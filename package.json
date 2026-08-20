@@ -91,7 +91,7 @@
     "pkg-pr-new": "^0.0.88",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "typescript": "^5.9.0"
+    "typescript": "^7.0.0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-host-webserver": {
