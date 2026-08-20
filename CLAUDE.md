@@ -153,9 +153,10 @@ loader 的 `claimStyles(id)` 会执行 `document.querySelectorAll('style:not([da
 - **`GenUIRenderer.create` 是异步的**，所以 renderer 必须放 state 而不是 ref：放 ref 的话首次渲染 effect 看到 `null` 直接返回，而 `code` 不再变化就永远不会重跑，表现为一个挂上了但永远空白的 surface。
 - **`preserveStateOnUpdate` 只适合流式增长**。它靠 hook signature 判断能否复用组件，所以一次「整份文件替换」如果 hook 没变，新内容会被静默丢弃。canvas 因此传 `preserveState={false}`，inline 保持默认。
 - **判据要选真的会渲染出来的东西**。验证文件回读时我把标记写进了 TSX 注释，注释永远不出现在 UI 上，于是「功能坏了」的结论完全是假的，白查了很久。改成往 JSX 文本里写标记才测出真相。
+- **`statePath`/`STATE_DIR` 是死代码。** 契约从 playground 抄过来了，但状态持久化没实现，全仓库零调用点。skill.ts 已经绕开它（教模型用 `localStorage`），所以不冲突 —— 留着是当未来工作的记号。
 - **preflight 抢全局 `console.error`**：`partial-react/src/runtime.ts:215-224` 临时替换、finally 还原。多卡片并发时内层 finally 会还原成外层的收集器，**宿主的 console.error 永久丢失**。chat node 天生多卡片，必须加引用计数或串行化。
 - **HMR 没有 react-refresh**：插件内 React state 每次 reload 全丢；增删插件必须重启 dsh。
-- **wasm 实例要显式 dispose**（`ctx.on('dispose')`），否则每次 HMR 泄漏一个。
+- **wasm 实例泄漏，且上游没给释放口。** `@esm.sh/tsx` 的导出面只有 `transform`/`init`/`initSync`，没有 dispose/free，所以「显式释放」这条做不到 —— 只能丢掉 `initPromise` 引用等 GC。每轮 HMR 多留一个 ~2.5MB 实例，只影响开发。blob URL 那半边已经接上（`disposeRegistry` 挂在 `ctx.effect` 的 disposer 上）。
 - **裸 specifier 必须补 fallback import map。** `registryImports()` 只有 react 那五个；模型一 `import { BarChart } from "recharts"` 就无法解析，而 ESM 的失败方式是整个模块 import 挂掉 —— 界面**一片空白，没有任何报错**（onError 也不触发）。`GenUISurface` 里按代码的 import 集合调 `mergeFallbackImports`（`partial-react/import-map`）探 esm.sh 补齐。它一次约 36ms，所以按 specifier 签名去重，不能每帧都算。
 - **`inject` 里的每一项都是硬依赖。** cordis 的 `Inject` 类型没有 required/optional 之分（`registry.d.ts:13`），少一个服务就整个 fiber 不激活、`apply()` 一行都不跑。所以 `webServer` 和 `skills` 都写成 `ctx.inject([...], cb)` 嵌套 fiber：`dsh --profile headless` 没有 `webServer`，要是列在静态 `inject` 里，插件在那儿连教模型都做不成 —— 而那正是批量评测要用的 profile。只有真正缺了就毫无意义的服务（`systemPrompt`）才留在静态数组里。
 - **publint 那条 `client.js` 警告不能修。** 它建议把 CJS 的 `lib/client.js` 改成 `.cjs`（因为 `"type": "module"` 让它被当 ESM 解析）。但 `dsh-client-modules` 构造的 URL 写死是 `/plugins/<id>/client.js?rev=...`，改扩展名等于插件加载不了。这是宿主形态的要求，不是我们的疏忽。
