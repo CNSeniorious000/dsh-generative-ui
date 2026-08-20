@@ -6,8 +6,8 @@
       "name": "dsh-generative-ui",
       "dependencies": {
         "@esm.sh/tsx": "^1.5.3",
-        "partial-react": "0.0.5",
-        "partial-tsx": "0.0.3",
+        "partial-react": "~0.0.5",
+        "partial-tsx": "~0.0.3",
       },
       "devDependencies": {
         "@deepseek-ai/cordis": "^4.0.1",

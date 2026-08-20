@@ -19,8 +19,21 @@ const initCompiler = () =>
     throw error;
   }));
 
-/** Compiles a throwaway module so the ~2.5 MB wasm is warm before the first real frame (a cold init costs 400-500 ms). */
-export const warmCompiler = (): Promise<unknown> => initCompiler();
+/**
+ * Starts loading the ~2.5 MB wasm so it is warm before the first real frame (a cold init
+ * costs 400-500 ms). Never throws: `apply()` calls this and nothing else awaits it, so a
+ * synchronous failure inside `initTsx` — an unfetchable wasm path, say — would otherwise
+ * take the whole plugin's registration down with it and leave the shell loading forever.
+ * A cold compile on the first card is a far better outcome than no plugin at all.
+ */
+export const warmCompiler = (): Promise<unknown> => {
+  try {
+    return initCompiler().catch(() => undefined);
+  } catch {
+    initPromise = null;
+    return Promise.resolve();
+  }
+};
 
 export function createBrowserTsxCompiler(): TsxCompiler {
   return {
