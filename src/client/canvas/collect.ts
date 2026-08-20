@@ -35,6 +35,16 @@ const PATH_KEYS = ["path", "file_path", "filename", "file", "target_file"];
  */
 const CONTENT_KEYS = ["content", "contents", "text", "file_text"];
 
+/**
+ * Keys that mean "this call changed the file without saying what it now contains".
+ *
+ * The counterpart to CONTENT_KEYS, and the thing that separates an edit from a read: both
+ * name a canvas path and neither carries a body, so without this a plain `read` would mark
+ * the canvas stale and — for a canvas this session never wrote — open a panel the user
+ * never asked for, just for looking at the file.
+ */
+const PATCH_KEYS = ["old_str", "new_str", "old_string", "new_string", "diff", "patch", "edits", "replacements"];
+
 const ESCAPES: Record<string, string> = { n: "\n", t: "\t", r: "\r", b: "\b", f: "\f" };
 
 /**
@@ -160,8 +170,10 @@ export function collectCanvases(calls: readonly ToolCallView[]): CollectedCanvas
     const isWrite = code !== undefined && code !== "";
 
     if (!isWrite) {
-      // Keep the position an earlier write established, but mark the body untrustworthy.
-      if (call.settled) stale.set(id, (stale.get(id) ?? 0) + 1);
+      // A patch changed the file without describing it, so the body on disk is now the only
+      // correct source. A call with neither a body nor a patch only read it — leave it alone.
+      const patches = PATCH_KEYS.some((key) => call.argsRaw.includes(`"${key}"`));
+      if (patches && call.settled) stale.set(id, (stale.get(id) ?? 0) + 1);
       continue;
     }
     // A later write to the same id replaces the earlier one; insertion order is kept.
