@@ -1,5 +1,8 @@
 # dsh-generative-ui
 
+[![pkg.pr.new](https://pkg.pr.new/badge/CNSeniorious000/dsh-generative-ui)](https://pkg.pr.new/~/CNSeniorious000/dsh-generative-ui)
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
 Generative UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent answers with a live React interface instead of prose. It streams — the component renders while the model is still typing it.
 
 Two places it shows up:
