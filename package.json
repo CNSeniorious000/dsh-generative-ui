@@ -29,10 +29,11 @@
     "dsh-plugin",
     "deepseek-harness",
     "cordis",
+    "cordis-plugin",
     "react",
     "tsx",
     "streaming",
-    "agent",
+    "ai-agents",
     "llm"
   ],
   "dsh": {
