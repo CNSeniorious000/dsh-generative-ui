@@ -14,7 +14,7 @@
         "@deepseek-ai/dsh-client-locale": "0.1.0-rc.7",
         "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.7",
         "@deepseek-ai/dsh-client-ui-conversation": "0.1.0-rc.7",
-        "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.7",
+        "@deepseek-ai/dsh-client-ui-layout": "0.1.0-rc.8",
         "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.7",
         "@deepseek-ai/dsh-host-webserver": "0.1.0-rc.7",
         "@deepseek-ai/dsh-skill": "0.1.0-rc.7",
@@ -83,7 +83,7 @@
 
     "@deepseek-ai/dsh-client-ui-input-trigger": ["@deepseek-ai/dsh-client-ui-input-trigger@0.1.0-rc.7", "", { "dependencies": { "clsx": "^2.0.0" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.7", "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.7", "@deepseek-ai/dsh-client-ui-primitives": "^0.1.0-rc.7", "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.7", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.7", "react": "^18.2.0" } }, "sha512-Sfn4YlS6dKm/ojGRyZL5oq34+GSeyirzGkmqhtoX7hpjHAhBVmugz2jku2ijYEjjFtD6YKYdWwvQxHdRaHFZ+w=="],
 
-    "@deepseek-ai/dsh-client-ui-layout": ["@deepseek-ai/dsh-client-ui-layout@0.1.0-rc.7", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.7", "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.7", "@deepseek-ai/dsh-client-ui-theme": "^0.1.0-rc.7", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.7", "react": "^18.2.0" } }, "sha512-4z5xkH/O8GT6ve1IX15WTel236fJwSuRZusMKJ9qIxdslZZ1h+wMbtgX3tCqg7mTtMznRDspCpC1b1QSAt4nTg=="],
+    "@deepseek-ai/dsh-client-ui-layout": ["@deepseek-ai/dsh-client-ui-layout@0.1.0-rc.8", "", { "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8", "@deepseek-ai/dsh-client-ui-theme": "^0.1.0-rc.8", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.8" } }, "sha512-tbHawbf8FsJqdwnXrU46V8u13bfAFVQQf0hA0OXH4k0PiLiThdZgQFn/T94+56JMUzD1QLqe7DLmNz29cwmjvQ=="],
 
     "@deepseek-ai/dsh-client-ui-primitives": ["@deepseek-ai/dsh-client-ui-primitives@0.1.0-rc.7", "", { "dependencies": { "@shikijs/langs": "^4.3.1", "@types/mdast": "^4.0.4", "anser": "^2.3.5", "clsx": "^2.0.0", "katex": "^0.16.47", "mdast-util-from-markdown": "^2.0.3", "mdast-util-gfm": "^3.1.0", "mdast-util-math": "^3.0.0", "micromark-core-commonmark": "^2.0.3", "micromark-extension-gfm": "^3.0.0", "micromark-extension-math": "^3.1.0", "micromark-factory-space": "^2.0.1", "micromark-util-character": "^2.1.1", "micromark-util-classify-character": "^2.0.1", "micromark-util-sanitize-uri": "^2.0.1", "micromark-util-symbol": "^2.0.1", "micromark-util-types": "^2.0.2", "react": "^18.2.0", "react-dom": "^18.2.0", "shiki": "^4.3.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.7" } }, "sha512-x3cnIAeOdDMd7no8JwP65q7J9Fj4xQWAZPPJY4MzgfQAAOcHJb0T0d5Uo4FXMiCcTeU/73n7BssS5PE7jjgiDg=="],
 
