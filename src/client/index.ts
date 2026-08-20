@@ -13,7 +13,7 @@ import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
 import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
 import { mountCanvasHost } from "./canvas/index.ts";
-import { toolCallsOf, type ToolCallView } from "./canvas/collect.ts";
+import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
 
 export const inject = ["slots", "sessions"];
 
@@ -91,13 +91,12 @@ function textOf(node: ChatNodeView): string {
  * `edit` that never marks it stale.
  */
 function callsKeyOf(node: ChatNodeView): string {
-  type Block = { kind?: string; call?: { argsRaw?: string }; argsRaw?: string; subCalls?: readonly Block[] };
   const parts: string[] = [];
-  const walk = (block: Block | undefined): void => {
+  const walk = (block: CallBlock | undefined): void => {
     if (block === undefined) return;
     parts.push(`${(block.call?.argsRaw ?? block.argsRaw)?.length ?? 0}${block.kind === "tool-result" ? "!" : ""}`);
     for (const child of block.subCalls ?? []) walk(child);
   };
-  walk((node.data as { root?: Block } | undefined)?.root);
+  walk((node.data as { root?: CallBlock } | undefined)?.root);
   return parts.join(",");
 }

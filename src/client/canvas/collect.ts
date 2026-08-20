@@ -106,7 +106,7 @@ export type ToolCallView = { name: string; argsRaw: string; settled: boolean };
  * may own `subCalls` — `run_code` dispatches the file tools as children, so a canvas
  * written from inside a code block is nested rather than top-level.
  */
-type CallBlock = {
+export type CallBlock = {
   kind?: string;
   name?: string;
   argsRaw?: string;
