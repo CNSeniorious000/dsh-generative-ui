@@ -48,16 +48,22 @@ async function serveAsset(req: IncomingMessage, res: ServerResponse, file: strin
  * arguments carry a patch rather than the file. Reading the file is the only source that
  * stays correct across every way it can change, including edits made outside the agent.
  *
- * Confined to the canvas directory by construction: the caller passes a workspace and a
- * canvas id, and the path is built from the contract rather than taken from the request.
+ * Confined to the canvas directory by construction — the id is a path segment and the path
+ * is built from the contract — and to a live session's own workspace by the `cwd` check.
+ *
+ * That check is the security boundary, not a formality. This route answers any page the
+ * user has open: a simple GET triggers no preflight, so without it `?cwd=/anywhere` turns
+ * the plugin into a file-existence oracle for the whole disk. The client only ever sends
+ * the cwd it read off the current session, so matching against live sessions costs nothing.
  */
-async function serveCanvas(req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "GET") return void res.writeHead(405).end();
   const url = new URL(req.url ?? "/", "http://x");
   const cwd = url.searchParams.get("cwd");
   const id = url.searchParams.get("id");
   // The id is a path segment by contract; anything else cannot name a canvas.
   if (cwd === null || id === null || !isCanvasId(id)) return void res.writeHead(400).end();
+  if (!liveWorkspaces().has(cwd)) return void res.writeHead(403).end();
   try {
     const code = await readFile(join(cwd, canvasPath(id)), "utf8");
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
@@ -68,16 +74,30 @@ async function serveCanvas(req: IncomingMessage, res: ServerResponse): Promise<v
   }
 }
 
+/** Live sessions' workspaces. Typed locally: a global `dsh-session` merge would also rewrite
+ *  the client half's `ctx.sessions`, which is a different service entirely. */
+type SessionStoreCtx = { sessions: { list: () => readonly { header: { cwd?: string } }[] } };
+
 export function apply(ctx: Context): void {
   ctx.effect(() => ctx.systemPrompt.section({ name: PROMPT_SECTION_NAME, order: PROMPT_SECTION_ORDER, text: INLINE_PROMPT }), "dsh-generative-ui: inline prompt");
   // Both routes only matter to a browser half that exists to consume them. Scoped rather than
   // required so the plugin still teaches the model on a profile with no web server at all —
   // `dsh --profile headless` has no `webServer`, and a required injection there means the
   // prompt and the skill go missing too, which is the whole plugin.
-  ctx.inject(["webServer"], (scoped) => {
+  //
+  // `sessions` rides along because the canvas route needs it to authorize a workspace, and
+  // cordis enforces injection at access time: reading `ctx.sessions` without declaring it
+  // throws "cannot get property ... without inject" inside the request, which the host turns
+  // into a bare 400. Declaring it here rather than in the static `inject` keeps the headless
+  // profile working, same as the other two.
+  ctx.inject(["webServer", "sessions"], (scoped) => {
     const file = wasmFile(import.meta.url);
+    const liveWorkspaces = (): ReadonlySet<string> => {
+      const sessions = (scoped as unknown as SessionStoreCtx).sessions.list();
+      return new Set(sessions.flatMap((session) => (session.header.cwd === undefined ? [] : [session.header.cwd])));
+    };
     scoped.effect(() => scoped.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: (req, res) => serveAsset(req, res, file) }), "dsh-generative-ui: tsx wasm");
-    scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: serveCanvas }), "dsh-generative-ui: canvas reads");
+    scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: (req, res) => serveCanvas(liveWorkspaces, req, res) }), "dsh-generative-ui: canvas reads");
   });
   // Scoped rather than listed in `inject`: cordis has no optional injection, so naming "skills"
   // there would keep the whole plugin — wasm route included — inactive wherever the skill
