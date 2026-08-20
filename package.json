@@ -20,16 +20,20 @@
     "cordis.patch.yml"
   ],
   "keywords": [
+    "generative-ui",
+    "genui",
+    "ui4a",
+    "artifacts",
+    "canvas",
     "dsh",
     "dsh-plugin",
     "deepseek-harness",
     "cordis",
-    "generative-ui",
-    "ui4a",
-    "tsx",
     "react",
+    "tsx",
     "streaming",
-    "canvas"
+    "agent",
+    "llm"
   ],
   "dsh": {
     "bundle": {
