@@ -1,0 +1,140 @@
+/*
+ * The canvas column. Everything visual comes from the host's design tokens, so the panel
+ * tracks theme changes for free and never introduces a second palette
+ * (docs/web-styling.md: feature packages consume aliases, they do not define colors).
+ */
+.dgu-panel {
+  --dgu-panel-width: 420px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: var(--dgu-panel-width);
+  background: var(--dsw-alias-bg-base);
+  border-left: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--dsw-font-family);
+  overflow: hidden;
+}
+
+.dgu-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 14px;
+  height: 44px;
+  flex: none;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.dgu-title {
+  font-size: var(--dsw-font-s-14-font-size);
+  line-height: var(--dsw-font-s-14-line-height);
+  font-weight: var(--dsw-font-s-strong-14-font-weight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dgu-spacer {
+  flex: 1 1 auto;
+}
+
+.dgu-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.dgu-icon-button:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.dgu-icon-button:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+
+/* Tabs only appear from the second canvas on: one canvas needs no chooser. */
+.dgu-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px;
+  flex: none;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  scrollbar-width: none;
+}
+.dgu-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dgu-tab {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-family: inherit;
+  font-size: var(--dsw-font-xs-13-font-size);
+  line-height: var(--dsw-font-xs-13-line-height);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dgu-tab:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.dgu-tab[aria-selected="true"] {
+  background: var(--dsw-specific-sidebar-nav-item-active);
+  color: var(--dsw-alias-label-primary);
+}
+
+/*
+ * The canvas owns this space entirely — the panel already provides the frame, so the body
+ * adds no padding and no background of its own. Generated UI is told to fill it.
+ */
+.dgu-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.dgu-body > * {
+  min-height: 100%;
+}
+
+.dgu-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--dsw-alias-label-secondary);
+  font-size: var(--dsw-font-xs-13-font-size);
+  line-height: var(--dsw-font-xs-13-line-height);
+}
+
+/* Invisible hit strip, matching how the host draws its own sidebar boundary. */
+.dgu-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 1;
+}
+.dgu-resize:hover,
+.dgu-resize[data-dragging] {
+  background: var(--dsw-alias-brand-primary);
+  opacity: 0.12;
+}

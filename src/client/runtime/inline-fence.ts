@@ -1,0 +1,115 @@
+/**
+ * Renders ```` ```ui4a/tsx ```` blocks in assistant prose live, in place, between the
+ * surrounding paragraphs — the ui4a-playground inline contract.
+ *
+ * Two sources, each doing what only it can:
+ *
+ * - **The session snapshot owns the code.** The host's markdown renderer withholds a
+ *   fence's info string until the closing fence arrives, so a DOM-only implementation
+ *   cannot tell a half-written ui4a block from any other code block, and can only claim
+ *   it after the model has stopped typing. The raw assistant text has the opening fence
+ *   from its very first token, so that is where the code and its language come from.
+ * - **The DOM owns the position.** There is no slot for a markdown code block, so the
+ *   rendered block is what tells us where in the prose to mount. `md-code-block` is a
+ *   hard-coded class on the host's CodeBlock wrapper.
+ *
+ * Blocks are matched to segments by content (a rendered block's text is a prefix of, or
+ * equal to, its segment's code), not by order, so unrelated code blocks in the same reply
+ * are left alone.
+ *
+ * The claimed block is hidden rather than removed: it belongs to the host's React tree,
+ * and detaching a node React still owns invites a NotFoundError on its next commit.
+ */
+import { createRoot, type Root } from "react-dom/client";
+import type { ReactElement } from "react";
+import type { Ui4aSegment } from "./segments.ts";
+import { observeTranscript } from "./observe.ts";
+
+const CLAIMED = "data-ui4a-claimed";
+const MOUNT = "data-ui4a-mount";
+
+type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string };
+
+/** The block's source. `pre` when the grammar was unknown, the highlighted div otherwise. */
+const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";
+
+/** CodeBlock trims one trailing newline for display, so compare on trimmed ends. */
+const sameCode = (a: string, b: string) => a.trimEnd() === b.trimEnd();
+
+/**
+ * The segment a rendered block belongs to.
+ *
+ * Mid-stream the block shows a prefix of its segment; once settled the two are equal.
+ */
+const matchSegment = (segments: readonly Ui4aSegment[], rendered: string) => segments.find((segment) => sameCode(segment.code, rendered) || segment.code.startsWith(rendered));
+
+export type InlineFenceOptions = {
+  /** Every ui4a segment currently in the transcript, in document order. */
+  segments: () => readonly Ui4aSegment[];
+  render: (props: { code: string; streaming: boolean }) => ReactElement;
+  scope?: HTMLElement;
+};
+
+export function claimInlineFences({ segments, render, scope }: InlineFenceOptions): () => void {
+  const claims = new Map<HTMLElement, Claim>();
+  const root = scope ?? document.body;
+
+  const release = (claim: Claim, restore: boolean) => {
+    claim.root.unmount();
+    claim.mount.remove();
+    if (restore && claim.block.isConnected) {
+      claim.block.style.display = "";
+      claim.block.removeAttribute(CLAIMED);
+    }
+    claims.delete(claim.block);
+  };
+
+  const sweep = () => {
+    const current = segments();
+
+    for (const block of root.querySelectorAll<HTMLElement>(`.md-code-block:not([${CLAIMED}])`)) {
+      const code = codeOf(block);
+      if (code === "") continue;
+      // A streaming block's rendered text is a prefix of its segment; a settled one equals it.
+      const segment = matchSegment(current, code);
+      if (segment === undefined) continue;
+      block.setAttribute(CLAIMED, "");
+      block.style.display = "none";
+      const mount = document.createElement("div");
+      mount.setAttribute(MOUNT, "");
+      block.parentElement?.insertBefore(mount, block.nextSibling);
+      claims.set(block, { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "" });
+    }
+
+    for (const claim of claims.values()) {
+      if (!claim.block.isConnected) {
+        release(claim, false);
+        continue;
+      }
+      const rendered = codeOf(claim.block);
+      // The block's own text is what locates its segment, so an unchanged block cannot
+      // have changed its match — skip the scan rather than re-run it every frame.
+      if (rendered === claim.rendered && claim.code !== "") continue;
+      claim.rendered = rendered;
+      const segment = matchSegment(current, rendered);
+      // The snapshot is authoritative while it still describes this block: mid-stream its
+      // code runs ahead of what markdown has painted. Once it stops describing it — an
+      // older page dropped out of the loaded window, or the assistant node was replaced —
+      // the last good frame stands. Re-deriving from the hidden block would hand the
+      // renderer a truncated prefix and blank a card that was already complete.
+      if (segment === undefined) continue;
+      const { code, complete } = segment;
+      if (code === claim.code && complete === claim.complete) continue;
+      claim.code = code;
+      claim.complete = complete;
+      claim.root.render(render({ code, streaming: !complete }));
+    }
+  };
+
+  const stop = observeTranscript(sweep);
+
+  return () => {
+    stop();
+    for (const claim of claims.values()) release(claim, true);
+  };
+}

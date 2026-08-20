@@ -1,0 +1,63 @@
+# dsh-generative-ui
+
+Generative UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent answers with a live React interface instead of prose. It streams — the component renders while the model is still typing it.
+
+Two places it shows up:
+
+- **Inline** — a fenced ```` ```ui4a/tsx ```` block renders in place, between the paragraphs of the reply. Right for a chart, a form, a set of options to click, a calculation the reader will want to change a number in.
+- **Canvas** — a file at `ui4a/canvases/<id>.ui4a.tsx` opens in a panel beside the conversation and stays there across turns. Right for a tool the user will come back to.
+
+Generated code imports anything on npm (resolved from esm.sh at render time), shares the host's single React instance, and takes its colours from the app's own design tokens, so it follows the light/dark theme.
+
+## Install
+
+```sh
+dsh plugin --profile web add dsh-generative-ui
+```
+
+`dsh plugin` forwards to the profile's package manager, so that installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
+
+```json
+{
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-generative-ui"
+      ]
+    }
+  }
+}
+```
+
+Then restart `dsh web` — plugins are mounted at boot, and there is no hot-reload for adding one.
+
+## How it works
+
+The package is one plugin with two halves, which is how dsh plugins reach the browser:
+
+| | |
+| --- | --- |
+| `lib/index.js` (node) | injects the system-prompt section, registers the `generative-ui` skill, serves the compiler wasm and canvas file reads over its own `webServer` routes |
+| `lib/client.js` (web) | claims `ui4a/tsx` code blocks in the transcript, compiles TSX in-browser, mounts the canvas panel |
+
+The model is taught in two layers, split by what each costs:
+
+- **`src/prompt.ts`** rides in every request, so it carries only the trigger, the fence syntax, the canvas path, and the colour tokens.
+- **`src/skill.ts`** is registered through `ctx.skills.register()` and loads only when the model reaches for it. It carries the judgement: whether the answer wants an interface at all, inline or canvas, how to frame and lay one out.
+
+That split is measured, not assumed — see [CLAUDE.md](./CLAUDE.md) §4.5 for the 40-prompt evaluation behind it.
+
+## Development
+
+```sh
+bun install
+bun run check     # lint + typecheck + build + smoke
+```
+
+`bun run build` bundles both halves with `Bun.build`. [CLAUDE.md](./CLAUDE.md) is the design document — it records the host constraints this plugin was built against, all of them found the hard way.
+
+## License
+
+MIT

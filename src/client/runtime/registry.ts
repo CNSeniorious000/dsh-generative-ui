@@ -1,0 +1,59 @@
+/**
+ * Generated TSX is imported as a blob URL, so an import map's targets must be real
+ * URLs. Vite hosts can point at `/src/lib/react.ts`; dsh plugin bundles have no
+ * such "source is a URL" escape hatch (and CJS factories have no `import.meta`).
+ *
+ * So this goes the other way round: register the module namespaces the shell has
+ * already loaded, then synthesize, per specifier, a blob module that reads the
+ * table and named-re-exports it. Export names are enumerated at runtime, so there
+ * is no hand-written list to drift. React is a singleton for free — everyone
+ * imports the same blob URL, and that URL reads the shell's instance.
+ * (Ported from ui4a-playground/src/runtime/registry.ts.)
+ */
+const REGISTRY_KEY = "__DSH_GENERATIVE_UI_MODULES__";
+type Registry = Record<string, Record<string, unknown>>;
+
+const registry: Registry = ((globalThis as Record<string, unknown>)[REGISTRY_KEY] ??= {}) as Registry;
+const urls = new Map<string, string>();
+
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+
+function buildModuleSource(specifier: string): string {
+  const namespace = registry[specifier] ?? {};
+  const lines = [`const ns = globalThis[${JSON.stringify(REGISTRY_KEY)}][${JSON.stringify(specifier)}];`];
+  // One `export const` per name rather than a spread: ESM export names must be statically visible.
+  // Freezing getters into consts is safe here — every registered namespace is a settled module.
+  for (const name of Object.keys(namespace)) {
+    if (name !== "default" && IDENTIFIER.test(name)) lines.push(`export const ${name} = ns[${JSON.stringify(name)}];`);
+  }
+  lines.push("default" in namespace ? "export default ns.default;" : "export default ns;");
+  return lines.join("\n");
+}
+
+export function registerModules(modules: Record<string, Record<string, unknown>>): void {
+  for (const [specifier, namespace] of Object.entries(modules)) {
+    registry[specifier] = namespace;
+    // A namespace can be hot-swapped; the old blob would re-export stale bindings.
+    const stale = urls.get(specifier);
+    if (stale !== undefined) {
+      URL.revokeObjectURL(stale);
+      urls.delete(specifier);
+    }
+  }
+}
+
+export function moduleUrl(specifier: string): string {
+  const cached = urls.get(specifier);
+  if (cached !== undefined) return cached;
+  const url = URL.createObjectURL(new Blob([buildModuleSource(specifier)], { type: "text/javascript" }));
+  urls.set(specifier, url);
+  return url;
+}
+
+export const registryImports = (): Record<string, string> => Object.fromEntries(Object.keys(registry).map((specifier) => [specifier, moduleUrl(specifier)]));
+
+/** Drops every synthesized blob. The plugin's dispose path must call this or each HMR round leaks one URL per specifier. */
+export function disposeRegistry(): void {
+  for (const url of urls.values()) URL.revokeObjectURL(url);
+  urls.clear();
+}
