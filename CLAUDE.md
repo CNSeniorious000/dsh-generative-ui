@@ -159,6 +159,8 @@ loader 的 `claimStyles(id)` 会执行 `document.querySelectorAll('style:not([da
 - **裸 specifier 必须补 fallback import map。** `registryImports()` 只有 react 那五个；模型一 `import { BarChart } from "recharts"` 就无法解析，而 ESM 的失败方式是整个模块 import 挂掉 —— 界面**一片空白，没有任何报错**（onError 也不触发）。`GenUISurface` 里按代码的 import 集合调 `mergeFallbackImports`（`partial-react/import-map`）探 esm.sh 补齐。它一次约 36ms，所以按 specifier 签名去重，不能每帧都算。
 - **`inject` 里的每一项都是硬依赖。** cordis 的 `Inject` 类型没有 required/optional 之分（`registry.d.ts:13`），少一个服务就整个 fiber 不激活、`apply()` 一行都不跑。所以 `webServer` 和 `skills` 都写成 `ctx.inject([...], cb)` 嵌套 fiber：`dsh --profile headless` 没有 `webServer`，要是列在静态 `inject` 里，插件在那儿连教模型都做不成 —— 而那正是批量评测要用的 profile。只有真正缺了就毫无意义的服务（`systemPrompt`）才留在静态数组里。
 - **publint 那条 `client.js` 警告不能修。** 它建议把 CJS 的 `lib/client.js` 改成 `.cjs`（因为 `"type": "module"` 让它被当 ESM 解析）。但 `dsh-client-modules` 构造的 URL 写死是 `/plugins/<id>/client.js?rev=...`，改扩展名等于插件加载不了。这是宿主形态的要求，不是我们的疏忽。
+- **cordis 在「访问时」而不是「声明时」强制 inject。** 读一个没声明的服务（`ctx.sessions`）不会在 apply 时报错，而是在**请求处理中**抛 `cannot get property "sessions" without inject`，被 `dsh-host-webserver` 兜成一个**没有 body、日志里也没有的 400**。表现完全像路由没注册，实际是缺依赖。绕过类型系统（`as unknown as`）躲开客户端类型冲突并不能躲开运行时这一关 —— 服务该声明还得声明，只是要声明在 `ctx.inject([...])` 作用域里。
+- **`/dsh-generative-ui/canvas` 必须校验 `cwd`。** 这条路由会应答用户开着的**任何**页面（简单 GET 不触发预检），所以不校验就是一个全盘的文件存在性预言机 —— 实测 `?cwd=/tmp/leak-probe` 能直接读出文件内容。白名单来源是 `ctx.sessions.list()` 里各 session 的 `header.cwd`；客户端本来就只发当前 session 的 cwd，所以不会误伤。
 - **做不了设置面板**：`dsh-host-apiproxy` 只为编译进去的白名单暴露 settings，第三方 `ctx.settings.register` 拿到 `settings-not-exposed`。配置走 `cordis.patch.yml`。
 - **dsh 是 `0.1.0-rc.7` developer preview**，官方自陈有破坏性变更。升版本时平台表、槽名、事件签名都要重新核。
 
