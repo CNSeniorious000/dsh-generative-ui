@@ -94,10 +94,19 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       const segment = matchSegment(current, rendered);
       // The snapshot is authoritative while it still describes this block: mid-stream its
       // code runs ahead of what markdown has painted. Once it stops describing it — an
-      // older page dropped out of the loaded window, or the assistant node was replaced —
-      // the last good frame stands. Re-deriving from the hidden block would hand the
-      // renderer a truncated prefix and blank a card that was already complete.
-      if (segment === undefined) continue;
+      // older page dropped out of the loaded window — the last good frame stands, because
+      // re-deriving from the hidden block would hand the renderer a truncated prefix and
+      // blank a card that was already complete.
+      //
+      // Unless the block stopped being this card's at all: React reconciles `.md-code-block`
+      // wrappers positionally, so a re-render can drop unrelated content into the very node
+      // we hid. Its text is then no longer a prefix of what we rendered, and holding the
+      // claim would leave a stale card on screen with the real block invisible behind it.
+      if (segment === undefined) {
+        if (claim.code.startsWith(rendered)) continue;
+        release(claim, true);
+        continue;
+      }
       const { code, complete } = segment;
       if (code === claim.code && complete === claim.complete) continue;
       claim.code = code;
