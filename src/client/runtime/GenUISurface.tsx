@@ -108,6 +108,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     };
     // Attach exactly once. The refs above are how later prop values reach the renderer
     // without tearing it down, so they deliberately do not belong in these deps.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- see above
   }, []);
 
   // The set of bare specifiers the current code imports. Recomputing the fallback map costs a
@@ -160,6 +161,9 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       renderer.pushCode(code);
     }
     deliveredRef.current = code;
+    // The refs this reads (`importedRef`, `deliveredRef`, `streamingRef`) are how the effect
+    // carries state between frames; listing them would re-run it on values it just wrote.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [renderer, code, streaming]);
 
   return <div ref={hostRef} className={className} data-genui-root="" />;

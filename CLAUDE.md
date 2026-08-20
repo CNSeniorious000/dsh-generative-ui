@@ -162,7 +162,7 @@ loader 的 `claimStyles(id)` 会执行 `document.querySelectorAll('style:not([da
 - **cordis 在「访问时」而不是「声明时」强制 inject。** 读一个没声明的服务（`ctx.sessions`）不会在 apply 时报错，而是在**请求处理中**抛 `cannot get property "sessions" without inject`，被 `dsh-host-webserver` 兜成一个**没有 body、日志里也没有的 400**。表现完全像路由没注册，实际是缺依赖。绕过类型系统（`as unknown as`）躲开客户端类型冲突并不能躲开运行时这一关 —— 服务该声明还得声明，只是要声明在 `ctx.inject([...])` 作用域里。
 - **`/dsh-generative-ui/canvas` 必须校验 `cwd`。** 这条路由会应答用户开着的**任何**页面（简单 GET 不触发预检），所以不校验就是一个全盘的文件存在性预言机 —— 实测 `?cwd=/tmp/leak-probe` 能直接读出文件内容。白名单来源是 `ctx.sessions.list()` 里各 session 的 `header.cwd`；客户端本来就只发当前 session 的 cwd，所以不会误伤。
 - **做不了设置面板**：`dsh-host-apiproxy` 只为编译进去的白名单暴露 settings，第三方 `ctx.settings.register` 拿到 `settings-not-exposed`。配置走 `cordis.patch.yml`。
-- **dsh 是 `0.1.0-rc.7` developer preview**，官方自陈有破坏性变更。升版本时平台表、槽名、事件签名都要重新核。
+- **dsh 是 developer preview**（写这段时 devDependencies 在 `0.1.0-rc.8`，以 package.json 为准），官方自陈有破坏性变更。升版本时平台表、槽名、事件签名都要重新核 —— rc.7→rc.8 就改了 `ChatNodeSeat` 的 props（`loadImage` → `renderMessageImages`），只是我们没用到。
 
 ## 4.5 提示词的实证依据（2026-08-20，40 条评测）
 

@@ -8,6 +8,7 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
+import { disposeRegistry } from "./runtime/registry.ts";
 import { claimInlineFences } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
@@ -67,6 +68,10 @@ export function apply(ctx: ClientContext): void {
   /** Identity of the open session, so a dismissed canvas stays dismissed only there. */
   const sessionId = (): string => ctx.sessions.list.getSnapshot().current ?? "";
 
+  // Revoking on teardown is safe: a blob module that was already imported keeps working after
+  // its URL is revoked (the module graph holds it), so this only reclaims URLs nothing can
+  // reach any more. Without it every HMR round leaks one per registered specifier.
+  ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
   ctx.effect(() => mountCanvasHost({ calls, cwd, sessionId }), "dsh-generative-ui: canvas column");
   ctx.effect(() => claimInlineFences({ segments, render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming }) }), "dsh-generative-ui: inline fences");
 }
