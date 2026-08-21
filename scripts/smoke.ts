@@ -92,7 +92,10 @@ const context: Record<string, unknown> = {
   effect,
   inject: (deps: readonly string[], callback: (scoped: unknown) => void) => {
     injected.push(...deps);
-    callback(context);
+    // The proxied context, not the bare one: a nested scope reads the very services it just
+    // declared, and handing it an object without the stub fallback makes every one of them
+    // undefined — which reads as "the plugin is broken" rather than "the fake is thin".
+    callback(proxied);
   },
 };
 // Anything else `apply` touches answers with a callable that keeps answering.
