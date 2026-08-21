@@ -76,9 +76,9 @@ Registration must be wrapped in `ctx.slots.inject(name, () => ...)`: these slots
 
 ### 2.5 CSS has to mark itself
 
-The loader's `claimStyles(id)` runs `document.querySelectorAll('style:not([data-plugin])')` and **claims every match** for whichever plugin is currently materializing. So every `<style>` the runtime UnoCSS injects must carry `data-plugin="dsh-generative-ui"` itself, or HMR and unload will tear each other's styles out.
+The loader's `claimStyles(id)` runs `document.querySelectorAll('style:not([data-plugin])')` and **claims every match** for whichever plugin is currently materializing. So every `<style>` this plugin appends must carry `data-plugin="dsh-generative-ui"` itself, or HMR and unload will tear each other's styles out. `injectStyles` in `canvas/mount.ts` is the one place that appends one.
 
-The host has its own theming system (`body[data-ds-dark-theme]` + `--dsw-alias-*`), so scoping rewrites must **hoist the theme ancestor selector**: `.dark .foo` → `.dark .genui-root .foo`. Prefixing without hoisting breaks the moment the theme flips.
+**There is no CSS framework here, and generated code gets none either.** The panel is hand-written CSS in `panel.css` (compiled into `panel-css.ts` at build time) over the host's `--dsw-alias-*` tokens, and §3.7's prompt tells the model to write inline `style` from those same tokens. Nothing in this repo needs an atomic-CSS runtime, so nothing needs class-name scoping either. If that ever changes, the trap waiting is that the host themes by ancestor (`body[data-ds-dark-theme]`), so a scoping rewrite has to **hoist the theme selector** — `.dark .foo` → `.dark .genui-root .foo` — and prefixing without hoisting breaks the moment the theme flips. That is also why §5 says not to copy `macaron-claude-code/web`'s global UnoCSS runtime.
 
 ### 2.6 Four bundling settings you cannot skip
 
