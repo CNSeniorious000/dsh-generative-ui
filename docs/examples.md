@@ -1424,3 +1424,33 @@ A coverage matrix built by reading the locale files through $dsh/fs: keys down t
 Read through $dsh/fs, header row detected, then a table usable on a wide file: sortable columns, a sticky header, and under each column name a one-line profile — type, null count, distinct count, min/max for numbers. Columns whose profile looks wrong (a numeric column with three strings in it, a date column with two formats) are marked, because that is what the person is about to be bitten by. Picking any column draws a distribution for it; picking two draws them against each other. Persisted so the picked columns survive a reopen.
 
 *Data files land in working directories constantly and 'take a look at this' is how people hand them over. The measured risk is the one §4.5:529 records — the model reads the file with its own tools and pastes the first ten rows in as literals, a photograph that cannot be sorted. The rule that fixed that is in place and this is the clearest case for it. Ranked last of the strong set because it needs a data file present, but examples.md notes 把这些数据可视化一下 correctly explores the workspace first, so the trigger path is known to work. Oh: the date column has two formats in it and the card said so before you sorted anything.*
+
+---
+
+## 八、数字
+
+| | |
+| --- | --- |
+| 轮次 | 7（4 轮发散 · 1 轮收敛核实 · 1 轮写成真代码 · 1 轮补角度 + 自我攻击） |
+| 独立意图 | **997** |
+| inline / canvas | 406 / 562（32 条两可） |
+| 写成真代码并编译 | 8 张，8/8 通过，三项运行时筛查全清白 |
+| 因研究而改的代码 | 9 处（3 个新能力、5 条提示词规则、1 个修正） |
+| 实测记录 | 见 CLAUDE.md §4.5 |
+
+### 能力分布，以及它自己暴露的问题
+
+| 能力 | 1–4 轮 (n=752) | 5–7 轮 (n=248) |
+| --- | --- | --- |
+| 无 | 264 (35%) | 102 (41%) |
+| `$dsh/fs` | 349 (46%) | 80 (32%) |
+| `$dsh/exec` | — | **79 (31%)** |
+| `$dsh/chat` | 160 (21%) | 51 (20%) |
+| `$dsh/ai` | 176 (23%) | **23 (9%)** |
+
+`$dsh/exec` 一出现就吃掉后三轮的 31%，而 `$dsh/ai` 从 23% 掉到 9%。
+这就是那条批评（「需求是在能力下游发明出来的」）的量化证据：
+**新能力会挤占注意力，头脑风暴会围着最新的玩具转。**
+
+对照真实产物：磁盘上 11 个 canvas，**1 个用了能力模块，0 个用 exec**。
+拿这份例子集去做产品判断时，这个落差要一起看。
