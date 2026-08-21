@@ -941,3 +941,21 @@ Prose fixtures still 4/4.
 
 The generalisation: **an abstract rule the model can weigh loses to "this seems like overkill".
 A rule that names the artefact and what happens to it after the reply does not.**
+
+### Non-dev intents, measured (2026-08-22)
+
+The research corpus was written by dev-shaped agents, so this checks the other half.
+
+| prompt | shape |
+| --- | --- |
+| `我妈生日快到了，帮我想想送啥` | fence |
+| `这周末去哪玩比较好` | fence |
+| `帮我对比下这几个手机 iPhone 17 小米 16 Pixel 11` | fence |
+| `教教我五线谱怎么看` | fence (12.6kb — the slowest single reply measured, first attempt read as a timeout) |
+| `我想学吉他，从哪开始` | prose → **canvas** after the plan rule |
+| `想开始跑步，怎么循序渐进` | prose → **canvas** after the plan rule |
+| `帮我定个每天背单词的计划` | fence both before and after |
+
+7/7 produce UI now. Two notes worth keeping: a long generation is not a failure — n4 was
+re-run and returned normally, matching §4's cold-start lesson; and **the two that failed were
+both plans**, which is what isolated the rule rather than a scattering of unrelated misses.
