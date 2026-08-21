@@ -150,14 +150,29 @@ refuses the write, and the card should say so rather than looking broken: catch 
 the user the session is read-only.
 
 Reach for it when the data **belongs to the workspace** — a file the user can also open, edit
-and commit. Keep \`localStorage\` for a canvas's own private state (which tab was open, the
-draft they were typing); writing that to disk just litters the repo.
+and commit.
+
+**You reading the file is not the card reading the file.** You have your own tools, so it is
+easy to open the README, summarise it, and paste the summary in as a string — and the result
+is a photograph: right the moment you took it, silently stale from the next edit on. If the
+card is about workspace content, the card calls \`readFile\`. Reserve your own reading for
+deciding *what to build*, not for supplying what it displays.
+
+Keep \`localStorage\` for a canvas's own private state (which tab was open, the draft they were
+typing); writing that to disk just litters the repo.
 
 ## Generating content inside the card
 
-\`streamText\` from \`$dsh/ai\` is for when a literal array in the file would freeze the thing
-that should vary — the recipe steps, the itinerary, the candidate names. It inherits the
-app's model, so there is no key to ask for and no setup.
+\`streamText\` from \`$dsh/ai\` exists because **you cannot write the answer while writing the
+card.** The user has not typed their ingredients yet, not named their destination, not said
+what the names are for — so a \`const RECIPES = […]\` you author now answers one case you
+guessed and freezes out every other. Ask yourself what happens when they type something you
+did not anticipate: if the card has nothing to show, it needs the model at click time.
+
+This is the most common mistake with this API, and it does not look like a mistake — writing
+plausible content inline produces a card that demos beautifully and is useless. Yours is the
+interface; the content is theirs. It inherits the app's model, so there is no key to ask for
+and no setup.
 
 Ask for JSON and parse the buffer as it grows, so items land one at a time rather than all
 at once at the end:
