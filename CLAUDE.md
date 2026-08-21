@@ -1015,3 +1015,21 @@ After: **6/6 across two different conversion prompts**, `5 公斤 3 两` → 11.
 time it made a canvas invisible (counting fences), this time it nearly pinned a nonexistent
 regression on a specific commit. Before attributing a shape change to an edit, repeat it —
 and repeat the *old* side too.
+
+### Re-measuring today's rules at 3 runs each (2026-08-22)
+
+Once the flap rate was known, everything decided on one sample had to be rechecked.
+
+| prompt | rule | 3-run result |
+| --- | --- | --- |
+| `想开始跑步，怎么循序渐进` | plan | 3/3 canvas |
+| `帮我把 .env 弄明白，有几个值我要改` | unnamed value | 3/3 fence |
+| `这个目录下都有啥文件…` | browse | 3/3 fence |
+| `什么是闭包？` | must stay prose | 3/3 prose |
+
+All stable. One correction falls out: the browse fixture demanded a **canvas**, recorded from the
+single run that produced a 522-line file browser over a whole repo. Against a 6-file directory it
+now picks a **fence** — 171 lines, still `readdir` + `readFile` reading live. That is the shape
+tracking the size of the thing, which is right; the fixture was over-specified, so the fixture
+was loosened rather than the prompt pushed. **A fixture that pins the container instead of the
+behaviour will eventually fail for being correct.**
