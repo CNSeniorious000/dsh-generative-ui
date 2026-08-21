@@ -37,6 +37,10 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `帮我算下 30 年期 100 万贷款利率 4.2% 的月供` | 4890.17 |
 | `5 公斤 3 两 是多少磅` | 11.35 |
 
+Run these in a workspace with **real files in it**. An empty directory changes the answer, and not
+always in the direction you would guess: the glob fixture scored 2/3 empty and 0/3 against a real
+`src/` tree, because having something to look at made the model explain instead of show.
+
 Measure a shape change over **at least 3 runs per prompt**. Single runs flap: `5 公斤 3 两`
 read 1 once in seven while its true rate was 0, which nearly attributed a regression to a commit.
 | `这个 cron 一年跑多少次？0 3 * * 1` | 52 or 53, depending on the year |
