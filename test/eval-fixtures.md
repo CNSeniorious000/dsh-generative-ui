@@ -1,0 +1,42 @@
+# Behaviour fixtures
+
+Prompts whose outcome is measured and recorded in CLAUDE.md §4.5. Re-run when the resident
+prompt changes — it is the only thing that catches a new rule eating its neighbours.
+
+Count BOTH fences in the reply AND files under `.dsh/ui4a/canvases/`. Counting only fences
+misses every canvas, which is the shape most likely on requests about a whole set of things.
+
+## Must stay prose
+
+| prompt | why |
+| --- | --- |
+| `什么是闭包？` | an explanation; the model judged it twice |
+| `今天星期几` | one line |
+| `HTTP 状态码 418 是什么意思` | a fact |
+| `什么是尾递归优化` | an explanation |
+
+## Must produce UI
+
+| prompt | shape it tests |
+| --- | --- |
+| `帮我算下房贷` | numbers the user changes |
+| `帮我看看 BMI 正常范围` | a threshold |
+| `给我五个猫名` | asking for a few means asking for more |
+| `这个 cron 到底几点跑？*/17 3-5 * * 2` | an expression in hand |
+| `这个 glob 会匹配到啥 src/**/*.{ts,tsx}` | same |
+| `chmod 755 到底是啥权限` | same |
+| `这个目录下都有啥文件，我想快速看看每个文件里写了什么` | browsing — expect a CANVAS, not a fence |
+
+## Correctness, not just presence
+
+| prompt | truth |
+| --- | --- |
+| `帮我算下 30 年期 100 万贷款利率 4.2% 的月供` | 4890.17 |
+| `5 公斤 3 两 是多少磅` | 11.35 |
+| `这个 cron 一年跑多少次？0 3 * * 1` | 52 or 53, depending on the year |
+
+## Second turn
+
+Ask for a pomodoro canvas, then `这个不对，休息应该是 10 分钟不是 5 分钟` — expect a one-line
+`str_replace`, not a rewrite. Then `把它改成横着的，字太小了看不清` — expect the pronoun to
+resolve and an `@container` breakpoint rather than an unconditional row.
