@@ -62,6 +62,16 @@ const compiler = () => {
  */
 const TRANSIENT = /No default export found|Unexpected (end of|eof)/i;
 
+/**
+ * A dependency that failed to arrive, not code that is wrong. esm.sh cold-starts and the
+ * network drops, and the symptom is identical to a broken component — a blank surface — so
+ * it is worth a few retries before anyone concludes the model wrote something wrong.
+ */
+const TRANSIENT_LOAD = /failed to fetch|failed to load|networkerror|load failed/i;
+const MAX_RETRIES = 3;
+/** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
+const RETRY_BACKOFF_MS = 400;
+
 export function GenUISurface({ code, streaming = false, preserveState = true, onError, onRendered, className }: GenUISurfaceProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   // State, not a ref: `create` is async, so readiness must be able to trigger the
@@ -74,6 +84,17 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   const streamingRef = useLatest(streaming);
   // Read once at attach: the renderer takes it as a construction option.
   const preserveStateRef = useRef(preserveState);
+  /** Retries spent on the current code. Reset by a successful paint and by every new frame. */
+  const retriesRef = useRef(0);
+  // Re-deliver the current code after a dependency failed to fetch. `clear` is what makes it a
+  // real retry: the renderer skips an unchanged compile result, so without it the failed import
+  // is never re-attempted and every retry is a no-op. Held through `useLatest` because the
+  // attach effect runs once and cannot capture a renderer that did not exist yet.
+  const retryRef = useLatest(() => {
+    if (renderer === null || code === "") return;
+    renderer.clear({ preserveVisualState: true });
+    renderer.render(code);
+  });
 
   useEffect(() => {
     const host = hostRef.current;
@@ -87,9 +108,19 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       callbacks: {
         onError: (error, phase) => {
           if (streamingRef.current && TRANSIENT.test(error.message)) return;
+          // Only retry a settled surface. While streaming, the next frame re-delivers on its own,
+          // and a retry there would replace the growing buffer with a stale prefix.
+          if (!streamingRef.current && TRANSIENT_LOAD.test(error.message) && retriesRef.current < MAX_RETRIES) {
+            retriesRef.current += 1;
+            setTimeout(() => retryRef.current(), RETRY_BACKOFF_MS * retriesRef.current);
+            return;
+          }
           onErrorRef.current?.(error, phase);
         },
-        onRendered: () => onRenderedRef.current?.(),
+        onRendered: () => {
+          retriesRef.current = 0;
+          onRenderedRef.current?.();
+        },
       },
     }).then((created) => {
       // A fast unmount can land before `create` settles; detaching there would leak the root.
@@ -139,6 +170,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
         if (!streamingRef.current && deliveredRef.current !== "") renderer.render(deliveredRef.current);
       });
     }
+    retriesRef.current = 0;
     if (!streaming) {
       // Settled: replace the buffer outright. `deliveredRef` must follow, or a later
       // streaming frame would diff against a prefix this render already superseded.
