@@ -1085,3 +1085,32 @@ After: **3/3**, 165 lines, presets for 644/700/777 wired as buttons. Prose fixtu
 The shape of this whole session: **the model does not reject the rule, it finds a new reason the
 rule doesn't apply.** Each reason is locally reasonable, which is why they have to be answered
 individually and by name rather than by making the rule louder.
+
+### Hunting the next escape, and finding the one that inverts (2026-08-22)
+
+Three escapes were on record, so I went looking for a fourth instead of waiting to trip over it:
+three prompts the rule should cover, 3 runs each, populated workspace.
+
+| prompt | before |
+| --- | --- |
+| `semver ^1.2.3 到底包含哪些版本` | 3/3 |
+| `正则 ^\w+@\w+\.\w{2,}$ 能匹配什么邮箱` | 1/3 (one reply produced **two** cards — the only multi-card seen) |
+| `git reset --soft --mixed --hard 有啥区别` | **0/3** |
+
+The git reasoning gives the fourth escape, and it is the strongest of the four because it does
+not dodge the rule, it **reverses** it:
+
+> *"this is a conceptual teaching question, not a computation. A card doesn't add much here — the
+> three states are fixed facts, not something to explore."*
+
+Said immediately after drawing a HEAD × index × working-tree grid by hand. A concept with nothing
+to compute is the case prose is *worst* at: three boxes and a button that shows which ones move.
+The counter added: whenever the explanation needs a before/after or a row per mode, the reader
+learns it by running it once, not by reading which cells say 不动.
+
+After: git **3/3** (111 lines, all three modes, HEAD and index wired to a click), regex **3/3**.
+Full regression 7/7.
+
+Four escapes, four sentences, same rule. **They are not rejections of the rule — each is a reason
+it doesn't apply here, locally reasonable every time.** Which is why volume does not help and
+naming the specific thought does.
