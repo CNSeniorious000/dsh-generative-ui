@@ -1,6 +1,7 @@
 # dsh generative UI：例子集
 
-四轮头脑风暴 + 一轮收敛，**752 个候选意图**，经交叉质证后留下的。
+六轮工作：四轮发散、一轮收敛核实、一轮把最强的点子写成真代码并编译。
+**895 个独立意图**，经交叉质证后留下的。
 
 每条都是**用户会原话打出来的**，不是需求描述——措辞本身被单独打分。判官毙掉了
 「我想 hover 文件名就看到内容」这类，理由是*「这是在替模型写交互规格，不是用户会说的话」*。
@@ -558,6 +559,74 @@ streamText 按类别（睡/吃/穿/应急）生成清单，每项可勾、可删
 - 「做一个只在我卡住的时候才出现的东西」 `canvas` 📁 ✨
 
 <sub>📁 `$dsh/fs` · ⌘ `$dsh/exec` · ✨ `$dsh/ai` · 💬 `$dsh/chat`</sub>
+
+---
+
+## 三点五、验证过的部分
+
+### `$dsh/exec`：这轮才有的能力（47 条）
+
+`bash(command)` 是研究中加的。R5 有一个 agent 专门评估它解锁了什么，
+并且诚实地指出了一个问题：**15 秒上限让「跑测试」这个用例名不副实**——
+提示词和 skill 都把「a test run」列为用途，但真实项目的测试套件跑不完。
+它建议要么提高上限，要么做流式变体，要么别在文档里承诺。
+
+- **「帮我把这个仓库最近 20 条 commit 画成一个按作者分组的柱状图」** `canvas` — exec bash 跑 git log --pretty=%an，前端 reduce 成计数，recharts BarChart，isAnimationActive={false}。纯只读一次性数据，无内部状态。…
+- **「看看 src 下面各个目录多大，画个图」** `canvas` — bash du -sh src/*，解析成 {name,size}，横向条形图 + 数字标签。…
+- **「跑一下测试，把结果做成一个能展开看失败详情的面板」** `canvas` — bash 跑测试命令，解析输出成用例列表，折叠展开。注意 15s 会被杀。…
+- **「扫一遍 src 里的 TODO 注释，做成可点开定位的列表」** `canvas` — bash rg -n TODO src，解析 file:line，点击调 chat 让我去看那一行。…
+- **「帮我做个画布，展示当前 git status，带个刷新按钮」** `canvas` — bash git status --porcelain，刷新按钮重跑并 setState。注意非零退出也会 resolve，要看 exitCode。…
+- **「这个仓库最近都改了啥，给我个能点开看的」** `canvas` — Commit timeline. One `git log -n 50 --format=%H%x00%an%x00%ar%x00%s` on mount, parsed client-side into rows — NUL-delimited so subjects with any punct…
+- **「帮我搜一下这个词在代码里都出现在哪」** `canvas` — Live ripgrep. Text input, 250ms debounce, `rg -n --color=never -S -- <shell-quoted query> | head -200`. Results grouped by file, click to `readFile` a…
+- **「我改了哪些文件？还没提交的那些」** `canvas` — Working-tree dashboard. `git status --porcelain=v1 -b` parsed into staged/unstaged/untracked columns, plus `git diff --stat` for churn numbers. Poll e…
+- **「跑一下测试，我想看哪些挂了」** `canvas` — Test runner. A Run button fires the project's test command, parses the summary into pass/fail counts and a failure list, and keeps the last run in loc…
+- **「帮我看看这个项目哪些文件最占地方」** `canvas` — Treemap of disk usage. One `du -ak . | sort -rn | head -500` builds the whole tree client-side — no walking, no per-directory recursion. Click a recta…
+- **「这两个分支到底差在哪」** `canvas` — Branch comparator. Two dropdowns populated by one `git branch -a --format=%(refname:short)`; picking a pair runs `git log --oneline A..B` and `git log…
+- **「给我做个能跑命令的面板，我老忘那几个命令」** `canvas` — A personal command palette. User adds entries (label + command), stored in localStorage; each row has a Run button that shows exit code, timing, and o…
+- **「这个函数是谁在调用？给我个能点的图」** `canvas` — Call-site explorer. One `rg -n --json -- '<symbol>\s*\('` gives every candidate call site with byte offsets in a single pass; the card groups by file,…
+- **「帮我把 git blame 看得舒服一点」** `canvas` — Annotated file view. `git blame --line-porcelain <path>` once, parsed into per-line author/date/sha; render the file with a left gutter colored by com…
+- **「看看我这周写了多少代码」** `canvas` — Contribution summary. `git log --since=<picked range> --author=<picked author> --numstat --format=%H%x00%at` in one call; sum insertions/deletions cli…
+- **「这个仓库依赖装得对不对，帮我查查」** `canvas` — Dependency health. Runs a small batch — the lockfile-consistency check, an outdated listing, `du -sh node_modules` — as three parallel commands via Pr…
+- **「帮我做个提交前的检查清单」** `canvas` — Pre-commit checklist. Rows for lint, typecheck, and status-clean; each row has its own Run and its own state, so a slow typecheck does not block the u…
+- **「这个文件的历史，我想看它一步步变成现在这样」** `canvas` — File time machine. `git log --format=%H%x00%ar%x00%s -- <path>` for the revision list, then one `git show <sha>:<path>` per revision the user selects.…
+
+### 音频（实测，不是回忆）
+
+R5 的音频 agent 用四个探针页在真实浏览器里量了这些，全部是**静默失败**类型：
+
+| 事实 | 后果 |
+| --- | --- |
+| 未经点击的 context 生来 suspended，`osc.start()` **不抛错** | 排进一个永不前进的时钟，无声无错 |
+| `await ctx.resume()` 在无手势时**永不 settle** | try/catch 无用；`await` 会把卡片卡死在首帧 |
+| 一次点击解锁**整个文档**，不只那个 handler | 节拍器/音序器可行——只有第一次按键必须是真手势 |
+| `decodeAudioData` 和 `OfflineAudioContext` **不需要手势** | 波形图可以在画布打开时就画出来，只有「听」被门控 |
+| Analyser 1024 bins ≈ 21Hz 分辨率 | 画图够用，做调音器不行（要用时域自相关） |
+
+这些已经写进 skill。发现它们的方式值得一提：agent 没有凭记忆写 Web Audio 的规则，
+而是真的开了浏览器去测——`await resume()` 永不 settle 这条，靠读文档是读不出来的。
+
+### 八张真卡（已编译验证）
+
+最后一轮不再写描述，直接**写代码**——把最强的八个点子写成完整的 `.ui4a.tsx`，
+然后用插件自己的编译器跑一遍，再筛 §4 记录的三个「编译通过但运行时炸」的坑。
+
+| 卡片 | 行数 | 编译产物 | 用到的能力 |
+| --- | --- | --- | --- |
+| 康威生命游戏，种子来自真实仓库 | 289 | 19.5kb | `$dsh/fs` |
+| cron 表达式的下一次触发 | 321 | 25.6kb | — |
+| 字素簇 / 码点 / UTF-16 / UTF-8 四层对齐 | 217 | 23.2kb | — |
+| 会衰老的 TODO | 265 | 21.7kb | `$dsh/exec` `$dsh/chat` |
+| 能弹的钢琴 | 284 | 17.7kb | Web Audio |
+| 简谱播放器 | 253 | 21.4kb | Web Audio |
+| 排序算法同屏赛跑 | 347 | 21.2kb | — |
+| glob 在真实文件树上高亮 | 265 | 25.5kb | `$dsh/fs` |
+
+**8/8 编译通过，三项筛查全清白。** 代码在 `.research/cards/`（不入库），
+筛查脚本是 `scripts/compile-cards.ts`。
+
+筛查器本身先用一张故意写坏的卡验证过——**第一版的 JSX 下标正则完全反了**：
+它匹配 `useState<number[]>`（合法泛型）却漏掉 `<META[k].icon />`（真正的非法下标）。
+这跟 §4.5 里「判分器要自验」是同一条教训。
 
 ---
 
