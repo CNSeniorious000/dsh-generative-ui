@@ -142,6 +142,29 @@ One user turn per call — there is no conversation here. Anything the card know
 goes into the prompt it builds. And skip it entirely when the data is genuinely fixed: a
 converter, a timer, a colour picker have nothing to generate.
 
+## Check it before you hand it over
+
+A canvas is a file, so you can run a checker over it. \`@genui/cli\` validates exactly this
+kind of TSX:
+
+\`\`\`
+npx --yes https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main check <file>
+\`\`\`
+
+\`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. \`check\` includes
+TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
+
+It is worth the round trip because it catches the two mistakes that cost the most here, both
+of which otherwise reach the user as a blank card:
+
+- \`<META[key].icon />\` — JSX allows the member form \`<a.b />\` but not a subscript.
+- \`import { Pie } from "recharts"\` beside \`export default function Pie()\` — reported as
+  "Import declaration conflicts with local declaration". Nothing fails at build time; at
+  runtime the component recurses into itself until React throws #185.
+
+Skip it for a small inline block you can read in one screen. Run it on anything long, and on
+anything you are about to leave in the workspace as a canvas.
+
 ## Imports
 
 Bare specifiers resolve from npm at render time — there is no install step, so never tell the user to install anything and never hold back an import because it "isn't available". Importing it *is* installing it.

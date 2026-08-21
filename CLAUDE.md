@@ -473,6 +473,25 @@ yet, and one method call on a missing one throws inside render. After the skill 
 saying every streamed field is optional until the end, the re-run guarded all of them
 (`?? []`, `?? "…"`, `&&`) and ran clean: 47 → 141 nodes as items landed one at a time.
 
+### `@genui/cli` as the model's own checker (2026-08-21)
+
+The skill tells the model to run `@genui/cli check` over a canvas before leaving it. Three
+things about that recommendation were measured rather than assumed:
+
+- **It catches what matters here.** `check` (which includes TypeScript diagnostics) flags both
+  of §4's expensive failures: the JSX subscript `<a[k] />`, and an import shadowed by the
+  default export — the React #185 recursion that builds clean and renders a blank card.
+  `lint` alone catches only the first.
+- **`npx`, not `bunx`.** The package is not on npm, so the URL is pkg.pr.new's long form
+  (`pkg.pr.new/${owner}/${repo}/${package}@${commit-or-branch}`; the compact form needs an npm
+  release). bun rejects that with `unrecognised dependency format` — a scoped name inside the
+  URL — while npx runs it. This is the one place in this repo where npx is the right answer.
+- **`@main`, not a SHA.** The branch tag resolves to the latest published commit, so the
+  instruction does not rot. pkg.pr.new publishes on every push to that repo.
+
+`@genui/cli` lives in `MindLab-Research/macaron-genui-demo` as a private workspace package; if
+it is ever released to npm, shorten the URL and drop the npx caveat.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you
