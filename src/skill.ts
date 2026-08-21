@@ -220,6 +220,19 @@ is a photograph: right the moment you took it, silently stale from the next edit
 card is about workspace content, the card calls \`readFile\`. Reserve your own reading for
 deciding *what to build*, not for supplying what it displays.
 
+**Read on demand, not all at once.** A list of twenty files does not want twenty
+\`readFile\` calls before it can draw — it wants to draw immediately from \`readdir\` (which
+already carries the type and the size), and to fetch a body only when the reader asks for one.
+Hovering a row, clicking to expand it, selecting it in a two-pane layout: all of these are one
+read at the moment of interest, cached after. That is what makes a card feel instant on a big
+tree, and it is also the difference between a browser and a table — a table answers what you
+guessed the reader wanted, a browser answers what they actually reach for.
+
+A useful default: draw from the cheap call, fetch on \`onMouseEnter\` (with a short delay so a
+sweep across the list does not fire twenty reads) or on click, keep what you fetched in a
+\`Map\`, and show a quiet placeholder in the gap. Never read a file the reader has not looked
+at yet.
+
 Keep \`localStorage\` for a canvas's own private state (which tab was open, the draft they were
 typing); writing that to disk just litters the repo.
 
