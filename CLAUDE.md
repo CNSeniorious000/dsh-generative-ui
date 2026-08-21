@@ -435,6 +435,14 @@ the way the prompt describes, rather than whether the API works:
 - Unprompted, they also got the answered state right: `disabled` after choosing, the chosen
   card highlighted, and a free-text field for answers not on the list.
 
+`$ui4a/ai` measured the same way: asked for "a recipe tool — I type ingredients, it lists
+dishes", the model reached for `streamText` + `partial-json` and parsed the buffer as it grew,
+without loading the skill. The first attempt then died mid-generation on
+`dish.difficulty.includes(…)` — `partial-json` hands out objects whose fields have not arrived
+yet, and one method call on a missing one throws inside render. After the skill gained a rule
+saying every streamed field is optional until the end, the re-run guarded all of them
+(`?? []`, `?? "…"`, `&&`) and ran clean: 47 → 141 nodes as items landed one at a time.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you
