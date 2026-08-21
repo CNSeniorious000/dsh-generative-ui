@@ -633,6 +633,19 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### Counting fences does not count canvases (2026-08-22)
+
+Every headless eval in this file counts ` ``` ` fences in the reply. That misses a canvas
+entirely: a canvas is a *file*, and the reply about it is prose. I read `fence=0` on
+`这个目录下都有啥文件，我想快速看看每个文件里写了什么` and concluded the browse rule had failed —
+twice. It had not. The run produced a **522-line canvas file browser**: a collapsible tree from
+`readdir`, `readFile` only on click, a `Map` cache that also caches failures, and a single-column
+fallback under 560px. Exactly the shape the rule describes.
+
+**An eval must count both**: fences in `out.txt` *and* files under
+`.dsh/ui4a/canvases/`. Counting one and calling it "produced UI" understates the model on
+precisely the requests most likely to deserve a canvas — the ones about a whole set of things.
+
 ### Regression after a day of prompt changes (2026-08-22)
 
 Three trigger rules were added in one day (expression, browse, exec). Re-ran the six prompts
