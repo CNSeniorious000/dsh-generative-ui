@@ -99,11 +99,17 @@ See `scripts/build.ts`. All four let the plugin **build fine and blow up at runt
 Inherited from `../ui4a-playground/src/fs/contract.ts`; **the only difference is that the files are real** (not a browser VFS):
 
 ```
-<workspace>/ui4a/
+<workspace>/.dsh/ui4a/
 ├── canvases/<id>.ui4a.tsx   # → a canvas view, one mini app
 ├── canvases/<id>/*.tsx      # → that mini app's sub-tree
 └── state/<id>/states.json   # → in the contract, not implemented (see §4)
 ```
+
+**`.dsh/` is the harness's own project convention, not ours** — `dsh-skill-filesystem` reads
+`join(projectRoot, ".dsh/skills")` and labels that source `project-dsh`. Sitting beside it
+keeps a plain `ls` of the user's repo clean and puts these files where anyone would look for
+something dsh wrote. `ui4a` goes *beneath* it because that names the format: this is a dsh
+plugin writing ui4a files, not a ui4a project with a dsh corner.
 
 `src/contract.ts` is the single place the contract is parsed. **Anything that needs to decide "is this a canvas file" must call it** — no ad-hoc regexes elsewhere.
 

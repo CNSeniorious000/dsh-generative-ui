@@ -3,7 +3,16 @@
  * Shared by both halves; never re-derive these patterns with an inline regex.
  */
 
-export const UI4A_DIR = "ui4a";
+/**
+ * Where generated files live, under the workspace's own dsh directory.
+ *
+ * `.dsh/` is the harness's project convention, not ours — `dsh-skill-filesystem` reads
+ * `join(projectRoot, ".dsh/skills")` and labels that source `project-dsh`. Sitting beside
+ * it keeps a plain `ls` of the user's repo clean and puts our files where they would look
+ * for anything dsh wrote. `ui4a` beneath it names the format, which is the honest nesting:
+ * this is a dsh plugin writing ui4a files, not a ui4a project with a dsh corner.
+ */
+export const UI4A_DIR = ".dsh/ui4a";
 export const CANVAS_DIR = `${UI4A_DIR}/canvases`;
 export const STATE_DIR = `${UI4A_DIR}/state`;
 export const CANVAS_SUFFIX = ".ui4a.tsx";
