@@ -28,7 +28,7 @@ await mkdir(out, { recursive: true });
  */
 const EMPTY_RESULT: Record<string, string> = {
   readFile: '""',
-  readdir: "[]",
+  readdir: "[]",   // DirEntry[]
   writeFile: "undefined",
   streamText: "(async function* () {})()",
 };

@@ -72,8 +72,14 @@ export function bind() {
   const fs = {
     /** The file's text. Throws when it does not exist or the session may not read it. */
     readFile: (path: string) => request<{ content: string }>("GET", path).then((body) => body.content),
-    /** Directory entries, names only. */
-    readdir: (path: string) => request<{ entries: { name: string }[] }>("GET", path, undefined, "list=1").then((body) => body.entries.map((entry) => entry.name)),
+    /**
+     * Directory entries: the name, whether it is a file or a directory, and a file's size.
+     *
+     * An array of objects rather than of names, because without `type` a card cannot draw a
+     * tree — it would have to probe every entry with a second call to find out whether it
+     * can be descended into. The host has all three already; we used to drop two of them.
+     */
+    readdir: (path: string) => request<{ entries: Ui4aDirEntry[] }>("GET", path, undefined, "list=1").then((body) => body.entries),
     /**
      * Writes the file, subject to the session's own access mode.
      *
@@ -104,6 +110,9 @@ async function request<T>(method: "GET" | "POST", path: string, content?: string
   if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/fs ${path}: ${body.error ?? response.statusText}`);
   return body as T;
 }
+
+/** One entry of a directory listing. `size` is absent for directories. */
+export type Ui4aDirEntry = { name: string; type?: "file" | "directory"; size?: number };
 
 /** One user turn plus an optional system prompt — see the route's note on why not more. */
 export type Ui4aStreamOptions = { prompt: string; system?: string };

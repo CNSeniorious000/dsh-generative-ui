@@ -2,8 +2,10 @@
 declare module "$dsh/fs" {
   /** The file's text. Rejects when it does not exist or the session may not read it. */
   export function readFile(path: string): Promise<string>;
-  /** Entry names in a directory. */
-  export function readdir(path: string): Promise<string[]>;
+  /** One directory entry. `size` is absent for directories. */
+  export type DirEntry = { name: string; type?: "file" | "directory"; size?: number };
+  /** A directory's entries — enough to draw a tree without probing each name. */
+  export function readdir(path: string): Promise<DirEntry[]>;
   /** Rejects with `FS_SANDBOX_DENIED` when the session is read-only. */
   export function writeFile(path: string, content: string): Promise<void>;
 }

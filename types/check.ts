@@ -16,7 +16,7 @@ type Declared = {
   ai: { streamText: (options: { prompt: string; system?: string } | string) => AsyncIterable<string> };
   fs: {
     readFile: (path: string) => Promise<string>;
-    readdir: (path: string) => Promise<string[]>;
+    readdir: (path: string) => Promise<{ name: string; type?: "file" | "directory"; size?: number }[]>;
     writeFile: (path: string, content: string) => Promise<void>;
   };
 };

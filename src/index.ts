@@ -116,7 +116,7 @@ type FsCtx = {
   fs: {
     resolve: (path: string, opts?: { cwd?: string }) => Promise<FsTargetLike>;
     readText: (target: FsTargetLike) => Promise<string>;
-    listDir: (target: FsTargetLike) => Promise<{ name: string; kind?: string }[]>;
+    listDir: (target: FsTargetLike) => Promise<{ name: string; type?: string; size?: number }[]>;
     writeText: (target: FsTargetLike, content: string, expected?: undefined, signal?: AbortSignal, policy?: unknown) => Promise<unknown>;
   };
   sandboxPolicy: { resolve: (request?: { session?: unknown }) => unknown };
@@ -156,7 +156,13 @@ async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, re
   try {
     const target = await ctx.fs.resolve(path, { cwd });
     if (req.method === "GET") {
-      if (url.searchParams.get("list") !== null) return json(200, { entries: await ctx.fs.listDir(target) });
+      if (url.searchParams.get("list") !== null) {
+        // Only the three fields a card can use. The host also returns its own `target` and a
+        // `version` cache key (dev:ino:size:mtime:ctime — note mtime precedes ctime, which is
+        // not the order the name suggests); neither is contract, so neither is forwarded.
+        const entries = await ctx.fs.listDir(target);
+        return json(200, { entries: entries.map(({ name, type, size }) => ({ name, type, size })) });
+      }
       return json(200, { content: await ctx.fs.readText(target) });
     }
     if (req.method !== "POST") return void res.writeHead(405).end();
