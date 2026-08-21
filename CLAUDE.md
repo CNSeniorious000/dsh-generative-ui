@@ -678,9 +678,20 @@ above the two type mismatches, because a missing name means a piece of code is a
 than mislabelled), and added a rule worth keeping: *"报错一大堆时通常先看第一个，因为它最可能是
 根因；但这次三个是平级的，所以看最重的那个"*. Nothing there wanted an interface.
 
-The round-7 intent said **forty-seven** errors, which is a different question — at that size
-"which first" stops being a judgement and becomes triage over a set. Re-running at that scale
-is the honest test of the angle; the three-error version tested the wrong thing.
+Re-ran at **forty-eight** errors, the scale the intent actually named. Still no card, and the
+reply explains why better than the intent did:
+
+> "先看第一条，但更要紧的是先**归类**——这 48 条不是 48 个问题。"
+
+Two codes, twenty-four each, and it said so in a four-row table, noted that the two classes do
+not cascade into one another, and then inferred *"这文件看起来是被截断/删了一半"* — which is
+exactly how the fixture was built. Forty-eight lines of output, two actual problems.
+
+So the angle's premise is wrong about real failures: a big error count is usually a small
+number of classes repeated, and once deduplicated there is nothing to triage. A card would earn
+its place on a genuinely heterogeneous failure — a monorepo build where twelve packages fail
+differently — not on volume alone. Worth remembering before designing UI for a state whose
+shape has not been checked.
 
 ### Is the card's arithmetic right? (2026-08-22)
 
