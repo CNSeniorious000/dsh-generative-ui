@@ -54,7 +54,7 @@ Two things follow from the lifetime difference:
 Ask with an **inline** block instead: one short line saying what you need to know, then 2–4 concrete options as clickable cards, each wired to \`sendMessage\` so a click *is* the reply:
 
 \`\`\`tsx
-import { sendMessage } from "$ui4a/chat"
+import { sendMessage } from "$dsh/chat"
 
 export default function Pick() {
   const [picked, setPicked] = useState<string | null>(null)
@@ -101,7 +101,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 ## Generating content inside the card
 
-\`streamText\` from \`$ui4a/ai\` is for when a literal array in the file would freeze the thing
+\`streamText\` from \`$dsh/ai\` is for when a literal array in the file would freeze the thing
 that should vary — the recipe steps, the itinerary, the candidate names. It inherits the
 app's model, so there is no key to ask for and no setup.
 
@@ -109,7 +109,7 @@ Ask for JSON and parse the buffer as it grows, so items land one at a time rathe
 at once at the end:
 
 \`\`\`tsx
-import { streamText } from "$ui4a/ai"
+import { streamText } from "$dsh/ai"
 import { parse, Allow } from "partial-json"
 
 let buffer = ""

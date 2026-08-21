@@ -15,6 +15,16 @@ export const CANVAS_SUFFIX = ".ui4a.tsx";
 export const FENCE_LANG = "ui4a/tsx";
 
 /**
+ * Import prefix for the capabilities the plugin lends to generated code.
+ *
+ * `$dsh/`, not `$ui4a/`: what these expose is the harness — the conversation, its model,
+ * its filesystem — and none of it is part of the ui4a rendering contract that `FENCE_LANG`
+ * and the canvas paths above define. A card written against them only runs inside dsh.
+ */
+export const CAPABILITY_PREFIX = "$dsh";
+export const capabilityModule = (group: string) => `${CAPABILITY_PREFIX}/${group}`;
+
+/**
  * Canvas ids are path segments, so anything that could escape the directory is not one.
  *
  * Stated as an exclusion rather than an allowlist: `[\w-]+` reads as "safe" but is really

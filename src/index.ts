@@ -181,7 +181,7 @@ export function apply(ctx: Context): void {
     scoped.effect(() => scoped.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: (req, res) => serveAsset(req, res, file) }), "dsh-generative-ui: tsx wasm");
     scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: (req, res) => serveCanvas(liveWorkspaces, req, res) }), "dsh-generative-ui: canvas reads");
     // One level deeper again: a deployment can mount a web server without an LLM runtime, and
-    // losing `$ui4a/ai` there should not take the wasm and canvas routes down with it.
+    // losing `$dsh/ai` there should not take the wasm and canvas routes down with it.
     scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {
       withLlm.effect(() => withLlm.webServer.register({ kind: "exact", path: AI_STREAM_PATH, handler: (req, res) => serveAi(withLlm as unknown as LlmCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: model stream");
     });

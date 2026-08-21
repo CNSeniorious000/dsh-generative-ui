@@ -81,7 +81,7 @@ export function apply(ctx: ClientContext): void {
   // its URL is revoked (the module graph holds it), so this only reclaims URLs nothing can
   // reach any more. Without it every HMR round leaks one per registered specifier.
   ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
-  // What `$ui4a/chat` calls into. A nested fiber, not a static inject: every name in
+  // What `$dsh/chat` calls into. A nested fiber, not a static inject: every name in
   // `inject` is a hard dependency, and a profile without `conversation` would otherwise
   // take the whole plugin down rather than just this one capability.
   ctx.inject(["conversation"], (scoped) => {
@@ -98,13 +98,13 @@ export function apply(ctx: ClientContext): void {
         send: (text) => {
           const id = currentSession();
           const session = id === undefined ? undefined : scoped.sessions.scope(id);
-          if (session === undefined) return void console.error("[dsh-generative-ui] $ui4a/chat: no session to send into");
+          if (session === undefined) return void console.error("[dsh-generative-ui] $dsh/chat: no session to send into");
           // The scoped context is minted by the host and carries its own inject set, so our
           // outer declaration does not reach it — reading `conversation` off it directly
           // throws `cannot get property "conversation" without inject`. One more inject on
           // that context is what makes the property readable.
           session.inject(["conversation"], (addressed) => {
-            void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] $ui4a/chat send failed", error));
+            void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] $dsh/chat send failed", error));
           });
         },
       });
@@ -112,7 +112,7 @@ export function apply(ctx: ClientContext): void {
         release();
         releaseBindings();
       };
-    }, "dsh-generative-ui: $ui4a host");
+    }, "dsh-generative-ui: $dsh host");
   });
   // Mounted inside the effect, not beside it: `mountCanvasHost` reaches for MutationObserver
   // straight away, and doing that during registration is exactly what smoke rejects.

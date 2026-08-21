@@ -159,21 +159,24 @@ Three traps:
 - **Closing a canvas must leave a way back, and the transcript is not enough of one.** Dismissal only hides, and a canvas outlives the session that wrote it — so a panel fed purely by the current transcript strands both the one just closed and every one written yesterday. `CanvasLauncher` sits where the panel's edge was and offers the whole workspace: the canvas route lists the directory when given no `id` (same cwd allowlist), and a canvas opened that way has no tool call behind it, so its body is read off disk once. The same picker sits in the panel header, so switching to another canvas does not require closing first. Note the repaint signature has to carry that offerable list: closing the last canvas changes nothing about the visible one, so a signature built from the visible canvases alone never repaints and the launcher never appears.
 - **The panel cannot be inserted into AppFrame as a flex child.** The host's column widths exactly fill the viewport, so an inserted column is always pushed offscreen — present in the DOM, correctly sized, and invisible. The answer is `position: fixed` against the right edge plus an equal `padding-right` on the frame.
 
-## 3.65 `$ui4a/*`: what generated code can call back into
+## 3.65 `$dsh/*`: what generated code can call back into
 
-The playground gives generated code four capability modules — `$ui4a/fs`, `$ui4a/state`,
-`$ui4a/chat`, `$ui4a/ai`. Only one of them has a host behind it here:
+The playground gives generated code four capability modules under `$ui4a/`. Here the prefix
+is **`$dsh/`**: what these expose is the harness — its conversation, its model, its
+filesystem — and none of it belongs to the ui4a rendering contract that the fence language
+and the canvas paths define. A card that imports one only runs inside dsh. `contract.ts`
+owns the prefix; nothing else should spell it out.
 
 | Module | Here | Why |
 | --- | --- | --- |
-| `$ui4a/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
-| `$ui4a/fs` | no | dsh has no browser-side filesystem — `dsh-fs` is the Node half only. Would need our own route, like the canvas read |
-| `$ui4a/state` | no | needs the `states.json` persistence that §4 records as unimplemented; the skill teaches `localStorage` instead |
-| `$ui4a/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
+| `$dsh/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
+| `$dsh/fs` | no | dsh has no browser-side filesystem — `dsh-fs` is the Node half only. Would need our own route, like the canvas read |
+| `$dsh/state` | no | needs the `states.json` persistence that §4 records as unimplemented; the skill teaches `localStorage` instead |
+| `$dsh/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
 
 The mechanism, ported from `ui4a-playground/src/runtime/bindings.ts`: the real implementation
-is ordinary TypeScript in our bundle, registered under `$ui4a/internal`, and each
-`$ui4a/<group>` is a few-line blob shim that imports it and re-exports that group's members.
+is ordinary TypeScript in our bundle, registered under `$dsh/internal`, and each
+`$dsh/<group>` is a few-line blob shim that imports it and re-exports that group's members.
 The indirection exists because **a blob URL cannot carry a query string** — anything the
 module needs to know about its caller has to be compiled into the body. The playground binds
 per surface for that reason; we have one global host, so one shim set is enough.
@@ -253,7 +256,7 @@ Three other empirical corrections:
 
 - **Half the canvases had no persistence** (8/19 used localStorage in the first round), so a refresh lost everything.
   A canvas is by definition "somewhere the user comes back to," which makes this fatal. The skill now requires
-  `localStorage`. Note: **do not write `usePersistedState`** — that's the playground's `$ui4a/state`, which this
+  `localStorage`. Note: **do not write `usePersistedState`** — that's the playground's `$dsh/state`, which this
   plugin never implemented, and making the model import something nonexistent fails compilation outright, which is
   far worse than losing state. `rg` for any API you promise in a prompt before you promise it.
 - **The model hand-rolls implementations to avoid library traps** (dropping recharts for hand-built SVG, dropping a
@@ -422,12 +425,12 @@ The boundary renders a bare text node, so the child count is 0 either way. Count
 a generated component's `item.difficulty.includes(…)` on a half-streamed object as an infrastructure
 failure, and I went looking in the wrong half of the system.
 
-### `$ui4a/chat` in the model's hands (2026-08-21, 5 prompts + 5 repeats)
+### `$dsh/chat` in the model's hands (2026-08-21, 5 prompts + 5 repeats)
 
 Ran five underspecified requests through headless to see whether the model uses `sendMessage`
 the way the prompt describes, rather than whether the API works:
 
-- **5/5 imported `$ui4a/chat` and wired every option to it.** No prompting for it beyond the
+- **5/5 imported `$dsh/chat` and wired every option to it.** No prompting for it beyond the
   one line in the resident layer and the example in the skill.
 - **5/5 sent human-readable text** — `sendMessage(id)` where `id` is `单位换算器` / `个人主页` /
   `习惯打卡`. None sent a JSON payload, which matters because `ctx.conversation.send` always
@@ -435,7 +438,7 @@ the way the prompt describes, rather than whether the API works:
 - Unprompted, they also got the answered state right: `disabled` after choosing, the chosen
   card highlighted, and a free-text field for answers not on the list.
 
-`$ui4a/ai` measured the same way: asked for "a recipe tool — I type ingredients, it lists
+`$dsh/ai` measured the same way: asked for "a recipe tool — I type ingredients, it lists
 dishes", the model reached for `streamText` + `partial-json` and parsed the buffer as it grew,
 without loading the skill. The first attempt then died mid-generation on
 `dish.difficulty.includes(…)` — `partial-json` hands out objects whose fields have not arrived

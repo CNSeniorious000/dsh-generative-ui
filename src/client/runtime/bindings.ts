@@ -1,5 +1,5 @@
 /**
- * The `$ui4a/*` capability modules generated code may import.
+ * The `$dsh/*` capability modules generated code may import.
  *
  * These are real TypeScript that lives in our bundle; generated code reaches them through
  * a per-surface blob shim, because a blob URL cannot carry a query string and the surface
@@ -7,10 +7,11 @@
  *
  * Ported from ui4a-playground, minus what this host cannot back: there is no browser-side
  * filesystem service in dsh (`dsh-fs` is the Node half only) and no client-facing model
- * gateway, so `$ui4a/fs` and `$ui4a/ai` have no implementation here yet.
+ * gateway, so `$dsh/fs` and `$dsh/ai` have no implementation here yet.
  */
 import { moduleUrl, registerModules, registryImports } from "./registry.ts";
 import { AI_STREAM_PATH } from "../../contract-assets.ts";
+import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
 
 /** What the plugin's client half lends to generated code. Registered once, at apply. */
@@ -21,7 +22,7 @@ export type Ui4aHost = {
   cwd: () => string | undefined;
 };
 
-const INTERNAL = "$ui4a/internal";
+const INTERNAL = capabilityModule("internal");
 let host: Ui4aHost | null = null;
 
 export function registerUi4aHost(next: Ui4aHost): () => void {
@@ -33,7 +34,7 @@ export function registerUi4aHost(next: Ui4aHost): () => void {
 }
 
 /**
- * The capability surface, one group per `$ui4a/<group>` module.
+ * The capability surface, one group per `$dsh/<group>` module.
  *
  * A function rather than a constant so the host can be swapped (or torn down) without the
  * already-imported blob modules going stale — they close over `bind`, not over a host.
@@ -61,7 +62,7 @@ export function bind() {
     streamText: (options: Ui4aStreamOptions | string): AsyncIterable<string> => {
       if (host === null) throw new Error("[dsh-generative-ui] no host bound");
       const workspace = host.cwd();
-      if (workspace === undefined) throw new Error("[dsh-generative-ui] $ui4a/ai needs a session workspace");
+      if (workspace === undefined) throw new Error("[dsh-generative-ui] $dsh/ai needs a session workspace");
       return streamFrom(workspace, typeof options === "string" ? { prompt: options } : options);
     },
   };
@@ -85,8 +86,8 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterab
     headers: { "content-type": "application/json" },
     body: JSON.stringify(request),
   });
-  if (!response.ok) throw new Error(`[dsh-generative-ui] $ui4a/ai: ${response.status} ${response.statusText}`);
-  if (response.body === null) throw new Error("[dsh-generative-ui] $ui4a/ai: no response body");
+  if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/ai: ${response.status} ${response.statusText}`);
+  if (response.body === null) throw new Error("[dsh-generative-ui] $dsh/ai: no response body");
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   while (true) {
@@ -100,7 +101,7 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterab
 
 const GROUPS = ["chat", "ai"] as const;
 
-/** Blob URLs for every `$ui4a/*` module, built once and reused by every surface. */
+/** Blob URLs for every `$dsh/*` module, built once and reused by every surface. */
 let cached: Record<string, string> | null = null;
 
 export function bindingImports(): Record<string, string> {
@@ -112,7 +113,7 @@ export function bindingImports(): Record<string, string> {
     const names = Object.keys(bound[group]);
     // One `export const` per name: ESM export names must be statically visible.
     const source = [`import { bind } from ${JSON.stringify(internal)};`, `const g = bind().${group};`, ...names.map((name) => `export const ${name} = g.${name};`), "export default g;"].join("\n");
-    imports[`$ui4a/${group}`] = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+    imports[capabilityModule(group)] = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
   }
   cached = imports;
   return imports;
@@ -125,7 +126,7 @@ export function releaseBindings(): void {
 
 /**
  * Every module generated code can import without reaching the network: the shell's React
- * family, plus the `$ui4a/*` capabilities.
+ * family, plus the `$dsh/*` capabilities.
  *
  * Exported from the plugin's client entry as well, so `bun run smoke` can build the blob
  * modules and parse them. They are synthesized strings that nothing type-checks, and a

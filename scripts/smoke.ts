@@ -121,7 +121,7 @@ if (registered_effects.length === 0) throw new Error("apply() registered no effe
  */
 if (typeof exports.localImports !== "function") throw new Error("client bundle exports no localImports()");
 const imports = (exports.localImports as () => Record<string, string>)();
-if (!("$ui4a/chat" in imports) || !("$ui4a/ai" in imports)) throw new Error(`a $ui4a capability is missing from the import map — generated code could not import it (got ${Object.keys(imports).join(", ")})`);
+if (!("$dsh/chat" in imports) || !("$dsh/ai" in imports)) throw new Error(`a $dsh capability is missing from the import map — generated code could not import it (got ${Object.keys(imports).join(", ")})`);
 if (!("react" in imports)) throw new Error("react is missing from the import map — generated code would load a second React");
 
 // Parse what those blob modules actually say. `new Function` rejects a syntax error the same
