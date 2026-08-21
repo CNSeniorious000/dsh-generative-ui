@@ -32,8 +32,13 @@ function buildModuleSource(specifier: string): string {
 
 export function registerModules(modules: Record<string, Record<string, unknown>>): void {
   for (const [specifier, namespace] of Object.entries(modules)) {
+    // Re-registering the same namespace must keep the URL. The document import map is
+    // installed once and points at these blobs for the tab's life, so revoking one leaves
+    // every esm.sh package resolving `react` to a dead URL — the module graph dies and the
+    // card renders blank with nothing in the console. Only a genuine hot-swap invalidates.
+    if (registry[specifier] === namespace) continue;
     registry[specifier] = namespace;
-    // A namespace can be hot-swapped; the old blob would re-export stale bindings.
+    // A namespace that really changed: the old blob would re-export stale bindings.
     const stale = urls.get(specifier);
     if (stale !== undefined) {
       URL.revokeObjectURL(stale);
