@@ -100,7 +100,7 @@ loader 的 `claimStyles(id)` 会执行 `document.querySelectorAll('style:not([da
 <workspace>/ui4a/
 ├── canvases/<id>.ui4a.tsx   # → canvas 视图，一个 mini app
 ├── canvases/<id>/*.tsx      # → 该 mini app 的子层级
-└── state/<id>/states.json   # → 持久化状态（devalue）
+└── state/<id>/states.json   # → 契约里有，但没实现（见 §4）
 ```
 
 契约由 `src/contract.ts` 单点解析，**任何地方要判断"这是不是一个 canvas 文件"都必须调它**，不要各处写正则。
@@ -121,13 +121,16 @@ loader 的 `claimStyles(id)` 会执行 `document.querySelectorAll('style:not([da
   - PTC profile 下工具都得从 `run_code` 里调，所以 prompt 里别写 `` 调用 `skill({name})` `` 这种具体调用形式（模型会直调一次、报 `unknown tool` 再自愈），只说「先加载 X skill」。
 - **渲染**：`src/client/runtime/inline-fence.ts` 在 DOM 里认领代码块。dsh **没有**按 markdown language 分发的扩展点（`CodeBlock` 的 `lang` 只是提示，未知语言退化成 plain），所以只能这么做。抓手是 `CodeBlock` 包装元素上那个硬编码的 `md-code-block` 类名，加上 banner 里逐字打印的 info string。
 
-三个必须照做的细节：
+四个必须照做的细节：
 
-- **匹配要接受被截断的 info string。** dsh 的 markdown 解析在第一个非标识符字符处截断，所以模型正确写出的 `ui4a/tsx` 在 DOM 里显示为 `ui4a`。只按全名匹配会静默认领不到任何东西 —— 这个 bug 看起来完全像"模型没照做"，实际日志里模型写得一字不差。`RENDERED_FENCE_LANGS` 同时接受两种形态。
+- **按内容匹配，不要按 info string。** 宿主的 markdown 解析在第一个非标识符字符处截断，模型写对的 `ui4a/tsx` 到了 DOM 里是 `ui4a`；更要命的是围栏闭合前 info string 根本不出现，只按它匹配就永远等到流结束才认领得到。所以 `matchSegment` 拿渲染出来的文本去和快照里的 segment 做前缀比对 —— 代码从会话快照来，位置从 DOM 来。
+- **块被复用成别的内容时要释放认领。** React 按位置复用 `.md-code-block` 节点，所以一次重渲染可能把无关内容塞进我们藏起来的那个节点。此时 `rendered` 不再是 `claim.code` 的前缀 —— 不释放的话，屏幕上留着一张过期卡片，真正的代码块被 `display: none` 挡在它背后，除了刷新没有出路。判据是前缀关系，不能只看"找不到 segment"（历史页滚出加载窗口也会找不到，那时反而必须留着卡片）。
 - **隐藏原块，不要移除。** 那个节点属于宿主的 React 树，摘掉一个 React 仍持有的节点，下次 commit 就 `NotFoundError`。
 - **MutationObserver 必须合到一帧。** 流式回复每秒触发几十次变更，一次变更一次 sweep 就是主线程烧穿的经典写法。
 
 ## 3.6 canvas 面板怎么落地的
+
+**按参数形状分类，不按工具名。** `collect.ts` 问的是「这次调用有没有 canvas 路径」「带的是整份文件（`CONTENT_KEYS`）、一个补丁（`PATCH_KEYS`）、还是都没有」。枚举工具名的话，宿主哪天改名或加一个文件工具，canvas 就静默失效。三分法里最容易漏的是第三种：**只读一个 canvas 不该动它的状态** —— 曾经 `read` 会把它标脏、并给一个本会话没写过的 canvas 凭空开出面板，问一句「看看这个文件写了啥」侧栏就自己弹出来了。
 
 **数据源是工具调用，不是新的 session event。** 模型用宿主自带的 `write` 写 `ui4a/canvases/<id>.ui4a.tsx`，客户端从 snapshot 的 `tool-call` 节点读 `root.call.argsRaw`。不用扩 `SessionEventMap`、不碰持久化契约、Node 半边零参与。
 
@@ -310,6 +313,20 @@ canvas 组工具调用 49 → 59，但涨的这 10 次里有 **17 次集中在�
 顺带一条检测方法：**判断卡片坏没坏，用「有高度但零子节点」，别用 innerText 匹配错误文案** —— #185 那次错误文本不在
 容器里，靠文案匹配整个漏掉了。
 
+## 4.9 依赖与发布
+
+**`^0.0.5` 什么都不放行。** semver 对 0.0.x 的 caret 只匹配那一个版本，要吃到后续 patch 得写 `~`。`partial-react`/`partial-tsx` 原来钉死精确版，其实等价于 `^`，只是白白让 renovate 每个 patch 开一次 PR。
+
+**peerDependencies 的下界写高就是在砍用户。** `^0.1.0-rc.7` 实测已经覆盖 rc.8 一直到 0.1.x 正式版（预发布 range 的这个行为容易记反，用 `semver.satisfies` 验一次比猜快）。升成 `^0.1.0-rc.8` 只会把还在跑 rc.7 的宿主排除掉 —— renovate 默认不动 peerDeps，是对的。
+
+**renovate 的多包合并靠配置，不靠手动关 PR。** `.github/renovate.json` 里一条 `groupName` + `matchPackageNames: ["/^@deepseek-ai//"]`，8 个 dsh 包就重开成一个 PR。校验用 `bunx -p renovate renovate-config-validator`（`bunx --bun` 会因为 re2 原生模块崩掉，去掉 `--bun` 走 node 运行时就行）。
+
+**CI 里不能用 bunx 跑 pkg-pr-new。** 它的文档明令禁止 `npx`/`bunx`/`dlx`，必须装成依赖再从 lockfile 执行（`bun run pkg-pr-new`）。
+
+**npm badge 要等包真发布了再加。** shields 的 `npm/v` 和 `npm/l` 都读 registry，包不存在时渲染成 `package not found` —— README 顶上挂两个红叉比不挂更差。
+
+**放宽依赖的前提是 CI 真能验。** smoke 原来只调模块工厂、不跑 `apply()`，所以「插件装载失败」这类问题它全放过（踩过一次：lint 改动让主线程挂死，smoke 照样绿）。现在 smoke 会跑 `apply()` 并断言效果数与耗时，三种故障都验证过能抓：`apply` 抛错、effect 抛错、同步阻塞（阻塞不能用 `setTimeout` 守，单线程下回调排在阻塞之后永远不触发，得测实际耗时）。
+
 ## 5. 参考实现
 
 抄之前先确认抄的是哪一份 —— 这几个仓库解决的是不同的问题：
@@ -319,7 +336,7 @@ canvas 组工具调用 49 → 59，但涨的这 10 次里有 **17 次集中在�
 | React 单例桥、import-map、自建 compiler、路径契约 | `../ui4a-playground/src/{runtime,fs}/` |
 | wasm 预热、esm.sh fallback 防双 React | `../genui-canvas/src/{genui-runtime,components/genui}/` |
 | CSS 作用域 + 主题祖先提升 | `Ori-Replication/obsidian-ui4a-renderer` 的 `src/styling.ts` |
-| dsh 插件骨架、tsdown 双 config | `liuup/dsh-latex-tools` |
+| dsh 插件骨架、双 config 的拆法（它用 tsdown，我们用 `Bun.build`，见 §0） | `liuup/dsh-latex-tools` |
 | 大型 client 插件的组织方式 | `omdsh-dev/DSH-better-sidebar` |
 
 **不要抄** `../macaron-claude-code/web` 的零隔离方案（全局 UnoCSS runtime + 全局 reset）—— 它 vendoring 时把 `useGenUIStyleScope` stub 成了 no-op，在有自己设计系统的宿主里会污染 shell。

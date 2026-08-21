@@ -61,7 +61,7 @@
   color: var(--dsw-alias-label-primary);
 }
 .dgu-icon-button:focus-visible {
-  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline: 2px solid var(--dsw-alias-state-business-primary);
   outline-offset: -2px;
 }
 
@@ -135,6 +135,8 @@
 }
 .dgu-resize:hover,
 .dgu-resize[data-dragging] {
+  /* The foreground token on purpose: this wants a wash that contrasts with whatever is
+     behind it, and `brand-primary` tracks the body text colour in both themes. */
   background: var(--dsw-alias-brand-primary);
   opacity: 0.12;
 }
