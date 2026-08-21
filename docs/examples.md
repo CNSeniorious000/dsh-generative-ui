@@ -566,30 +566,72 @@ streamText 按类别（睡/吃/穿/应急）生成清单，每项可勾、可删
 
 ### `$dsh/exec`：这轮才有的能力（47 条）
 
-`bash(command)` 是研究中加的。R5 有一个 agent 专门评估它解锁了什么，
-并且诚实地指出了一个问题：**15 秒上限让「跑测试」这个用例名不副实**——
-提示词和 skill 都把「a test run」列为用途，但真实项目的测试套件跑不完。
-它建议要么提高上限，要么做流式变体，要么别在文档里承诺。
+`bash(command)` 是研究中加的。R5 有个 agent 专门评估它解锁了什么，设计得相当细致——
+注意这些不是「跑个 git log」的水平，而是把命令当成卡片的数据源来设计：
 
-- **「帮我把这个仓库最近 20 条 commit 画成一个按作者分组的柱状图」** `canvas` — exec bash 跑 git log --pretty=%an，前端 reduce 成计数，recharts BarChart，isAnimationActive={false}。纯只读一次性数据，无内部状态。…
-- **「看看 src 下面各个目录多大，画个图」** `canvas` — bash du -sh src/*，解析成 {name,size}，横向条形图 + 数字标签。…
-- **「跑一下测试，把结果做成一个能展开看失败详情的面板」** `canvas` — bash 跑测试命令，解析输出成用例列表，折叠展开。注意 15s 会被杀。…
-- **「扫一遍 src 里的 TODO 注释，做成可点开定位的列表」** `canvas` — bash rg -n TODO src，解析 file:line，点击调 chat 让我去看那一行。…
-- **「帮我做个画布，展示当前 git status，带个刷新按钮」** `canvas` — bash git status --porcelain，刷新按钮重跑并 setState。注意非零退出也会 resolve，要看 exitCode。…
-- **「这个仓库最近都改了啥，给我个能点开看的」** `canvas` — Commit timeline. One `git log -n 50 --format=%H%x00%an%x00%ar%x00%s` on mount, parsed client-side into rows — NUL-delimited so subjects with any punct…
-- **「帮我搜一下这个词在代码里都出现在哪」** `canvas` — Live ripgrep. Text input, 250ms debounce, `rg -n --color=never -S -- <shell-quoted query> | head -200`. Results grouped by file, click to `readFile` a…
-- **「我改了哪些文件？还没提交的那些」** `canvas` — Working-tree dashboard. `git status --porcelain=v1 -b` parsed into staged/unstaged/untracked columns, plus `git diff --stat` for churn numbers. Poll e…
-- **「跑一下测试，我想看哪些挂了」** `canvas` — Test runner. A Run button fires the project's test command, parses the summary into pass/fail counts and a failure list, and keeps the last run in loc…
-- **「帮我看看这个项目哪些文件最占地方」** `canvas` — Treemap of disk usage. One `du -ak . | sort -rn | head -500` builds the whole tree client-side — no walking, no per-directory recursion. Click a recta…
-- **「这两个分支到底差在哪」** `canvas` — Branch comparator. Two dropdowns populated by one `git branch -a --format=%(refname:short)`; picking a pair runs `git log --oneline A..B` and `git log…
-- **「给我做个能跑命令的面板，我老忘那几个命令」** `canvas` — A personal command palette. User adds entries (label + command), stored in localStorage; each row has a Run button that shows exit code, timing, and o…
-- **「这个函数是谁在调用？给我个能点的图」** `canvas` — Call-site explorer. One `rg -n --json -- '<symbol>\s*\('` gives every candidate call site with byte offsets in a single pass; the card groups by file,…
-- **「帮我把 git blame 看得舒服一点」** `canvas` — Annotated file view. `git blame --line-porcelain <path>` once, parsed into per-line author/date/sha; render the file with a left gutter colored by com…
-- **「看看我这周写了多少代码」** `canvas` — Contribution summary. `git log --since=<picked range> --author=<picked author> --numstat --format=%H%x00%at` in one call; sum insertions/deletions cli…
-- **「这个仓库依赖装得对不对，帮我查查」** `canvas` — Dependency health. Runs a small batch — the lockfile-consistency check, an outdated listing, `du -sh node_modules` — as three parallel commands via Pr…
-- **「帮我做个提交前的检查清单」** `canvas` — Pre-commit checklist. Rows for lint, typecheck, and status-clean; each row has its own Run and its own state, so a slow typecheck does not block the u…
-- **「这个文件的历史，我想看它一步步变成现在这样」** `canvas` — File time machine. `git log --format=%H%x00%ar%x00%s -- <path>` for the revision list, then one `git show <sha>:<path>` per revision the user selects.…
+**「这个仓库最近都改了啥，给我个能点开看的」** `canvas` `$dsh/exec`
 
+Commit timeline. One `git log -n 50 --format=%H%x00%an%x00%ar%x00%s` on mount, parsed client-side into rows — NUL-delimited so subjects with any punctuation survive. Clicking a row fires exactly one more command, `git show --stat <sha>`, and expands the file list under it; a second click on a file runs `git show <sha> -- <path>` for the patch. Lazy per-row, never fanout: the list costs one command, and depth costs one per thing the user actually opened. Refresh button re-runs the top-level log. localStorage keeps which rows were expanded.
+
+*Nothing but a command can produce history — fs cannot see into .git in any useful way, and a model-pasted log is stale the moment anyone commits. It is also the cleanest demonstration of the one-command-per-interaction rule the skill asks for: the expensive shape (a diff per row) is deferred to the row the user opened.*
+
+**「帮我搜一下这个词在代码里都出现在哪」** `canvas` `$dsh/exec` `$dsh/fs`
+
+Live ripgrep. Text input, 250ms debounce, `rg -n --color=never -S -- <shell-quoted query> | head -200`. Results grouped by file, click to `readFile` and show the surrounding lines. Because `bash()` has no AbortSignal, each call carries an incrementing id and only the newest result is allowed to render — otherwise a slow third query paints over a fast fifth. A `--` before the query and proper quoting, so a search for `-i` or `a;b` is a search, not a flag or a second command.
+
+*The archetypal parameterized card: the query is something the model could not have known, so this is impossible to precompute at any quality. Also the intent most likely to surface both API gaps at once — no cancellation and no arg-array form — which makes it the honest stress test of the current shape.*
+
+**「我改了哪些文件？还没提交的那些」** `canvas` `$dsh/exec`
+
+Working-tree dashboard. `git status --porcelain=v1 -b` parsed into staged/unstaged/untracked columns, plus `git diff --stat` for churn numbers. Poll every 2s while the panel is visible (cheap command, well inside 15s), pause on document.hidden so a backgrounded canvas is not shelling out forever. Click a file to see its diff. Explicitly read-only: no stage button, no discard button.
+
+*This is the purest case of the staleness argument in src/skill.ts applied to process state rather than file content. The user's working tree changes under the card continuously, which is precisely the thing a chat reply can never represent and a polling card represents perfectly.*
+
+**「跑一下测试，我想看哪些挂了」** `canvas` `$dsh/exec`
+
+Test runner. A Run button fires the project's test command, parses the summary into pass/fail counts and a failure list, and keeps the last run in localStorage so reopening the canvas shows the previous result rather than nothing. Critically it must handle `timedOut: true` as a first-class state with real copy — "exceeded the 15s limit, N tests had reported by then" — because on most real repos that is the likely outcome today, not the exception.
+
+*The highest-value intent and the one that most exposes the cap. Both src/prompt.ts:34 and src/skill.ts:153 advertise "a test run" as a use case, but EXEC_TIMEOUT_MS=15_000 makes that a promise the code cannot keep on any substantial suite. Ranked high because the demand is real; it is also the strongest single argument for a streaming variant.*
+
+**「帮我看看这个项目哪些文件最占地方」** `canvas` `$dsh/exec`
+
+Treemap of disk usage. One `du -ak . | sort -rn | head -500` builds the whole tree client-side — no walking, no per-directory recursion. Click a rectangle to drill in (pure client-side re-render of already-fetched data, zero extra commands); a Rescan button is the only thing that re-runs. Sizes formatted human-side so the command stays machine-parseable.
+
+*Exactly the case the prompt calls out — one command beats twenty readdir round trips. Doing this with fs means recursive readdir over the whole tree, dozens of sequential fetches, and it would still miss anything readdir cannot size. One du call and the entire dataset is local, which is also what makes the drill-down free.*
+
+**「这两个分支到底差在哪」** `canvas` `$dsh/exec`
+
+Branch comparator. Two dropdowns populated by one `git branch -a --format=%(refname:short)`; picking a pair runs `git log --oneline A..B` and `git log --oneline B..A` and `git diff --stat A...B`, three commands per comparison, and lays them out as ahead/behind/changed. Swap button flips the pair. The comparison only runs when both are chosen — never on mount with a guessed default pair.
+
+*The run-several-and-diff shape. The model can compare one pair, once; the card compares whichever pair the user picks out of a combinatorial set. Three commands per interaction is the honest ceiling for a click — it is a single user action, so a single spinner is legible.*
+
+**「给我做个能跑命令的面板，我老忘那几个命令」** `canvas` `$dsh/exec`
+
+A personal command palette. User adds entries (label + command), stored in localStorage; each row has a Run button that shows exit code, timing, and output in a collapsible. A visible textarea shows the exact command before it runs — never a label that hides the command. Non-zero exit renders as a red badge with stderr, not as an error boundary. No entry is ever run on mount, only on explicit click.
+
+*The user composes; the model only builds the frame. It gains everything from exec because it IS exec, and it is the clearest place to establish the safety convention — command always visible, never auto-run — that every other exec card should inherit.*
+
+**「这个函数是谁在调用？给我个能点的图」** `canvas` `$dsh/exec` `$dsh/fs`
+
+Call-site explorer. One `rg -n --json -- '<symbol>\s*\('` gives every candidate call site with byte offsets in a single pass; the card groups by file, and clicking a site readFile's that file and shows the enclosing lines with the hit highlighted. A back stack lets the user walk outward from callee to caller, each hop one rg.
+
+*rg over a whole tree is seconds; the fs equivalent is unbounded reads and would blow the 15s budget and the user's patience alike. The navigation is the point — a model gives you one list of call sites, this gives you the ability to keep going, and each hop is one round trip.*
+
+**「帮我把 git blame 看得舒服一点」** `canvas` `$dsh/exec`
+
+Annotated file view. `git blame --line-porcelain <path>` once, parsed into per-line author/date/sha; render the file with a left gutter colored by commit age (older = cooler). Hovering a line shows the commit subject from data already parsed. Clicking a gutter entry runs one `git show --stat <sha>`. A file picker at the top costs one blame per file opened.
+
+*Blame is only obtainable by command, and the porcelain format is designed for exactly this parse. The heat-map rendering is the part a chat reply cannot do at all — the information is per-line and spatial, which is the whole argument for a card over prose.*
+
+**「看看我这周写了多少代码」** `canvas` `$dsh/exec`
+
+Contribution summary. `git log --since=<picked range> --author=<picked author> --numstat --format=%H%x00%at` in one call; sum insertions/deletions client-side into a per-day bar chart plus a by-extension breakdown. Date range and author are controls — changing either re-runs the single command with new flags. Author list comes from one `git shortlog -sne`.
+
+*One command yields the entire dataset for any range, so the interactivity is nearly free after the first fetch. It gains from exec because numstat aggregation is not something a model can do accurately by eye over hundreds of commits — and the range being adjustable is the difference between an answer and a tool.*
+
+它同时指出了三个问题：**15 秒上限让「跑测试」名不副实**（提示词和 skill 都列了这个用途，
+已改成诚实措辞）、**`truncated` 合并两个流**（已修）、**没有 `AbortSignal`**
+（每次按键跑命令的卡片没法取消上一次，只能靠请求 id 忽略——记为已知缺口）。
 ### 音频（实测，不是回忆）
 
 R5 的音频 agent 用四个探针页在真实浏览器里量了这些，全部是**静默失败**类型：
