@@ -410,6 +410,18 @@ error:
 One detection technique worth keeping: **judge a broken card by "has height, zero children", not by matching error
 text in innerText** — #185's error text wasn't in the container, and text matching missed it entirely.
 
+But read `innerText` as well, because zero children has **two** causes that need opposite responses
+(2026-08-21, both hit within an hour):
+
+| `innerText` | Meaning | Whose bug |
+| --- | --- | --- |
+| empty | The module graph died — a bad import, a revoked blob URL. ESM kills the whole import silently. | ours |
+| `ERROR: …` | partial-react's error boundary caught a throw during render and painted the message. | the generated code's |
+
+The boundary renders a bare text node, so the child count is 0 either way. Counting alone reported
+a generated component's `item.difficulty.includes(…)` on a half-streamed object as an infrastructure
+failure, and I went looking in the wrong half of the system.
+
 ### `$ui4a/chat` in the model's hands (2026-08-21, 5 prompts + 5 repeats)
 
 Ran five underspecified requests through headless to see whether the model uses `sendMessage`

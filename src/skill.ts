@@ -119,6 +119,12 @@ for await (const chunk of streamText({ prompt: \`…Return JSON: {"items":[{"tit
 }
 \`\`\`
 
+**Every field is optional until the stream ends.** \`partial-json\` hands you the object as it
+grows, so an item can arrive with a title and nothing else — and one \`item.difficulty.includes(…)\`
+on that frame throws inside render, which unmounts the whole card mid-generation. Read every
+streamed field defensively (\`item.steps ?? []\`, \`item.difficulty === "简单" ? … : …\`) and never
+call a method on one without a fallback. This is the failure mode of this API, not an edge case.
+
 One user turn per call — there is no conversation here. Anything the card knows from earlier
 goes into the prompt it builds. And skip it entirely when the data is genuinely fixed: a
 converter, a timer, a colour picker have nothing to generate.
