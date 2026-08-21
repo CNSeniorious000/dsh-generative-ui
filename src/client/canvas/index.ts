@@ -23,7 +23,7 @@ export type CanvasHostOptions = {
 
 const EMPTY: ReadonlySet<string> = new Set();
 
-export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): () => void {
+export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
   /**
    * Canvas bodies re-read from disk, for the ones a patch left stale.
    *
@@ -58,6 +58,23 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
   // `null` until the first paint, so an empty first paint is still a paint. An empty string
   // would collide with the signature of "no canvases" and skip it.
   let signature: string | null = null;
+
+  /**
+   * Show a canvas the reader picked, whether or not this session wrote it.
+   *
+   * Defined out here rather than inside the sweep because callers outside the panel reach
+   * it too — the transcript's file links, which would otherwise hand a `.ui4a.tsx` to the
+   * OS file opener.
+   */
+  const show = (id: string): void => {
+    const session = sessionId();
+    dismissed.get(session)?.delete(id);
+    const showing = opened.get(session) ?? new Set<string>();
+    showing.add(id);
+    opened.set(session, showing);
+    signature = null;
+    scheduleSweep();
+  };
 
   const stopWaiting = whenFrameReady((frameElement) => {
     const column = createColumn(frameElement);
@@ -142,15 +159,6 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
         scheduleSweep();
       };
 
-      /** Show a canvas the reader picked, whether or not this session wrote it. */
-      const show = (id: string) => {
-        dismissed.get(session)?.delete(id);
-        const showing = opened.get(session) ?? new Set<string>();
-        showing.add(id);
-        opened.set(session, showing);
-        repaint();
-      };
-
       root.render(
         canvases.length > 0
           ? createElement(CanvasPanel, {
@@ -182,7 +190,10 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
   });
 
   disposers.push(stopWaiting);
-  return () => {
-    for (const dispose of disposers.toReversed()) dispose();
+  return {
+    dispose: () => {
+      for (const dispose of disposers.toReversed()) dispose();
+    },
+    show,
   };
 }

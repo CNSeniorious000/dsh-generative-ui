@@ -144,6 +144,18 @@ Three traps:
 
 - **A `tool-call` node's data is `{root: {...}}`**, not the assistant's `blocks`.
 - **Tool arguments carry absolute paths**, so contract matching looks for `ui4a/canvases/` as a path suffix and must not anchor at the start.
+- **Re-registering an unchanged namespace must keep its blob URL.** The document import map
+  is installed once and names those blobs for the tab's life, so revoking one leaves every
+  esm.sh package resolving `react` to a dead URL. ESM fails that by killing the whole module
+  graph: a blank card, nothing in the console, and smoke green throughout. It cost a bisect
+  to find, because the symptom is identical to "the model wrote something broken". The guard
+  is an identity check in `registerModules` — only a genuine hot-swap invalidates.
+- **The transcript's file links go to the OS, not to us.** `workspaces.openPath` is what both
+  the inline path links and the 产物 chips call, so clicking a canvas the model just wrote
+  opened it in an editor rather than in the panel beside it. We wrap that method: a path the
+  contract recognises shows the panel, everything else forwards untouched. Wrapping someone
+  else's method is a bet on its shape, so the wrapper checks for it and no-ops when absent —
+  losing that bet during registration would take the whole plugin down.
 - **Closing a canvas must leave a way back, and the transcript is not enough of one.** Dismissal only hides, and a canvas outlives the session that wrote it — so a panel fed purely by the current transcript strands both the one just closed and every one written yesterday. `CanvasLauncher` sits where the panel's edge was and offers the whole workspace: the canvas route lists the directory when given no `id` (same cwd allowlist), and a canvas opened that way has no tool call behind it, so its body is read off disk once. The same picker sits in the panel header, so switching to another canvas does not require closing first. Note the repaint signature has to carry that offerable list: closing the last canvas changes nothing about the visible one, so a signature built from the visible canvases alone never repaints and the launcher never appears.
 - **The panel cannot be inserted into AppFrame as a flex child.** The host's column widths exactly fill the viewport, so an inserted column is always pushed offscreen — present in the DOM, correctly sized, and invisible. The answer is `position: fixed` against the right edge plus an equal `padding-right` on the frame.
 
@@ -432,6 +444,12 @@ dependency and run it from the lockfile (`bun run pkg-pr-new`).
 
 **Add npm badges only once the package is actually published.** shields' `npm/v` and `npm/l` both read the registry
 and render `package not found` when it doesn't exist — two red crosses at the top of the README are worse than none.
+
+**A thin test fake reads as a broken plugin.** smoke's `ctx.inject` used to hand its callback
+the bare context rather than the proxied one, so a nested scope saw `undefined` for the very
+services it had just declared — reported as "effect failed", which is indistinguishable from
+a real defect until you read the fake. If smoke accuses the plugin of something the browser
+does not, suspect the stand-in first.
 
 **Widening dependencies is only safe if CI can actually verify.** smoke used to call the module factory without
 running `apply()`, so it let every "plugin fails to load" class of problem through (hit once: a lint change hung the

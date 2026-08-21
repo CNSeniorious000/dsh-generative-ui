@@ -16,6 +16,7 @@ import { warmCompiler } from "./runtime/compiler.ts";
 import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
 import { mountCanvasHost } from "./canvas/index.ts";
 import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
+import { canvasIdOf } from "../contract.ts";
 
 export const inject = ["slots", "sessions"];
 
@@ -113,7 +114,43 @@ export function apply(ctx: ClientContext): void {
       };
     }, "dsh-generative-ui: $ui4a host");
   });
-  ctx.effect(() => mountCanvasHost({ calls, cwd, sessionId }), "dsh-generative-ui: canvas column");
+  // Mounted inside the effect, not beside it: `mountCanvasHost` reaches for MutationObserver
+  // straight away, and doing that during registration is exactly what smoke rejects.
+  let showCanvas: ((id: string) => void) | null = null;
+  ctx.effect(() => {
+    const host = mountCanvasHost({ calls, cwd, sessionId });
+    showCanvas = host.show;
+    return () => {
+      showCanvas = null;
+      host.dispose();
+    };
+  }, "dsh-generative-ui: canvas column");
+
+  // The transcript's file links and the "产物" chips call `workspaces.openPath`, which hands
+  // the path to the OS — so clicking a canvas the model just wrote opened it in an editor
+  // rather than in the panel three inches to the right. Wrapping the method routes canvases
+  // to the panel and forwards everything else untouched.
+  ctx.inject(["workspaces"], (scoped) => {
+    scoped.effect(() => {
+      const workspaces = scoped.workspaces as { openPath?: (path: string) => Promise<void> };
+      // Wrapping someone else's method is a bet on its shape. Losing that bet here would
+      // throw during registration and take the whole plugin down, so a host without it
+      // simply keeps its own behaviour.
+      if (typeof workspaces.openPath !== "function") return () => {};
+      const original = workspaces.openPath.bind(workspaces);
+      workspaces.openPath = async (path: string) => {
+        const id = canvasIdOf(path);
+        // No panel mounted (headless, or torn down): the OS opener is still the right answer.
+        if (id === null || showCanvas === null) return original(path);
+        showCanvas(id);
+      };
+      // Restore rather than delete: another plugin may have wrapped it after us, and
+      // deleting the own-property would expose theirs — or the prototype's — instead.
+      return () => {
+        workspaces.openPath = original;
+      };
+    }, "dsh-generative-ui: canvas links open the panel");
+  });
   ctx.effect(() => claimInlineFences({ segments, render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming }) }), "dsh-generative-ui: inline fences");
 }
 
