@@ -95,6 +95,7 @@ export function apply(ctx: ClientContext): void {
       // exactly like a click that was never wired up.
       const release = registerUi4aHost({
         cwd,
+        sessionId,
         send: (text) => {
           const id = currentSession();
           const session = id === undefined ? undefined : scoped.sessions.scope(id);

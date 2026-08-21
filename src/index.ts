@@ -20,7 +20,7 @@ import type {} from "@deepseek-ai/dsh-skill";
 // A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
 // and this is the constructor that stamps the identity and source tags it requires.
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, WASM_PATH } from "./contract-assets.ts";
+import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { SKILL_BODY, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
@@ -85,13 +85,88 @@ async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: Incom
   }
 }
 
+/** Context shape for the filesystem route; see the SessionStoreCtx note on why it is local. */
+type FsCtx = {
+  fs: {
+    resolve: (path: string, opts?: { cwd?: string }) => Promise<FsTargetLike>;
+    readText: (target: FsTargetLike) => Promise<string>;
+    listDir: (target: FsTargetLike) => Promise<{ name: string; kind?: string }[]>;
+    writeText: (target: FsTargetLike, content: string, expected?: undefined, signal?: AbortSignal, policy?: unknown) => Promise<unknown>;
+  };
+  sandboxPolicy: { resolve: (request?: { session?: unknown }) => unknown };
+  sessions: { list: () => readonly { id?: string; header: { cwd?: string } }[] };
+};
+type FsTargetLike = { targetKey: unknown; displayPath: string };
+
+/**
+ * Reads, lists, and writes on behalf of a generated card.
+ *
+ * Everything goes through the host's `ctx.fs` carrying the session's own
+ * `ctx.sandboxPolicy`, so **a card may do exactly what the session may do** — under
+ * `read-only` the write is refused by the same fence that refuses the model's, with the
+ * same structured denial. Inventing a narrower boundary here would mean a second policy to
+ * keep in sync with the one the user actually sees in the composer.
+ *
+ * The `cwd` allowlist is still required, for the reason the canvas route documents: any page
+ * the user has open can call this, so without it the workspace is not the workspace.
+ */
+async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? "/", "http://x");
+  const cwd = url.searchParams.get("cwd");
+  const path = url.searchParams.get("path");
+  if (cwd === null || path === null || path === "") return void res.writeHead(400).end();
+  if (!liveWorkspaces().has(cwd)) return void res.writeHead(403).end();
+
+  const json = (status: number, body: unknown): void => {
+    res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    res.end(JSON.stringify(body));
+  };
+  // A denial is an answer, not a crash: the card needs to tell "you may not" from "it broke".
+  const failed = (error: unknown): void => {
+    const code = (error as { code?: string } | undefined)?.code;
+    json(code === "FS_SANDBOX_DENIED" ? 403 : 404, { error: code ?? (error instanceof Error ? error.message : String(error)) });
+  };
+
+  try {
+    const target = await ctx.fs.resolve(path, { cwd });
+    if (req.method === "GET") {
+      if (url.searchParams.get("list") !== null) return json(200, { entries: await ctx.fs.listDir(target) });
+      return json(200, { content: await ctx.fs.readText(target) });
+    }
+    if (req.method !== "POST") return void res.writeHead(405).end();
+
+    let body = "";
+    for await (const chunk of req) {
+      body += chunk as string;
+      if (body.length > MAX_BODY) return void res.writeHead(413).end();
+    }
+    let content: string;
+    try {
+      ({ content } = JSON.parse(body) as { content: string });
+    } catch {
+      return void res.writeHead(400).end();
+    }
+    if (typeof content !== "string") return void res.writeHead(400).end();
+    // The session's policy, not ours: the composer's access mode is what decides. Addressed
+    // by id, not found by cwd — several sessions share one workspace, and picking the first
+    // of them silently runs the write under a stranger's access mode.
+    const sessionId = url.searchParams.get("session");
+    const session = sessionId === null ? undefined : ctx.sessions.list().find((entry) => entry.id === sessionId);
+    if (session === undefined) return void res.writeHead(400).end();
+    await ctx.fs.writeText(target, content, undefined, undefined, ctx.sandboxPolicy.resolve({ session }));
+    return json(200, { written: target.displayPath });
+  } catch (error) {
+    return failed(error);
+  }
+}
+
 /** Context shape for the two services the AI route needs; see the SessionStoreCtx note. */
 type LlmCtx = {
   llm: { stream: (options: { provider: string; model: string; messages: readonly unknown[]; system?: string; signal?: AbortSignal }) => AsyncIterable<{ type: string; text?: string; reason?: { kind: string; failure?: { message?: string } } }> };
   agentDefaultModel: { currentSelection: () => { provider: string; model: string } };
 };
 
-/** Largest request body accepted, so a runaway card cannot exhaust memory here. */
+/** Largest request body accepted by either POST route, so a runaway card cannot exhaust memory. */
 const MAX_BODY = 64 * 1024;
 
 /**
@@ -182,6 +257,11 @@ export function apply(ctx: Context): void {
     scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: (req, res) => serveCanvas(liveWorkspaces, req, res) }), "dsh-generative-ui: canvas reads");
     // One level deeper again: a deployment can mount a web server without an LLM runtime, and
     // losing `$dsh/ai` there should not take the wasm and canvas routes down with it.
+    // Same shape again: a deployment can serve the web without a sandboxed filesystem, and
+    // losing `$dsh/fs` there should not cost the routes above it.
+    scoped.inject(["fs", "sandboxPolicy"], (withFs) => {
+      withFs.effect(() => withFs.webServer.register({ kind: "exact", path: FS_PATH, handler: (req, res) => serveFs(withFs as unknown as FsCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: workspace files");
+    });
     scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {
       withLlm.effect(() => withLlm.webServer.register({ kind: "exact", path: AI_STREAM_PATH, handler: (req, res) => serveAi(withLlm as unknown as LlmCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: model stream");
     });

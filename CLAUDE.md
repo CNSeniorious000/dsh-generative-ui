@@ -170,7 +170,7 @@ owns the prefix; nothing else should spell it out.
 | Module | Here | Why |
 | --- | --- | --- |
 | `$dsh/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
-| `$dsh/fs` | no | dsh has no browser-side filesystem — `dsh-fs` is the Node half only. Would need our own route, like the canvas read |
+| `$dsh/fs` | **implemented** | Forwards to the host's `ctx.fs` carrying the session's `ctx.sandboxPolicy` |
 | `$dsh/state` | no | needs the `states.json` persistence that §4 records as unimplemented; the skill teaches `localStorage` instead |
 | `$dsh/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
 
@@ -192,6 +192,20 @@ switches sessions under us.
 `conversation` also goes in a nested `ctx.inject`, not the static array — every static name is a
 hard dependency (§4), and a profile without it would lose the whole plugin rather than one
 capability.
+
+**`$dsh/fs` inherits the session's access mode rather than defining its own.** Every call goes
+through `ctx.fs` with the policy from `ctx.sandboxPolicy.resolve({ session })`, so a card may
+do exactly what the composer says the session may do — under `Read Only` the write is refused
+by the same fence that refuses the model's, with the same `FS_SANDBOX_DENIED`. Inventing a
+narrower boundary here (I first proposed hard-coding `ui4a/`) would have meant a second policy
+to keep in sync with the one the user can actually see and change.
+
+Two things that boundary does *not* do, and should not be mistaken for holes: `workspace-write`
+permits the platform temp area as well as the workspace (the same `writableRoots` set Seatbelt
+grants, so bash and fs cannot drift), and the session must be addressed **by id** — several
+sessions share one workspace, so resolving it from `cwd` silently runs the write under a
+stranger's access mode. That was a real bug: read-only mode did not deny until the id was
+threaded through.
 
 **`send` is visible.** The playground's `sendMessage(content, visible = false)` can post a
 turn the user never sees; `ctx.conversation.send` always writes their message into the

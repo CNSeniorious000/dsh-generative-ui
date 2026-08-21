@@ -15,3 +15,12 @@ export const CANVAS_READ_PATH = "/dsh-generative-ui/canvas";
  * rather than carrying a key of its own.
  */
 export const AI_STREAM_PATH = "/dsh-generative-ui/ai";
+
+/**
+ * Filesystem access for a generated card: `?cwd=<workspace>&path=<path>`.
+ *
+ * GET reads (or lists, with `?list=1`), POST writes. Both go through the host's `ctx.fs`
+ * and carry the session's own sandbox policy, so what a card may do is exactly what the
+ * session may do — `read-only` denies the write at the fence rather than here.
+ */
+export const FS_PATH = "/dsh-generative-ui/fs";

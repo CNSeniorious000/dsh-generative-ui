@@ -99,6 +99,17 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, let exits finish, and honour \`prefers-reduced-motion\`.
 
+## Reading and writing workspace files
+
+\`$dsh/fs\` gives a card \`readFile\`, \`writeFile\` and \`readdir\` over the workspace, under the
+session's own access mode — the same fence the file tools run behind. So a read-only session
+refuses the write, and the card should say so rather than looking broken: catch it and tell
+the user the session is read-only.
+
+Reach for it when the data **belongs to the workspace** — a file the user can also open, edit
+and commit. Keep \`localStorage\` for a canvas's own private state (which tab was open, the
+draft they were typing); writing that to disk just litters the repo.
+
 ## Generating content inside the card
 
 \`streamText\` from \`$dsh/ai\` is for when a literal array in the file would freeze the thing

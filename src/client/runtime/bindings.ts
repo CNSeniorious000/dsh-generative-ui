@@ -10,7 +10,7 @@
  * gateway, so `$dsh/fs` and `$dsh/ai` have no implementation here yet.
  */
 import { moduleUrl, registerModules, registryImports } from "./registry.ts";
-import { AI_STREAM_PATH } from "../../contract-assets.ts";
+import { AI_STREAM_PATH, FS_PATH } from "../../contract-assets.ts";
 import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
 
@@ -20,6 +20,8 @@ export type Ui4aHost = {
   send: (text: string) => void;
   /** The current session's workspace, which the AI route authorizes against. */
   cwd: () => string | undefined;
+  /** The open session, so a write runs under the access mode the composer shows. */
+  sessionId: () => string;
 };
 
 const INTERNAL = capabilityModule("internal");
@@ -67,7 +69,36 @@ export function bind() {
     },
   };
 
-  return { chat, ai };
+  const fs = {
+    /** The file's text. Throws when it does not exist or the session may not read it. */
+    readFile: (path: string) => request<{ content: string }>("GET", path).then((body) => body.content),
+    /** Directory entries, names only. */
+    readdir: (path: string) => request<{ entries: { name: string }[] }>("GET", path, undefined, "list=1").then((body) => body.entries.map((entry) => entry.name)),
+    /**
+     * Writes the file, subject to the session's own access mode.
+     *
+     * Under `Read Only` this rejects exactly as the model's own `write` would — the fence
+     * is the host's, not ours, so what a card may do never diverges from what the composer
+     * says the session may do.
+     */
+    writeFile: (path: string, content: string) => request<{ written: string }>("POST", path, content).then(() => undefined),
+  };
+
+  return { chat, ai, fs };
+}
+
+/** Talks to the fs route, carrying the workspace and the session whose policy applies. */
+async function request<T>(method: "GET" | "POST", path: string, content?: string, extra?: string): Promise<T> {
+  if (host === null) throw new Error("[dsh-generative-ui] no host bound");
+  const workspace = host.cwd();
+  if (workspace === undefined) throw new Error("[dsh-generative-ui] $dsh/fs needs a session workspace");
+  const query = `cwd=${encodeURIComponent(workspace)}&session=${encodeURIComponent(host.sessionId())}&path=${encodeURIComponent(path)}${extra === undefined ? "" : `&${extra}`}`;
+  const response = await fetch(`${FS_PATH}?${query}`, content === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ content }) });
+  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  // A denial is not an outage. Naming it lets the card say "this session is read-only"
+  // rather than "something went wrong".
+  if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/fs ${path}: ${body.error ?? response.statusText}`);
+  return body as T;
 }
 
 /** One user turn plus an optional system prompt — see the route's note on why not more. */
@@ -99,7 +130,7 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterab
   }
 }
 
-const GROUPS = ["chat", "ai"] as const;
+const GROUPS = ["chat", "ai", "fs"] as const;
 
 /** Blob URLs for every `$dsh/*` module, built once and reused by every surface. */
 let cached: Record<string, string> | null = null;
