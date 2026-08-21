@@ -6,7 +6,7 @@
  * (top-level `import.meta` is the classic one), a banner/footer wrapper that does
  * not call `load()`, and any bare `require()` the shell's module table cannot answer.
  */
-const PLATFORM = new Set(["react", "react/jsx-runtime", "react-dom", "react-dom/client", "@deepseek-ai/cordis", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-web-react", "@deepseek-ai/dsh-client-ui-primitives", "@deepseek-ai/dsh-client-ui-attachment", "@deepseek-ai/dsh-client-schema-form"]);
+const PLATFORM = new Set(["react", "react/jsx-runtime", "react-dom", "react-dom/client", "@deepseek-ai/cordis", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-ui-primitives"]);
 
 const source = await Bun.file("lib/client.js").text();
 let registered: { id: string; factory: (require: (id: string) => unknown) => Record<string, unknown> } | null = null;

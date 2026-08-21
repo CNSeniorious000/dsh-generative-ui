@@ -17,7 +17,7 @@ await Bun.write(resolve(import.meta.dir, "../src/client/canvas/panel-css.ts"), `
  */
 
 /** The shell's frozen module table (packages/client/web/src/platform.ts). No `scheduler`, no `react-dom/server` — both get bundled. */
-const PLATFORM_MODULES = ["react", "react/jsx-runtime", "react-dom", "react-dom/client", "@deepseek-ai/cordis", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-web-react", "@deepseek-ai/dsh-client-ui-primitives", "@deepseek-ai/dsh-client-ui-attachment", "@deepseek-ai/dsh-client-schema-form"];
+const PLATFORM_MODULES = ["react", "react/jsx-runtime", "react-dom", "react-dom/client", "@deepseek-ai/cordis", "@deepseek-ai/dsh-client-ui-slots", "@deepseek-ai/dsh-client-ui-primitives"];
 
 const PLUGIN_ID = "dsh-generative-ui";
 
