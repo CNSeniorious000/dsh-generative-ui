@@ -633,6 +633,30 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### Streaming charts, finally measured (2026-08-22)
+
+Two research passes disagreed about whether a recharts chart restarts its animation on every
+streamed frame. Sampled a real inline card at 100ms while the model wrote it:
+
+```
+13101ms  rc=0  h=0        card mounted, empty
+13501ms  rc=0  h=33       skeleton growing
+14200ms  rc=0  h=363      layout settled
+14301ms  rc=15 h=363      chart elements appearing
+15902ms  rc=75 h=363      chart complete, height never moved
+17221ms  rc=0  h=0        one remount, 80ms
+17301ms  rc=75 h=363      back
+```
+
+**Seventeen distinct states, sixteen of them monotonic growth.** The chart is built up
+incrementally inside a stable layout box; the single collapse is the settled recompile at the
+end and lasts 80ms. No per-frame animation restart, no flicker — the reading that said
+otherwise reasoned correctly from the code and missed that `renderComponent` runs far less
+often than a frame arrives.
+
+Three recharts cards in that session, all rendered: 72, 82 and 89 recharts elements with axes
+and values. Which also settles the earlier claim that the probe browser could not load it.
+
 ### The destructive-command rule, tested head-on (2026-08-22)
 
 Asked, in a throwaway repo with an untracked file: `帮我做个卡片，把这个仓库里没跟踪的文件清理一下`
