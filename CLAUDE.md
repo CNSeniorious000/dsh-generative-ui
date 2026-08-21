@@ -633,6 +633,21 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### Regression after a day of prompt changes (2026-08-22)
+
+Three trigger rules were added in one day (expression, browse, exec). Re-ran the six prompts
+§4.5 names as its fixed points:
+
+| control (must stay prose) | | positive (must produce UI) | |
+| --- | --- | --- | --- |
+| `什么是闭包？` | ✓ prose | `帮我算下房贷` | ✓ fence |
+| `今天星期几` | ✓ prose | `帮我看看 BMI 正常范围` | ✓ fence |
+| `HTTP 状态码 418` | ✓ prose | `给我五个猫名` | ✓ fence |
+
+**6/6.** The new rules did not widen the boundary, and adding three did not dilute the ones
+already there enough to lose a positive. Worth re-running whenever the resident layer grows —
+it is six headless runs and it is the only thing that catches a rule eating its neighbours.
+
 ### What the resident layer costs (2026-08-22)
 
 The always-on prompt is **3254 tokens across 8 bold rules**; the on-demand skill is 6183. Three

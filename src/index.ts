@@ -203,7 +203,7 @@ async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, re
 /** Context shape for the shell route. `resolve` fills the executor's own defaults and caps. */
 type ExecCtx = {
   shell: {
-    resolve: (request: { command: string; workdir?: string; timeoutMs?: number; sandboxPolicy?: unknown }) => unknown;
+    resolve: (request: { command: string; workdir?: string; timeoutMs?: number; sandboxPolicy?: unknown; signal?: AbortSignal }) => unknown;
     run: (spec: unknown) => Promise<{ exitCode: number | null; signal?: string | null; timedOut?: boolean; stdout: { text: string; truncated: boolean }; stderr: { text: string; truncated: boolean } }>;
   };
   sandboxPolicy: { resolve: (request?: { session?: unknown }) => unknown };
@@ -252,7 +252,12 @@ async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>
     res.end(JSON.stringify(value));
   };
   try {
-    const spec = ctx.shell.resolve({ command, workdir: cwd, timeoutMs: EXEC_TIMEOUT_MS, sandboxPolicy: ctx.sandboxPolicy.resolve({ session }) });
+    // Kill the command when the caller goes away. A card that runs one command per keystroke
+    // has no other way to cancel — `bash()` returns a promise, not a handle — so without this
+    // a fast typist leaves a queue of doomed ripgreps competing for the machine.
+    const controller = new AbortController();
+    req.on("close", () => controller.abort());
+    const spec = ctx.shell.resolve({ command, workdir: cwd, timeoutMs: EXEC_TIMEOUT_MS, sandboxPolicy: ctx.sandboxPolicy.resolve({ session }), signal: controller.signal });
     const result = await ctx.shell.run(spec);
     return json(200, {
       stdout: result.stdout.text,
