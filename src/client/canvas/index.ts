@@ -5,6 +5,7 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { CanvasPanel, type Canvas } from "./CanvasPanel.tsx";
+import { CanvasLauncher } from "./CanvasLauncher.tsx";
 import { PANEL_CSS } from "./panel-css.ts";
 import { collectCanvases, type ToolCallView } from "./collect.ts";
 import { readCanvasFile } from "./read.ts";
@@ -83,15 +84,27 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
           return cached?.code === undefined ? canvas : { ...canvas, code: cached.code };
         });
 
-      // Re-render only on a real change: the observer fires on every streamed token.
-      const next = canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|");
+      // Written this session but currently dismissed. These are what the launcher restores —
+      // counted from what was collected, not from `hidden`, so ids the reader closed in an
+      // earlier session and never wrote again do not advertise a canvas that is not there.
+      const hiddenCount = collected.canvases.filter((canvas) => hidden.has(canvas.id)).length;
+
+      // Re-render only on a real change: the observer fires on every streamed token. The
+      // hidden count belongs in the signature too — closing the last canvas changes nothing
+      // about the visible list, and without it the launcher would never paint.
+      const next = `${canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|")}#${hiddenCount}`;
       if (next === signature) return;
       signature = next;
       if (canvases.length === 0) column.setWidth(0);
+
+      const repaint = () => {
+        signature = null;
+        scheduleSweep();
+      };
+
       root.render(
-        canvases.length === 0
-          ? null
-          : createElement(CanvasPanel, {
+        canvases.length > 0
+          ? createElement(CanvasPanel, {
               canvases,
               onWidth: column.setWidth,
               onClose: () => {
@@ -99,10 +112,18 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
                 const hiding = dismissed.get(session) ?? new Set<string>();
                 for (const canvas of canvases) hiding.add(canvas.id);
                 dismissed.set(session, hiding);
-                signature = null;
-                scheduleSweep();
+                repaint();
               },
-            }),
+            })
+          : hiddenCount > 0
+            ? createElement(CanvasLauncher, {
+                count: hiddenCount,
+                onOpen: () => {
+                  dismissed.delete(sessionId());
+                  repaint();
+                },
+              })
+            : null,
       );
     };
 

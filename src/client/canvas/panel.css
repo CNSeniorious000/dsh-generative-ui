@@ -140,3 +140,41 @@
   background: var(--dsw-alias-brand-primary);
   opacity: 0.12;
 }
+
+/*
+ * Sits where the panel's left edge was, so reopening is a click in the place it closed
+ * from. Fixed like the panel because it shares the same "outside the frame" problem —
+ * an extra flex child in the frame's row lands off screen.
+ */
+.dgu-launcher {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--dsw-font-family);
+  font-size: var(--dsw-font-xs-13-font-size);
+  line-height: var(--dsw-font-xs-13-line-height);
+  cursor: pointer;
+}
+.dgu-launcher:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+.dgu-launcher:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: -2px;
+}
+
+.dgu-launcher-count {
+  font-variant-numeric: tabular-nums;
+}
