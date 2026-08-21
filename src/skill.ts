@@ -180,9 +180,22 @@ exception to swallow. Only a failure to run at all rejects.
 
 This is the shortest path to anything the filesystem alone cannot answer: history
 (\`git log\`), state (\`git status\`, \`git diff --stat\`),
-search at speed (\`rg -n pattern\`), sizes (\`du -sh *\`), a test run. Prefer one
+search at speed (\`rg -n pattern\`), sizes (\`du -sh *\`). A whole test suite usually will
+not fit in 15 seconds — one file's tests might, and \`timedOut\` is the honest thing to show when
+it does not. Prefer one
 command over many \`readFile\` calls: a card that walks a tree with twenty round trips is slower and
 more code than one \`ls -R\`.
+
+**A card's commands are invisible in a way yours are not.** When you run a command, it is in
+the transcript before it runs, attributed, and the user can see it. When a card runs one, it is
+inside code they did not read, behind a button whose label they trust, and it can fire on mount
+with no click at all. The sandbox is the same; their ability to notice is not. So:
+
+- **Nothing destructive, ever** — no \`rm\`, no \`git clean\`, no \`git reset --hard\`, no
+  \`checkout\` that discards, no \`kill\`, no package installs. A card observes; when something
+  should change, hand it to the user through \`sendMessage\` and let them agree to it in the open.
+- **Show what you ran.** A card that shells out should say so — the command in small type near
+  the result, or under a disclosure. It costs one line and turns "permitted" into "seen".
 
 Two limits worth designing around. Commands are killed after **15 seconds**, so nothing that
 watches, serves, or waits. And the card is on the user's page — a command runs while they
