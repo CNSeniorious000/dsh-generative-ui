@@ -79,4 +79,15 @@ So \`background: "var(--dsw-alias-bg-layer-1)"\`, not \`background: "#fff"\`.
 
 **Do not use \`--dsw-alias-brand-primary\` as a background.** Despite the name it is a *foreground* colour — it equals the body text colour in both themes (near-white on dark, near-black on light), so an icon tile filled with it and a white glyph on top is a white square. The accent you fill with is \`--dsw-alias-state-business-primary\`.
 
-Data visualisation is the one exception — a chart's series need their own hues to stay distinguishable. Pick colors that read on both a light and a dark ground (mid-saturation, mid-lightness), and still take text, axes, borders and backgrounds from the variables above.`;
+Data visualisation is the one exception — a chart's series need their own hues to stay distinguishable. Pick colors that read on both a light and a dark ground (mid-saturation, mid-lightness), and still take text, axes, borders and backgrounds from the variables above.
+
+## Width
+
+**You do not know how wide you will be, and the viewport cannot tell you.** The same block renders in a narrow chat column and in a side panel the reader drags between 320 and 720 pixels — \`100vw\` is the whole window in both, and a media query answers a question nobody asked. Your root is already a query container, so size against *it* with a \`<style>\` block:
+
+    <style>{\`
+      .row { display: grid; gap: 12px; }
+      @container (min-width: 30rem) { .row { grid-template-columns: 1fr 1fr; } }
+    \`}</style>
+
+Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.`;

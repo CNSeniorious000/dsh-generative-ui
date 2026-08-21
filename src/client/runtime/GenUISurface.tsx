@@ -196,5 +196,11 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [renderer, code, streaming]);
 
-  return <div ref={hostRef} className={className} data-genui-root="" />;
+  // A query container, so generated code can size itself against the space it was given.
+  // The same card lands in a chat column and in a panel the reader drags between 320 and
+  // 720px, and the viewport tells it nothing about either — `100vw` is the whole window in
+  // both. Without `container-type` here a `@container` rule is inert rather than wrong
+  // (measured: the guarded declaration simply never applies), which is the kind of failure
+  // that reads as the model writing something bad.
+  return <div ref={hostRef} className={className} data-genui-root="" style={{ containerType: "inline-size" }} />;
 }
