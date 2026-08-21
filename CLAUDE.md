@@ -500,6 +500,11 @@ it is ever released to npm, shorten the URL and drop the npx caveat.
 runs the checker from the workspace. `skillBody` takes that path and omits the flag when it
 cannot be resolved.
 
+**That map is for `check` only.** Its targets are `.d.ts`, so `build` and `dev` fail on it with
+`Missing export` — verified. Not a gap: `$dsh/*` forwards to dsh's own services, so a standalone
+HTML export or a Vite preview has no harness to reach, and there is no JS that would make them
+work there. `types/README.md` says so beside the file.
+
 Two things measured while wiring this up, both worth knowing before trusting the flag:
 
 - **The `.d.ts` are not actually loaded.** `-i` suppresses TS2307 and nothing more:

@@ -163,7 +163,12 @@ npx --yes https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main
 TypeScript diagnostics; \`lint\` is the faster syntax-only pass.${typesMap === undefined ? "" : `
 
 The \`-i\` is not optional when the card imports \`$dsh/*\`: without it every one of those lines
-is reported as \`Cannot find module\`, and there is nothing to fix — they resolve at render time.`}
+is reported as \`Cannot find module\`, and there is nothing to fix — they resolve at render time.
+
+That map holds type declarations, so it serves \`check\` and \`lint\` only. \`build\` and \`dev\` want
+runnable JS and will fail on it — but neither applies to a card that uses \`$dsh/*\` anyway: those
+capabilities are the harness, and a standalone HTML export or a Vite preview has no harness to
+reach. Render your work by writing the canvas and looking at the panel.`}
 
 It is worth the round trip because it catches the two mistakes that cost the most here, both
 of which otherwise reach the user as a blank card:
