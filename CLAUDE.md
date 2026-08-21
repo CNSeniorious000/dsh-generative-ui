@@ -633,6 +633,31 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### The second turn, measured at last (2026-08-22)
+
+Every number in this section had answered "did a card appear". A critique pass pointed out that
+nothing measured what happens *next*, and that the revision loop is where the documented
+remount-resets-state trap lives. Two runs, both cheap:
+
+**A revision is an edit, not a rewrite.** Asked for a pomodoro canvas (338 lines, using
+localStorage), then `这个不对，休息应该是 10 分钟不是 5 分钟`. The diff is **one line**:
+`BREAK_MS = 5 * 60 * 1000` → `10 * 60 * 1000`, same 338 lines. The reply even says the panel
+needs a refresh. So the feared shape — a whole-file rewrite discarding the reader's state on
+every tweak — is not what the model does; `str_replace` is.
+
+**Two resident rules can fight, and "fine as text" wins.** `帮我算下这个月还剩多少钱能花，
+工资 12000，房租 3500，还了 2000 花呗` produced correct prose and no card, on a request whose
+three numbers are exactly the "a number the user might want to change" shape. The reasoning
+trace is 4010 characters of the model arguing with itself **six times**, quoting the trigger
+rule, nearly building the card (*"Given the strong guidance in the system prompt … I'll provide
+a lightweight interactive card"*), and finally settling it with a different rule of ours:
+
+> "Not for text that is already fine as text. A simple subtraction is fine as text."
+
+Not a rule that failed to land — two that collide, decided by the one that reads as permission
+to stop. Left alone deliberately: tightening either one damages what the other covers, and the
+model's own tie-breaker (*"用户语气是随口问的"*) is a reasonable read of the request.
+
 ### Counting fences does not count canvases (2026-08-22)
 
 Every headless eval in this file counts ` ``` ` fences in the reply. That misses a canvas
