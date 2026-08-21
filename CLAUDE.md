@@ -633,6 +633,18 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### What the resident layer costs (2026-08-22)
+
+The always-on prompt is **3254 tokens across 8 bold rules**; the on-demand skill is 6183. Three
+of those rules were added in one day, which is the moment to say the obvious: every rule added
+to the resident layer dilutes the attention the others get, and it is paid on every turn of
+every session, including the ones that will never produce UI.
+
+The bar for a resident rule, given what §4.5 measures: it must be recognisable from the request
+alone (see the pattern below), it must cover a *shape* of request rather than a topic, and it
+must have flipped something measurable. Everything else belongs in the skill, where it is paid
+for only when the model has already decided UI is on the table.
+
 ### Gathering data eats the turn (three observations, 2026-08-22)
 
 The same failure shape showed up three times, on unrelated prompts, and it is not a wording
