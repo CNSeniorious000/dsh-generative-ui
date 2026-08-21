@@ -592,6 +592,32 @@ already records as worth leaving alone, and pushing harder would just be overrid
 knowing too that a fix measured in another harness does not transfer for free: same model
 family, different tool surface, and the same sentence lands differently.
 
+### An expression the user is holding is a fourth trigger shape (2026-08-22)
+
+`这个 cron 到底几点跑？*/17 3-5 * * 2` produced no UI, and the session log shows why: 2003
+characters of reasoning that never once considered an interface. **"This is a simple factual
+question — no tools needed, no skill needed."** The same sentence that killed `5 公斤等于多少磅`
+earlier the same day.
+
+But the answer it wrote was *already a table* — twelve firing times, laid out in markdown. The
+trigger list in the resident layer had three shapes (a number to change, a multi-way
+comparison, steps to step through) and an opaque expression is none of them, even though it is
+the case where a live table pays best: the way to be sure a cron line does what you think is to
+change a field and watch what moves.
+
+Added a fourth shape, with the tell stated explicitly (**your answer is already a table**) and
+the excuse named (`simple is what makes it cheap to build, not what makes it unwanted`).
+Measured: `glob` and `chmod` both flipped to a fence, the two controls (`HTTP 418`,
+`尾递归优化`) correctly stayed prose.
+
+### `$dsh/exec` in the model's hands, first run (2026-08-22)
+
+Asked for a git-log card in a throwaway repo, the model wrote exactly the intended shape
+without being pointed at it: `import { bash } from "$dsh/exec"`, one command for the list, a
+second on click for `git show`, and **`if (res.exitCode !== 0)` rather than a try/catch** — the
+one thing the prompt insists on, because a non-zero exit resolves. A capability added that
+morning was in correct use the same day, from the prompt text alone.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you
