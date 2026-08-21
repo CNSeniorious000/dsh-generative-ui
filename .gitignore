@@ -5,3 +5,6 @@ lib/
 
 # Generated from panel.css at build time.
 src/client/canvas/panel-css.ts
+
+# Raw brainstorm output — the curated set lives in docs/examples.md
+.research/
