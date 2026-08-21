@@ -30,6 +30,7 @@
   "ignorePatterns": [
     "node_modules",
     "lib",
-    "src/client/canvas/panel-css.ts"
+    "src/client/canvas/panel-css.ts",
+    ".research"
   ]
 }
