@@ -14,7 +14,6 @@
  */
 export const UI4A_DIR = ".dsh/ui4a";
 export const CANVAS_DIR = `${UI4A_DIR}/canvases`;
-export const STATE_DIR = `${UI4A_DIR}/state`;
 export const CANVAS_SUFFIX = ".ui4a.tsx";
 /**
  * Info string of an inline fence, as the model writes it. Slash, not dash — matches
@@ -47,7 +46,6 @@ export const isCanvasId = (id: string) => CANVAS_ID.test(id);
 
 export const canvasPath = (id: string) => `${CANVAS_DIR}/${id}${CANVAS_SUFFIX}`;
 export const canvasChildDir = (id: string) => `${CANVAS_DIR}/${id}`;
-export const statePath = (id: string) => `${STATE_DIR}/${id}/states.json`;
 
 /**
  * Reduces a path to its workspace-relative form.

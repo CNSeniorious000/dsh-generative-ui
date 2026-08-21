@@ -101,8 +101,7 @@ Inherited from `../ui4a-playground/src/fs/contract.ts`; **the only difference is
 ```
 <workspace>/.dsh/ui4a/
 ├── canvases/<id>.ui4a.tsx   # → a canvas view, one mini app
-├── canvases/<id>/*.tsx      # → that mini app's sub-tree
-└── state/<id>/states.json   # → in the contract, not implemented (see §4)
+└── canvases/<id>/*.tsx      # → that mini app's sub-tree
 ```
 
 **`.dsh/` is the harness's own project convention, not ours** — `dsh-skill-filesystem` reads
@@ -177,7 +176,7 @@ owns the prefix; nothing else should spell it out.
 | --- | --- | --- |
 | `$dsh/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
 | `$dsh/fs` | **implemented** | Forwards to the host's `ctx.fs` carrying the session's `ctx.sandboxPolicy` |
-| `$dsh/state` | no | needs the `states.json` persistence that §4 records as unimplemented; the skill teaches `localStorage` instead |
+| `$dsh/state` | **declined** | it would be a naming convention over `$dsh/fs`, which a card can already call directly; private UI state belongs in `localStorage` and the skill teaches that |
 | `$dsh/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
 
 The mechanism, ported from `ui4a-playground/src/runtime/bindings.ts`: the real implementation
@@ -237,7 +236,6 @@ Data visualization is the one exception — chart series need their own hues to 
 - **`GenUIRenderer.create` is async**, so the renderer must live in state, not a ref: in a ref, the first render's effect sees `null` and bails, and since `code` no longer changes it never re-runs — a surface that mounted and stays blank forever.
 - **`preserveStateOnUpdate` only suits streaming growth.** It decides reuse by hook signature, so a whole-file replacement whose hooks happen to match will silently discard the new content. The canvas therefore passes `preserveState={false}`; inline keeps the default.
 - **Pick a signal that actually renders.** Verifying file readback, I wrote the marker into a TSX comment — comments never reach the UI, so the "it's broken" conclusion was entirely fake and cost a lot of time. Writing the marker into JSX text found the truth.
-- **`statePath`/`STATE_DIR` are dead code.** The contract came over from the playground, but state persistence was never implemented and there are zero call sites repo-wide. `skill.ts` already routes around it (it teaches `localStorage`), so nothing conflicts — they stay as a marker for future work.
 - **Preflight steals the global `console.error`**: `partial-react/src/runtime.ts:215-224` swaps it and restores in `finally`. With concurrent cards the inner `finally` restores the *outer* collector, and **the host's console.error is lost permanently**. A chat node is multi-card by nature, so this needs refcounting or serialization.
 - **HMR has no react-refresh**: React state inside the plugin is lost on every reload, and adding or removing a plugin requires restarting dsh.
 - **wasm instances leak, and upstream offers no release.** `@esm.sh/tsx` exports only `transform`/`init`/`initSync` — no dispose, no free — so "release explicitly" is not an option; dropping the `initPromise` reference and waiting for GC is. Each HMR round leaves another ~2.5MB instance behind, dev-only. The blob-URL half is already wired up (`disposeRegistry` hangs off a `ctx.effect` disposer).
