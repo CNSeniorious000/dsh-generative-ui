@@ -101,7 +101,9 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 ## Reading and writing workspace files
 
-\`$dsh/fs\` gives a card \`readFile\`, \`writeFile\` and \`readdir\` over the workspace, under the
+\`$dsh/fs\` gives a card \`readFile(path) -> string\`, \`readdir(path) -> string[]\` (names, not
+objects) and \`writeFile(path, content)\` over the workspace. Paths are workspace-relative and
+\`path\` is required — there is no "current directory" argument-less form, under the
 session's own access mode — the same fence the file tools run behind. So a read-only session
 refuses the write, and the card should say so rather than looking broken: catch it and tell
 the user the session is read-only.

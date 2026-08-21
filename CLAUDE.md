@@ -207,6 +207,13 @@ sessions share one workspace, so resolving it from `cwd` silently runs the write
 stranger's access mode. That was a real bug: read-only mode did not deny until the id was
 threaded through.
 
+Measured end to end (2026-08-21): asked for "a canvas that browses the .md files here, viewing
+and editing them", the model imported all three of `readFile`/`writeFile`/`readdir`, wrapped
+every call in try/catch, and surfaced a failed save as `保存失败: …` rather than silently. It
+also wrote a `normalizeEntry` that accepts strings, `{path}`, `{file_path}`, `{fullPath}` and
+`{name}` — a sign it could not tell from the prompt what `readdir` returns, which is worth
+tightening if the shape ever matters.
+
 **`send` is visible.** The playground's `sendMessage(content, visible = false)` can post a
 turn the user never sees; `ctx.conversation.send` always writes their message into the
 transcript. So a card's click has to read as something the user would have said — `我选 红`,
