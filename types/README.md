@@ -10,6 +10,16 @@ export or a Vite preview has no harness to forward to; there is no JS that would
 there, only JS that would lie about it.
 
 The declarations are hand-written rather than emitted from `src/client/runtime/bindings.ts`:
-what a card should see is the capability surface, not how it reaches the host. Keep them in
-step with that file by hand — they are ten lines, and generating them would mean shipping the
-implementation's types, which name things a card has no business knowing.
+what a card should see is the capability surface, not how it reaches the host.
+
+`check.ts` keeps them honest — it asserts the declared surface and `bind()`'s return type are
+assignable **both ways**, so a declaration that is narrower than the implementation (hiding
+capability) fails just as a wider one does (promising what the runtime will not do). Verified
+it catches both an added method and a changed signature. Editing a `.d.ts` therefore means
+editing the transcription in `check.ts` too; that duplication is the point, since a check that
+derives from the thing it checks proves nothing.
+
+Pointing the map at the real `.ts` sources instead was measured and rejected: `paths` targets
+are compiled as part of the program, so the implementation's own diagnostics — a module it
+imports, an error in a file beside it — surface as errors on the model'"'"'s card, about code the
+model cannot see or fix.

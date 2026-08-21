@@ -81,7 +81,11 @@ export function bind() {
      * is the host's, not ours, so what a card may do never diverges from what the composer
      * says the session may do.
      */
-    writeFile: (path: string, content: string) => request<{ written: string }>("POST", path, content).then(() => undefined),
+    // `Promise<void>`, not the `Promise<undefined>` a bare `.then(() => undefined)` infers:
+    // what a caller may do with the result is the contract, and `types/chat.d.ts` says void.
+    writeFile: async (path: string, content: string): Promise<void> => {
+      await request<{ written: string }>("POST", path, content);
+    },
   };
 
   return { chat, ai, fs };
