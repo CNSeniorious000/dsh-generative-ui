@@ -163,16 +163,29 @@ typing); writing that to disk just litters the repo.
 
 ## Generating content inside the card
 
-\`streamText\` from \`$dsh/ai\` exists because **you cannot write the answer while writing the
-card.** The user has not typed their ingredients yet, not named their destination, not said
-what the names are for — so a \`const RECIPES = […]\` you author now answers one case you
-guessed and freezes out every other. Ask yourself what happens when they type something you
-did not anticipate: if the card has nothing to show, it needs the model at click time.
+\`streamText\` from \`$dsh/ai\` is for content whose **answer space is open**, and the trap is
+that knowing the subject feels like the same thing as the data being fixed. It is not:
 
-This is the most common mistake with this API, and it does not look like a mistake — writing
-plausible content inline produces a card that demos beautifully and is useless. Yours is the
-interface; the content is theirs. It inherits the app's model, so there is no key to ask for
-and no setup.
+> "I know Tokyo, so the attractions are fixed knowledge — I don't need \`streamText\` here."
+
+That sentence is from a real generation, and it produced five hardcoded itineraries. The
+error is not the knowledge claim; it is that *three-day Tokyo itineraries* is not a set of
+five. Writing them out samples the space and presents the sample as the whole. Ask **could I
+enumerate every answer**, not *do I know this topic*:
+
+| | Closed — no model call | Open — \`streamText\` |
+| --- | --- | --- |
+| Converter | 100°C is one number | |
+| Timer | one formula | |
+| Itinerary | | any city, any length, any interest |
+| Recipe | | whatever they have in the fridge |
+| Names | | for a thing you have not been told about |
+
+A closed answer has one right value per input. An open one has as many as the user has ideas,
+and hardcoding it produces a card that demos beautifully and dead-ends the moment they want
+something you did not think of. Yours is the interface; the content is theirs.
+
+It inherits the app's model, so there is no key to ask for and no setup.
 
 Ask for JSON and parse the buffer as it grows, so items land one at a time rather than all
 at once at the end:
