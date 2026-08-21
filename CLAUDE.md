@@ -518,6 +518,43 @@ Two things measured while wiring this up, both worth knowing before trusting the
   locally the flag does nothing at all, and I nearly concluded from that it was useless
   everywhere. Verify CLI behaviour against the published build, not the checkout.
 
+### Getting the model to reach for a capability (2026-08-22, 20 prompts + follow-ups)
+
+The negative judgements were already right — 5/5 avoided `$dsh/ai` where the data is fixed,
+4/4 kept a canvas's private state in `localStorage`, 2/2 asked back through `$dsh/chat`. The
+positive ones were the problem: **0/5 used `$dsh/ai` where it was wanted, 0/2 used `$dsh/fs`
+for read-then-display.** The model knew the APIs (another run called `readdir`/`readFile`
+correctly) and chose to hardcode instead.
+
+Two rewrites moved nothing. What did was reading the session log rather than guessing:
+
+> "the content (Tokyo attractions) is fixed knowledge I already have. I don't need
+> `streamText` for Tokyo landmarks — that's fixed data."
+
+**The model reads "fixed" as "known to me"** — which for Tokyo is true, so every framing about
+variable content or unseen inputs argued past it. The test that works is **enumerability**:
+three-day Tokyo itineraries is not a set of five, and writing five samples the space while
+presenting it as the whole. Quoting that reasoning back with a closed/open table took the
+failing prompts to 2/3, the third correctly staying local (two-digit addition is one formula —
+`Math.random` beats a model call).
+
+Same shape for `$dsh/fs`: the model read files with its own tools and pasted the findings in
+as literals. "Reading it yourself is not the card reading it — that card is a photograph" took
+that to 2/2.
+
+A third gap sat above both: **`给我五个猫名` produced no UI at all.** The trigger list in the
+resident layer was all numbers, comparisons and steps, and a naming request is none of those.
+"Asking for a few of something is asking for more of them" fixed it.
+
+One case stayed prose after all of it — a dinner recipe — and the log shows a deliberate
+weighing, not a miss. That is a judgement call worth leaving to the model.
+
+Method note: the first pass concluded the skill had not loaded, from grepping `out.txt`.
+Headless's final reply is far too terse to show internal calls; the session log said it had
+loaded every time. **Check `~/.dsh/sessions/<cwd-key>/session-*/session.jsonl.zstd`**, whose
+`reasoning-chunks` carry a `texts` array — and where the model tells you exactly why it did
+what it did, which beats a third rewrite guessing at it.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you
