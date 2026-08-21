@@ -668,10 +668,14 @@ output without raising its accuracy."* Three prompts with independently computab
 | 30y ¥1M at 4.2%, monthly payment | 4890.17 | **4890.17** | `P*r*(1+r)^n/((1+r)^n-1)`, with an `r === 0` branch |
 | 5 公斤 3 两 in pounds | 11.35 | **11.35** | prose; also flagged that a HK/TW 两 is 37.5g, giving 11.30 |
 
-Both exact to the cent, and the mortgage card's formula is the same one used to compute the
-truth — the arithmetic lives in the card, not in a number the model wrote down. One sample of
-two is not a guarantee, but the specific fear (a plausible card quietly wrong) did not
-reproduce on the shapes most likely to show it.
+A third, `这个 cron 一年跑多少次？0 3 * * 1`, was better than correct: it answered **"52 or 53,
+depending on how many Mondays that year has"** (2025 has 52, 2024 has 53) and built a card with
+a **year selector that counts them**, using `Date.UTC` to dodge the timezone trap. The right
+answer to "how many times a year" was not a number, and the card is what let it say so.
+
+All three exact, and the arithmetic lives in the card rather than in a number the model wrote
+down. Three samples is not a guarantee, but the specific fear — a plausible card quietly wrong
+— did not reproduce on the shapes most likely to show it.
 
 ### Counting fences does not count canvases (2026-08-22)
 
