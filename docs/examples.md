@@ -901,3 +901,44 @@ R2 的 agent 读代码后判定「canvas 每帧重挂、图表动画永远播不
 
 > 次要遗漏：机器上有 12 个真实 canvas，被当成装饰引用（「仓库里 recipe-generator 已经是真实产物」），
 > 而不是当成数据集。**它们是这栋楼里唯一无提示的证据，而它们从没和头脑风暴对照过。**
+
+### 由批评生出的测试用例
+
+那个 agent 按自己的批评提了 15 个意图，**每一个都是为了测某件从没测过的事**：
+
+| 提问 | 它要测什么 |
+| --- | --- |
+| 「帮我做个计算器」 | An answer everyone can check by eye, with zero idea to hide behind. It is the control the methodology is missing. |
+| 「这个不对，退格键应该只删一位，不是清空」 | The revision loop is the most common real interaction with generated UI and the least measured thing in the repo. |
+| 「给我个番茄钟，25 分钟那种」 | The only card whose bug is invisible at first render and obvious ten minutes later — exactly the class the research never looked at. |
+| 「这几个月的支出画个图 一月 3200 二月 4100 三月 2800 四月 5600」 | The most ordinary generative-UI request in the world, absent from the flagship set, and the cheapest way to test whether more library usage was actually an improvement. |
+| 「我把日志贴给你 你帮我看看哪几条是错误的」 | Tests the one input shape never tried: a large blob the user supplies, rather than a short question or a file on disk. |
+| 「帮我算下这个月还剩多少钱能花，工资 12000，房租 3500，还了 2000 花呗」 | Re-tests the reverted negative result with the one variable that was never manipulated. |
+| 「给我个秒表，要能记圈」 | The intersection of 'streams' and 'has its own clock' is untested, and it is where partial-react's state preservation would fail most visibly. |
+| 「这个卡老是报错，你看看怎么回事」 | Runtime failure in the user's hands is the one product state with zero measurement and the highest cost. |
+| 「两个人 AA，一共 386，我垫的，小李没喝酒少算 60」 | Argues the case directly: the best example may be the one where the reader can verify the output without trusting the author. |
+| 「帮我做个背单词的卡，先来 20 个四级词」 | Turns a metric that was measured by code-presence into one measured by behaviour. |
+| 「给我个能记体重的，每天记一下就行」 | Directly tests a curation rule that was applied to hundreds of intents and never validated against an actual artifact. |
+| 「帮我看一眼这个 CSV 里有几行数据是重复的」 | Isolates whether fs alone carries the workspace cases, which is the load-bearing claim in cutting $dsh/exec. |
+| 「把上面那个改成横着的，字太小了看不清」 | Vague follow-up plus panel geometry: two things every real session has and the whole 40-prompt corpus lacks. |
+| 「你刚给我的那个数算错了吧」 | The single biggest unexamined risk: generative UI raises the credibility of output without raising its accuracy. |
+| 「给我做个转盘，中午吃啥让它决定」 | An unprompted real-world shape that the curated set has no room for, plus a free audio-gesture check. |
+
+### 已经测掉的两个
+
+**修改是编辑，不是重写。** 先要一个番茄钟画布（338 行，用了 localStorage），
+再说「这个不对，休息应该是 10 分钟不是 5 分钟」。**diff 是一行**：
+`BREAK_MS = 5 * 60 * 1000` → `10 * 60 * 1000`，行数一行没变。
+所以担心的那个形态——整份重写、每次微调都丢掉读者的输入——不是模型的行为，它用的是 `str_replace`。
+
+**两条常驻规则会打架，「作为文本就挺好」赢了。** 「工资 12000，房租 3500，还了 2000 花呗」
+这种三个数字全可改的请求，出的是正确的散文、没有卡片。推理轨迹 4010 字符，
+模型来回争论了**六次**，引用了触发规则、差点就做了
+（*「Given the strong guidance in the system prompt … I'll provide a lightweight interactive card」*），
+最后用我们**另一条**规则收尾：
+
+> *「Not for text that is already fine as text. 一个简单的减法作为文本就挺好。」*
+
+不是规则没生效，是两条撞在一起，被那条读起来像「可以停下」的赢了。
+**故意不动**：收紧任何一条都会伤到另一条覆盖的场景，而模型自己的裁决理由
+（*「用户语气是随口问的」*）对这个请求是合理的读法。
