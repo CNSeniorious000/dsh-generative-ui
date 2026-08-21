@@ -688,10 +688,18 @@ not cascade into one another, and then inferred *"这文件看起来是被截断
 exactly how the fixture was built. Forty-eight lines of output, two actual problems.
 
 So the angle's premise is wrong about real failures: a big error count is usually a small
-number of classes repeated, and once deduplicated there is nothing to triage. A card would earn
-its place on a genuinely heterogeneous failure — a monorepo build where twelve packages fail
-differently — not on volume alone. Worth remembering before designing UI for a state whose
-shape has not been checked.
+number of classes repeated, and once deduplicated there is nothing to triage.
+
+Then built the case that was supposed to earn the card — a monorepo build failing **seven
+different ways across four packages** (missing workspace module, unresolved import, a postcss
+plugin, an absent env var, an OOM, a test timeout). Still prose, and still right: it picked
+`@org/shared-types` because it is the only *shared internal* dependency, which makes it a build
+graph problem rather than a file problem, and the one whose fix can clear others.
+
+**Triage assumes a flat list of peers. Real build failures have a topology**, and finding the
+upstream root is reasoning, not sorting — the thing the model is better at than any interface
+would be. Two scales, two kinds of heterogeneity, no card either time. The angle is refuted,
+and the reason is worth more than the angle was.
 
 ### Is the card's arithmetic right? (2026-08-22)
 
