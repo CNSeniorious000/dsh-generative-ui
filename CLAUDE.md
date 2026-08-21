@@ -882,3 +882,33 @@ used `?.` and turned a failure into a pass.
 **Don't copy** `../macaron-claude-code/web`'s zero-isolation approach (global UnoCSS runtime + global reset) — while
 vendoring, it stubbed `useGenUIStyleScope` into a no-op, which pollutes the shell of any host that has its own design
 system.
+
+### "I don't know what they want" is why the form exists (2026-08-22)
+
+`帮我把 .env 弄明白，有几个值我要改` in a fixture with 3 set keys and 3 missing ones.
+First run: `fence=0`, no canvas — a correct table of current values, a table of missing ones,
+a warning about the uncommitted secret, ending on **"你要改哪几个、分别改成什么值？"**.
+
+Two mechanisms, found in the reasoning trace, not guessed:
+
+1. The `**Nothing destructive, ever**` bullet, written for `$dsh/exec`, generalized:
+   *"I can't write to the file from a card without sendMessage for destructive ops.
+   Actually editing .env is a file write. Hmm."*
+2. Under it, the plain reflex: *"I don't know what new values they want. So I should first
+   explain, then ask."* — which is exactly backwards. **Not knowing the value is the argument
+   for a field, not against one.** The model also decided *"I don't think I need a skill here"*,
+   so the whole skill layer never loaded; the resident layer had to carry it alone.
+
+Fixed in both layers: the skill now says a write leaves a diff and a read-only session refuses
+it, so a card **should** write with a preview and a confirm; the resident layer got a trigger
+keyed on the sentence — "when they tell you they want to change something without saying what to,
+the missing value is the card", with the same *decide before you read* clause the browse rule needed.
+
+Re-run: `fence=1`, 213 lines — every key from both files in one form, `existed:false` badged
+未设置, a `/key|secret|token|password|dsn/i` mask with an eye toggle, blank values skipped,
+`writeFile` behind one 保存 button, and a `<details>` preview of the exact text about to land
+with the secret still masked. The preview was not asked for by name; it followed from
+*change visible before it lands*.
+
+Same pattern as every other trigger that worked: **recognisable from the request alone.**
+"我要改" is in the sentence. Nothing had to be read first.
