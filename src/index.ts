@@ -258,7 +258,10 @@ async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>
       stdout: result.stdout.text,
       stderr: result.stderr.text,
       exitCode: result.exitCode,
-      truncated: result.stdout.truncated || result.stderr.truncated,
+      // Per stream, not merged: a card that parses stdout needs to know whether *stdout* was
+      // cut, and one boolean for both makes a full stdout look unreliable whenever a noisy
+      // stderr overflowed.
+      truncated: { stdout: result.stdout.truncated, stderr: result.stderr.truncated },
       timedOut: result.timedOut === true,
     });
   } catch (error) {

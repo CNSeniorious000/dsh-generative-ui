@@ -20,7 +20,7 @@ type Declared = {
     readBytes: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
     writeFile: (path: string, content: string) => Promise<void>;
   };
-  exec: { bash: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: boolean; timedOut: boolean }> };
+  exec: { bash: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: { stdout: boolean; stderr: boolean }; timedOut: boolean }> };
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one

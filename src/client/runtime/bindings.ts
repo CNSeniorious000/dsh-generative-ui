@@ -142,7 +142,7 @@ async function request<T>(method: "GET" | "POST", path: string, content?: string
 }
 
 /** What a command left behind. `truncated` means the output was cut, not that it failed. */
-export type Ui4aExecResult = { stdout: string; stderr: string; exitCode: number | null; truncated: boolean; timedOut: boolean };
+export type Ui4aExecResult = { stdout: string; stderr: string; exitCode: number | null; truncated: { stdout: boolean; stderr: boolean }; timedOut: boolean };
 
 /** Talks to the exec route. Separate from `request` because the shape and the failure mode differ. */
 async function execRequest(cwd: string, sessionId: string, command: string): Promise<Ui4aExecResult> {
