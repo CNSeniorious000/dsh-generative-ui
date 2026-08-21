@@ -9,7 +9,7 @@
  * @module dsh-generative-ui
  */
 
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRequire } from "node:module";
@@ -18,7 +18,7 @@ import type {} from "@deepseek-ai/dsh-host-webserver";
 import type {} from "@deepseek-ai/dsh-system-prompt";
 import type {} from "@deepseek-ai/dsh-skill";
 import { ASSET_PREFIX, CANVAS_READ_PATH, WASM_PATH } from "./contract-assets.ts";
-import { canvasPath, isCanvasId } from "./contract.ts";
+import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { SKILL_BODY, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 
@@ -41,7 +41,8 @@ async function serveAsset(req: IncomingMessage, res: ServerResponse, file: strin
 }
 
 /**
- * Serves one canvas file's current contents.
+ * Serves one canvas file's current contents, or — with no `id` — the ids of every canvas
+ * in the workspace.
  *
  * The client could reconstruct a canvas from `write` tool arguments alone, and does while
  * a write streams — but a model routinely follows a write with several `edit` calls, whose
@@ -62,8 +63,15 @@ async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: Incom
   const cwd = url.searchParams.get("cwd");
   const id = url.searchParams.get("id");
   // The id is a path segment by contract; anything else cannot name a canvas.
-  if (cwd === null || id === null || !isCanvasId(id)) return void res.writeHead(400).end();
+  if (cwd === null || (id !== null && !isCanvasId(id))) return void res.writeHead(400).end();
   if (!liveWorkspaces().has(cwd)) return void res.writeHead(403).end();
+  // No id: list the directory. A canvas outlives the session that wrote it, so the panel
+  // needs a source beyond the current transcript to offer one written yesterday.
+  if (id === null) {
+    const ids = await readdir(join(cwd, CANVAS_DIR)).then((names) => names.flatMap((name) => { const found = canvasIdOf(`${CANVAS_DIR}/${name}`); return found === null ? [] : [found]; }), () => []);
+    res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    return void res.end(JSON.stringify(ids));
+  }
   try {
     const code = await readFile(join(cwd, canvasPath(id)), "utf8");
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });

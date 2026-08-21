@@ -9,6 +9,16 @@ import { CANVAS_READ_PATH } from "../../contract-assets.ts";
 /** Monotonic per-read, so no two reads of one canvas can share a cache entry. */
 let readSerial = 0;
 
+/** Every canvas in the workspace, including ones this session never wrote. */
+export async function listCanvasIds(cwd: string): Promise<readonly string[]> {
+  try {
+    const response = await fetch(`${CANVAS_READ_PATH}?cwd=${encodeURIComponent(cwd)}`, { cache: "no-store" });
+    return response.ok ? ((await response.json()) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function readCanvasFile(cwd: string, id: string): Promise<string | null> {
   // A distinct URL per read on top of `no-store`: the file is re-read precisely because it
   // changed, so any reuse of an earlier response is guaranteed to be the wrong answer.
