@@ -1,7 +1,7 @@
 # dsh generative UI：例子集
 
-六轮工作：四轮发散、一轮收敛核实、一轮把最强的点子写成真代码并编译。
-**895 个独立意图**，经交叉质证后留下的。
+七轮工作：四轮发散、一轮收敛核实、一轮把最强的点子写成真代码并编译、一轮补角度并攻击自己的结论。
+**997 个独立意图**，经交叉质证后留下的。
 
 每条都是**用户会原话打出来的**，不是需求描述——措辞本身被单独打分。判官毙掉了
 「我想 hover 文件名就看到内容」这类，理由是*「这是在替模型写交互规格，不是用户会说的话」*。
@@ -950,3 +950,477 @@ R2 的 agent 读代码后判定「canvas 每帧重挂、图表动画永远播不
 不是规则没生效，是两条撞在一起，被那条读起来像「可以停下」的赢了。
 **故意不动**：收紧任何一条都会伤到另一条覆盖的场景，而模型自己的裁决理由
 （*「用户语气是随口问的」*）对这个请求是合理的读法。
+
+---
+
+## 七、第七轮补的角度
+
+### 会写文件的卡片
+
+`writeFile` 一直没被用起来——**编辑本身就是界面**的那些场景。
+
+**「这几个语言的翻译文件对不齐了，帮我把缺的补上」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+三列并排的 key 表：zh / en / ja 各一栏，每行一个 key，缺失的格子空着并高亮。一次 readdir locales/ 拿到 {name,type,size}[]，逐个 readFile 解析成 Map，取并集当行。空格子直接可编辑；改过但没保存的格子左边有一条竖线。顶部「只看缺的 (37)」开关。保存按钮按语言分开——「写回 en.json（+12 键）」——点下去先弹出这一个文件的 key 级 diff（+ 绿 / ~ 黄），确认后 writeFile，然后重新 readFile 回来重画整张表，行数对不上就说对不上。缺失键写入时按原文件的 key 顺序插入而不是重排，避免整个文件变成一个大 diff。只读会话下保存失败，横幅写「只读会话，没落盘」，旁边一个按钮把补全后的 JSON 通过 sendMessage 发回聊天让 agent 写。
+
+*翻译文件是「必须并排看才能发现问题、又必须逐格编辑才能修」的典型，纯文本回答和纯只读 diff 都只做了一半。它把 examples.md 里已有的「.env 和示例文件对得上吗」那种只读比对推进成能落盘的编辑，且写入是 key 级的、可预览的，正好示范安全写的全套动作。*
+
+**「帮我把 .env 弄明白，有几个值我要改」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+每个环境变量一行：键名、值默认打码成 sk-…f3a2（只留前 4 后 4），一个眼睛图标临时显形，一个铅笔进入编辑。右侧一列灰字是 .env.example 里对应的说明/占位，example 有而 .env 没有的键单独一组「缺 3 个」置顶，可一键填入。保存时的预览只显示键名和「值已变更」，不显示明文——预览本身也不能是泄露渠道。写只写 .env；.env.example 在这张卡里是只读的，UI 上根本没有它的保存按钮。sendMessage 兜底路径只发键名列表，绝不发值，横幅里明说这一点。只读会话按统一横幅处理。
+
+*打码值是这个界面存在的唯一理由——终端里 cat .env 是全裸的，聊天里贴 .env 是永久留痕。它同时给出了「什么绝不该写」的最清晰答案：example 文件、和 transcript。*
+
+**「给我加个新组件，样板文件我懒得一个个建」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+一个表单：组件名、要不要 story、要不要测试、放哪个目录（下拉，由 readdir src/components 现场列出）。表单一改，下面立刻出现一棵将要创建的文件树，每个节点点开是完整内容预览（不是省略号），名字按 PascalCase/kebab 规则实时推导并显示推导结果。挂载时对每个目标路径 readFile 探一次，已存在的节点标红并禁用整个创建按钮——绝不覆盖，只创建。按钮文字是「创建 4 个文件」不是「生成」。写完逐个 readFile 校验，成功的打勾，任何一个失败就停在那一步并显示已经写了哪几个（半成品要说出来，别假装原子）。只读会话下把整棵树折成一段 sendMessage 让 agent 建。
+
+*脚手架是唯一一类「写多个文件才算完成」的意图，所以它是唯一能逼出「部分失败怎么说」这个问题的卡。不覆盖只创建 + 冲突即禁用，是写卡最容易讲清楚的安全模型。*
+
+**「这一堆文件名太乱了，帮我统一改一下」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+左边规则区：几个可叠加的规则（小写化、空格转连字符、去掉日期前缀、加序号），也可以直接写一条 find/replace。右边是全量预览表，旧名 → 新名，改动的部分字符级高亮；冲突（两个文件重名）标红并阻断，未变化的行灰掉折起。这里要诚实：fs 没有 rename，卡片能做的是 readBytes 原文件 + writeFile 新名，删旧文件不属于卡片——所以按钮分两段：「写出新名文件（12 个）」，成功后出现第二段「把要删的旧文件清单发回聊天」走 sendMessage，卡片自己一个字节都不删。二进制走 readBytes 不走 readFile，避免把图片当 UTF-8 读坏。只读会话在第一段就横幅。
+
+*批量重命名是最想要也最容易做成灾难的写操作。把它诚实地拆成「卡片只增、删除交回 agent」，正好是 examples.md:406 那条「诚实面对硬限制」的写版本，也把「用 writeFile 空串当删除」这个诱惑当场否掉。*
+
+**「这个 yaml 我改一下就报错，给我个能边改边看对不对的」** `canvas` · `$dsh/fs`
+
+左编辑右校验。左边 textarea 装 readFile 回来的原文；每次输入用 yaml 解析一遍（解析在内存里跑，不落盘），失败就在右边指出行号和那一行的原文，成功就把解析结果渲染成可折叠树，并对已知字段做类型/取值校验（端口是数字、路径存在与否用 readFile 探一下）。保存按钮在有解析错误时禁用——不给用户把坏文件写进磁盘的机会。保存写的是编辑框里的原始文本，不是序列化回来的对象：一旦 round-trip 就会吃掉注释和键序，这一点在按钮旁边写成一行小字。写完 readFile 回来做字节比对，不一致就直说。只读横幅同上。
+
+*「解析失败就不许保存」是校验型写卡最强的一条护栏，一句话说得清。而「保存原文不保存序列化结果」是这类卡最常见、最沉默的破坏方式，值得被当成设计要点写出来而不是留给模型自己撞。*
+
+**「我们刚才聊出来的那几条，写进 CLAUDE.md 吧」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+readFile CLAUDE.md，按标题切成章节列表。上半区是几条候选规则，每条可编辑措辞、可选择插到哪个章节（下拉就是现有的 h2/h3）。下半区是「将要变成这样」的行级 diff，只显示受影响章节前后各 3 行的上下文——追加式：只插入，从不重写别的行，diff 里出现任何 `-` 行就意味着有 bug，UI 上把删除行数当成断言显示出来（「删除 0 行」）。确认后 writeFile 整文件，再 readFile 回来把新章节渲染出来。只读会话下横幅 + sendMessage 把这几条按 markdown 发回聊天。
+
+*examples.md 旗舰里已有「哪些结论该写进 CLAUDE.md」，但那张卡到「圈出来」为止。这条是它缺的另一半，且 append-only + 「删除 0 行」这个可见断言，是让人敢按下写入按钮的最小成本设计。*
+
+**「帮我理一下 package.json 里的 scripts，太多了我自己都忘了」** `canvas` · `$dsh/fs`
+
+每个 script 一行：名字、命令（可编辑）、一句可编辑的备注（存 localStorage，不写进 json）。可以加、可以改名、可以拖排序。写入只碰 scripts 这一个键：readFile 原文，用字符串定位 scripts 块的起止括号做区间替换，其余字节原样保留——不 JSON.parse 再 stringify，否则整个文件缩进和键序会被重排成一个几百行的 diff。预览就是这段区间的前后对照。lockfile、dependencies 一律不碰，UI 上没有入口。写完 readFile 校验 JSON 仍可解析，不可解析就……不可能发生，因为写前已经在内存里 parse 过一次新文本。只读横幅同上。
+
+*它是「只重写你真正编辑的那一段字节」这条规则的最好载体——同样一次保存，做对了 diff 是 3 行，做错了是 400 行，而两者在卡片里长得一模一样。备注存 localStorage 而不写进 json，也顺手示范了「不是所有状态都该落盘」。*
+
+**「这个 .gitignore 到底有没有生效，帮我边改边看」** `canvas` · `$dsh/fs` `$dsh/exec` `$dsh/chat`
+
+左边编辑 .gitignore，右边是当前工作区文件列表（一条 git status --porcelain --ignored 拿到，展示时标出 ignored / tracked / untracked）。每输入一条规则，用 git check-ignore -v --stdin 批量喂一遍待判定路径，右边即时重染色并显示是哪一行规则命中的——这是纯只读命令，卡片里显示原命令文本。真正 writeFile 只在点「写回 .gitignore」时发生，预览是行级 diff，并额外告警「这条规则会开始忽略 3 个已 tracked 的文件（忽略对已跟踪文件无效）」这种反直觉情况。exec 只读、fs 只写这一个文件。只读会话下 check-ignore 照常能跑（denial 只发生在写），横幅只挡保存。
+
+*examples.md 有「为啥我这个文件没被 gitignore 掉」的只读诊断版；这条把它变成可编辑的，且 exec 只承担「预览后果」的角色、写入只经 fs 一个文件，正好画出观察与改动的分界。已 tracked 文件那条告警是纯经验，别处没人提醒。*
+
+**「这文件冲突了，给我个能一块一块选的」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+readFile 带冲突标记的文件，按 <<<<<<< / ======= / >>>>>>> 切成 hunk。每个 hunk 三个按钮：要我的 / 要它的 / 两个都要（可调顺序），也可以直接在下面的框里手打一个第三版。顶部进度「3/7 已决定」，未决定的 hunk 卡住保存按钮。右边常驻一个「合并后全文」预览，随选择实时变化。写入一次成型，写完再 readFile 检查还有没有残留的冲突标记，有就报出来。绝不碰 .git/ 下任何东西——不写 index、不 git add、不 --continue，这些一律 sendMessage 交回 agent，卡片只负责把文件变干净。
+
+*冲突解决天然是「逐块确认」的，UI 形状和安全模型是同一件事：没决定完就不给写。而它给出了 .git/ 那条禁令最具体的场景——就在手边、非常想顺手做、做坏了用户救不回来。*
+
+**「这张卡我想自己调调，颜色和默认值都不太顺手」** `canvas` · `$dsh/fs`
+
+卡片自带一个折起来的齿轮面板，里面是它自己的可调项（配色档、默认时长、显示密度）。改动先只作用于 localStorage，界面立即变——这一层随便点，不落盘。面板底部一个「把这些设置写进卡片源码」按钮，才真的 readFile 自己的 .ui4a.tsx、替换顶部那个 DEFAULTS 常量块、writeFile 回去。预览显示的是那 8 行常量的前后对照。写完这张卡会被整棵重挂载、所有 useState 归零——按钮下面提前写清楚「保存后卡片会重载一次」，因为那正是它变成新版本的样子；草稿本来就在 localStorage 里，所以什么都不丢。写入只允许自己那一个文件路径，别的 canvas 一律不碰。
+
+*把 §4 那条「edit 会 remount 并清空 useState」的已知陷阱直接变成产品语义：重挂载就是确认动画。这是别的环境根本做不出的一张卡——UI 编辑自己的源码、当场变成新的自己，而安全边界恰好是「只写自己那一个路径」。*
+
+**「我从表格里复制了一堆东西，帮我存成文件」** `either` · `$dsh/fs` `$dsh/chat`
+
+一个大粘贴框，粘进去就猜分隔符（tab / 逗号 / 多空格）并渲染成表格，猜错了可以手选。首行是否表头、每列的列名和类型可改，右上角实时显示「12 行 × 5 列」。输出格式三选一（csv / json / jsonl），下面是即将写入内容的前 20 行预览，用等宽字体、显示真实转义（引号、逗号、换行都按最终字节展示）。文件名可改，默认 data-<日期>.csv；挂载时对该名 readFile 探一次，重名就在按钮上写「该文件已存在，会被覆盖」并把按钮变成第二次点击才生效。只读会话横幅 + sendMessage 把 csv 正文发回聊天。
+
+*「剪贴板里的东西落成工作区里的文件」是最短的一条写路径，人人每周都干，且它把覆盖确认这件事做成了可见的两段式，而不是一个 confirm 弹窗。inline 也成立，所以它顺便测了写卡在两个 surface 上的表现。*
+
+**「这些 md 的 frontmatter 乱七八糟，帮我统一一下」** `canvas` · `$dsh/fs`
+
+readdir posts/ 拿 {name,type,size}[]，逐个 readFile 只解析头部的 --- 块，汇成一张表：行是文件，列是所有出现过的 frontmatter 字段（并集），缺字段的格子空着。列头可以整列操作：补默认值、改名、删列，也能单格改。所有编辑先只改内存，表格上用底色标出「这 9 个文件会被改」。保存前的预览不是整表，是按文件分组的 diff 列表，可逐个展开看那几行 yaml 的前后。写入逐文件进行，只替换首个 --- 块的字节区间，正文一字不动，并把「正文长度不变」当断言显示出来。任何一个文件写失败就停下并列出已改的。只读横幅同上。
+
+*批量写是最吓人的写，所以它需要最强的可见承诺：「只动 frontmatter，正文长度不变」是一个用户能自己验证的断言。列头级操作也让「编辑即界面」成立——同样的活在编辑器里是 30 次手改。*
+
+**「这个测试的 fixture 我想改改看，但不知道改了会影响谁」** `canvas` · `$dsh/fs` `$dsh/exec` `$dsh/chat`
+
+左边编辑 fixture（json，实时校验，坏了不许存）。右边先跑一条只读 rg -l 找出引用这个 fixture 文件名的测试文件，列成清单并可点开看引用那几行——改之前先知道会波及谁。保存后不自动跑测试（15s 会被杀，卡片不该假装能跑完整套件），而是给一个按钮把「我改了这个 fixture，帮我跑一下这几个测试」通过 sendMessage 发回聊天。差异预览是 json 的键级 diff。只读会话下 rg 照跑，只有保存被挡。
+
+*它回答了写卡最该回答的问题——不是「怎么写」，而是「写之前我该看到什么」。而且它诚实处理了 15s 上限（这一条在既有记录里被标为「不诚实的承诺」），把执行交回有多轮能力的 agent。*
+
+**「帮我把 README 顶上那段重写一下，我想看着改」** `canvas` · `$dsh/fs` `$dsh/ai` `$dsh/chat`
+
+上下两栏：上面编辑 markdown 源码，下面实时渲染预览（marked + 自己的样式，不引重型编辑器）。只编辑 README 的一个章节——挂载时按标题切段，用下拉选中要改的那一段，其余部分在预览里灰掉且只读，保存也只替换这一段的字节区间。左侧一条竖直的字数/行数计。有一个「让 AI 给三个改法」的按钮，streamText 流式吐候选，每个候选是可点入编辑框的起点而不是直接落盘——AI 的产物必须先经过人眼和编辑框，绝不从模型直连到 writeFile。保存后 readFile 回来重渲染。只读横幅 + sendMessage 兜底。
+
+*它给出了 ai + writeFile 同处一卡时唯一安全的连法：模型只能填编辑框，落盘按钮永远由人按。这条边界在整个例子集里还没有卡片画过，而它恰恰是最容易被顺手做错的一条。*
+
+**「给我个能记决定的地方，我老是忘了当初为啥这么定」** `canvas` · `$dsh/fs`
+
+侧栏常驻。上面一个输入区：标题、背景、决定、放弃的方案，四个框。写的过程中每次改动只进 localStorage（草稿绝不落盘，避免半句话的文件散在仓库里）。点「归档这条决定」才 writeFile 到 docs/decisions/<日期>-<slug>.md，slug 由标题推导并显示推导结果，重名自动加 -2 而不是覆盖——只创建，永不覆盖，这条写在按钮旁边。下半区是 readdir docs/decisions 出来的历史列表，点开 readFile 只读展示，历史条目在这张卡里不可编辑（要改就是新写一条，这是 ADR 的规矩，也顺便消灭了「改坏旧记录」这一整类风险）。只读会话下草稿照常能写（localStorage 不受沙箱管），只有归档被挡，横幅说清楚草稿还在。
+
+*append-only + 永不覆盖 + 历史只读，是最保守也最容易讲清的写模型，适合当写卡的样板。而「草稿在 localStorage、归档才落盘」正好利用了 canvas 会 remount 清空 useState 这条硬约束，把它变成设计而不是坑。*
+
+**「这个脚本里几个路径写死了，帮我挑一下」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+readFile 脚本，用一条正则挑出所有看起来像路径的字符串字面量，每个变成一行：当前值、一个可编辑输入框、以及一个当场 readFile 探测出来的存在性徽标（存在 / 不存在 / 是目录）。输入时即时重探，把「这个路径根本不存在」当场说出来——这是写死路径最常见的死法。保存只替换这些字面量所在的字节区间，其余一字不动，预览是逐处的行级前后对照，并显示「将修改 4 处」。不做任何格式化、不整理 import、不碰别的行。只读横幅 + sendMessage 把替换清单发回聊天。
+
+*它跟已有的「能改代码的旋钮」形状相近但问的是另一件事：旋钮调的是数值手感，这张卡验的是外部世界是否真的存在。存在性徽标是只有在这台机器上、在这个已打开的工作区里才给得出的信息，纯编辑器给不出。*
+
+### 出错时的卡片
+
+前面所有例子都假设一切顺利。人真正需要帮助时是在这些状态里，卡片的活是诊断不是装饰。
+
+**「这堆栈我看不懂，四十行全是 node_modules」** `inline` · `$dsh/fs`
+
+读：把用户贴的栈按帧切开，对每帧的文件路径跑一次存在性判断（`$dsh/fs` readFile 成功=是你的代码，失败=依赖或运行时），命中的帧再读出前后 5 行。显示：一列折叠的帧，依赖帧默认收起成一句「node_modules 里的 12 帧」，第一个属于你的帧展开并高亮那一行源码，帧号旁标「抛出点 / 你的代码第一次出现 / 调用入口」三个锚。下一步：那一帧下面一个按钮，sendMessage「从 <file>:<line> 这帧开始查，上面是我的代码」。
+
+*栈的信息量全在「哪一帧是我能改的」，而这件事只有在这台机器上试着读一下路径才知道——模型贴回来的栈是照片，卡片是探针。折叠依赖帧是整张卡的全部价值：四十行变三行。*
+
+**「build 挂了，报了四十七个错，我该先看哪个」** `canvas` · `$dsh/exec` `$dsh/fs`
+
+跑：一次构建命令，stderr/stdout 一起解析成 {file, line, code, message}。显示：错误按文件聚成组，组之间画出「A 的错来自 B 导出的类型」这类由 import 关系推出的边，被指向最多、自己不指向别人的那个组置顶标「大概率是这个」，其余标「连锁」并默认折叠。每条错误可点开看 readFile 出来的那几行。下一步：顶部一个「就修这个」，sendMessage 把根因文件和那条错误原文发回去。旁边一个重跑按钮，两次结果做 diff，消失的错标绿、新出现的标红。
+
+*构建失败的痛点从来不是「有错」，是四十七条里四十六条是同一个原因的回声。排序和折叠是纯客户端的，做完一次构建就够，正好落在 15 秒预算里。重跑后的红绿 diff 是修复循环里唯一想看的东西。*
+
+**「这个测试有时候过有时候挂，帮我看看是不是真的偶发」** `canvas` · `$dsh/exec`
+
+跑：同一条测试命令在 15 秒预算内连续跑 N 次（跑一次测一次耗时，动态决定还能跑几轮，跑不满就诚实写「只跑了 3 次」），再单独跑一次「只跑这一个 case」和一次「跑整个文件」。显示：一排通过/失败的点，下面三行结论候选各自带证据——单跑必过+合跑必挂 = 用例间有污染；随机分布 = 真偶发；每次都挂 = 根本不是 flaky，是你上次看错了。失败信息两两做 diff，只有一种失败文本还是好几种，直接写出来。下一步：sendMessage「这个是 <结论>，证据是 <n> 次里 <k> 次挂且都在合跑时」。
+
+*flaky 的三种成因（顺序依赖 / 真随机 / 一直挂）在单次运行里长得一模一样，而区分它们唯一的办法是重复——人不会手动跑八遍，卡片会。也是对 15 秒上限最诚实的用法：不假装能跑完全量，而是把预算花在采样上。*
+
+**「merge 冲突了，一堆文件，我不知道哪些是真冲突」** `canvas` · `$dsh/fs` `$dsh/exec` `$dsh/chat`
+
+读：`git diff --name-only --diff-filter=U` 拿冲突文件，逐个 readFile 切出冲突块。判：每块把 ours/theirs 去掉空白和行序后比较，完全相同的标「假冲突（只是空行/缩进）」，只有 import 行不同的标「import 顺序」，其余标「要人看」。显示：左侧文件树带三色计数，右侧当前块三栏对照（ours / base / theirs），真冲突的块默认展开，假冲突整批折成一行。下一步：每块选一边只记录选择，不写盘；底部「把我的选择发给你」sendMessage 输出一份「文件 X 的第 2 块要 theirs」的清单，由 agent 落地。
+
+*冲突解决里 80% 的块根本不需要人判断，把它们挑出来就是全部工作量的节省。不写盘是刻意的：一个正在 merge 中的工作区是用户最不能承受误写的时刻，而这正好是仓库那条「改动走 sendMessage」规则最该生效的场景。*
+
+**「这个依赖死活装不上，报错我也看不懂」** `canvas` · `$dsh/exec` `$dsh/fs`
+
+跑：把用户的错误文本先做一次分类（网络 / 版本冲突 / 平台架构 / peer / 权限），然后按分类只跑对应的探针——`node -v`、`uname -m`、包管理器 `config get registry`、`env | grep -i proxy`、`curl -sI -m 5 <registry>` 计时。显示：左边「这个包要求什么」（从 package.json / lockfile / 错误文本里抠出来的 engines、os、cpu、peer 范围），右边「这台机器是什么」，不匹配的行画红。网络类的直接给出握手到首字节的毫秒数，超时就写「registry 五秒没响应」。下一步：一条具体命令的按钮，sendMessage 把它连同证据一起发回。
+
+*装不上的五种成因需要五组完全不同的证据，而错误文本本身对新手不提供分诊信息。左右两栏「它要什么 / 你有什么」是这个问题的天然形状——一眼看到红的那行，比读五段解释快。*
+
+**「容器起不来，一直在重启」** `canvas` · `$dsh/exec` `$dsh/fs`
+
+跑：`docker ps -a --format`、`docker inspect <id>` 取 State（含 OOMKilled、ExitCode、Error、RestartCount）、`docker logs --tail 80`。显示：一条状态带写明「第 N 次重启，上次活了 1.2 秒」，正中一句退出码的翻译，并且把最容易混的两种分开——137 且 OOMKilled=true 是被内存杀的，137 且 false 是收到了 SIGKILL（有人 stop 了它 / healthcheck 判死）；再把挂载点逐个拿 fs 探一遍存在性，端口拿 `lsof -i :<port>` 看是不是被别的进程占了。日志尾部只高亮最后一次启动那段。下一步：sendMessage 带上退出码、OOMKilled 真值和缺失的挂载路径。
+
+*退出码 137 的两种含义是这类问题里最贵的混淆，而区分它们只需要 inspect 里一个布尔字段——没人会记得去看。重启循环还有个特点：日志里同一段错误重复了三十遍，只看最后一次启动那段才读得下去。*
+
+**「报 permission denied，我明明是这台机器的管理员」** `inline` · `$dsh/exec` `$dsh/fs`
+
+跑：先用一条无害的探针命令在目标路径上试写（`touch` 一个探针文件），拿到 exitCode 和 stderr 原文；再跑 `id`、对路径链上每一级跑 `ls -ldn`。显示：三选一的判定牌——(a) stderr 是 `Operation not permitted` 而系统权限位看着完全正常 → 这是本次会话被设成了只读，去 composer 改访问模式，不是你的文件有问题；(b) stderr 是 `EACCES/Permission denied` 且某一级目录的属主 uid 不是你 → 直接指出断在路径的哪一级，把那一级高亮；(c) 目录可写但文件被锁/只读位 → 指文件本身。下一步：按判定给出对应的一句话，sendMessage 发回。
+
+*这是本项目独有的、外面任何工具都做不出的分诊：沙箱拒绝和操作系统拒绝对用户呈现的文案几乎一样，而处理方式完全相反（一个改设置，一个改属主）。仓库实测过拒绝是以 exitCode=1 + stderr 的形式返回而不是抛异常，所以卡片能安静地探一下再下结论。*
+
+**「跑着跑着就被杀了，说是内存不够」** `canvas` · `$dsh/exec`
+
+跑：`sysctl hw.memsize` 或 `free -b`、容器里的 `cat /sys/fs/cgroup/memory.max`、`node -e 'console.log(require("v8").getHeapStatistics())'` 之类的运行时上限，再 `ps -o rss,vsz` 采样若干次（在预算内每 1.5 秒一次）。显示：几条水平的天花板线叠在一张图上——物理内存、cgroup 限额、运行时默认堆上限——和一条正在爬的 RSS 曲线，谁先被撞到就标谁，并写明「你撞的是运行时默认堆的 4GB，机器还有 26GB 空着」这类结论。下一步：sendMessage 带上撞到的是哪条线和它的值。
+
+*OOM 有三条互不相干的天花板，用户默认以为是物理内存，而实际上最常见的是运行时或容器限额——「机器还有一半内存空着却被杀了」这句话只有把三条线画在一起才成立。采样天然适合 15 秒预算。*
+
+**「我这命令跑了十分钟了一动不动，是死了还是在干活」** `canvas` · `$dsh/exec`
+
+跑：让用户填 pid 或从 `ps` 列表里点一个，然后每 2 秒一轮 `ps -o state,%cpu,rss`、`lsof -p <pid> -nP` 统计 ESTABLISHED 连接和打开的文件，能用就再抓一次 `sample <pid> 1`。显示：一条随时间滚动的四态带——烧 CPU（死循环/真在算）、0% CPU 且挂在网络 socket（等远端）、0% CPU 且等 stdin（在问你话，你没看见）、状态 D/不可中断（等磁盘）；RSS 在涨说明还在推进，平了十轮说明真卡住。下一步：sendMessage「它卡在 <哪一态>，连着 <host>，等了 N 秒」。
+
+*「卡住」是所有失败态里最没有信息的一个，而四种成因的应对完全不同（等着 / kill 掉 / 回车一下 / 查网络）。它必须是连续观测才有意义——单次快照分不出「慢」和「死」，这一点仓库自己在跑 benchmark 时也踩过。*
+
+**「CI 挂了但我本地明明是过的」** `canvas` · `$dsh/exec` `$dsh/fs`
+
+读：workflow 文件（readFile）抠出 runner 镜像、语言版本、缓存键、安装命令、环境变量名；跑：在本机取同样这些量（`node -v`、`uname -sm`、包管理器版本、`git rev-parse HEAD`、`env` 里同名变量存不存在，值只显示存/不存在不显示内容）。显示：左 CI 右本地的两栏对照，不一致的行标红并按「最可能造成差异」排序（版本 > 架构 > 大小写敏感的文件系统 > 缺失的环境变量 > lockfile 是否被真正使用）。文件名大小写那条特别做：跑一次 `git ls-files` 和实际 readdir 对比，找出只有大小写不同的路径。下一步：sendMessage 把红的那几行发回去。
+
+*本地过 CI 挂永远是环境差异，而差异清单是可枚举的，只是没人肯手动核对十几项。大小写敏感这条尤其值得内建：macOS 上永远发现不了，到了 CI 上就是 module not found，而它在错误信息里长得像一个普通的路径错误。*
+
+**「你刚给我做的那张卡是白的，啥也没有」** `inline` · `$dsh/fs` `$dsh/exec` `$dsh/chat`
+
+读：把出问题的那个 canvas 文件 readFile 回来，扫出它的 import 列表和 default export 的名字。跑：对每个第三方 specifier 跑一次 `curl -sI -m 8 https://esm.sh/<spec>` 并记时间，同一个 URL 连打三次（冷启动会第一次失败第二次成功——单次失败不能下结论）。显示：三种判定分开写——(a) 某个包三次里挂了三次 → 是取不到依赖，不是代码坏了，给出重试按钮；(b) default export 的函数名和某个 import 的名字撞了 → 直接指出这一行，这会让组件递归调用自己、编译不报错、渲染出一张有高度零子节点的白卡；(c) 都正常 → 让用户把卡里显示的文字念回来：空白是模块图死了（我们的问题），以 ERROR: 开头是卡片渲染时抛了（生成的代码的问题）。下一步：按判定 sendMessage，(a) 请重试、(b) 请改名、(c) 带上那行 ERROR 文本。
+
+*这是整个产品最贵的一次混淆，仓库自己踩了不止一次并写进了 §4：依赖没取到、导入被同名默认导出遮蔽、生成代码运行时抛错，三者都表现为一张空白卡片，控制台什么都没有。把「重复测量网络」和「白卡里有没有 ERROR 字样」两条判据做成一张卡，等于把作者调试这套系统的方法交给用户。*
+
+**「rebase 到一半卡在那了，现在这仓库到底是什么状态」** `inline` · `$dsh/exec` `$dsh/fs` `$dsh/chat`
+
+读：`git status --porcelain=v1 -b` 加上 .git 下的状态文件（rebase-merge/rebase-apply 的 msgnum/end/onto、MERGE_HEAD、CHERRY_PICK_HEAD、BISECT_LOG 是否存在）。显示：一句「你在 rebase 的第 4/9 步，正在把 <commit subject> 放到 <onto> 上」，下面列出未解决的路径和已经解决待继续的路径；再给三条出路各自的后果一行话——continue（需要先解决这 2 个文件）、skip（会丢掉这一个 commit，标出是哪个）、abort（回到 rebase 前的 <sha>，你这 30 分钟的解决全没了）。下一步：三个按钮各自 sendMessage 对应的意图，卡片自己一条 git 都不执行。
+
+*中断态的 git 是最典型的「知道自己在哪就解决了一半」——用户不敢动是因为 abort 会丢什么、skip 会丢什么没人告诉他。把三个后果写实、把执行交回 agent，正好是这个仓库那条 consent 规则最该被遵守的地方。*
+
+**「这个接口在浏览器里能通，我脚本里就是连不上」** `canvas` · `$dsh/exec`
+
+跑：对同一个 URL 分层探——`dig +short <host>`（或 getent）、`curl -sv -o /dev/null -m 8 -w '%{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{http_code}'`、再跑一次带 `--noproxy '*'`、再打印 `env | grep -iE 'proxy|no_proxy'`、`curl --version | head -1` 看有没有走系统证书。显示：一条四段的阶梯（DNS → TCP → TLS → 首字节），断在哪一段哪一段标红并写出该段的原始报错；下面一行关键对照——「带代理通 / 不带代理不通」意味着你的脚本没读代理环境变量，「curl 通但 node 不通」同理。下一步：sendMessage 把断掉的那一段和代理对照结论发回。
+
+*网络失败在应用层永远只报一句 connect failed，而 DNS、TCP、TLS、代理四层的修法互不相干。分段计时是 curl 现成能给的，做成阶梯就一眼看得懂；而「浏览器通脚本不通」几乎总是代理，这个对照实验值得内建成一个固定按钮。*
+
+**「这错误以前没有的，什么时候开始的」** `canvas` · `$dsh/exec` `$dsh/chat`
+
+跑：从错误文本里抠出符号名/文件名，`git log -S '<symbol>' --oneline -n 30` 和 `git log --oneline -n 30 -- <file>`，把两串按时间合并；再对最近若干个 commit 逐个跑一次极轻量的验证命令（用户填，默认取 build 或单个测试），每跑一个记 exit code，能跑几个就跑几个，超预算就停下并写明「只验到 <sha>」。显示：一条 commit 时间线，验过的染绿/红，没验的留灰，红绿交界处标「嫌疑区间」并展开那一段的 diff --stat。下一步：sendMessage「坏在 <good sha>..<bad sha> 之间，改了这几个文件」，让 agent 接着 bisect。
+
+*这是唯一一种能把「什么时候坏的」变成可点的形态，而卡片必须诚实对待 15 秒上限——它不假装能 bisect 完，它只把区间从三十个 commit 缩到两三个，然后把接力棒交给有多轮能力的 agent。灰色的「没验到」格子和绿红一样重要，是这张卡不撒谎的地方。*
+
+### 不在写代码的人
+
+写作、读、计划、决定、学、记、跟人沟通、钱和健康和家人。
+
+**「明天的会我主持 一共八个议题 每次都超时 帮我搞个能按的议程」** `canvas` · `$dsh/chat`
+
+侧栏常驻的活议程：每个议题一行，左边是预算时长（可拖），右边是实际用掉的时间条。按「开始」进入当前议题，条子实时长；超时后整行转成警示色并轻响一声（此时用户已经点过按钮，Web Audio 已解锁）。顶部一行大字实时算「按现在的速度，最后两个议题只剩 3 分钟」，超支的时间自动从后面的议题里按比例扣，被扣到 0 的议题灰掉并打上「下次再说」。每个议题下面可以随手敲一行结论。整场结束按「收工」，把所有结论 + 被砍掉的议题通过 sendMessage 发回聊天，让 agent 整理成会议纪要。议程和计时进度全部存 localStorage——会开到一半刷新页面不能清零。
+
+*这是全组里唯一一条「在它开着的时候用它」的卡：不是看完就走，是会议进行中一直摆在侧栏。panel 的持久化和可拖宽度在这里是刚需而不是顺带。而且它是纯人际场景——超时的代价是屋里另外七个人的时间。开发者的非代码工作里，主持会议是最高频也最没工具的一件事。*
+
+**「这份合同我不敢签 帮我把对我不利的条款挑出来」** `canvas` · `$dsh/fs` `$dsh/ai` `$dsh/chat`
+
+用 readFile 读进合同（或直接粘），按条切开，每条一行，左侧一根风险竖条（深浅=对我的不利程度）。整列默认按不利程度排序，不是按原文顺序——你最该看的在最上面。点开一条，下面抽屉里 streamText 用大白话讲「这句话真正的意思是：如果 X 发生，你要承担 Y」，并明确标出「这条是行业常见」还是「这条不常见」。每条右边一个勾「我要求改这条」。底部按钮把所有勾选的条款连同你自己补的一句话，通过 sendMessage 变成一条给 agent 的消息：「帮我把这几条改成对我更公平的措辞」。醒目免责：这不是法律意见。存 localStorage，签之前会再打开一次。
+
+*「不敢签」是真实的、带恐惧的日常句子，而合同天然是一份「你没写过、又必须读懂」的文档——散文回答在这里最没用，因为你要的是逐条可勾选的对象。条款语言是无限开放的空间（不是五个的集合），$dsh/ai 用在这里完全站得住；而它诚实地不假装能谈判，把要求改的条款交回聊天。*
+
+**「同事这个 PR 描述我看不懂他到底改了啥 帮我理一理」** `canvas` · `$dsh/exec` `$dsh/fs` `$dsh/chat`
+
+左边贴 PR 描述原文，右边用 bash 跑 `gh pr diff` / `git log --stat` 拿真实改动，两边对齐成一张对照表：描述里声称的每一点前面一个标记——「代码里找得到」绿、「找不到对应改动」黄、「代码改了但描述没提」红（这一列最有用）。红的那几行是你 review 时唯一真正要问的。每行一个「问这个」按钮，sendMessage 把问题写成一句人话发回聊天，攒成给同事的评论草稿。exitCode !== 0 时（比如没装 gh）整块降级成只读描述并说明原因，不装作跑通了。
+
+*review 别人的 PR 描述是开发者最典型的非代码工作，而且是人对人的：你要给同事写评论。「描述没提但代码改了」这一列是模型和 shell 一起才拿得到的信息，纯文字回答给不了。而且它严格只读——跑的全是 git/gh 的查询命令，任何动作都走 sendMessage。*
+
+**「这个活我报几天 我老是低估」** `inline`
+
+三个滑块：最顺利、最可能、最糟糕。中间实时画一条概率分布小曲线，下面大字给出 50% 和 90% 两个交付日期（「一半概率 3 月 12 号前交，想有把握就报 3 月 20」）。再加一个「我的历史低估系数」滑块，默认 1.5，拖它整条曲线右移。底部一句大白话：「你说的 5 天，按你自己的历史，实际大概是 8 天」。把两个日期做成可复制的一句话。
+
+*这句话是每个人在被问「多久能好」时心里真正想的。答案不是一个数而是一个分布，只有能拖的界面能表达；而且它故意不带 ai——PERT 是一道公式，让模型算是纯装饰。「我老是低估」这半句自带自嘲，是真人打字的语气。*
+
+**「我们下个月要从旧系统迁过去 帮我把步骤排一下 哪步做了就回不了头」** `canvas` · `$dsh/chat`
+
+竖排的步骤卡，可拖动排序，每张卡上一个开关：「可回滚」/「回不了头」。所有回不了头的步骤之上自动画一条粗的不可逆红线，线以上写「过了这条线，回退要停机」。有依赖关系的两步之间连一根线，顺序拖错了线变红并提示「B 依赖 A」。每张卡可以补一句「回滚办法」，没填的回滚步骤打问号。底部统计「12 步里 3 步不可逆，其中 2 步没写回滚办法」。整份计划存 localStorage，改一个月。
+
+*迁移计划是开发者写得最多、工具最少的一类非代码产出物——今天大家都在 markdown 里手排。「哪步回不了头」是这份文档唯一真正重要的信息，而它在纯文本里永远是散在各段的一句话，做成一条能看见的线才有用。canvas 因为这份计划要改一个月，不是看一眼。*
+
+**「两个 offer 我实在选不出来 帮我理一下」** `canvas` · `$dsh/chat`
+
+左右两栏，中间是一排你自己加的维度（钱、通勤、老板、能学到啥、稳定性…），每个维度一根权重滑块，两边各打分。右侧实时出总分和一条差距条。关键的一步在最后：算完之后按「翻硬币」，屏幕给出一个随机结果，下面只有一句话——「看到这个结果的一瞬间，你是松了口气还是有点失望？」，两个按钮。选了以后卡片把你真正的倾向写出来，并回头标出是哪个维度的权重被你自己打低了。所有打分存 localStorage，这种事要想好几天。
+
+*决策不是算术，加权打分表满大街都是且没人真被它说服；这张卡的价值全在最后那个翻硬币的动作——它把「看到结果时的第一反应」变成了一个可点击的输入。这是纯 UI 才做得到的心理学小把戏，散文回答里说「你可以试试翻硬币」完全没有同样的效果。*
+
+**「爸妈的药老是搞混 帮我排个一天该吃啥的表」** `canvas` · `$dsh/chat`
+
+横轴是早中晚睡前四格，纵轴是药名，每种药填剂量、饭前饭后、是否不能和别的一起吃。冲突的两种药在同一格里会碰出提示条。做出来的表是给老人看的：字特别大、每种药一个颜色圆点、饭前饭后用一个碗的小图标而不是文字。下面一排七天的打勾格，吃了就点一下，存 localStorage，一眼看出昨天晚上那顿是不是漏了。底部按钮把这张表通过 sendMessage 发回聊天，让 agent 排版成能打印贴冰箱上的样子。
+
+*家人 + 健康 + 记忆，三样都在，而且是那种「你在电脑前，爸妈在电话那头」的真实时刻。它的设计约束很特别——成品不是给提问的人看的，是给一个七十岁的人看的，这个约束逼出的界面（大字、颜色点、碗图标）跟前面所有卡都不一样。canvas 因为要连着记一周。*
+
+**「这篇论文我每次读到第三页就走神 帮我拆成能一段一段啃的」** `canvas` · `$dsh/fs` `$dsh/ai` `$dsh/chat`
+
+readFile 读进 pdf 转出的文本或 md，按小节切成一屏一段。每段读完下面 streamText 出一个只有一句话的检查问题（不是测验，是「你能用自己的话说说这段在反驳谁吗」），有个输入框，你打的答案存下来。答不上来的可以点「这段我没懂」，sendMessage 把这一段原文抛回聊天让 agent 展开讲。顶部一条进度条 + 「你在这篇上花了 47 分钟，还剩 3 节」。所有进度和你写过的答案存 localStorage——这东西的全部意义就是明天还能接着读。
+
+*「读到第三页就走神」是学习场景里最诚实的一句抱怨，而它的解法确实是个界面：把一篇长文变成有节奏、有回合、有记录的东西。它跟被毙掉的通用 flashcard 的区别是内容全部来自你手上这份真文件，且 ai 用在生成问题这个真正开放的地方。*
+
+**「同事结婚 我随多少合适 我们关系一般但一个组的」** `inline`
+
+三个滑块——关系亲疏、城市档次、去不去到场，中间给一个数区间而不是一个数，下面一行小字解释这个数是怎么来的（「同组同事、二线城市、到场：多数人在 600–800」）。旁边一个「对方之前随过我」的开关，打开后填个数，区间自动对齐。底部给一句可复制的转账留言。
+
+*这是那种绝对不好意思问真人、但每个人都真的会打给 AI 的问题，而且答案天生是区间不是数字——纯文字回答只会说「视关系而定」，等于没说。措辞里「我们关系一般但一个组的」这半句尴尬感很真。形状明摆着是 widget，不需要任何能力，也不该假装需要。*
+
+**「这段我写了三遍还是别扭 你别改 就告诉我哪儿别扭」** `inline`
+
+把粘进来的段落逐句拆行，每句后面一根长度条——一眼看出是不是连着五个长句没喘气。重复用到的词高亮成同一个颜色（「其实」出现了四次），被动句、套娃的定语从句、三个以上逗号的句子各打一个小标记。底部三个数：平均句长、最长的那句、你最爱用的词。不给改写版本，一个字都不改。
+
+*「你别改，就告诉我哪儿别扭」是写东西的人真正想说的话——大多数 AI 写作工具的问题恰恰是它直接替你重写了，而你学不到东西。这张卡的克制就是它的卖点，也是它不需要 $dsh/ai 的原因：句长、重复词、被动句全是可数的，交给模型反而更不可信。*
+
+**「体检报告好几个箭头 我到底哪个要紧哪个不用管」** `canvas` · `$dsh/ai` `$dsh/chat`
+
+每个异常指标一行，画成一条数轴：正常区间是一段浅色带，你的值是一个点，点离带子多远一目了然。整列按「偏离程度」排序而不是按报告原顺序。点开一行，streamText 用大白话讲这个指标是干嘛的、单独一个偏高通常意味着什么、什么情况下才值得紧张，并明确说「这个要结合别的指标看，我看不到你的全部情况」。每行一个勾「问医生」，底部把勾中的指标整理成一句可以直接念给医生听的话，走 sendMessage 交回聊天。反复出现的醒目免责。
+
+*体检报告是最典型的「一份你看不懂但关于你自己的文档」，而它的核心信息——离正常范围多远——在 PDF 里恰恰是最看不出来的。数轴这个形状把它变成三秒钟的事。它同时严格守住了边界：不下结论，产物是一句给医生的话。*
+
+**「周六一天 得陪娃 还要买菜 我还想睡个午觉 帮我排一下」** `inline`
+
+一条从早八点到晚十点的横向时间条，把要做的事拖成一个个色块，长度就是耗时。重叠的两块直接闪红。娃的睡午觉时段做成底纹，落在上面的块自动提示「这个时候他要睡了」。剩下的空档用浅灰标出来并标注时长，一眼看出「你今天其实只有一个 40 分钟的完整空档」。最后一行大字就说这一句。
+
+*带孩子的周末规划是纯文字最容易骗人的地方——列成清单看着都排得下，画成时间条才发现根本塞不进去。「我还想睡个午觉」这半句是真人打字的语气，也是整张卡真正要回答的问题。一次性，所以是 inline，不该变成一个日历 app。*
+
+**「三张机票 便宜那班要转两次 到底值不值」** `inline`
+
+三个航班并排，横条画的是门到门总时长（含到机场、转机等待、落地进城），不是航司写的飞行时间——转两次的那条一下子长出一大截。下面一根滑块「你的一小时值多少钱」，拖它，三条的「真实成本 = 票价 + 时间成本」实时重排序，谁跑到第一位一目了然。底部一句：「按你 80 块一小时算，省的 400 块要你多花 6 小时」。
+
+*这是经典的「便宜其实不便宜」，而人脑算不清，因为票价是明码而时间是隐性的。滑块把「你的时间值多少钱」这个从来没人明写的参数变成可拖的东西，拖一下结论就翻转——这正是可交互界面独有的说服力。没有任何能力依赖，也不需要。*
+
+**「明天要跟老板提涨薪 帮我想想他会怎么怼我」** `canvas` · `$dsh/ai` `$dsh/chat`
+
+左边是你的开场白（可编辑），右边 streamText 逐条生成老板可能的反驳，每条一张卡，按「你最难接的」排序。每张卡下面一个空框让你写自己的回应，写完点「这条我能接住」打勾。接不住的点「帮我想想」，sendMessage 把这一条抛回聊天让 agent 陪你练。顶部一个进度：「7 个反驳，你接住了 4 个」。全部存 localStorage——今晚练一半，明早上班路上再翻一遍。
+
+*这是纯人际、纯情绪、且真的会在半夜打出来的一句话。它把「排练一场谈话」变成了可以打勾的对象，而这件事人自己在脑子里做永远是发散的。老板的反驳是无限开放的空间，$dsh/ai 用得其所；接不住的交回 agent 多轮陪练，正好补上单轮的短板。canvas 是因为明早还要再看一遍。*
+
+**「这个保险条款说的赔付 我到底啥情况能赔」** `inline`
+
+把条款里的赔付条件编成一棵是/否的树，一次只问你一个问题（「是意外导致的吗」），点了往下走一步，路径留在上面像面包屑，可以点任意一步回头改答案。走到底给出「赔 / 不赔 / 要看材料」三种结果之一，并把这一路踩过的原文条款列在下面，每条可展开看原句。走出不赔的结局时，标出是哪一步把你挡在外面的。
+
+*保险条款是「一堆嵌套的如果」，人读不进去是因为大脑没法同时压住五层条件——一次只问一个问题就全解决了。它跟前面的合同卡是相反的方向：那张是扫描全文找风险，这张是带着一个具体情况走完一条路径。答案是路径不是段落，只能是界面。*
+
+**「这个群一百多条我没看 就告诉我有没有轮到我做的事」** `inline` · `$dsh/ai` `$dsh/chat`
+
+粘进聊天记录，streamText 边出边分三堆：「点名要你做的」「没点名但你大概逃不掉的」「纯热闹」。第一堆每条带原话引用和是谁说的，右边一个勾。第二堆每条给一句「为什么我觉得会落到你头上」。第三堆折叠成一行「另有 83 条闲聊」，点开才展。勾完底部生成一句可以直接发回群里的话（「上面那两件我来，周三前给」），可复制，也可以 sendMessage 让 agent 帮你排期。
+
+*「一百多条没看」是打工人每天真实的一句话，而它要的不是摘要——摘要工具满地都是且没人用——要的是「有没有轮到我」这一个判断。把结果分成「点名的 / 逃不掉的 / 纯热闹」三堆，第二堆才是真正值钱的那堆，也是模型独占的判断。产出物是一句能发回群里的话，人对人的闭环收在这。*
+
+### 一条回复里多张卡 / 撑住规模的卡
+
+几乎所有例子都是一张自足的卡。这组推的是关系、规模和翻页。
+
+**「帮我把这个 canvas 拆一下，都塞一个文件里我看不动了」** `canvas` · `$dsh/fs`
+
+The model splits an existing large canvas — say the 496-line tarot.ui4a.tsx — moving data and helpers into .dsh/ui4a/canvases/<id>/*.tsx and leaving the entry importing them with `./tarot/deck`. The panel must then still render.
+
+*This is the sub-page question stated as something a user actually says, and it is the cheapest possible test of the gap. src/prompt.ts:47 promises relative sub-page imports; .dsh/ui4a/canvases/tarot.ui4a.tsx:3 shows the model already does it; but GenUISurface.tsx:102-107 passes no `filename`, so compiler.ts:45 uses `_.tsx` and partial-react's runtime.ts:17-18 says `./deck` becomes the unresolvable `_.tsx/deck`. mergeFallbackImports cannot help (importMap.ts:20 excludes dot-relative). serveCanvas (index.ts:105) never fetches the child anyway. Expected outcome: a blank panel with nothing in the console — the exact §4 signature of a dead module graph. One turn either confirms the whole chain or falsifies my reading.*
+
+**「把咱们这次聊的东西整理成一个能翻页的小册子，一页一个主题」** `canvas` · `$dsh/fs` `$dsh/ai`
+
+A multi-page canvas: the entry file is a shell with a left rail of page titles and a content area; each page is its own file under <id>/. Clicking a title swaps the rendered sub-component. Current page number in localStorage so reopening lands where you left.
+
+*The intended use of the sub-page contract, phrased as a thing people ask for rather than as a directory layout. It is the second, larger probe of the same gap: where the previous intent tests one relative import, this one tests a whole tree plus a router, so if the plugin ever gains `filename` resolution this is the intent that shows whether a many-file canvas is pleasant or merely possible. The remount fact from §4 matters here — a canvas edit resets every useState, so the current page has to live in localStorage or every edit throws the reader back to page one.*
+
+**「我们仨轮流值班，这个月怎么排大家都能接受」** `either`
+
+Two blocks in one reply. The first is a compact month grid, one cell per day, colored by who is on. The second is a fairness readout — nights each, weekends each, longest streak — that recomputes when you drag a day in the grid. They agree through one localStorage key holding the assignment array; the grid writes it, the readout reads it on the same tick.
+
+*The cleanest two-card relationship: a manipulable thing and a verdict on it. §4.5 only ever measured that three inline blocks coexist — nothing tested whether two of them can share state, and localStorage is the only channel they have (each fence gets its own GenUISurface and its own blob module; nothing passes props between them). Also a real reproduction case for §4's console.error refcount trap, which is explicitly a concurrent-card bug and which a chat node is 'multi-card by nature'.*
+
+**「nginx 这三份配置我不知道该用哪个，线上是哪份」** `canvas` · `$dsh/fs` `$dsh/exec`
+
+Three panels side by side under one shared scroll position, differing lines tinted; above them a single strip saying which directives actually differ and which of the three the running process is using. Reading is via readFile; the running-config check is one command whose exact text is printed above its output.
+
+*The heaviest multi-card ask in the set, and deliberately so: three surfaces plus a summary strip in one reply is the concurrency stress §4 predicts will lose the host's console.error permanently. It also exercises the consent rule the repo tested head-on — inspecting which config is live is observation, and any 'switch to this one' has to leave through sendMessage. Nothing in examples.md compares three files at once; the closest is the two-branch comparator in the exec section.*
+
+**「这仓库里到底有多少地方在用这个函数，全给我列出来别省略」** `canvas` · `$dsh/exec` `$dsh/fs`
+
+One `rg -n --json` pass, results held in a plain array and drawn through a windowed list — only the ~40 rows in view are React elements, the rest is spacer height. A header states the true count, and if $dsh/exec reported truncation it says so in that header rather than silently showing a short list.
+
+*The thousands-of-rows case. 'Don't skip any' is what a person actually says, and it forces the windowing rather than the model's habitual `head -200` (which the examples.md live-ripgrep card does). The truncation display is not decoration: commit c99aed4 split `truncated` into per-stream flags precisely so a card can distinguish which stream was cut, and this is the intent where lying about the count is the worst failure. 15s bash kill is the other real ceiling and belongs in the same header.*
+
+**「这个构建到底卡在哪一步，我盯着终端看不出来」** `canvas` · `$dsh/exec`
+
+A card that re-runs one cheap status command every second or two and draws the last ~60 samples as a small strip — which step is current, how long it has been there. It shows the exact command it is polling, and stops polling itself when the run ends or the panel is closed.
+
+*The timer intent, but a timer with a side effect rather than a clock. pomodoro and stopwatch already prove the pure-clock form; nothing in the repo polls $dsh/exec on an interval, and examples.md's git-status card explicitly uses a manual refresh button instead. It lands directly on the gap examples.md recorded as known and unfixed — no AbortSignal, so a card firing a command per tick cannot cancel the previous one — which makes the self-stop condition the interesting part rather than a detail.*
+
+**「给我起一堆名字，我一个都看不上就再来，直到我说停」** `canvas` · `$dsh/ai` `$dsh/chat`
+
+A button starts it; each round is one streamText call whose output appends to a running list, and when the stream finishes a state flag decides whether to fire another. A Stop button clears the flag — the current stream finishes, no new one starts. Kept names get starred into localStorage; the rest scroll away.
+
+*The keeps-generating case, phrased honestly against the measured API: $dsh/ai is single-turn with no tools and no abort, so 'until stopped' can only mean a loop between calls, and the Stop button stops the next one. It also sits on the enumerability rule from the 2026-08-22 §4.5 section — the model reads 'fixed' as 'known to me', and the fix was the closed/open test. 'Until I say stop' is the most explicitly open request possible, so it should clear that bar without argument. 给我五个猫名 in the repo was the one-shot version; this is what happens when five is not enough.*
+
+**「还有多久发布」** `canvas` · `$dsh/exec`
+
+Almost nothing. One number, very large, centered, with a word under it. No border, no card chrome, no legend. It stays one number at 320px and at 720px — the container query changes the type size, not the column count. One small line at the bottom names where the number came from.
+
+*The mostly-empty-on-purpose case, which has no precedent in any of the 895 intents — every one of them fills its surface. It is also the reverse test of the container-query work in §2.5, which was verified going one way (560px single column → 640px three columns, on the model's own 38rem breakpoint) and never tested for a design that refuses to add columns when given room. The prompt is four characters because a card that is mostly empty has to come from a question that is mostly empty; asking for it elaborately would produce something elaborate.*
+
+**「这个报错我搜了半天没头绪，你先别急着改」** `either` · `$dsh/chat` `$dsh/fs`
+
+Two blocks. The first is a short list of candidate causes, each one line, each with a button. The second block does not exist yet — clicking a candidate sendMessages '先查第三个：连接池被耗尽了？' and the model's next reply carries the evidence card for that one branch, replacing the question in practice by superseding it.
+
+*The question-card-whose-answer-replaces-it, written the only way the runtime permits: a card cannot swap itself out, but ctx.conversation.send puts the choice in the transcript and the next reply carries the replacement. §4.5's $dsh/chat run measured 5/5 wiring every option to sendMessage and 5/5 sending human-readable text, so the mechanism is proven — what is untested is a two-card reply where the second card's content is decided by a click on the first. '你先别急着改' is also the phrasing that makes it a question card rather than a fix.*
+
+**「这个 JSON 太大了打不开，先给我看看长什么样」** `canvas` · `$dsh/fs`
+
+readBytes the file, and show the shape rather than the content: top-level keys, array lengths, the type of each field, one sample value per path. Expanding a node reads only that slice. Nothing renders the whole document — the header states the byte size and how much was actually parsed.
+
+*The other half of the thousands-of-rows problem: not a long list but a deep object, where the failure mode is the browser dying on the parse rather than on the render. readBytes exists for exactly the reason that matters here (commit c703340 — readFile UTF-8-decodes, and a large file read as text is both slow and lossy for anything non-text). It is also the reading-vs-photograph rule from §4.5's capability section in its most obvious form: the model summarizing the JSON itself would be a snapshot, and the point is that the user opens nodes the model never looked at.*
+
+**「刚跑完的测试挂了几个，我想边看边试着改」** `canvas` · `$dsh/exec` `$dsh/fs` `$dsh/chat`
+
+Failures on the left as a list; selecting one shows its assertion and the source lines around it via readFile on the right. Each failure has a 'this one is mine' note field that persists in localStorage, so triage survives the remount an edit causes. Re-running is one button that shows its command; fixes leave through sendMessage.
+
+*examples.md has two test-runner cards and both stop at 'show pass/fail with expandable detail'. What neither does is survive being worked alongside — and §4 records that a canvas edit remounts the tree and resets every useState while localStorage survives, which makes triage notes the exact thing that must not be state. It also inherits the honest limit examples.md already flagged as an over-promise: 15s kills a real suite, so the card has to say what it could not finish rather than report a green it did not earn.*
+
+**「帮我看看这几个域名到底指到哪去了，有俩我怀疑早就废了」** `either` · `$dsh/exec`
+
+A summary block first — how many resolve, how many do not, how many point somewhere unexpected — then a per-domain block with the actual answer for each, the resolving command printed above its output. The summary is the thing you screenshot; the detail is the thing you scroll.
+
+*The plainest form of the summary-card-plus-detail-card ask, chosen because the split is inherent to the question rather than imposed: 'how bad is it' and 'which ones' are two different reads at two different moments. Unlike the rota intent these two do not share state at all — the summary is derived once from the same command output — which makes it the control for whether two related blocks need a channel or merely need ordering. Every command is read-only, so it sits cleanly inside the observe-only rule verified on 2026-08-22.*
+
+**「我这台机器上装了几个版本的 node，到底哪个在管事」** `inline` · `$dsh/exec`
+
+One block: the resolution chain as a short vertical list — what which returns, what the version managers each think, what the shims point at — with the one that actually wins marked. Each row carries the command that produced it. Fits in a chat column without scrolling.
+
+*The fourth trigger shape from §4.5 — an expression the user is holding — applied to an environment instead of a cron line, and the tell the repo named is present: the answer is already a table. It is also the small-and-inline control for this batch, which is otherwise heavy on canvases and multi-block replies; §4.5's 'simple is what makes it cheap to build, not what makes it unwanted' is exactly the excuse this prompt invites, and the cron/glob/chmod result (3/3 flipped) says the rule should hold here.*
+
+**「把上次那个卡片再打开一下，我改两个数」** `canvas` · `$dsh/fs`
+
+No new file. The reply is a pointer to a canvas written days ago, opened from the launcher's workspace listing, with its localStorage state exactly as it was left.
+
+*The one intent here that asks for no card at all, and the only test of the claim §3.6 makes about the launcher — that a canvas outliving its session is reachable because serveCanvas with no `id` lists the whole directory. Worth asking because the same listing is where the sub-page gap becomes user-visible: index.ts:100 flatMaps through canvasIdOf, which requires the .ui4a.tsx suffix, so a canvas's own child directory is silently absent from the picker. It also checks the wrapped workspaces.openPath behaviour §3.6 describes, where a contract path shows the panel instead of handing the file to an editor.*
+
+### 没听说过这个功能的人
+
+门槛比演示高：他**本来就会打这句话**，在任意仓库里，一轮之内就有回报。
+
+**「帮我写个 commit message」** `inline` · `$dsh/exec` `$dsh/ai` `$dsh/chat`
+
+One `git diff --cached --stat` + `git diff --cached` on mount, shown as a compact change summary at the top (files, +/-). Below it, three or four candidate subject lines in different registers — terse conventional-commit, plain descriptive, one that names the *why* — each with an optional drafted body, generated through streamText so they land one at a time. Each candidate is a click target: clicking sends it back as the user's next message ("用这条：fix(auth): ..."), so the agent runs the commit. A small editable field under the selected one for a hand tweak before sending. If the index is empty, the card says so and offers the unstaged diff instead of rendering an empty shell.
+
+*The most-typed sentence in this list — anyone using a coding agent types it several times a day, with no knowledge of the plugin. Trigger is strong on two counts: it is 'asking for a few of something' (the rule §4.5:529–565 added after 给我五个猫名 produced no UI at all), and the answer the model was going to write is already a list of options. Genuinely open-ended, so it survives the enumerability test that killed the Tokyo case. Observe-only holds naturally: the card reads the diff, the commit goes back through sendMessage — the exact shape the model chose unprompted in the untracked-files test (CLAUDE.md:636–647). Oh: the diff is right there and the options are already written.*
+
+**「这个报错我看不懂，日志贴给你了」** `inline` · `$dsh/fs` `$dsh/chat`
+
+The pasted log is parsed into stack frames and grouped: frames inside the user's own code get full contrast and a file:line anchor, node_modules / runtime frames collapse into a single dimmed 'and 34 frames of library' row that expands on click. The one line the card believes is the actual cause sits at the top in plain language, with the raw line underneath verbatim so nothing is taken on trust. Clicking a project frame reads that file through $dsh/fs and shows the five lines around it in place — the real current source, not a remembered version. A button at the bottom sends '从 src/x.ts:42 开始查' back to chat.
+
+*Ordinary to the point of invisible: everyone pastes a stack trace. 帮我把这段报错翻译成人话 is in the flagship set, but that is a translation; this is the *fold*, which is where the payoff is. Directly consumes the §4.5:529 photograph rule — the model's instinct is to read the file with its own tools and paste lines in as literals, and 'reading it yourself is not the card reading it' took that from 0/2 to 2/2. Trigger risk low: a stack trace is the fourth shape almost by definition, an opaque expression the user is holding. Oh: forty lines collapse to the three that are yours, and clicking one shows live source.*
+
+**「这个 SQL 有点慢，我 explain 了一下，你看看」** `inline`
+
+The EXPLAIN output becomes the tree it actually is: nested nodes indented by depth, each node's estimated rows drawn as a bar so a 12-row nested loop and a 4M-row seq scan are visibly different objects rather than two similar lines of text. The node where estimated and actual diverge worst is outlined. Toggles across the top flip the assumptions the plan depends on — 'assume an index on user_id', 'assume stats are current' — and the tree redraws to show which node the change would have moved. Nothing is executed; the card reads the plan the user already has.
+
+*A query plan is the fourth trigger shape in its purest form — an expression the user is holding where the prose answer is already a table, the exact tell §4.5:597–617 added and measured 3/3 on. Real people paste EXPLAIN output constantly and get back a paragraph they re-read three times. No capability needed at all, so it is the cheapest one-turn payoff in the set: everything it needs is in the message. Oh: the seq scan is physically nine times taller than everything else.*
+
+**「这两个 json 有啥不一样？我这边好的那个和坏的那个」** `inline`
+
+Two paste areas, then a structural diff by key path rather than by line: keys present in one and missing in the other, keys in both with different values, and — the part a text diff never gives — keys whose *type* changed (string "1" vs number 1, null vs absent). Unchanged subtrees collapse by default so the screen holds only differences. A filter box narrows by path prefix; value diffs show both sides inline. Order-insensitive, which is the whole reason `diff` on two files fails the user.
+
+*Config that works on one machine and not another, an API response that changed shape — weekly for anyone integrating anything, and the thing people currently do (diff two pretty-printed files) fails on key order and misses type changes entirely. examples.md has 「这个 diff 我看不出来改了啥」 for source and 「.env 和示例文件对得上吗」 for env files; neither is structural JSON. Two pasted blobs are two expressions the user is holding, so the fourth-shape trigger applies, and the answer was going to be a table of paths anyway. Oh: the difference was a string "1" against a number 1, and no line diff would have said so.*
+
+**「这个功能我准备这么做，你看看有啥漏的」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+The user's plan restated as an ordered list of steps, each with a checkbox and a one-line note on what it touches. Beside it a second column the card fills in itself: for each step, the files it would have to change, read live through $dsh/fs so paths are real and clickable rather than guessed. Steps whose target file does not exist get flagged — usually where the plan is wrong. A third column is empty and editable: risks the user thinks of while reading. Everything persists to localStorage under the canvas key, so tomorrow it is still there with the boxes ticked. Ticking the last box sends a summary back to chat.
+
+*People say this before every non-trivial change and are not asking for UI. It is the request shape the resident layer already lists (a procedure, steps to step through) and it fails the enumerability test in the right direction — a plan for *this* repo is not printable from memory, it has to look. Persistence is a real requirement rather than a demo of one, which is what CLAUDE.md:294 demands of a canvas, and the plugin's own measurement moved canvas persistence 8/19 → 17/19. Oh: two of the files your plan assumed exist, don't.*
+
+**「这堆日志里的报错，哪些其实是同一个问题」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+One bounded read of the log file through $dsh/fs, then clustering by normalized shape — timestamps, ids, ports and paths stripped so 'connect ECONNREFUSED 127.0.0.1:5432' and the same line with a different port land together. Each cluster is a row: count, first and last occurrence, one representative line verbatim. Rows sort by count, so 900 identical noise lines sink into one row and the two-occurrence oddity becomes visible, which is the point. Expanding a row lists the real lines. A 'this one' button sends the representative line back to chat to be chased.
+
+*The realistic version of 'the build failed and there are 4000 lines': the person does not want them read, they want to know how many distinct problems there are. Answer-is-already-a-table applies, and enumerability is the strong framing — the model cannot know what is in *this* log, so the 'I already know this' reasoning §4.5:529 identifies as the blocker never arises. Deliberately not framed as watching a running build: the 15s exec kill (CLAUDE.md:618) makes that a promise the surface cannot keep, and examples.md already calls out that dishonesty. Oh: 4000 lines were four problems.*
+
+**「这个跑一次大概要多少钱？」** `inline`
+
+A cost model with the pieces exposed as fields rather than baked into a sentence: input tokens, output tokens, calls per run, runs per day, and per-model rates in a small editable table. One big number for per-run cost, a second for per-month, and a stacked bar showing how the total splits between input and output — usually the surprising part. A cache-hit-rate slider redraws it, because that is the lever people actually have. Changing any field moves everything at once.
+
+*Two years ago nobody typed this; now anyone wiring up an LLM feature types it before shipping. The archetypal 'numbers the user might change' trigger the resident layer has carried since round one, and unlike the currency case in §4.5:566 — which lost its whole turn to searching for a live rate — the numbers are the user's own, so no lookup swallows the turn. That contrast is exactly why I rank it above the exchange-rate shape that measurably failed. Oh: output tokens are 80% of the bill, and the slider says caching barely helps.*
+
+**「这个函数叫啥好？我实在想不出名字」** `inline` · `$dsh/fs` `$dsh/ai` `$dsh/chat`
+
+The user pastes or names the function; the card reads it through $dsh/fs if it is in the workspace, then streams candidate names in — each with a one-line justification and, crucially, the call site rendered with that name substituted, so the name is judged in the position it will be read in. Names group by convention (verb-first, noun, get/compute/derive) so the choice is between styles rather than twenty flat strings. Clicking one sends '就叫 xxx' back to chat and the agent does the rename.
+
+*The most-typed non-technical sentence in programming, and the one where prose is worst: a bulleted list of names is unusable because a name is only judgeable in a call site. Hits 'asking for a few of something is asking for more of them' — the rule added after 给我五个猫名 produced nothing — and passes enumerability cleanly: good names for *this* function are not a set of five, which is the framing that took the failing $dsh/ai prompts to 2/3. Oh: seeing the name inside its own call site instantly kills three of the four candidates.*
+
+**「这个 PR 太大了，帮我拆一下」** `canvas` · `$dsh/exec` `$dsh/chat`
+
+One `git diff --stat` plus per-file hunk headers, rendered as a board of hunks the user drags into named piles. The card seeds the piles with a guess — pure renames together, test files with the code they cover, formatting-only hunks in their own pile — and each pile shows its own stat line so the user can see when one is still too big. A pile can be sent to chat as '先提交这些：<file list>', which is what actually splits the branch: no staging, no resets, no destructive commands anywhere in the card.
+
+*Everyone who works with an agent ends up with a branch that grew too big, and this is the sentence they type. It is the one place where the consent finding (CLAUDE.md:636–647) does visible work rather than being obeyed quietly: splitting a branch is inherently mutating, so the mutating half leaves through sendMessage and stays in the transcript. The model chose exactly this shape unprompted in the untracked-file test, the best available evidence it will hold here. Oh: the 40-file diff was really three commits, and one of them is pure formatting.*
+
+**「这段文案帮我换几种说法」** `inline` · `$dsh/ai` `$dsh/chat`
+
+The original sits at the top, unedited. Below it, variants stream in one at a time through streamText, each labelled by what it trades away — shorter, warmer, more direct, less hedged — with changed spans marked against the original so the difference is visible without re-reading the whole thing. A length constraint field at the top (a 60-character button label, a 200-character summary) re-runs and marks the ones that bust it. Clicking a variant sends it back to chat as the chosen one.
+
+*Error copy, a PR description, a button label, a Slack message — typed constantly in real work and never thought of as a UI request. The enumerability case done right: phrasings of a specific sentence are an open space, so the 'I already know this' reasoning quoted at CLAUDE.md:529–565 has nothing to grab. Streaming is the payoff and inline is the leg measured to stream (47 state changes over 17.5s), so variants land one at a time instead of arriving as a wall. Oh: the changed words are highlighted, so you can see what each version actually gave up.*
+
+**「tsconfig 这些 strict 选项我该开哪些」** `canvas` · `$dsh/fs` `$dsh/exec` `$dsh/chat`
+
+Every strict-family flag as a row with a switch, initialized from the real tsconfig.json read through $dsh/fs so the starting state is the project's actual state, not a blank template. Flipping one on runs a scoped type-check through exec and reports how many errors it would add and in which files — the number is what makes the decision, and it is the number nobody has because getting it means editing the config and waiting. Rows sort by that cost so the free wins float up. The chosen set persists; 'apply these' goes back through chat rather than writing the file.
+
+*A real recurring question in any TS repo that predates strict mode, and the honest answer has always been 'try it and see' — exactly the work a card can do while you read. Fits observe-only without strain (it measures, the agent edits), and it is a genuine fs case: the model's alternative is to read tsconfig with its own tools and hardcode the list, the photograph problem §4.5 names directly. Ranked here rather than higher because it only comes up on a repo that hasn't decided, and the check must be scoped to stay inside the 15s kill. Oh: three of the six flags are already free.*
+
+**「这几个方案我到底选哪个」** `canvas`
+
+Options as columns, criteria as rows, each criterion carrying a weight slider. Cells are filled by the user or by the card where it has grounds; the total row updates live as weights move. The useful part is the sensitivity strip under the totals: it marks how far each weight can move before the winner changes, so an option that wins only under one exact weighting is visibly fragile. Persisted, because this argument resumes tomorrow and usually with someone else in the room.
+
+*Multi-way comparison is one of the three original trigger shapes and §4.5 shows it working — 帮我比较三款云服务器 went from 13 tool calls to 4 with the skill first. What is new is the sensitivity strip, the actual 'oh': it converts a decision people make by argument into one where you can see whether the winner is robust. examples.md has 三个人合租怎么分不吵架 as a weighted split, but nothing surfacing ranking stability. No capabilities, so nothing can fail. Oh: nudge one weight 10% and the winner flips — you never actually had a preference.*
+
+**「这个 docker 镜像怎么这么大」** `canvas` · `$dsh/exec` `$dsh/chat`
+
+`docker history --no-trunc --format` in one call, rendered as a vertical stack of layers sized by bytes, so the 900MB layer is nine times the height of the 100MB one and the twelve trivial layers are hairlines. Each layer shows the Dockerfile instruction that produced it, wrapped and readable rather than truncated at 60 characters. Layers above a size threshold get flagged with the usual suspects — apt lists left behind, a COPY before the dependency install that invalidates the cache below it. The rewrite suggestion goes back through chat; nothing is built or pruned by the card.
+
+*Typed the moment a push gets slow, by people with no intention of asking for an interface — the current answer is a table with a truncated command column, unreadable exactly where it matters. Answer-is-already-a-table applies, and it is the honest kind of exec use: one fast read-only command well inside the 15s kill, with the fix routed out through sendMessage per the consent rule. Lower rank only because it needs Docker in the picture; when it applies it applies hard. Oh: one COPY line is 60% of the image.*
+
+**「这几个语言的翻译对得上吗」** `canvas` · `$dsh/fs` `$dsh/chat`
+
+A coverage matrix built by reading the locale files through $dsh/fs: keys down the side, locales across the top, each cell a small mark — present, missing, or present-but-identical-to-the-source-string, the untranslated-placeholder case a key-count diff scores as complete. Filter to 'missing anywhere' and the matrix collapses to the work. Per-locale completion percentages across the top. Selecting a set of gaps sends them back to chat as a list to fill.
+
+*Anyone maintaining more than one locale asks this before a release, and the tool they reach for undercounts because identical-to-source reads as translated. The matrix is the answer's real shape, so the fourth-shape tell fires, and it is a pure photograph-rule case: the model's default is to read three locale files itself and paste a summary that goes stale on the next commit. Narrower audience than the items above, hence the rank; inside it, typed every release. Oh: the locale showing 100% has 40 strings that are just the English copied over.*
+
+**「帮我把这个 csv 看一下」** `canvas` · `$dsh/fs`
+
+Read through $dsh/fs, header row detected, then a table usable on a wide file: sortable columns, a sticky header, and under each column name a one-line profile — type, null count, distinct count, min/max for numbers. Columns whose profile looks wrong (a numeric column with three strings in it, a date column with two formats) are marked, because that is what the person is about to be bitten by. Picking any column draws a distribution for it; picking two draws them against each other. Persisted so the picked columns survive a reopen.
+
+*Data files land in working directories constantly and 'take a look at this' is how people hand them over. The measured risk is the one §4.5:529 records — the model reads the file with its own tools and pastes the first ten rows in as literals, a photograph that cannot be sorted. The rule that fixed that is in place and this is the clearest case for it. Ranked last of the strong set because it needs a data file present, but examples.md notes 把这些数据可视化一下 correctly explores the workspace first, so the trigger path is known to work. Oh: the date column has two formats in it and the card said so before you sorted anything.*
