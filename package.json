@@ -51,13 +51,14 @@
     }
   },
   "scripts": {
-    "build": "bun scripts/build.ts",
-    "prepare": "bun scripts/build.ts",
+    "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
+    "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "typecheck": "node scripts/typecheck.mjs",
     "smoke": "bun scripts/smoke.ts",
     "check": "bun run lint && bun run typecheck && bun run build && bun run smoke",
     "lint": "oxlint",
-    "fmt": "oxfmt"
+    "fmt": "oxfmt",
+    "gen:standalone": "bun scripts/gen-standalone.ts"
   },
   "dependencies": {
     "@esm.sh/tsx": "^1.5.3",

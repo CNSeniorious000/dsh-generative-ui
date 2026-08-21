@@ -33,10 +33,10 @@ Object.assign(globalThis, {
  */
 const blobs: string[] = [];
 Object.assign(globalThis, {
-  Blob: class {
-    constructor(parts: string[]) {
-      blobs.push(parts.join(""));
-    }
+  // A constructor is the whole contract here — the bundle only ever does `new Blob([source])`.
+  // oxlint-disable-next-line typescript/no-extraneous-class
+  Blob: function Blob(this: unknown, parts: string[]) {
+    blobs.push(parts.join(""));
   },
   URL: Object.assign(URL, { createObjectURL: () => `blob:smoke/${blobs.length}`, revokeObjectURL: () => {} }),
 });
@@ -133,10 +133,12 @@ for (const source of blobs) {
     .filter((line) => !line.startsWith("import ") && !line.startsWith("export "))
     .join("\n");
   try {
-    // oxlint-disable-next-line no-new-func
+    // Constructed for the parse, not the function: a syntax error throws here, and that is the
+    // whole check.
+    // oxlint-disable-next-line no-new-func, no-new
     new Function(body);
   } catch (error) {
-    throw new Error(`a synthesized blob module does not parse: ${error instanceof Error ? error.message : String(error)}\n${source}`);
+    throw new Error(`a synthesized blob module does not parse: ${error instanceof Error ? error.message : String(error)}\n${source}`, { cause: error });
   }
 }
 if (blobs.length === 0) throw new Error("no blob modules were synthesized — see the registry trigger above");

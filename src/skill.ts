@@ -10,7 +10,10 @@
  * The catalog carries `name` and `description` **only** — not `whenToUse`, not the body — so the
  * description is the entire routing signal and has to name the trigger, not summarise the content.
  */
-import { CANVAS_DIR, CANVAS_SUFFIX, FENCE_LANG } from "./contract.ts";
+import { CANVAS_DIR, CANVAS_SUFFIX, CAPABILITY_PREFIX, FENCE_LANG } from "./contract.ts";
+
+/** The checker, from pkg.pr.new: @genui/cli is a private workspace package and not on npm. */
+const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main";
 
 export const SKILL_NAME = "generative-ui";
 
@@ -24,7 +27,37 @@ export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} 
  * Without the map, `check` reports `Cannot find module "$dsh/chat"` on every card that uses
  * one, and a false error is worse than no check: the model goes and "fixes" it.
  */
-export const skillBody = (typesMap: string | undefined): string => `# Building a generative UI
+/**
+ * The paragraph about which import map serves which command.
+ *
+ * Built here rather than inline: nesting one template interpolation inside another inside the
+ * body is how this file broke twice, and the two maps have genuinely different lifetimes —
+ * the type one may exist while the stub one does not.
+ */
+function mapNotes(typesMap: string | undefined, standaloneMap: string | undefined): string {
+  if (typesMap === undefined) return "";
+  const check = [
+    `The \`-i\` is not optional when the card imports \`${CAPABILITY_PREFIX}/*\`: without it every one of those lines`,
+    "is reported as `Cannot find module`, and there is nothing to fix — they resolve at render time.",
+    "",
+    "That map holds type declarations, so it serves `check` and `lint`.",
+  ].join("\n");
+  if (standaloneMap === undefined) return `${check} \`build\` and \`dev\` want runnable JS and will fail on it.`;
+  return [
+    `${check} \`build\` and \`dev\` want runnable JS, so they take a different one:`,
+    "",
+    "```",
+    `npx --yes ${CLI_URL} build <file> -i ${standaloneMap}`,
+    "```",
+    "",
+    `That second map stubs \`${CAPABILITY_PREFIX}/*\` — the exported page has no dsh around it, so those calls log to`,
+    "the console and return empty instead of working. The layout, the styling and everything that",
+    "does not touch the harness are real; anything that does is inert. Useful for showing someone a",
+    "snapshot, not for testing the interactive parts.",
+  ].join("\n");
+}
+
+export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined): string => ((maps) => `# Building a generative UI
 
 ## Is this a UI at all
 
@@ -156,19 +189,15 @@ A canvas is a file, so you can run a checker over it. \`@genui/cli\` validates e
 kind of TSX:
 
 \`\`\`
-npx --yes https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
+npx --yes ${CLI_URL} check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
 \`\`\`
 
 \`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. \`check\` includes
-TypeScript diagnostics; \`lint\` is the faster syntax-only pass.${typesMap === undefined ? "" : `
+TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
 
-The \`-i\` is not optional when the card imports \`$dsh/*\`: without it every one of those lines
-is reported as \`Cannot find module\`, and there is nothing to fix — they resolve at render time.
+${maps}
 
-That map holds type declarations, so it serves \`check\` and \`lint\` only. \`build\` and \`dev\` want
-runnable JS and will fail on it — but neither applies to a card that uses \`$dsh/*\` anyway: those
-capabilities are the harness, and a standalone HTML export or a Vite preview has no harness to
-reach. Render your work by writing the canvas and looking at the panel.`}
+Either way, the way to see your work actually run is to write the canvas and look at the panel.
 
 It is worth the round trip because it catches the two mistakes that cost the most here, both
 of which otherwise reach the user as a blank card:
@@ -189,4 +218,4 @@ Bare specifiers resolve from npm at render time — there is no install step, so
 
 Names you half-remember are the main failure mode: a wrong export is not a typo, it is an \`undefined\` component and a blank render, with nothing in the console naming it. So look a name up *before* you write the code, not after it breaks — for lucide, fetching \`https://lucide.dev/icons/<kebab-name>\` answers it outright, since a 404 means the name does not exist. Icons you have actually watched render are fine to reuse from memory.
 
-One lookup costs a few seconds; a wrong name costs a blank card, a confused user, and a repair round-trip.`;
+One lookup costs a few seconds; a wrong name costs a blank card, a confused user, and a repair round-trip.`)(mapNotes(typesMap, standaloneMap));

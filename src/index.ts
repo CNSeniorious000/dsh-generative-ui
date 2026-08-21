@@ -45,6 +45,15 @@ const typesImportMap = (importMetaUrl: string): string | undefined => {
   try {
     return fileURLToPath(new URL("../types/importmap.json", importMetaUrl));
   } catch {
+    return undefined;
+  }
+};
+
+/** Absolute path of the runtime stub map `genui build` and `genui dev` resolve `$dsh/*` against. */
+const standaloneImportMap = (importMetaUrl: string): string | undefined => {
+  try {
+    return fileURLToPath(new URL("../types/standalone/importmap.json", importMetaUrl));
+  } catch {
     // Installed in a shape where the package root is not two levels up. The skill drops the
     // `-i` flag rather than passing a path that does not exist.
     return undefined;
@@ -288,6 +297,6 @@ export function apply(ctx: Context): void {
   // subsystem is disabled. Nested, only the skill goes missing.
   // Model-only: `/generative-ui` as a user command would just print the guidance at the user.
   ctx.inject(["skills"], (scoped) => {
-    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: skillBody(typesImportMap(import.meta.url)), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
+    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: skillBody(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url)), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
   });
 }
