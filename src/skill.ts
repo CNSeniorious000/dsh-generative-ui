@@ -197,6 +197,15 @@ with no click at all. The sandbox is the same; their ability to notice is not. S
 - **Show what you ran.** A card that shells out should say so — the command in small type near
   the result, or under a disclosure. It costs one line and turns "permitted" into "seen".
 
+**This is about commands, not about \`writeFile\`.** A command can do something there is no
+way back from; a file write leaves a diff, sits in version control, and a read-only session
+refuses it. So a card that edits a config, fills in a missing key, renames in bulk or saves a
+draft should **write the file** — with the change visible before it lands and a button that
+commits it. Turning that into a question ("which values do you want to change?") gives back the
+one thing the card was for. Reserve \`sendMessage\` for what the card genuinely cannot do:
+running the destructive command, or a change big enough that the user wants you to think about
+it first.
+
 Two limits worth designing around. Commands are killed after **15 seconds**, so nothing that
 watches, serves, or waits. And the card is on the user's page — a command runs while they
 look at a spinner, so keep it to one round trip per interaction rather than one per row.
