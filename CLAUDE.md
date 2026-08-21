@@ -614,6 +614,24 @@ tried earlier the same day, which went 1/4 and was reverted: this one names a re
 the model can match on sight, where that one asked it to re-judge something it had already
 judged.
 
+### The `$dsh/exec` sandbox, measured (2026-08-22)
+
+Switched the composer to `Read Only` and ran the same two commands through the route:
+
+| command | exit | what came back |
+| --- | --- | --- |
+| `echo hello` | 0 | `hello` — reads are untouched |
+| `touch ./probe.txt` | **1** | `touch: Operation not permitted` on stderr, **HTTP 200**, and no file on disk |
+
+The denial arrives as a *result*, not an exception — same shape as `$dsh/fs`'s
+`FS_SANDBOX_DENIED`, and the reason a card can say "this session is read-only" instead of
+going blank. Under `workspace-write` a write to the platform temp area succeeds, which §3.65
+already records as intended: that is the same `writableRoots` set Seatbelt grants the model's
+own bash, and a narrower fence here would be a second policy to keep in sync.
+
+Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
+command is composed, so there is no unattributed execution path.
+
 ### `$dsh/exec` in the model's hands, first run (2026-08-22)
 
 Asked for a git-log card in a throwaway repo, the model wrote exactly the intended shape
