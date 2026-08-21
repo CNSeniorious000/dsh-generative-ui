@@ -28,11 +28,13 @@
 
 这一节全部是**实测**结论，不是读文档得来的。改动前先看这里，能省一整轮重新查证。
 
-### 2.1 平台共享模块表只有 10 项
+### 2.1 平台共享模块表在 rc.8 缩到了 7 项
 
-`react` / `react/jsx-runtime` / `react-dom` / `react-dom/client` / `@deepseek-ai/cordis` / `dsh-client-ui-slots` / `dsh-client-web-react` / `dsh-client-ui-primitives` / `dsh-client-ui-attachment` / `dsh-client-schema-form`
+`react` / `react/jsx-runtime` / `react-dom` / `react-dom/client` / `@deepseek-ai/cordis` / `dsh-client-ui-slots` / `dsh-client-ui-primitives`
 
-写在 `tsdown.config.ts` 的 `PLATFORM_MODULES`，必须与宿主的 `packages/client/web/src/platform.ts` 保持一致。列进去 = 运行时走 `require()` 拿宿主单例；没列 = 打进我们自己的 bundle。
+rc.7 还有 `dsh-client-web-react` / `dsh-client-ui-attachment` / `dsh-client-schema-form` 这三项，rc.8 删了（对比 `@deepseek-ai/dsh-client-web` 两个版本 `lib/index.js` 的 `PLATFORM_MODULES` 即可）。**这张表会缩**，所以升级 dsh 时要重新核一遍：列进去 = 运行时走 `require()` 拿宿主单例；没列 = 打进我们自己的 bundle；**列了但宿主没有 = 运行时 require 不到，整个 client 挂掉**。
+
+写在 `scripts/build.ts` 的 `PLATFORM_MODULES`（`scripts/smoke.ts` 的 `PLATFORM` 是它的镜像，改一处必须改两处，smoke 才拦得住）。
 
 **表里没有 `scheduler`，也没有 `react-dom/server`。** 后者是 preflight 必需，只能 inline，且**必须钉 18** 以匹配桥过来的 React。
 
@@ -43,11 +45,11 @@
 于是：
 
 - 写本项目的组件时，**React 19 独有 API 一律不可用**（`use()` / `useActionState` / `useOptimistic` / `cache` / `useEffectEvent` / ref-as-prop）。`vercel-composition-patterns` 的 `react19-*` 规则整节跳过 —— 我们仍然需要 `forwardRef`。
-- `partial-react@0.0.4` 的 peer 写 `^19.0.0` 但运行时只用 18 就有的 API（已实测，见 MindLab-Research/macaron-genui-demo#1715）。**唯一的类型不兼容**在 `runtime.ts:425`（`Promise<ReactNode>` 不能赋给 18 的 `ReactNode`），运行时无影响。
+- `partial-react` 的 peer 现在是 `^18.3.0 || ^19.0.0`（0.0.5 起放宽，早先是纯 `^19.0.0`），运行时只用 18 就有的 API（已实测，见 MindLab-Research/macaron-genui-demo#1715）。曾经 `runtime.ts:425` 有一处 `Promise<ReactNode>` 不能赋给 18 的 `ReactNode`，上游已用类型断言修掉了。
 
   注意 **`skipLibCheck` 对它无效** —— 那个选项只跳过 `.d.ts`，而这两个包 ship 的是 `.ts` 源码，值导入会真的去编译它们。
 
-  **不要为此打 patch。** 这是上游的类型 bug（连同 `compiler.ts:13` 那个没声明的 `typeof Bun` 守卫，共 3 条），对我们运行时和构建都没有影响，只有 `tsc` 会报。打 patch 等于用长期维护成本换一行好看的输出，还会把问题藏在本地、削弱上游修它的动力。`scripts/typecheck.mjs` 的做法是把上游错误打印出来但不计入成败，只对 `src/` 判定 —— 上游修好后连这个脚本一起删掉。
+  **不要为此打 patch。** 现在只剩 `compiler.ts:13` 那个没声明的 `typeof Bun` 守卫（2 条），对我们运行时和构建都没有影响，只有 `tsc` 会报。打 patch 等于用长期维护成本换一行好看的输出，还会把问题藏在本地、削弱上游修它的动力。`scripts/typecheck.mjs` 的做法是把上游错误打印出来但不计入成败，只对 `src/` 判定 —— 上游修好后连这个脚本一起删掉。
 - `partial-tsx` / `partial-react` 用了 `toSorted` / `findLast` / `toReversed`，所以 `lib` 必须 ≥ `ES2023`。
 
 ### 2.3 非 JS 资源只能走自注册路由
@@ -68,7 +70,7 @@ CJS 产物里 `import.meta` 不存在，所以上游那种 `import.meta.resolve(
 | `conversation.view` | list | **canvas 视图 tab**，与「对话 / 轨迹」并列 |
 | `shell.overlay` | list | 跨全 frame 的浮层，需要时再用 |
 
-**`details`（右侧列）碰不得。** 它是 `kind: 'single'`，现由 ui-conversation 的 `DetailsPanel` 占着。而动态加载的包其 ctx facade 会覆写 priority（`allocatePriority: () => --this.nextPriority`），**我们必然赢过 shipped 的 0** —— 一注册就静默顶掉 DetailsPanel，连带它声明的 `conversation.details.tool` 一起消失，**全 App 的 tool call 检视功能坏掉**，且没有交接 API。
+**`details`（右侧列）碰不得。** 它是 `kind: 'single'`，现由 ui-conversation 的 `DetailsPanel` 占着。而动态加载的包其 ctx facade 会覆写 priority（每装一个就往负数递减），**我们必然赢过 shipped 的 0** —— 一注册就静默顶掉 DetailsPanel，连带它声明的 `conversation.details.tool` 一起消失，**全 App 的 tool call 检视功能坏掉**，且没有交接 API。
 
 注册必须包在 `ctx.slots.inject(name, () => ...)` 里：这些槽由 ui-conversation 运行时声明，早注册会抛 `slot "..." is not declared`。
 
