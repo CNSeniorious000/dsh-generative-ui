@@ -140,6 +140,34 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, let exits finish, and honour \`prefers-reduced-motion\`.
 
+## Sound
+
+Every fact here was measured in a real browser, not recalled — the failure modes are silent
+ones, so guessing costs a card that looks fine and makes no noise.
+
+**A context built before any click is born suspended, and starting an oscillator on it throws
+nothing.** It schedules against a clock that never advances: no error, no sound. Worse,
+\`await ctx.resume()\` on a document nobody has ever clicked **never settles** — it does not
+reject, so a \`try/catch\` buys nothing and an \`await\` in front of your setup deadlocks the card
+at first render.
+
+**But one click unlocks the whole page, not just that handler.** Chromium's gate is
+"has this document ever been activated", so after a single press anywhere in the card, a
+context created later — on a timer, in an effect — is born \`running\`. That is what makes a
+metronome or a sequencer possible: only the *first* press has to be a real gesture. Build the
+context lazily inside that first click, or build it eagerly and gate every sound behind a
+"someone has pressed something" flag.
+
+**Drawing sound needs no gesture at all.** \`decodeAudioData\` works on a suspended context, and
+\`OfflineAudioContext\` renders with no interaction whatever. So a card can \`readBytes\` a wav,
+decode it and paint its waveform the moment it opens; only *hearing* it is gated. Note an
+\`AnalyserNode\` at 1024 bins resolves to about 21Hz — good enough for a picture, not for a
+tuner (use autocorrelation on the time-domain data for pitch).
+
+A bare \`OscillatorNode\` sine reads as a test tone. Layer two or three partials and shape a
+\`GainNode\` envelope and it reads as an instrument instead. Close the context on unmount, or
+every reload leaves another one behind.
+
 ## Running a command
 
 \`bash(command)\` from \`$dsh/exec\` runs one command in the workspace and resolves
