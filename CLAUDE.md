@@ -912,3 +912,32 @@ with the secret still masked. The preview was not asked for by name; it followed
 
 Same pattern as every other trigger that worked: **recognisable from the request alone.**
 "我要改" is in the sentence. Nothing had to be read first.
+
+### A plan talks itself out of being a plan (2026-08-22)
+
+Non-dev intents, first sweep: `我妈生日送啥` 1, `这周末去哪玩` 1, `对比几个手机` 1 — but
+`我想学吉他，从哪开始` 0 and `想开始跑步怎么循序渐进` 0. Both prose answers **contain a
+week-by-week table**; the running one is a full 10-week Couch-to-5K.
+
+The traces show the same self-talk twice, and n3's is the honest one — it saw the rule and
+argued past it:
+
+> *"The guidance says 'Anything with steps to step through' is a UI block. A running progression
+> plan is steps. But honestly, a clean prose answer with a clear week-by-week table might be
+> better and simpler."* … *"building a UI would be over-engineering a simple 'how do I start'
+> question."*
+
+m3: *"it's a text answer that's fine as text."* So the abstract rule was present, recognised,
+and **overruled by a plausibility check** — which is the failure mode, not a missing rule.
+
+The counter has to name why a plan is different from the prose around it: it is followed over
+weeks, checked off, and bent to the person following it. Added to the resident layer with the
+give-away stated as **the second person over time** and the specific rationalisation quoted back
+("这在文字里就够了" is true of the explanation and false of the plan; they arrive together).
+
+Re-run 3/3. Two of them chose a **canvas**, unprompted — right call for something spanning weeks —
+and the running plan persisted its checkboxes to `localStorage` with no instruction to.
+Prose fixtures still 4/4.
+
+The generalisation: **an abstract rule the model can weigh loses to "this seems like overkill".
+A rule that names the artefact and what happens to it after the reply does not.**

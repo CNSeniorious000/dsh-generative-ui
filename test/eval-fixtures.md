@@ -27,6 +27,8 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `chmod 755 到底是啥权限` | same |
 | `这个目录下都有啥文件，我想快速看看每个文件里写了什么` | browsing — expect a CANVAS, not a fence |
 | `帮我把 .env 弄明白，有几个值我要改` | an unnamed value — expect a form that writes the file |
+| `想开始跑步，怎么循序渐进` | a plan is followed over weeks — expect a CANVAS |
+| `我想学吉他，从哪开始` | same; prose answer hid a week-1 table |
 
 ## Correctness, not just presence
 
