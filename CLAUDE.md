@@ -1033,3 +1033,31 @@ now picks a **fence** — 171 lines, still `readdir` + `readFile` reading live. 
 tracking the size of the thing, which is right; the fixture was over-specified, so the fixture
 was loosened rather than the prompt pushed. **A fixture that pins the container instead of the
 behaviour will eventually fail for being correct.**
+
+### The glob rule inverts on a real directory (2026-08-22)
+
+Re-measuring the expression fixtures at 3 runs: cron 3/3, chmod 3/3, glob **2/3**. The miss
+blamed an empty workspace — *"the workspace has only `o.txt`, so there's nothing meaningful to
+match against"* — so I built a real `src/` tree (nested dirs, `.ts`/`.tsx`/`.js`) expecting it to
+go 3/3.
+
+It went **0/3**. The opposite of the hypothesis, and the reason is the pattern this session keeps
+finding, in its strongest form yet. With real files to look at, the model looked — and what it
+found was *nuance*:
+
+> *"I want to verify my claim about `**/` matching zero directories and `.d.ts` matching. These
+> are the non-obvious points worth being precise about."* … *"it's also potentially overkill for
+> 'what does this glob match.' I'll go with a clear prose answer that's precise about edge cases."*
+
+**Having something concrete to show made it explain instead of show.** The edge cases it wanted to
+be precise about — `**` matching zero directories, whether `.d.ts` counts, bash without globstar —
+are precisely the ones learned by editing a pattern and watching ticks move.
+
+The existing rule already blocked `this is a simple factual question`. It needed the other side:
+`这些细节值得讲清楚` is the argument for the card, not against it. After: **3/3**, 136 lines,
+`readdir` reading the real tree, an editable pattern field, and `types.d.ts` called out by name.
+Prose fixtures 4/4.
+
+Worth noting the empty directory scored *higher* (2/3) than the populated one (0/3) — a fixture
+with nothing in it can pass for the wrong reason. Test the shape against a workspace that
+resembles the user's.
