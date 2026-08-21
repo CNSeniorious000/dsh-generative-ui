@@ -959,3 +959,33 @@ The research corpus was written by dev-shaped agents, so this checks the other h
 7/7 produce UI now. Two notes worth keeping: a long generation is not a failure — n4 was
 re-run and returned normally, matching §4's cold-start lesson; and **the two that failed were
 both plans**, which is what isolated the rule rather than a scattering of unrelated misses.
+
+### A canvas edit does remount — reproduced, and the symptom is partial (2026-08-22)
+
+The open item said "a canvas `edit` resets every `useState`, traced through the code, not yet
+reproduced". Now reproduced in a real browser, and the observation is sharper than the note.
+
+Setup: asked dsh web for a counter canvas, clicked `+1` three times, typed `typed-by-hand` into
+its input. State: `3` / `typed-by-hand`. Then asked the model to change one button's label —
+a one-character diff, verified with `diff`.
+
+After: **`3` survived, the input was empty.**
+
+That looks like selective state loss and is not. The model had given `count` a lazy initializer
+reading `localStorage` and an effect writing it back; `draft` was plain `useState`. The tree
+remounted and took both — `count` merely restored itself. `CanvasPanel.tsx:124` passes
+`preserveState={false}` on purpose (a canvas arrives as a whole file, so preserving state would
+make an edit look like it did nothing), so this is the design working, not a bug.
+
+Two things worth having learned:
+
+1. **The failure was invisible because the model had already worked around half of it.** A
+   symptom partly masked by good behaviour reads as a *different, smaller* bug. Both states had
+   to be checked to see it at all.
+2. `skill.ts` warned about persistence in terms of **reload**. The trigger that actually fires is
+   **the next edit** — far more frequent, and caused by us rather than the user. Reworded there:
+   change one word in a label and the user's half-typed row goes with it.
+
+Method note: my first attempt edited the file with `sed` and nothing re-rendered. The version
+key in `collect.ts` counts *mutating tool calls*, not mtime — editing behind the agent's back is
+not the edit path. Drive the real one.

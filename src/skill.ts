@@ -87,6 +87,10 @@ Two things follow from the lifetime difference:
 - An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
 - A **canvas** stays interactive. It does not "complete"; it just sits there working.
 - A **canvas outlives the reply that made it**, so data the user puts into it — entries, notes, cards — must survive a reload on its own. There is no persistence hook here yet, so reach for \`localStorage\` under a key named after the canvas. Plain \`useState\` is a bug you cannot see while building: the ledger looks right until the tab reloads and every row is gone.
+  **And a reload is not the common case — your own next edit is.** Every revision replaces the
+  whole file, so the canvas remounts and anything held only in \`useState\` is gone; change one word
+  in a label and the user's half-typed row goes with it. Persist what they typed, not just what
+  they saved.
 
 ## Ask with an interface when the request is underspecified
 
