@@ -1061,3 +1061,27 @@ Prose fixtures 4/4.
 Worth noting the empty directory scored *higher* (2/3) than the populated one (0/3) — a fixture
 with nothing in it can pass for the wrong reason. Test the shape against a workspace that
 resembles the user's.
+
+### "The table is fixed" is the third way out (2026-08-22)
+
+Re-running the expression fixtures inside a *populated* workspace (the empty one flatters them):
+cron 3/3, chmod **2/3**. The miss reasoned:
+
+> *"this is a well-known concept and a clear prose answer with a table is fine … the answer is
+> essentially a fixed table of 755 → rwxr-xr-x."*
+
+and then listed 755, 644, 700, 777 — which is a row of presets described as prose.
+
+Three distinct escapes are now on record for the same rule, each needing its own sentence:
+
+| escape | counter |
+| --- | --- |
+| "简单事实问题" | simple is the cost of building, not evidence it was unwanted |
+| "细节值得讲清楚" | enumeration is what the card does better than you |
+| "这张表是固定的" | fixed is *why* toggling beats printing — the thing being learned is which bit does what |
+
+After: **3/3**, 165 lines, presets for 644/700/777 wired as buttons. Prose fixtures 4/4.
+
+The shape of this whole session: **the model does not reject the rule, it finds a new reason the
+rule doesn't apply.** Each reason is locally reasonable, which is why they have to be answered
+individually and by name rather than by making the rule louder.
