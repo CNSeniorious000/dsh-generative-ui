@@ -39,12 +39,28 @@ export function createBrowserTsxCompiler(): TsxCompiler {
   return {
     async compile(code, options = {}) {
       await initCompiler();
-      const source = options.partial === true ? normalizeGeneratedTsx(code, { mode: "streaming" }) : code;
       const importMap = options.importMap;
-      const resolved = importMap?.imports ? rewriteImportMetaResolveSpecifiers(source, importMap.imports) : source;
-      const result = transformTsx({ filename: options.filename ?? "_.tsx", code: resolved, target: "es2022", importMap, jsxImportSource: "react" });
-      const compiled = new TextDecoder().decode(result.code);
-      return { code: compiled, source, changed: compiled !== options.previousCode };
+      const build = (source: string): CompileResult => {
+        const resolved = importMap?.imports ? rewriteImportMetaResolveSpecifiers(source, importMap.imports) : source;
+        const result = transformTsx({ filename: options.filename ?? "_.tsx", code: resolved, target: "es2022", importMap, jsxImportSource: "react" });
+        const compiled = new TextDecoder().decode(result.code);
+        return { code: compiled, source, changed: compiled !== options.previousCode };
+      };
+
+      // Normalization runs for `final` too. The model does not reliably close its trailing
+      // `)` and `}` before writing the fence, so compiling the raw source renders every
+      // streaming frame fine and then throws `Expected ',', got '<eof>'` at the very moment
+      // the block completes — measured on exactly that shape.
+      if (options.partial === true) return build(normalizeGeneratedTsx(code, { mode: "streaming" }));
+      try {
+        return build(normalizeGeneratedTsx(code, { mode: "final" }));
+      } catch {
+        // **The final compile must never be more fragile than a streaming frame.** The only
+        // difference between the modes is that `streaming` first cuts back the still-being-typed
+        // tail, and some damage (an unterminated string, typically) is only recoverable by
+        // cutting. Losing the last half-sentence beats going blank on the last frame.
+        return build(normalizeGeneratedTsx(code, { mode: "streaming" }));
+      }
     },
   };
 }
