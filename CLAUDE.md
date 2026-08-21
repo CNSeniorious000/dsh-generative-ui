@@ -554,6 +554,37 @@ loaded every time. **Check `~/.dsh/sessions/<cwd-key>/session-*/session.jsonl.zs
 `reasoning-chunks` carry a `texts` array — and where the model tells you exactly why it did
 what it did, which beats a third rewrite guessing at it.
 
+### A negative result: the "knob" reframing did not transfer (2026-08-22)
+
+The playground added a rule telling the model to ask **which input the user is most likely
+to change** rather than whether the task is hard enough to deserve an interface, and reported
+its conversion prompts flipping from tables to live fields. Tried here as a replacement for
+our existing trigger rule, on four prompts with a knob and two controls without.
+
+**It did not reproduce: 1/4.** Only the mortgage prompt flipped, and the session logs say why
+each of the others did not:
+
+| prompt | reasoning | what happened |
+| --- | --- | --- |
+| mortgage | 4664 chars, quoted the new rule verbatim | **built the widget** |
+| 1000 USD → CNY | 2773 chars: "the input (amount) is likely to change. **But more fundamentally, I need current data**" | three searches about rate staleness, never returned to the question of shape |
+| 5kg → lb | **172 chars**: "simple conversion... factual calculation. No need for tools." | the rule was never reached at all |
+| React vs Vue | — | prose, correctly |
+
+So the rule lands only when the reply already has room for it. A second pass added "this one
+is simple is not a reason to skip it" and "decide the shape before you go get the data",
+aimed at exactly those two failures. The unit conversion's reasoning grew 172 → 709 chars,
+quoted the new line, **and overruled it**: "this is a trivial single conversion. I think a
+simple prose answer is fine here." The currency one grew to 4519 chars with no mention of
+shape at all — the lookup had taken the whole turn.
+
+Reverted. Two rounds, no movement on the cases it targeted, and the one case that did engage
+came back with a considered judgement rather than a miss. **A prompt rule that the model
+reads, quotes, and then argues with is not a wording problem** — that is the shape §4.5
+already records as worth leaving alone, and pushing harder would just be overriding it. Worth
+knowing too that a fix measured in another harness does not transfer for free: same model
+family, different tool surface, and the same sentence lands differently.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you
