@@ -607,8 +607,11 @@ change a field and watch what moves.
 
 Added a fourth shape, with the tell stated explicitly (**your answer is already a table**) and
 the excuse named (`simple is what makes it cheap to build, not what makes it unwanted`).
-Measured: `glob` and `chmod` both flipped to a fence, the two controls (`HTTP 418`,
-`尾递归优化`) correctly stayed prose.
+Measured: **3/3 flipped** — `cron`, `glob` and `chmod` all produced a fence — and both controls
+(`HTTP 418`, `尾递归优化`) correctly stayed prose. Worth contrasting with the `knob` reframing
+tried earlier the same day, which went 1/4 and was reverted: this one names a request *shape*
+the model can match on sight, where that one asked it to re-judge something it had already
+judged.
 
 ### `$dsh/exec` in the model's hands, first run (2026-08-22)
 
