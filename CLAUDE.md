@@ -633,6 +633,27 @@ own bash, and a narrower fence here would be a second policy to keep in sync.
 Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
 command is composed, so there is no unattributed execution path.
 
+### Gathering data eats the turn (three observations, 2026-08-22)
+
+The same failure shape showed up three times, on unrelated prompts, and it is not a wording
+problem in any rule:
+
+| prompt | what happened |
+| --- | --- |
+| `1000 美元换成人民币是多少` | 2773 chars of reasoning. Named the trigger rule — *"the input (amount) is likely to change"* — then **"But more fundamentally, I need current data"**, ran three searches about rate staleness, never returned to the question of shape. |
+| `CORS 报错到底谁拒绝了我` | Asked itself *"Should I build a UI?"*, noted it *"does have a kind of flow/decision structure"*, then judged prose sufficient. A considered call. |
+| `这个目录下都有啥文件，我想快速看看每个文件里写了什么` | Read all 26 files with its own tools, then: *"a compact per-file one-liner is best"*. Once the reading was done, a card was redundant work on an answer it already had. |
+
+The middle one is a legitimate judgement. The other two share a mechanism: **the decision about
+what shape the answer takes is made once, early, and a data-gathering detour overwrites it.**
+By the time the model has the data it is finishing, not deciding.
+
+A rule that fires *after* the detour cannot help, which is why the `knob` rewrite went 1/4 —
+it asked the model to re-judge something it had stopped judging. What did work (the expression
+rule, 3/3) matches on the *shape of the request*, before any tool runs. **Trigger rules must be
+recognisable from the prompt alone.** Anything that needs the answer in hand to evaluate will
+lose to whatever the model went to fetch.
+
 ### Streaming charts, finally measured (2026-08-22)
 
 Two research passes disagreed about whether a recharts chart restarts its animation on every
