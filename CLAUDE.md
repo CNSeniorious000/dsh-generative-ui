@@ -492,6 +492,27 @@ things about that recommendation were measured rather than assumed:
 `@genui/cli` lives in `MindLab-Research/macaron-genui-demo` as a private workspace package; if
 it is ever released to npm, shorten the URL and drop the npx caveat.
 
+**`-i` is mandatory once a card imports `$dsh/*`.** Without it `check` reports
+`Cannot find module '$dsh/chat'` on every such line — a false error the model will go and
+"fix". `types/importmap.json` plus the three `.d.ts` beside it exist for that flag, and
+`src/index.ts` resolves their absolute path at load time (`../types/` relative to
+`import.meta.url`), because the plugin lives wherever the profile installed it and the model
+runs the checker from the workspace. `skillBody` takes that path and omits the flag when it
+cannot be resolved.
+
+Two things measured while wiring this up, both worth knowing before trusting the flag:
+
+- **The `.d.ts` are not actually loaded.** `-i` suppresses TS2307 and nothing more:
+  `sendMessage(42)` against a `.d.ts` declaring `(text: string)` still passes. The control
+  proves TS itself is running — a plain `const s: string = useState(0)[0]` is caught. Reported
+  with a minimal repro on MindLab-Research/macaron-genui-demo#1427, which already tracks this
+  class of gap. So today the flag buys silence, not signal; real errors like the shadowed
+  import are still caught because those need no facade types.
+- **`bun genui check -i` and the published CLI disagree.** This repo's host config is
+  `check: async (code, _imports, codeDir) => …` — the underscore discards the import map — so
+  locally the flag does nothing at all, and I nearly concluded from that it was useless
+  everywhere. Verify CLI behaviour against the published build, not the checkout.
+
 ## 4.9 Dependencies and releasing
 
 **`^0.0.5` lets nothing through.** semver's caret on 0.0.x matches that exact version; to accept later patches you

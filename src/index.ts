@@ -13,6 +13,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import type { Context } from "@deepseek-ai/cordis";
 import type {} from "@deepseek-ai/dsh-host-webserver";
 import type {} from "@deepseek-ai/dsh-system-prompt";
@@ -23,7 +24,7 @@ import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
-import { SKILL_BODY, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
+import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 
 export const name = "dsh-generative-ui";
 export const inject = ["systemPrompt"];
@@ -33,6 +34,22 @@ export { ASSET_PREFIX, WASM_PATH } from "./contract-assets.ts";
 
 /** Resolved from this module's own location so pnpm's nested install is anchored against the plugin, not the profile tree. */
 const wasmFile = (importMetaUrl: string) => createRequire(importMetaUrl).resolve("@esm.sh/tsx/pkg/tsx_bg.wasm");
+
+/**
+ * Absolute path of the import map that types `$dsh/*` for `genui check`.
+ *
+ * Resolved rather than hard-coded because the plugin lives wherever the profile installed it,
+ * and the model runs the checker from the workspace — it has no way to guess that path.
+ */
+const typesImportMap = (importMetaUrl: string): string | undefined => {
+  try {
+    return fileURLToPath(new URL("../types/importmap.json", importMetaUrl));
+  } catch {
+    // Installed in a shape where the package root is not two levels up. The skill drops the
+    // `-i` flag rather than passing a path that does not exist.
+    return undefined;
+  }
+};
 
 async function serveAsset(req: IncomingMessage, res: ServerResponse, file: string): Promise<void> {
   if (req.method !== "GET" && req.method !== "HEAD") return void res.writeHead(405).end();
@@ -271,6 +288,6 @@ export function apply(ctx: Context): void {
   // subsystem is disabled. Nested, only the skill goes missing.
   // Model-only: `/generative-ui` as a user command would just print the guidance at the user.
   ctx.inject(["skills"], (scoped) => {
-    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: SKILL_BODY, source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
+    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: skillBody(typesImportMap(import.meta.url)), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
   });
 }

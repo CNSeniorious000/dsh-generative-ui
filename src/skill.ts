@@ -16,7 +16,15 @@ export const SKILL_NAME = "generative-ui";
 
 export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} block, a canvas file, and plain prose — and how to lay one out so it reads. Load this before you build any interface.`;
 
-export const SKILL_BODY = `# Building a generative UI
+/**
+ * The skill body.
+ *
+ * A function of the import-map path because that path is only known at runtime — the plugin
+ * lives wherever the profile installed it, and the model runs the checker from the workspace.
+ * Without the map, `check` reports `Cannot find module "$dsh/chat"` on every card that uses
+ * one, and a false error is worse than no check: the model goes and "fixes" it.
+ */
+export const skillBody = (typesMap: string | undefined): string => `# Building a generative UI
 
 ## Is this a UI at all
 
@@ -148,11 +156,14 @@ A canvas is a file, so you can run a checker over it. \`@genui/cli\` validates e
 kind of TSX:
 
 \`\`\`
-npx --yes https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main check <file>
+npx --yes https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
 \`\`\`
 
 \`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. \`check\` includes
-TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
+TypeScript diagnostics; \`lint\` is the faster syntax-only pass.${typesMap === undefined ? "" : `
+
+The \`-i\` is not optional when the card imports \`$dsh/*\`: without it every one of those lines
+is reported as \`Cannot find module\`, and there is nothing to fix — they resolve at render time.`}
 
 It is worth the round trip because it catches the two mistakes that cost the most here, both
 of which otherwise reach the user as a blank card:

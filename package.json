@@ -17,6 +17,7 @@
   "files": [
     "lib",
     "src",
+    "types",
     "cordis.patch.yml"
   ],
   "keywords": [
