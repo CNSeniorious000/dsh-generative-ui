@@ -28,7 +28,18 @@ import { observeTranscript } from "./observe.ts";
 const CLAIMED = "data-ui4a-claimed";
 const MOUNT = "data-ui4a-mount";
 
-type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string };
+type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string; painted: MutationObserver | null };
+
+/**
+ * Whether the card has actually painted something a reader can see.
+ *
+ * **Compiling is not the same as having something to look at.** Mid-stream the default
+ * export usually exists while the body is still an empty shell, so hiding the source block
+ * at claim time leaves a blank gap that fills in with a pop seconds later — and the source
+ * was sitting right there the whole time. Text or an svg (icons and charts carry no text)
+ * is the signal; a wrapper div with layout classes is not.
+ */
+const hasPainted = (mount: HTMLElement) => (mount.textContent ?? "").trim() !== "" || mount.querySelector("svg") !== null;
 
 /** The block's source. `pre` when the grammar was unknown, the highlighted div otherwise. */
 const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";
@@ -55,6 +66,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
   const root = scope ?? document.body;
 
   const release = (claim: Claim, restore: boolean) => {
+    claim.painted?.disconnect();
     claim.root.unmount();
     claim.mount.remove();
     if (restore && claim.block.isConnected) {
@@ -74,11 +86,27 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       const segment = matchSegment(current, code);
       if (segment === undefined) continue;
       block.setAttribute(CLAIMED, "");
-      block.style.display = "none";
       const mount = document.createElement("div");
       mount.setAttribute(MOUNT, "");
       block.parentElement?.insertBefore(mount, block.nextSibling);
-      claims.set(block, { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "" });
+      const claim: Claim = { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "", painted: null };
+      // The source stays visible until the card paints. Checked at most once per frame and
+      // torn down the moment it fires: a streaming card mutates thousands of times, and
+      // `textContent` walks the whole subtree, so a per-mutation check would be
+      // O(mutations x subtree). The cost only exists during the gap it closes.
+      let queued = 0;
+      claim.painted = new MutationObserver(() => {
+        if (queued !== 0) return;
+        queued = requestAnimationFrame(() => {
+          queued = 0;
+          if (!hasPainted(mount)) return;
+          claim.painted?.disconnect();
+          claim.painted = null;
+          if (claim.block.isConnected) claim.block.style.display = "none";
+        });
+      });
+      claim.painted.observe(mount, { childList: true, subtree: true, characterData: true });
+      claims.set(block, claim);
     }
 
     for (const claim of claims.values()) {
