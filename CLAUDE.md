@@ -326,13 +326,16 @@ the familiar language name at the last moment, and the whole interface is lost, 
 naming it specifically now lives in the resident layer, right after the four-backticks line, as close to the moment
 of writing as possible. Re-ran each of the two prompts that failed 3 times: **6/6 correct**.
 
-It came back on 2026-08-21, on a prompt vaguer than anything in the original 40 —
-`帮我搭个东西记录点什么`, which names no artifact at all. 1/5 in a first pass and 1/5 again on
-five repeats of that one prompt, so ~20% there against ~5% overall: **the vaguer the request,
-the likelier the slip.** Which fits the mechanism — the model spends its attention deciding
-*what* to build, and the fence language is the thing that gets written on autopilot. Worth a
-second rule only if it shows up on ordinary requests too; on this evidence it is the tail,
-not a regression.
+It came back on 2026-08-21 on `帮我搭个东西记录点什么`, at 1/5, 1/5 and 1/6 across three passes —
+~17% for that one prompt against ~5% overall. My first reading was "the vaguer the request,
+the likelier the slip", and **one control killed it**: `帮我搞个东西看看数据`, no less vague, went
+6/6 clean. So it is not a property of vagueness; it is a property of that prompt, and the
+mechanism behind it is still unknown. Recorded rather than acted on — a rule aimed at a
+pattern this thin would be aimed at nothing.
+
+The general lesson is the one from §4.5's counting traps: with a ~5% base rate, five samples
+of one prompt cannot tell a real cluster from noise. Run the control before believing the
+explanation.
 
 Two measurement traps worth recording, both of which had me draw a wrong conclusion: fences must be counted at three
 backticks or more (counting four misses 3/5/6/8), and canvas artifacts must be counted by `find`ing the whole runs
