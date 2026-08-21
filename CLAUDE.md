@@ -49,7 +49,7 @@ Consequences:
 
   Note that **`skipLibCheck` does nothing here** — that option only skips `.d.ts`, and these two packages ship `.ts` source, so a value import really does compile them.
 
-  **Do not patch around this.** What's left is the undeclared `typeof Bun` guard in `compiler.ts:13` (2 errors), which affects neither our runtime nor our build — only `tsc` complains. Patching trades long-term maintenance for one line of prettier output, hides the problem locally, and takes the pressure off upstream. `scripts/typecheck.mjs` prints upstream errors without counting them, and only judges `src/` — delete the script along with them once upstream lands the fix.
+  **Do not patch around this.** What's left is the undeclared `typeof Bun` guard in `compiler.ts:13` (2 errors, tracked as MindLab-Research/macaron-genui-demo#1717 — #1715 was the peer-range half and is closed), which affects neither our runtime nor our build — only `tsc` complains. Patching trades long-term maintenance for one line of prettier output, hides the problem locally, and takes the pressure off upstream. `scripts/typecheck.mjs` prints upstream errors without counting them, and only judges `src/` — delete the script along with them once upstream lands the fix.
 - `partial-tsx` / `partial-react` use `toSorted` / `findLast` / `toReversed`, so `lib` must be ≥ `ES2023`.
 
 ### 2.3 Non-JS assets only reach the browser through your own route
