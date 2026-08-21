@@ -1,0 +1,11 @@
+import { expect, test } from "bun:test";
+import { parseUi4aSegments as p } from "../src/client/runtime/segments.ts";
+test("standard", () => { const [b]=p("说明\n\n````ui4a/tsx\nexport default function A() {}\n````\n收尾"); expect(b.code).toBe("export default function A() {}\n"); expect(b.complete).toBe(true); });
+test("open mid-sentence", () => { const [b]=p("……完整元素周期表。````ui4a/tsx\nexport default function A() {}\n````"); expect(b.complete).toBe(true); });
+test("first line glued to lang", () => { const [b]=p("````ui4a/tsx import { useState } from \"react\"\nexport default function A() {}\n````"); expect(b.code.startsWith('import { useState } from "react"\n')).toBe(true); });
+test("close glued to last line", () => { const [b]=p("````ui4a/tsx\nexport default function A() {}````"); expect(b.complete).toBe(true); });
+test("streaming", () => { const [b]=p("````ui4a/tsx\nexport default function A() {"); expect(b.complete).toBe(false); });
+test("longer fence not cut", () => { const [b]=p("`````ui4a/tsx\nconst md = `\\`\\`\\``\n`````"); expect(b.complete).toBe(true); });
+test("python untouched", () => { expect(p("```python\nprint(1)\n```")).toHaveLength(0); });
+test("two blocks", () => { expect(p("````ui4a/tsx\nA\n````\n中间\n````ui4a/tsx\nB\n````")).toHaveLength(2); });
+test("meta on fence line", () => { const [b]=p("````ui4a/tsx title=demo\nexport default function A() {}\n````"); expect(b.code).toBe("export default function A() {}\n"); });

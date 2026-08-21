@@ -54,8 +54,9 @@
     "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "typecheck": "node scripts/typecheck.mjs",
+    "test": "bun test",
     "smoke": "bun scripts/smoke.ts",
-    "check": "bun run lint && bun run typecheck && bun run build && bun run smoke",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run build && bun run smoke",
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts"
