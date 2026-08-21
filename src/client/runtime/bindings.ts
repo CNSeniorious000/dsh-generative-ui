@@ -10,7 +10,7 @@
  * gateway, so `$dsh/fs` and `$dsh/ai` have no implementation here yet.
  */
 import { moduleUrl, registerModules, registryImports } from "./registry.ts";
-import { AI_STREAM_PATH, FS_PATH } from "../../contract-assets.ts";
+import { AI_STREAM_PATH, EXEC_PATH, FS_PATH } from "../../contract-assets.ts";
 import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
 
@@ -94,7 +94,23 @@ export function bind() {
     },
   };
 
-  return { chat, ai, fs };
+  const exec = {
+    /**
+     * Runs one command in the workspace and resolves with its output.
+     *
+     * A non-zero exit resolves rather than rejects: `git status` failing outside a repo is
+     * something a card wants to show, not an outage. Only a failure to run at all rejects.
+     * The session's own sandbox mode applies, so this is no wider than the model's own bash.
+     */
+    bash: (command: string): Promise<Ui4aExecResult> => {
+      if (host === null) throw new Error("[dsh-generative-ui] no host bound");
+      const workspace = host.cwd();
+      if (workspace === undefined) throw new Error("[dsh-generative-ui] $dsh/exec needs a session workspace");
+      return execRequest(workspace, host.sessionId(), command);
+    },
+  };
+
+  return { chat, ai, fs, exec };
 }
 
 /** Talks to the fs route, carrying the workspace and the session whose policy applies. */
@@ -109,6 +125,18 @@ async function request<T>(method: "GET" | "POST", path: string, content?: string
   // rather than "something went wrong".
   if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/fs ${path}: ${body.error ?? response.statusText}`);
   return body as T;
+}
+
+/** What a command left behind. `truncated` means the output was cut, not that it failed. */
+export type Ui4aExecResult = { stdout: string; stderr: string; exitCode: number | null; truncated: boolean; timedOut: boolean };
+
+/** Talks to the exec route. Separate from `request` because the shape and the failure mode differ. */
+async function execRequest(cwd: string, sessionId: string, command: string): Promise<Ui4aExecResult> {
+  const query = `cwd=${encodeURIComponent(cwd)}&session=${encodeURIComponent(sessionId)}`;
+  const response = await fetch(`${EXEC_PATH}?${query}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ command }) });
+  const body = (await response.json().catch(() => ({}))) as Ui4aExecResult & { error?: string };
+  if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/exec: ${body.error ?? response.statusText}`);
+  return body;
 }
 
 /** One entry of a directory listing. `size` is absent for directories. */
@@ -143,7 +171,7 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterab
   }
 }
 
-const GROUPS = ["chat", "ai", "fs"] as const;
+const GROUPS = ["chat", "ai", "fs", "exec"] as const;
 
 /** Blob URLs for every `$dsh/*` module, built once and reused by every surface. */
 let cached: Record<string, string> | null = null;

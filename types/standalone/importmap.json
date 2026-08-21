@@ -2,6 +2,7 @@
   "imports": {
     "$dsh/chat": "./chat.js",
     "$dsh/ai": "./ai.js",
-    "$dsh/fs": "./fs.js"
+    "$dsh/fs": "./fs.js",
+    "$dsh/exec": "./exec.js"
   }
 }

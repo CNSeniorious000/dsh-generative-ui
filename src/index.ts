@@ -21,7 +21,7 @@ import type {} from "@deepseek-ai/dsh-skill";
 // A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
 // and this is the constructor that stamps the identity and source tags it requires.
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
+import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
@@ -192,6 +192,72 @@ async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, re
   }
 }
 
+/** Context shape for the shell route. `resolve` fills the executor's own defaults and caps. */
+type ExecCtx = {
+  shell: {
+    resolve: (request: { command: string; workdir?: string; timeoutMs?: number; sandboxPolicy?: unknown }) => unknown;
+    run: (spec: unknown) => Promise<{ exitCode: number | null; signal?: string | null; timedOut?: boolean; stdout: { text: string; truncated: boolean }; stderr: { text: string; truncated: boolean } }>;
+  };
+  sandboxPolicy: { resolve: (request?: { session?: unknown }) => unknown };
+  sessions: { list: () => readonly { id?: string; header: { cwd?: string } }[] };
+};
+
+/** Longest a card's command may run. The card is on the user's page, waiting on a fetch. */
+const EXEC_TIMEOUT_MS = 15_000;
+
+/**
+ * Runs one command on behalf of a generated card.
+ *
+ * The whole point is that a card can answer questions only a command can answer — git
+ * history, a test run, ripgrep across a big tree — without us re-implementing each one as a
+ * route. It carries the session's own sandbox policy, so this opens no door the model's own
+ * bash tool does not already have open, and a read-only session gets a read-only shell.
+ *
+ * A non-zero exit is a RESULT, not an error: a card wants to show `git status` failing in a
+ * non-repo as much as it wants to show it succeeding. Only infrastructure failures reject.
+ */
+async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? "/", "http://x");
+  const cwd = url.searchParams.get("cwd");
+  if (cwd === null || !liveWorkspaces().has(cwd)) return void res.writeHead(cwd === null ? 400 : 403).end();
+  if (req.method !== "POST") return void res.writeHead(405).end();
+
+  const sessionId = url.searchParams.get("session");
+  const session = sessionId === null ? undefined : ctx.sessions.list().find((entry) => entry.id === sessionId);
+  if (session === undefined) return void res.writeHead(400).end();
+
+  let body = "";
+  for await (const chunk of req) {
+    body += chunk as string;
+    if (body.length > MAX_BODY) return void res.writeHead(413).end();
+  }
+  let command: string;
+  try {
+    ({ command } = JSON.parse(body) as { command: string });
+  } catch {
+    return void res.writeHead(400).end();
+  }
+  if (typeof command !== "string" || command === "") return void res.writeHead(400).end();
+
+  const json = (status: number, value: unknown): void => {
+    res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    res.end(JSON.stringify(value));
+  };
+  try {
+    const spec = ctx.shell.resolve({ command, workdir: cwd, timeoutMs: EXEC_TIMEOUT_MS, sandboxPolicy: ctx.sandboxPolicy.resolve({ session }) });
+    const result = await ctx.shell.run(spec);
+    return json(200, {
+      stdout: result.stdout.text,
+      stderr: result.stderr.text,
+      exitCode: result.exitCode,
+      truncated: result.stdout.truncated || result.stderr.truncated,
+      timedOut: result.timedOut === true,
+    });
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 /** Context shape for the two services the AI route needs; see the SessionStoreCtx note. */
 type LlmCtx = {
   llm: { stream: (options: { provider: string; model: string; messages: readonly unknown[]; system?: string; signal?: AbortSignal }) => AsyncIterable<{ type: string; text?: string; reason?: { kind: string; failure?: { message?: string } } }> };
@@ -293,6 +359,10 @@ export function apply(ctx: Context): void {
     // losing `$dsh/fs` there should not cost the routes above it.
     scoped.inject(["fs", "sandboxPolicy"], (withFs) => {
       withFs.effect(() => withFs.webServer.register({ kind: "exact", path: FS_PATH, handler: (req, res) => serveFs(withFs as unknown as FsCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: workspace files");
+    });
+    // And again for the shell: a host may compose a web server without a command executor.
+    scoped.inject(["shell", "sandboxPolicy"], (withShell) => {
+      withShell.effect(() => withShell.webServer.register({ kind: "exact", path: EXEC_PATH, handler: (req, res) => serveExec(withShell as unknown as ExecCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: commands");
     });
     scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {
       withLlm.effect(() => withLlm.webServer.register({ kind: "exact", path: AI_STREAM_PATH, handler: (req, res) => serveAi(withLlm as unknown as LlmCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: model stream");

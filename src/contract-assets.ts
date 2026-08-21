@@ -24,3 +24,12 @@ export const AI_STREAM_PATH = "/dsh-generative-ui/ai";
  * session may do — `read-only` denies the write at the fence rather than here.
  */
 export const FS_PATH = "/dsh-generative-ui/fs";
+
+/**
+ * Runs one command for a generated card: `?cwd=<workspace>&session=<id>`, POST `{command}`.
+ *
+ * Under the session's own sandbox policy, exactly as `FS_PATH` is — a read-only session gets
+ * a read-only shell rather than a different fence. Foreground only: a card that wants a
+ * long-running process wants a different product.
+ */
+export const EXEC_PATH = "/dsh-generative-ui/exec";

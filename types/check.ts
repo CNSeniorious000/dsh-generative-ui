@@ -19,6 +19,7 @@ type Declared = {
     readdir: (path: string) => Promise<{ name: string; type?: "file" | "directory"; size?: number }[]>;
     writeFile: (path: string, content: string) => Promise<void>;
   };
+  exec: { bash: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: boolean; timedOut: boolean }> };
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one

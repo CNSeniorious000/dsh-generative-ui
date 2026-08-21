@@ -140,6 +140,26 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, let exits finish, and honour \`prefers-reduced-motion\`.
 
+## Running a command
+
+\`bash(command)\` from \`$dsh/exec\` runs one command in the workspace and resolves
+with \`{stdout, stderr, exitCode, truncated, timedOut}\`. It runs under the session's own sandbox
+mode, so it opens nothing your own bash tool has not already opened.
+
+**A non-zero exit resolves.** Check \`exitCode\` and show what the command said —
+\`git status\` failing outside a repo is a thing the card should display, not an
+exception to swallow. Only a failure to run at all rejects.
+
+This is the shortest path to anything the filesystem alone cannot answer: history
+(\`git log\`), state (\`git status\`, \`git diff --stat\`),
+search at speed (\`rg -n pattern\`), sizes (\`du -sh *\`), a test run. Prefer one
+command over many \`readFile\` calls: a card that walks a tree with twenty round trips is slower and
+more code than one \`ls -R\`.
+
+Two limits worth designing around. Commands are killed after **15 seconds**, so nothing that
+watches, serves, or waits. And the card is on the user's page — a command runs while they
+look at a spinner, so keep it to one round trip per interaction rather than one per row.
+
 ## Reading and writing workspace files
 
 \`$dsh/fs\` gives a card \`readFile(path) -> string\`, \`readdir(path) -> {name, type, size}[]\`
