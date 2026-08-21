@@ -23,6 +23,24 @@ Object.assign(globalThis, {
   document: { querySelector: () => null, createElement: () => ({ style: {}, setAttribute() {} }), head: { prepend() {}, append() {} } },
 });
 
+/**
+ * Capture every blob module the plugin synthesizes, so their source can be parsed below.
+ *
+ * These are the `$ui4a/*` shims and the registry's re-export modules — strings built at
+ * runtime and then `import`ed. Nothing type-checks them, and a syntax error in one fails
+ * the way an unresolvable import fails: the whole module graph dies and the card renders
+ * blank with no console error. That is exactly the class of defect this script exists for.
+ */
+const blobs: string[] = [];
+Object.assign(globalThis, {
+  Blob: class {
+    constructor(parts: string[]) {
+      blobs.push(parts.join(""));
+    }
+  },
+  URL: Object.assign(URL, { createObjectURL: () => `blob:smoke/${blobs.length}`, revokeObjectURL: () => {} }),
+});
+
 // The whole point is to evaluate the bundle exactly as the shell's loader does, including
 // the banner that calls `__ModuleLoader__.load` — a syntax error here is the failure this
 // script exists to catch.
@@ -91,6 +109,34 @@ const elapsed = performance.now() - started;
 if (elapsed > 1000) throw new Error(`apply() blocked for ${Math.round(elapsed)}ms — registration must not do work`);
 
 if (registered_effects.length === 0) throw new Error("apply() registered no effects");
+
+/**
+ * Build the blob modules the plugin synthesizes.
+ *
+ * They are lazy — nothing builds one until the first surface mounts, which needs a DOM —
+ * so `localImports()` is what makes them exist here. It is the same call the renderer makes.
+ */
+if (typeof exports.localImports !== "function") throw new Error("client bundle exports no localImports()");
+const imports = (exports.localImports as () => Record<string, string>)();
+if (!("$ui4a/chat" in imports)) throw new Error(`$ui4a/chat is missing from the import map — generated code could not import it (got ${Object.keys(imports).join(", ")})`);
+if (!("react" in imports)) throw new Error("react is missing from the import map — generated code would load a second React");
+
+// Parse what those blob modules actually say. `new Function` rejects a syntax error the same
+// way the browser's module parser would, minus the module grammar — so strip the import/export
+// lines first and check the rest, which is where a real mistake would be.
+for (const source of blobs) {
+  const body = source
+    .split("\n")
+    .filter((line) => !line.startsWith("import ") && !line.startsWith("export "))
+    .join("\n");
+  try {
+    // oxlint-disable-next-line no-new-func
+    new Function(body);
+  } catch (error) {
+    throw new Error(`a synthesized blob module does not parse: ${error instanceof Error ? error.message : String(error)}\n${source}`);
+  }
+}
+if (blobs.length === 0) throw new Error("no blob modules were synthesized — see the registry trigger above");
 const gaps = dom_gaps.length === 0 ? "" : `, ${dom_gaps.length} needing a DOM`;
 console.log(`smoke: ok — id ${id}, requires [${[...new Set(asked)].join(", ")}]`);
 console.log(`       apply() registered ${registered_effects.length} effects${gaps} under injections [${[...new Set(injected)].join(", ")}]`);

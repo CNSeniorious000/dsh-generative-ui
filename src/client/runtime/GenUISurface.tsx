@@ -7,9 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { GenUIRenderer } from "partial-react";
 import { createBrowserTsxCompiler } from "./compiler.ts";
 import { mergeFallbackImports } from "partial-react/import-map";
-import { registryImports } from "./registry.ts";
-import { bindingImports } from "./bindings.ts";
-import { registerRuntimeModules } from "./register.ts";
+import { localImports } from "./bindings.ts";
 
 export type GenUISurfaceProps = {
   /** Full source when settled; the growing prefix while streaming. */
@@ -45,14 +43,10 @@ function useLatest<T>(value: T) {
   return ref;
 }
 
-/** Everything generated code can import without reaching the network: the shell's React, plus `$ui4a/*`. */
-const localImports = () => ({ ...registryImports(), ...bindingImports() });
-
 /** The compiler owns a single wasm instance; one per document is both enough and what we can afford. */
 let sharedCompiler: ReturnType<typeof createBrowserTsxCompiler> | null = null;
 const compiler = () => {
   if (sharedCompiler === null) {
-    registerRuntimeModules();
     sharedCompiler = createBrowserTsxCompiler();
   }
   return sharedCompiler;

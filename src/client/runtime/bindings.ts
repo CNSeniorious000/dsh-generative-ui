@@ -9,7 +9,8 @@
  * filesystem service in dsh (`dsh-fs` is the Node half only) and no client-facing model
  * gateway, so `$ui4a/fs` and `$ui4a/ai` have no implementation here yet.
  */
-import { moduleUrl, registerModules } from "./registry.ts";
+import { moduleUrl, registerModules, registryImports } from "./registry.ts";
+import { registerRuntimeModules } from "./register.ts";
 
 /** What the plugin's client half lends to generated code. Registered once, at apply. */
 export type Ui4aHost = {
@@ -72,4 +73,18 @@ export function bindingImports(): Record<string, string> {
 export function releaseBindings(): void {
   for (const url of Object.values(cached ?? {})) URL.revokeObjectURL(url);
   cached = null;
+}
+
+/**
+ * Every module generated code can import without reaching the network: the shell's React
+ * family, plus the `$ui4a/*` capabilities.
+ *
+ * Exported from the plugin's client entry as well, so `bun run smoke` can build the blob
+ * modules and parse them. They are synthesized strings that nothing type-checks, and a
+ * syntax error in one fails the way an unresolvable import does — the whole module graph
+ * dies and the card renders blank with no console error.
+ */
+export function localImports(): Record<string, string> {
+  registerRuntimeModules();
+  return { ...registryImports(), ...bindingImports() };
 }

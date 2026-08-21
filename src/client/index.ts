@@ -9,7 +9,7 @@ import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
-import { registerUi4aHost, releaseBindings } from "./runtime/bindings.ts";
+import { registerUi4aHost, releaseBindings, localImports } from "./runtime/bindings.ts";
 import { claimInlineFences } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
@@ -18,6 +18,9 @@ import { mountCanvasHost } from "./canvas/index.ts";
 import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
 
 export const inject = ["slots", "sessions"];
+
+/** Re-exported so `bun run smoke` can build the synthesized blob modules and parse them. */
+export { localImports };
 
 /** Assistant text blocks, whose fences are the inline sources. */
 type AssistantNodeData = { blocks?: readonly { kind: string; text?: string }[] };
