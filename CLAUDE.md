@@ -177,7 +177,7 @@ owns the prefix; nothing else should spell it out.
 | `$dsh/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
 | `$dsh/fs` | **implemented** | Forwards to the host's `ctx.fs` carrying the session's `ctx.sandboxPolicy` |
 | `$dsh/state` | **declined** | it would be a naming convention over `$dsh/fs`, which a card can already call directly; private UI state belongs in `localStorage` and the skill teaches that |
-| `$dsh/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
+| `$dsh/ai` | **implemented** | not through a client gateway — there is none — but through a route on our Node half onto `ctx.llm.stream()`, on the session's own model selection, so the card never sees a key |
 
 The mechanism, ported from `ui4a-playground/src/runtime/bindings.ts`: the real implementation
 is ordinary TypeScript in our bundle, registered under `$dsh/internal`, and each
