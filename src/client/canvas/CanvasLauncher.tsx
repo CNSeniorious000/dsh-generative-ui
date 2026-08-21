@@ -6,7 +6,7 @@
  * disk, but nothing on screen reaches it and the only recovery is making the model write
  * it again.
  */
-import { useState } from "react";
+import { useDismissable } from "./useDismissable.ts";
 
 export type CanvasLauncherProps = {
   /** Every canvas in the workspace, including ones this session never wrote. */
@@ -15,13 +15,13 @@ export type CanvasLauncherProps = {
 };
 
 export function CanvasLauncher({ ids, onOpen }: CanvasLauncherProps) {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, anchor } = useDismissable();
   // One canvas needs no menu — the button is the canvas.
   const single = ids.length === 1 ? ids[0] : undefined;
   const label = single === undefined ? `打开画布（${ids.length}）` : `打开画布 ${single}`;
 
   return (
-    <div className="dgu-launcher-dock">
+    <div className="dgu-launcher-dock" ref={anchor}>
       {open && single === undefined && (
         <ul className="dgu-launcher-menu">
           {ids.map((id) => (

@@ -8,11 +8,15 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { GenUISurface } from "../runtime/GenUISurface.tsx";
+import { useDismissable } from "./useDismissable.ts";
 
 export type Canvas = { id: string; code: string; streaming: boolean };
 
 export type CanvasPanelProps = {
   canvases: readonly Canvas[];
+  /** Every canvas in the workspace, so the header can reach ones this session never wrote. */
+  offerable: readonly string[];
+  onOpen: (id: string) => void;
   onClose: () => void;
   /** Reports the panel's width so the host frame can reserve matching space. */
   onWidth: (width: number) => void;
@@ -49,10 +53,13 @@ function useResize(initial: number) {
   return { width, start };
 }
 
-export function CanvasPanel({ canvases, onClose, onWidth }: CanvasPanelProps) {
+export function CanvasPanel({ canvases, offerable, onOpen, onClose, onWidth }: CanvasPanelProps) {
   const { width, start } = useResize(420);
   useEffect(() => onWidth(width), [width, onWidth]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const { open: picking, setOpen: setPicking, anchor: picker } = useDismissable();
+  // Only what is not already a tab: the tabs cover this session, this covers the rest.
+  const elsewhere = offerable.filter((id) => !canvases.some((canvas) => canvas.id === id));
 
   // Follow the newest canvas unless the reader has picked one that still exists. A
   // selection that disappears needs no cleanup: the fallback already covers it, and
@@ -65,6 +72,34 @@ export function CanvasPanel({ canvases, onClose, onWidth }: CanvasPanelProps) {
       <div className="dgu-header">
         <span className="dgu-title">{active?.id ?? "Canvas"}</span>
         <span className="dgu-spacer" />
+        {elsewhere.length > 0 && (
+          <div className="dgu-picker" ref={picker}>
+            <button type="button" className="dgu-icon-button" onClick={() => setPicking(!picking)} aria-expanded={picking} aria-label={`其他画布（${elsewhere.length}）`} title={`其他画布（${elsewhere.length}）`}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M3 5.5l4 3.5 4-3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {picking && (
+              <ul className="dgu-launcher-menu dgu-picker-menu">
+                {elsewhere.map((id) => (
+                  <li key={id}>
+                    <button
+                      type="button"
+                      className="dgu-launcher-item"
+                      onClick={() => {
+                        setPicking(false);
+                        setActiveId(id);
+                        onOpen(id);
+                      }}
+                    >
+                      {id}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <button type="button" className="dgu-icon-button" onClick={onClose} aria-label="关闭画布" title="关闭画布">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

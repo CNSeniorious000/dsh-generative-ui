@@ -142,10 +142,21 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
         scheduleSweep();
       };
 
+      /** Show a canvas the reader picked, whether or not this session wrote it. */
+      const show = (id: string) => {
+        dismissed.get(session)?.delete(id);
+        const showing = opened.get(session) ?? new Set<string>();
+        showing.add(id);
+        opened.set(session, showing);
+        repaint();
+      };
+
       root.render(
         canvases.length > 0
           ? createElement(CanvasPanel, {
               canvases,
+              offerable,
+              onOpen: show,
               onWidth: column.setWidth,
               onClose: () => {
                 const hiding = dismissed.get(session) ?? new Set<string>();
@@ -161,13 +172,7 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
           : offerable.length > 0
             ? createElement(CanvasLauncher, {
                 ids: offerable,
-                onOpen: (id: string) => {
-                  dismissed.get(session)?.delete(id);
-                  const showing = opened.get(session) ?? new Set<string>();
-                  showing.add(id);
-                  opened.set(session, showing);
-                  repaint();
-                },
+                onOpen: show,
               })
             : null,
       );

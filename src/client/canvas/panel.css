@@ -197,7 +197,11 @@
   list-style: none;
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-1);
+  /* A floating surface has to occlude: `bg-layer-1` is a tint over whatever it sits on, so
+     it needs the panel's own opaque ground underneath before the tint reads as a menu. */
+  background: var(--dsw-alias-bg-base);
+  background-image: linear-gradient(var(--dsw-alias-bg-layer-1), var(--dsw-alias-bg-layer-1));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.24);
 }
 
 .dgu-launcher-item {
@@ -217,4 +221,17 @@
 }
 .dgu-launcher-item:hover {
   background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* Anchors the header's canvas picker; the menu drops below the button. */
+.dgu-picker {
+  position: relative;
+  display: flex;
+}
+
+.dgu-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1;
 }
