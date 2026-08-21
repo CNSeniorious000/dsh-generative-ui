@@ -645,6 +645,14 @@ localStorage), then `这个不对，休息应该是 10 分钟不是 5 分钟`. T
 needs a refresh. So the feared shape — a whole-file rewrite discarding the reader's state on
 every tweak — is not what the model does; `str_replace` is.
 
+**A vague follow-up resolves, and the width rule survives it.** Third turn on the same canvas:
+`把它改成横着的，字太小了看不清` — a pronoun with no referent in the sentence, a layout verb, and
+a complaint. The model resolved 它 to the canvas in the panel and, crucially, did not simply
+turn the layout sideways: it added `@container (min-width: 640px)` so the horizontal
+arrangement applies when there is room and falls back to a column when there is not, then
+listed the type-size changes it made (56→64px, 14→18px). 125-line diff, and the container-query
+rule held under a request that never mentioned width.
+
 **Two resident rules can fight, and "fine as text" wins.** `帮我算下这个月还剩多少钱能花，
 工资 12000，房租 3500，还了 2000 花呗` produced correct prose and no card, on a request whose
 three numbers are exactly the "a number the user might want to change" shape. The reasoning
