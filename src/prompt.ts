@@ -35,6 +35,11 @@ export default function Answer() {
 - \`import { sendMessage } from "$dsh/chat"\` drives the next turn from inside the card. A click on an option becomes the user's reply, so they answer by pointing instead of retyping what you already listed.
 - Reach for this when a picture, a control, or a comparison answers better than a paragraph — a chart, a form, a set of options to click, a live calculation. Not for text that is already fine as text.
 - **A question does not have to say "build" to want this.** Anything with a number the user might want to change (a loan, a unit conversion, a threshold like BMI), anything comparing more than two things, and anything with steps to step through, is one of these blocks — even when it is phrased as "算一下…", "看看…", "对比一下…". Computing the one answer they named and printing it is the worse version of the same reply: they get one row of a table they could have explored.
+- **A conversion is never asked once.** "5 英里是多少公里", "98 华氏度是多少摄氏度", "5 公斤 3 两是多少磅" —
+  you will answer with one number and the user will be back within the minute with a different one, because the
+  number they said out loud is rarely the only one they care about. "这是简单事实问题，直接算就行" is the thought
+  to catch: it is about **the cost of building**, not about whether they wanted it. Give them the pair of fields
+  with their number already in it and the arrow going both ways, and the next five questions cost them nothing.
 - **A plan is not prose. It is something they come back to.** "我想学吉他，从哪开始", "想开始跑步怎么循序渐进",
   "帮我定个背单词的计划" — you will produce a week-by-week table either way, and the moment you write that table
   you have conceded the shape: a schedule is checked off, reordered, and bent to the person following it. Printed,

@@ -989,3 +989,29 @@ Two things worth having learned:
 Method note: my first attempt edited the file with `sed` and nothing re-rendered. The version
 key in `collect.ts` counts *mutating tool calls*, not mtime — editing behind the agent's back is
 not the edit path. Drive the real one.
+
+### Unit conversion, and the single sample that nearly invented a regression (2026-08-22)
+
+Multi-card probe (`帮我算下 BMI 再看看蛋白质`, `cron + chmod`, `英里 + 华氏度`): no reply ever
+produced two cards, and the first two merged both jobs into **one** card (91 and 178 lines) —
+which is the better answer, so multi-card is a non-need, not a gap. The third produced nothing.
+
+Chasing that third one nearly produced a false finding. `5 公斤 3 两 是多少磅` is a recorded
+positive fixture and now read 0, so I checked out an older `src/prompt.ts` to bisect. The old
+build gave **0** and HEAD gave **1** — the opposite of a regression, and contradicting a run of
+HEAD three minutes earlier. Six repeats on HEAD: **0/6**. The single `fence=1` was one flap in
+seven, and the fixture itself was probably written from an equally lucky single sample.
+
+So: not a regression, a **standing gap**. The trace is 337 characters and ends
+*"This is simple, no need for tools. Just answer directly."* — the rule layer was never reached.
+
+Fixed with the same shape that works: name what happens after the reply. *A conversion is never
+asked once* — they will be back within the minute with a different number, and
+`这是简单事实问题` is about the cost of building, not about whether they wanted it.
+After: **6/6 across two different conversion prompts**, `5 公斤 3 两` → 11.35 lb with
+`LB_PER_KG = 2.2046226218`. Prose fixtures still 4/4.
+
+**The method rule, hit twice today: one run decides nothing about prompt behaviour.** The first
+time it made a canvas invisible (counting fences), this time it nearly pinned a nonexistent
+regression on a specific commit. Before attributing a shape change to an edit, repeat it —
+and repeat the *old* side too.
