@@ -81,6 +81,20 @@ export function bind() {
      */
     readdir: (path: string) => request<{ entries: Ui4aDirEntry[] }>("GET", path, undefined, "list=1").then((body) => body.entries),
     /**
+     * The file's bytes, for anything that is not text.
+     *
+     * `readFile` decodes as UTF-8, so a .mid, a wav or a png read that way comes back with
+     * every byte above 0x7f replaced by U+FFFD — corrupt, and silently so. Anything handed to
+     * `decodeAudioData`, a MIDI parser or an image decoder has to come through here.
+     */
+    readBytes: (path: string) =>
+      request<{ base64: string }>("GET", path, undefined, "bytes=1").then((body) => {
+        const binary = atob(body.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }),
+    /**
      * Writes the file, subject to the session's own access mode.
      *
      * Under `Read Only` this rejects exactly as the model's own `write` would — the fence

@@ -6,6 +6,12 @@ declare module "$dsh/fs" {
   export type DirEntry = { name: string; type?: "file" | "directory"; size?: number };
   /** A directory's entries — enough to draw a tree without probing each name. */
   export function readdir(path: string): Promise<DirEntry[]>;
+  /**
+   * The file's raw bytes — for audio, MIDI, images, anything not text.
+   *
+   * `readFile` decodes as UTF-8 and would corrupt them silently. Capped at 8MB.
+   */
+  export function readBytes(path: string): Promise<Uint8Array<ArrayBuffer>>;
   /** Rejects with `FS_SANDBOX_DENIED` when the session is read-only. */
   export function writeFile(path: string, content: string): Promise<void>;
 }

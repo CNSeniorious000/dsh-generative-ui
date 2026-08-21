@@ -17,6 +17,7 @@ type Declared = {
   fs: {
     readFile: (path: string) => Promise<string>;
     readdir: (path: string) => Promise<{ name: string; type?: "file" | "directory"; size?: number }[]>;
+    readBytes: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
     writeFile: (path: string, content: string) => Promise<void>;
   };
   exec: { bash: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: boolean; timedOut: boolean }> };

@@ -116,6 +116,7 @@ type FsCtx = {
   fs: {
     resolve: (path: string, opts?: { cwd?: string }) => Promise<FsTargetLike>;
     readText: (target: FsTargetLike) => Promise<string>;
+    readBytes: (target: FsTargetLike, signal: AbortSignal | undefined, maxBytes: number) => Promise<Uint8Array>;
     listDir: (target: FsTargetLike) => Promise<{ name: string; type?: string; size?: number }[]>;
     writeText: (target: FsTargetLike, content: string, expected?: undefined, signal?: AbortSignal, policy?: unknown) => Promise<unknown>;
   };
@@ -162,6 +163,13 @@ async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, re
         // not the order the name suggests); neither is contract, so neither is forwarded.
         const entries = await ctx.fs.listDir(target);
         return json(200, { entries: entries.map(({ name, type, size }) => ({ name, type, size })) });
+      }
+      // `?bytes=1` reads the file as bytes and answers base64. A card that wants a .mid, a
+      // wav, or an image cannot use the text path: `readText` decodes as UTF-8, so every byte
+      // above 0x7f comes back as U+FFFD and the file is silently corrupt rather than refused.
+      if (url.searchParams.get("bytes") !== null) {
+        const bytes = await ctx.fs.readBytes(target, undefined, MAX_BINARY);
+        return json(200, { base64: Buffer.from(bytes).toString("base64"), byteLength: bytes.byteLength });
       }
       return json(200, { content: await ctx.fs.readText(target) });
     }
@@ -266,6 +274,9 @@ type LlmCtx = {
 
 /** Largest request body accepted by either POST route, so a runaway card cannot exhaust memory. */
 const MAX_BODY = 64 * 1024;
+
+/** Byte cap on a binary read. Base64 inflates by a third, and this crosses a JSON response. */
+const MAX_BINARY = 8 * 1024 * 1024;
 
 /**
  * Streams one model call on behalf of a generated card.
