@@ -326,6 +326,14 @@ the familiar language name at the last moment, and the whole interface is lost, 
 naming it specifically now lives in the resident layer, right after the four-backticks line, as close to the moment
 of writing as possible. Re-ran each of the two prompts that failed 3 times: **6/6 correct**.
 
+It came back on 2026-08-21, on a prompt vaguer than anything in the original 40 —
+`帮我搭个东西记录点什么`, which names no artifact at all. 1/5 in a first pass and 1/5 again on
+five repeats of that one prompt, so ~20% there against ~5% overall: **the vaguer the request,
+the likelier the slip.** Which fits the mechanism — the model spends its attention deciding
+*what* to build, and the fence language is the thing that gets written on autopilot. Worth a
+second rule only if it shows up on ordinary requests too; on this evidence it is the tail,
+not a regression.
+
 Two measurement traps worth recording, both of which had me draw a wrong conclusion: fences must be counted at three
 backticks or more (counting four misses 3/5/6/8), and canvas artifacts must be counted by `find`ing the whole runs
 directory (my original `runs/*/ui4a/canvases/*.tsx` glob missed files and turned "8/19 used persistence" into "0/10,
@@ -386,6 +394,19 @@ error:
 
 One detection technique worth keeping: **judge a broken card by "has height, zero children", not by matching error
 text in innerText** — #185's error text wasn't in the container, and text matching missed it entirely.
+
+### `$ui4a/chat` in the model's hands (2026-08-21, 5 prompts + 5 repeats)
+
+Ran five underspecified requests through headless to see whether the model uses `sendMessage`
+the way the prompt describes, rather than whether the API works:
+
+- **5/5 imported `$ui4a/chat` and wired every option to it.** No prompting for it beyond the
+  one line in the resident layer and the example in the skill.
+- **5/5 sent human-readable text** — `sendMessage(id)` where `id` is `单位换算器` / `个人主页` /
+  `习惯打卡`. None sent a JSON payload, which matters because `ctx.conversation.send` always
+  writes the message into the transcript: a click has to read as something the user would say.
+- Unprompted, they also got the answered state right: `disabled` after choosing, the chosen
+  card highlighted, and a free-text field for answers not on the list.
 
 ## 4.9 Dependencies and releasing
 
