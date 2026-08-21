@@ -10,12 +10,15 @@
  * gateway, so `$ui4a/fs` and `$ui4a/ai` have no implementation here yet.
  */
 import { moduleUrl, registerModules, registryImports } from "./registry.ts";
+import { AI_STREAM_PATH } from "../../contract-assets.ts";
 import { registerRuntimeModules } from "./register.ts";
 
 /** What the plugin's client half lends to generated code. Registered once, at apply. */
 export type Ui4aHost = {
   /** Sends a prompt into the current session, exactly as the composer would. */
   send: (text: string) => void;
+  /** The current session's workspace, which the AI route authorizes against. */
+  cwd: () => string | undefined;
 };
 
 const INTERNAL = "$ui4a/internal";
@@ -47,10 +50,55 @@ export function bind() {
       host.send(text);
     },
   };
-  return { chat };
+  const ai = {
+    /**
+     * Streams text from the app's own model, yielded character by character.
+     *
+     * Nothing here holds a credential: the Node half forwards to `ctx.llm`, which owns the
+     * provider route and the keys. Reach for it when the *content* is the variable part —
+     * the recipe, the five candidate names — and skip it when the data is genuinely fixed.
+     */
+    streamText: (options: Ui4aStreamOptions | string): AsyncIterable<string> => {
+      if (host === null) throw new Error("[dsh-generative-ui] no host bound");
+      const workspace = host.cwd();
+      if (workspace === undefined) throw new Error("[dsh-generative-ui] $ui4a/ai needs a session workspace");
+      return streamFrom(workspace, typeof options === "string" ? { prompt: options } : options);
+    },
+  };
+
+  return { chat, ai };
 }
 
-const GROUPS = ["chat"] as const;
+/** One user turn plus an optional system prompt — see the route's note on why not more. */
+export type Ui4aStreamOptions = { prompt: string; system?: string };
+
+/**
+ * Decodes the route's plain-text stream into characters.
+ *
+ * Character-at-a-time rather than chunk-at-a-time because that is what the consumer wants:
+ * generated cards append to a buffer and re-parse it, and a card that grows by whole network
+ * chunks reads as stuttering rather than typing.
+ */
+async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterable<string> {
+  const response = await fetch(`${AI_STREAM_PATH}?cwd=${encodeURIComponent(cwd)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!response.ok) throw new Error(`[dsh-generative-ui] $ui4a/ai: ${response.status} ${response.statusText}`);
+  if (response.body === null) throw new Error("[dsh-generative-ui] $ui4a/ai: no response body");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    // `stream: true` so a multi-byte character split across chunks is not mangled — the
+    // failure mode is a replacement character mid-word in any non-ASCII answer.
+    yield* decoder.decode(value, { stream: true });
+  }
+}
+
+const GROUPS = ["chat", "ai"] as const;
 
 /** Blob URLs for every `$ui4a/*` module, built once and reused by every surface. */
 let cached: Record<string, string> | null = null;

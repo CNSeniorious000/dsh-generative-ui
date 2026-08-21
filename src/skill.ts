@@ -99,6 +99,30 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, let exits finish, and honour \`prefers-reduced-motion\`.
 
+## Generating content inside the card
+
+\`streamText\` from \`$ui4a/ai\` is for when a literal array in the file would freeze the thing
+that should vary — the recipe steps, the itinerary, the candidate names. It inherits the
+app's model, so there is no key to ask for and no setup.
+
+Ask for JSON and parse the buffer as it grows, so items land one at a time rather than all
+at once at the end:
+
+\`\`\`tsx
+import { streamText } from "$ui4a/ai"
+import { parse, Allow } from "partial-json"
+
+let buffer = ""
+for await (const chunk of streamText({ prompt: \`…Return JSON: {"items":[{"title":"","note":""}]}\` })) {
+  buffer += chunk
+  try { setData(parse(buffer, Allow.ALL)) } catch {}  // half-written JSON throws; skip that frame
+}
+\`\`\`
+
+One user turn per call — there is no conversation here. Anything the card knows from earlier
+goes into the prompt it builds. And skip it entirely when the data is genuinely fixed: a
+converter, a timer, a colour picker have nothing to generate.
+
 ## Imports
 
 Bare specifiers resolve from npm at render time — there is no install step, so never tell the user to install anything and never hold back an import because it "isn't available". Importing it *is* installing it.

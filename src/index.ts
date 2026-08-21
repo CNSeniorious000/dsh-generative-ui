@@ -17,7 +17,10 @@ import type { Context } from "@deepseek-ai/cordis";
 import type {} from "@deepseek-ai/dsh-host-webserver";
 import type {} from "@deepseek-ai/dsh-system-prompt";
 import type {} from "@deepseek-ai/dsh-skill";
-import { ASSET_PREFIX, CANVAS_READ_PATH, WASM_PATH } from "./contract-assets.ts";
+// A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
+// and this is the constructor that stamps the identity and source tags it requires.
+import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, WASM_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { SKILL_BODY, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
@@ -82,6 +85,77 @@ async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: Incom
   }
 }
 
+/** Context shape for the two services the AI route needs; see the SessionStoreCtx note. */
+type LlmCtx = {
+  llm: { stream: (options: { provider: string; model: string; messages: readonly unknown[]; system?: string; signal?: AbortSignal }) => AsyncIterable<{ type: string; text?: string; reason?: { kind: string; failure?: { message?: string } } }> };
+  agentDefaultModel: { currentSelection: () => { provider: string; model: string } };
+};
+
+/** Largest request body accepted, so a runaway card cannot exhaust memory here. */
+const MAX_BODY = 64 * 1024;
+
+/**
+ * Streams one model call on behalf of a generated card.
+ *
+ * The card cannot call a provider itself — it has no credentials and should never be given
+ * any. `ctx.llm` already owns the adapter registry, the retry policy and the keys, and
+ * `agentDefaultModel` owns which model the app is set to, so this route is a forwarder:
+ * it converts a small JSON request into `llm.stream` and pipes the text deltas back.
+ *
+ * Same `cwd` allowlist as the canvas route, and for the same reason: any page the user has
+ * open can POST here, so without it this is an open model proxy for anything on the machine.
+ */
+async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== "POST") return void res.writeHead(405).end();
+  const url = new URL(req.url ?? "/", "http://x");
+  const cwd = url.searchParams.get("cwd");
+  if (cwd === null) return void res.writeHead(400).end();
+  if (!liveWorkspaces().has(cwd)) return void res.writeHead(403).end();
+
+  let body = "";
+  for await (const chunk of req) {
+    body += chunk as string;
+    if (body.length > MAX_BODY) return void res.writeHead(413).end();
+  }
+
+  let request: { prompt?: string; system?: string };
+  try {
+    request = JSON.parse(body) as typeof request;
+  } catch {
+    return void res.writeHead(400).end();
+  }
+  if (request.prompt === undefined || request.prompt === "") return void res.writeHead(400).end();
+  // One user turn, deliberately: `llm.stream` will not take a bare `{role, content}` — a
+  // message carries an identity and a source tag — and the assistant-side constructor wants
+  // provider, model and replay state, which means a multi-turn API here would be forging
+  // turns the model never produced. Anything a card needs from an earlier turn belongs in
+  // the prompt it builds.
+  const messages = [createUserMessage({ content: [{ type: "text", text: request.prompt }], source: { kind: "plugin", plugin: "dsh-generative-ui" } })];
+
+  const selection = ctx.agentDefaultModel.currentSelection();
+  // Abort the model call when the reader navigates away or the card unmounts; without this
+  // a closed tab leaves a generation running and billing.
+  const controller = new AbortController();
+  req.on("close", () => controller.abort());
+
+  res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" });
+  try {
+    for await (const chunk of ctx.llm.stream({ ...selection, messages, system: request.system, signal: controller.signal })) {
+      if (chunk.type === "text-delta" && chunk.text !== undefined) res.write(chunk.text);
+      // A failed call finishes rather than throwing, so without this the card sees a clean
+      // empty 200 and reports "the model said nothing" — indistinguishable from a real
+      // empty answer. Trailing the reason is the only channel left once the body has begun.
+      // `reason` is an object with a `kind`, not a string: interpolating it directly writes
+      // `[object Object]`, which is how this was first shipped.
+      else if (chunk.type === "finish" && chunk.reason !== undefined && chunk.reason.kind !== "stop") res.write(`\n\n[${chunk.reason.kind}${chunk.reason.failure?.message === undefined ? "" : `: ${chunk.reason.failure.message}`}]`);
+    }
+  } catch (error) {
+    // Headers are already out, so this cannot become a status code.
+    res.write(`\n\n[error: ${error instanceof Error ? error.message : String(error)}]`);
+  }
+  res.end();
+}
+
 /** Live sessions' workspaces. Typed locally: a global `dsh-session` merge would also rewrite
  *  the client half's `ctx.sessions`, which is a different service entirely. */
 type SessionStoreCtx = { sessions: { list: () => readonly { header: { cwd?: string } }[] } };
@@ -106,6 +180,11 @@ export function apply(ctx: Context): void {
     };
     scoped.effect(() => scoped.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: (req, res) => serveAsset(req, res, file) }), "dsh-generative-ui: tsx wasm");
     scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: (req, res) => serveCanvas(liveWorkspaces, req, res) }), "dsh-generative-ui: canvas reads");
+    // One level deeper again: a deployment can mount a web server without an LLM runtime, and
+    // losing `$ui4a/ai` there should not take the wasm and canvas routes down with it.
+    scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {
+      withLlm.effect(() => withLlm.webServer.register({ kind: "exact", path: AI_STREAM_PATH, handler: (req, res) => serveAi(withLlm as unknown as LlmCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: model stream");
+    });
   });
   // Scoped rather than listed in `inject`: cordis has no optional injection, so naming "skills"
   // there would keep the whole plugin — wasm route included — inactive wherever the skill
