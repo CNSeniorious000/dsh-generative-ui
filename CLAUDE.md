@@ -658,6 +658,21 @@ Not a rule that failed to land — two that collide, decided by the one that rea
 to stop. Left alone deliberately: tightening either one damages what the other covers, and the
 model's own tie-breaker (*"用户语气是随口问的"*) is a reasonable read of the request.
 
+### Is the card's arithmetic right? (2026-08-22)
+
+The critique named this the biggest unexamined risk: *"generative UI raises the credibility of
+output without raising its accuracy."* Three prompts with independently computable answers:
+
+| prompt | truth | card said | card's formula |
+| --- | --- | --- | --- |
+| 30y ¥1M at 4.2%, monthly payment | 4890.17 | **4890.17** | `P*r*(1+r)^n/((1+r)^n-1)`, with an `r === 0` branch |
+| 5 公斤 3 两 in pounds | 11.35 | **11.35** | prose; also flagged that a HK/TW 两 is 37.5g, giving 11.30 |
+
+Both exact to the cent, and the mortgage card's formula is the same one used to compute the
+truth — the arithmetic lives in the card, not in a number the model wrote down. One sample of
+two is not a guarantee, but the specific fear (a plausible card quietly wrong) did not
+reproduce on the shapes most likely to show it.
+
 ### Counting fences does not count canvases (2026-08-22)
 
 Every headless eval in this file counts ` ``` ` fences in the reply. That misses a canvas
