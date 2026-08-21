@@ -127,7 +127,7 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): (
 
       // What the launcher can offer: everything on disk, plus anything written this session
       // whose file has not landed yet. Sorted so the button does not reshuffle between sweeps.
-      const offerable = [...new Set([...workspaceIds, ...collected.canvases.map((canvas) => canvas.id)])].sort();
+      const offerable = [...new Set([...workspaceIds, ...collected.canvases.map((canvas) => canvas.id)])].toSorted();
 
       // Re-render only on a real change: the observer fires on every streamed token. The
       // offerable list belongs in the signature too — closing the last canvas changes nothing

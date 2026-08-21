@@ -147,6 +147,42 @@ Three traps:
 - **Closing a canvas must leave a way back, and the transcript is not enough of one.** Dismissal only hides, and a canvas outlives the session that wrote it — so a panel fed purely by the current transcript strands both the one just closed and every one written yesterday. `CanvasLauncher` sits where the panel's edge was and offers the whole workspace: the canvas route lists the directory when given no `id` (same cwd allowlist), and a canvas opened that way has no tool call behind it, so its body is read off disk once. The same picker sits in the panel header, so switching to another canvas does not require closing first. Note the repaint signature has to carry that offerable list: closing the last canvas changes nothing about the visible one, so a signature built from the visible canvases alone never repaints and the launcher never appears.
 - **The panel cannot be inserted into AppFrame as a flex child.** The host's column widths exactly fill the viewport, so an inserted column is always pushed offscreen — present in the DOM, correctly sized, and invisible. The answer is `position: fixed` against the right edge plus an equal `padding-right` on the frame.
 
+## 3.65 `$ui4a/*`: what generated code can call back into
+
+The playground gives generated code four capability modules — `$ui4a/fs`, `$ui4a/state`,
+`$ui4a/chat`, `$ui4a/ai`. Only one of them has a host behind it here:
+
+| Module | Here | Why |
+| --- | --- | --- |
+| `$ui4a/chat` | **implemented** | `ctx.conversation.send(text)` is a public client service |
+| `$ui4a/fs` | no | dsh has no browser-side filesystem — `dsh-fs` is the Node half only. Would need our own route, like the canvas read |
+| `$ui4a/state` | no | needs the `states.json` persistence that §4 records as unimplemented; the skill teaches `localStorage` instead |
+| `$ui4a/ai` | no | no client-facing model gateway; `dsh-host-apiproxy` only serves a compiled-in allowlist (§4) |
+
+The mechanism, ported from `ui4a-playground/src/runtime/bindings.ts`: the real implementation
+is ordinary TypeScript in our bundle, registered under `$ui4a/internal`, and each
+`$ui4a/<group>` is a few-line blob shim that imports it and re-exports that group's members.
+The indirection exists because **a blob URL cannot carry a query string** — anything the
+module needs to know about its caller has to be compiled into the body. The playground binds
+per surface for that reason; we have one global host, so one shim set is enough.
+
+**`conversation` is scope-addressed, and the scope is a fresh context.** Reading it off the
+plugin's own context rejects with `requires a session scope — address one via
+ctx.sessions.scope(id).conversation`. But `scope(id)` returns a context the *host* minted,
+carrying its own inject set — so reading `conversation` off it throws the §4 access-time
+error instead, and our outer declaration does not help. It takes both: resolve the scope,
+then `inject(["conversation"], …)` on that context. Resolve per call, not once — the reader
+switches sessions under us.
+
+`conversation` also goes in a nested `ctx.inject`, not the static array — every static name is a
+hard dependency (§4), and a profile without it would lose the whole plugin rather than one
+capability.
+
+**`send` is visible.** The playground's `sendMessage(content, visible = false)` can post a
+turn the user never sees; `ctx.conversation.send` always writes their message into the
+transcript. So a card's click has to read as something the user would have said — `我选 红`,
+not a JSON payload.
+
 ## 3.7 Colors: put the tokens in the prompt
 
 Generated UI doesn't know the host is dark by default and will paint white cards onto a dark app. The fix isn't runtime CSS rewriting — it's **listing the 14 `--dsw-alias-*` semantic tokens in the system prompt** and stating flatly that literal colors are never allowed. Measured: 106 token uses across the generated code, zero literal hex.

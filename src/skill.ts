@@ -43,7 +43,7 @@ The tell is the question "would the user want this again in ten turns?" Yes → 
 
 Two things follow from the lifetime difference:
 
-- An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: record what was chosen so the card still shows it when scrolled back to weeks later. A form that looks untouched after submitting reads as broken.
+- An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
 - A **canvas** stays interactive. It does not "complete"; it just sits there working.
 - A **canvas outlives the reply that made it**, so data the user puts into it — entries, notes, cards — must survive a reload on its own. There is no persistence hook here yet, so reach for \`localStorage\` under a key named after the canvas. Plain \`useState\` is a bug you cannot see while building: the ledger looks right until the tab reloads and every row is gone.
 
@@ -51,7 +51,19 @@ Two things follow from the lifetime difference:
 
 "Build me a tool", "show me the data" — several plausible readings, no default. Guessing wastes a build; asking in prose makes the user type the answer back.
 
-Ask with an **inline** block instead: one short line saying what you need to know, then 2–4 concrete options as clickable cards. Rules for that move:
+Ask with an **inline** block instead: one short line saying what you need to know, then 2–4 concrete options as clickable cards, each wired to \`sendMessage\` so a click *is* the reply:
+
+\`\`\`tsx
+import { sendMessage } from "$ui4a/chat"
+
+export default function Pick() {
+  const [picked, setPicked] = useState<string | null>(null)
+  const choose = (id: string) => { setPicked(id); sendMessage(id) }
+  // picked === null → the options; otherwise just the chosen one, still highlighted
+}
+\`\`\`
+
+Rules for that move:
 
 - **Do it before you explore.** Listing the workspace tells you what is there, never what the user wants. Stalling in tool calls is not a step.
 - **Real options, not a form.** Each card is a thing you could go build right now. "Something else" belongs at the end as a plain text field, not as one of the cards.

@@ -8,6 +8,7 @@ import { GenUIRenderer } from "partial-react";
 import { createBrowserTsxCompiler } from "./compiler.ts";
 import { mergeFallbackImports } from "partial-react/import-map";
 import { registryImports } from "./registry.ts";
+import { bindingImports } from "./bindings.ts";
 import { registerRuntimeModules } from "./register.ts";
 
 export type GenUISurfaceProps = {
@@ -43,6 +44,9 @@ function useLatest<T>(value: T) {
   }, [value]);
   return ref;
 }
+
+/** Everything generated code can import without reaching the network: the shell's React, plus `$ui4a/*`. */
+const localImports = () => ({ ...registryImports(), ...bindingImports() });
 
 /** The compiler owns a single wasm instance; one per document is both enough and what we can afford. */
 let sharedCompiler: ReturnType<typeof createBrowserTsxCompiler> | null = null;
@@ -103,7 +107,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     let attached: GenUIRenderer | null = null;
     void GenUIRenderer.create(host, {
       compiler: compiler(),
-      importmap: { imports: registryImports() },
+      importmap: { imports: localImports() },
       preserveStateOnUpdate: preserveStateRef.current,
       callbacks: {
         onError: (error, phase) => {
@@ -159,7 +163,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     if (signature !== importedRef.current) {
       importedRef.current = signature;
       // A later frame's probe can settle first; without this the map reverts to an older import set.
-      void mergeFallbackImports(registryImports(), code).then((imports) => {
+      void mergeFallbackImports(localImports(), code).then((imports) => {
         if (signature !== importedRef.current) return;
         renderer.setImportMap({ imports });
         // `setImportMap` only stores — it schedules nothing, so whoever delivers next is what

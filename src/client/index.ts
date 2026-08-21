@@ -9,6 +9,7 @@ import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
+import { registerUi4aHost, releaseBindings } from "./runtime/bindings.ts";
 import { claimInlineFences } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
@@ -65,13 +66,49 @@ export function apply(ctx: ClientContext): void {
     return list.current === undefined ? undefined : list.byId[list.current]?.cwd;
   };
 
-  /** Identity of the open session, so a dismissed canvas stays dismissed only there. */
-  const sessionId = (): string => ctx.sessions.list.getSnapshot().current ?? "";
+  /**
+   * Identity of the open session, so a dismissed canvas stays dismissed only there.
+   * Returns the branded `SessionId` rather than a plain string: `sessions.scope()` needs it.
+   */
+  const currentSession = () => ctx.sessions.list.getSnapshot().current;
+  const sessionId = (): string => currentSession() ?? "";
 
   // Revoking on teardown is safe: a blob module that was already imported keeps working after
   // its URL is revoked (the module graph holds it), so this only reclaims URLs nothing can
   // reach any more. Without it every HMR round leaks one per registered specifier.
   ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
+  // What `$ui4a/chat` calls into. A nested fiber, not a static inject: every name in
+  // `inject` is a hard dependency, and a profile without `conversation` would otherwise
+  // take the whole plugin down rather than just this one capability.
+  ctx.inject(["conversation"], (scoped) => {
+    scoped.effect(() => {
+      // `conversation` is scope-addressed: reading it off the plugin's own context sends
+      // into no session and rejects. The scope has to come from `sessions.scope(id)`, and
+      // resolved per call rather than once — the reader switches sessions under us.
+      //
+      // `send` rejects on business failures and the caller is a generated card that cannot
+      // handle it, so surface it rather than dropping it: a click that goes nowhere looks
+      // exactly like a click that was never wired up.
+      const release = registerUi4aHost({
+        send: (text) => {
+          const id = currentSession();
+          const session = id === undefined ? undefined : scoped.sessions.scope(id);
+          if (session === undefined) return void console.error("[dsh-generative-ui] $ui4a/chat: no session to send into");
+          // The scoped context is minted by the host and carries its own inject set, so our
+          // outer declaration does not reach it — reading `conversation` off it directly
+          // throws `cannot get property "conversation" without inject`. One more inject on
+          // that context is what makes the property readable.
+          session.inject(["conversation"], (addressed) => {
+            void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] $ui4a/chat send failed", error));
+          });
+        },
+      });
+      return () => {
+        release();
+        releaseBindings();
+      };
+    }, "dsh-generative-ui: $ui4a host");
+  });
   ctx.effect(() => mountCanvasHost({ calls, cwd, sessionId }), "dsh-generative-ui: canvas column");
   ctx.effect(() => claimInlineFences({ segments, render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming }) }), "dsh-generative-ui: inline fences");
 }
