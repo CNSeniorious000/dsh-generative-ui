@@ -666,6 +666,22 @@ Not a rule that failed to land — two that collide, decided by the one that rea
 to stop. Left alone deliberately: tightening either one damages what the other covers, and the
 model's own tie-breaker (*"用户语气是随口问的"*) is a reasonable read of the request.
 
+### Failure-shaped requests: scale is the trigger, not failure (2026-08-22)
+
+A round-7 angle proposed cards for the states people are actually in when they ask for help —
+a stack trace, a failing build, a flaky test. Built a repo with a deliberately broken file and
+asked `build 挂了，我该先看哪个错`.
+
+**Three errors: no card, and rightly so.** The reply ran the build, then made the observation
+that matters — the three are *independent*, not a cascade — ranked them (`TS2304` name-not-found
+above the two type mismatches, because a missing name means a piece of code is absent rather
+than mislabelled), and added a rule worth keeping: *"报错一大堆时通常先看第一个，因为它最可能是
+根因；但这次三个是平级的，所以看最重的那个"*. Nothing there wanted an interface.
+
+The round-7 intent said **forty-seven** errors, which is a different question — at that size
+"which first" stops being a judgement and becomes triage over a set. Re-running at that scale
+is the honest test of the angle; the three-error version tested the wrong thing.
+
 ### Is the card's arithmetic right? (2026-08-22)
 
 The critique named this the biggest unexamined risk: *"generative UI raises the credibility of
