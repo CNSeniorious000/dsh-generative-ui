@@ -63,14 +63,16 @@ export const compiler = () => {
  * the last good frame, so surfacing them would just make the UI flash errors while the
  * model types. Only a failure that survives settling is the caller's business.
  */
-const TRANSIENT = /No default export found|Unexpected (end of|eof)/i;
+/** Exported for `test/transient.test.ts`: this decides whether the reader sees an error. */
+export const TRANSIENT = /No default export found|Unexpected (end of|eof)/i;
 
 /**
  * A dependency that failed to arrive, not code that is wrong. esm.sh cold-starts and the
  * network drops, and the symptom is identical to a broken component — a blank surface — so
  * it is worth a few retries before anyone concludes the model wrote something wrong.
  */
-const TRANSIENT_LOAD = /failed to fetch|failed to load|networkerror|load failed/i;
+/** Exported for `test/transient.test.ts`. */
+export const TRANSIENT_LOAD = /failed to fetch|failed to load|networkerror|load failed/i;
 const MAX_RETRIES = 3;
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
 const RETRY_BACKOFF_MS = 400;
