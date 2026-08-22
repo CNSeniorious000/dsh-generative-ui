@@ -95,7 +95,8 @@ See `scripts/build.ts`. All four let the plugin **build fine and blow up at runt
 - **`partial-react/src/compiler.ts` must be swapped for `src/client/runtime/compiler-shim.ts`.** It has a top-level `import.meta.resolve`, which is a **syntax-level** error inside a CJS factory — it throws whether or not that branch runs, surfacing as the whole plugin `loaded without registering`. We ship our own compiler anyway, and the swap also drops its `Bun` global and its node:fs read path.
 - **`define` away `import.meta.url`.** `@esm.sh/tsx`'s entry reads it. We always pass the wasm path explicitly, so a constant is enough.
 
-**When MindLab-Research/macaron-genui-demo#1718 merges, three things come out together** — the
+**MindLab-Research/macaron-genui-demo#1718 merged on 2026-08-22** (`515c7c5`), and three things
+come out together the moment a release carries it — the
 bullet above, its shim, and the type-error filter. This was verified against the PR's own
 `pkg.pr.new` build on 2026-08-22 rather than assumed, on the branch `trial/drop-workaround`
 (now far behind main; keep it as evidence, not as something to merge):
@@ -107,9 +108,13 @@ bullet above, its shim, and the type-error filter. This was verified against the
    `src/client/runtime/compiler-shim.ts` with it.
 3. Delete `scripts/typecheck.mjs`; point the `typecheck` script at plain `tsc --noEmit`.
 
-Measured with that build installed: `bun run check` green, bare `tsc` exits 0, and
-`import.meta` / `Bun.` / `import.meta.resolve` all read **0** in `lib/client.js`. The PR has been
-green and mergeable since 2026-08-19 and is not ours to merge.
+Re-measured against **post-merge `main`** (not the PR snapshot) on 2026-08-22: with all three
+cleanups applied, `bun run check` is green, bare `tsc` exits 0, and `import.meta` / `Bun.` /
+`import.meta.resolve` all read **0** in `lib/client.js`.
+
+**Blocked on a release, not on the merge.** npm `partial-react` is still `0.0.5`, published
+2026-08-19 12:09 — three days before the merge — and its `src/compiler.ts` still carries both
+`import.meta.resolve` and `typeof Bun`. Nothing changes here until a version above 0.0.5 ships.
 
 ### 2.7 Two traps in the type system
 
