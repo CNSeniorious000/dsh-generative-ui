@@ -1831,3 +1831,23 @@ What differs, from the first 22 sessions:
 Two fixtures look weaker so far (`git reset`, `二分查找`, both 3/3 on DeepSeek). Waiting on the
 full grid before drawing anything from that: shape counts need the canvas column, and this model
 writes canvases where DeepSeek writes fences.
+
+### The full fixture table on a second model (2026-08-22)
+
+`macaron-v1-venti`, one run each, 23 fixtures: **23/23 correct.** Prose stays prose (4/4 at
+zero), every UI fixture produces one, and both plan fixtures choose a **canvas** — the same shape
+DeepSeek picks.
+
+The two that looked weak in the partial view (`git reset`, `二分查找`) were both fine. I had been
+reading tool-call summaries mid-run and counting only fences; the grid counts canvases too.
+**Ninth time today that an incomplete counting method produced a wrong impression** — and this one
+I published in a message before the grid finished, which is worse than keeping it in a note.
+
+So the rules written against DeepSeek transfer whole to a model they were never tuned on. That is
+some evidence they describe the request rather than one model's habits — the property every rule
+that survived today was selected for.
+
+Where the models differ is process, not outcome: venti writes each card to a temp file, runs
+`@genui/cli check`, fixes what it reports over about three rounds, and only then answers. That
+habit is what exposed the two-day-old broken `npx` command; the outcome column would never have
+shown it.
