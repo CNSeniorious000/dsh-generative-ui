@@ -45,6 +45,16 @@ describe("canvas listing", () => {
     expect((await call(`cwd=${encodeURIComponent(cwd)}`, new Set())).status).toBe(403);
   });
 
+  // The claim the OPAQUE_WRITE fix rests on: a canvas that appears on disk mid-session, named
+  // by nothing in any tool call, is visible to a second listing. Without this the fix is an
+  // assumption — re-listing is only worth anything if the listing sees what arrived after it.
+  test("a canvas that appears after the first listing shows up in the next one", async () => {
+    const before = JSON.parse((await call(`cwd=${encodeURIComponent(cwd)}`)).body) as string[];
+    expect(before).not.toContain("late-arrival");
+    writeFileSync(join(cwd, CANVAS_DIR, "late-arrival.ui4a.tsx"), "export default () => <div />");
+    expect(JSON.parse((await call(`cwd=${encodeURIComponent(cwd)}`)).body)).toContain("late-arrival");
+  });
+
   test("a missing canvases directory lists empty rather than failing", async () => {
     const bare = mkdtempSync(join(tmpdir(), "ui4a-bare-"));
     const { status, body } = await call(`cwd=${encodeURIComponent(bare)}`, new Set([bare]));
