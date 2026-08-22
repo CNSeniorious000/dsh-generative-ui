@@ -3433,3 +3433,23 @@ buys a coupling that will outlive the problem.
 
 So: reverted, and the 1.8% stays with the prompt where §4.5 says trigger rules belong. Recorded
 because the attractive version of this fix looks clean until you check what else it catches.
+
+### The "loaded the skill and built nothing" cell is mostly not that (2026-08-23)
+
+Earlier I recorded 140 such sessions, of which 72 wrote a canvas instead and 68 were
+unexplained. Reading the 68: **39 produced no assistant message at all.** They end mid-stream on
+a `*-chunks` record with no `turn/end` and no `session/end-seed` — killed while generating, and
+8 of them had already opened a fence when they died.
+
+Across the whole corpus **44 of 1012 sessions (4.3%) are truncated that way**, and they are not
+a standing rate: 31 of the 44 land on **2026-08-19 (22% of that day)**, against 0%, 3.7% and
+0.4% on the days either side. One bad afternoon of killed eval runs, not a product failure — and
+a rate computed over the pooled corpus would have reported 4.3% forever.
+
+That leaves **10 sessions** where the model loaded the skill, wrote a real reply, and built
+nothing. Reading all ten: several are correct (a quicksort explanation the user asked to have
+*explained*, a `ls` that found one file), and three are the `帮我搭个东西记录点什么` ask where the
+model offered options and waited — which is what `skill.ts`'s "ask first" section tells it to
+do. So the honest count of "should have built and did not" is closer to **2 or 3 in 1012**, not
+68, and the cell that looked like the biggest behavioural gap in the corpus is mostly a
+scheduling artefact plus rules working as written.
