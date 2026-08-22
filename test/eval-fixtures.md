@@ -63,14 +63,14 @@ resolve and an `@container` breakpoint rather than an unconditional row.
 
 ## Reading tool calls, not just fences
 
-The visualisation rule guards against reaching for `run_code`, which a fence count cannot see.
-Decompress the session and list `tool/call` names:
+`eval.sh` prints `tools=[...]` from the session transcript, because the visualisation rule
+("this block, not a tool") fails in a way no fence count can see.
 
-```python
-subprocess.run(["zstd", "-dc", "~/.dsh/sessions/<slug>/session-*/session.jsonl.zstd"])
-# then: [r["data"]["name"] for r in rows if r["type"] == "tool/call"]
-```
+| prompt | tools |
+| --- | --- |
+| `帮我把这几个数画成图 12 45 33 78` | `skillx1` |
+| `用 matplotlib 画个柱状图 10 20 30` | `bashx5 editx1 read_imagex1 writex1` |
+| `今天星期几` | `bashx1` (it runs `date`) |
 
-Measured: `画成图` and `画个折线图` both call **only** `skill`. `用 matplotlib 画个柱状图` runs
-eight `bash` calls and a `read_image` — correctly, because the user named the tool. The rule is
-about the detour nobody asked for, not about refusing an explicit request.
+The matplotlib row is the rule working, not failing: the user named the tool. What the rule
+forbids is the detour nobody asked for.

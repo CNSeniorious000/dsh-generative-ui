@@ -15,4 +15,15 @@ if grep -qE '^(Error|dsh: (QUOTA|RATE)|.*EPERM|.*Cannot find package)' "$out" ||
   echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
   exit 2
 fi
-echo "fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  $d"
+# Tool calls live in the session transcript, not the reply — the visualisation rule
+# ("this block, not a tool") is invisible without them.
+# The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
+# path has been through /private, so match on the trailing mktemp name instead of rebuilding it.
+sess=$(ls -td "$HOME/.dsh/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
+calls=""
+# `name` sits inside `data`, well past the first `}` — grep the whole record, take the last name.
+[ -n "$sess" ] && calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
+  | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
+  | sort | uniq -c | awk '{print $2"x"$1}' | tr '\n' ' ')
+
+echo "fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d"
