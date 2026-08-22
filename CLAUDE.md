@@ -2109,3 +2109,57 @@ is what you read **after** deciding to build, and its job is how to build well.
 about keeping three cards. I had edited `src/skill.ts` on a branch, switched back, and `git add -A
 src` picked it up. **An unmeasured change rode in on an unrelated commit** — which is exactly the
 accident that makes a later measurement meaningless if nobody notices.)
+
+### A rule that named its own counter-examples taught the model to match them (2026-08-23)
+
+The one unexplained cell in the four-model grid — `claude-sonnet-5` answering `二分查找的原理是什么`
+in prose — was not flap and not a model quirk. It was the rule text doing the opposite of what it said.
+
+The rule ended: *"Note which words already get this right: `二分查找是怎么工作的` and `讲讲快排的过程`
+reliably become a card, while the same subject asked as `什么是二分查找` or `二分查找的原理` usually does
+not. Nothing about the subject changed — only the phrasing did."* Written as an observation about a
+failure. Read as a classifier. The transcript is unambiguous — the model gets it right first, on the
+subject alone, **then loads the skill and talks itself out of it**:
+
+> This question about how binary search works is really about an algorithm — something that runs step
+> by step — so it deserves an interactive card. I should load the generative-ui skill first.
+
+> The user's question "二分查找的原理是什么" matches the "原理" phrasing pattern **the skill flags as
+> typically not warranting a card**, so I should respond with a plain conceptual explanation instead.
+
+Six runs, six times, same two steps. The rule was not being ignored; it was being *followed*, in the
+direction I had accidentally written. Every negative example in a prompt is a pattern the model can
+match against, and it cannot tell "this phrasing gets it wrong" from "this phrasing means no".
+
+Rewritten to state all three phrasings are a card, with no is-not pair to match on, and to name the
+inversion directly: *if you have already thought `this runs step by step, so it deserves a card`, that
+judgement was made on the subject, and nothing about the phrasing revises it.* **0/6 → 6/6.**
+
+Two lessons, both new:
+
+- **A trigger rule must not contain a recognisable negative.** Naming the phrasings that fail hands the
+  model a rule for failing. The earlier finding — a rule must be recognisable from the request alone —
+  now has a second half: and it must be recognisable *only* in the direction you want.
+- **This is the first miss located after the skill load, not before.** Every previous one was decided
+  before the skill was read. Reasoning traces are the only instrument that separates the two, and the
+  fence count cannot: a `0` from "never considered it" and a `0` from "considered it and was argued
+  out of it" are identical at the metric, and want opposite fixes.
+
+### Two measurement bugs found on the way, both silent (2026-08-23)
+
+Neither changed a number in a way that looked wrong.
+
+- **The profiles link to a checkout that was 63 commits behind.** `~/Desktop/…/dsh-generative-ui` had
+  become readable again after the TCC revocation, still on `b206197`, with the phrasing rule sitting
+  *uncommitted* in its working tree. Every run that used a profile pointed there measured a prompt that
+  no commit ever contained.
+- **The symlink pointed somewhere else than I assumed, and I rebuilt the wrong tree.** After editing the
+  rule I rebuilt the desktop copy, re-ran, and watched the model quote wording that no longer existed in
+  any file — `rg -l` across both trees found zero hits. The profile symlink resolves to `/tmp/recover`,
+  whose `lib/` had never been rebuilt. **Build the tree the symlink resolves to, and verify the new text
+  is in the artifact the profile actually loads** — `rg -c '<new phrase>' lib/index.js` — not merely in
+  a `lib/` somewhere.
+
+The tell in both cases was the same and is worth keeping: **the model quoted text I could not find.**
+When a transcript cites guidance that does not exist in the source, the model is not confabulating —
+it is reading an older artifact, and the delivery path is what is broken.
