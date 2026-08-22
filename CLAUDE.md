@@ -3738,3 +3738,31 @@ missing module cannot show the difference** — both versions fail identically a
 only a dependency that recovers on its third request separates "retried and failed" from "never
 retried at all". Threaded, because a single-threaded server deadlocks the moment the page
 fetches `/hits` while the browser still holds the HTML connection.
+
+### Testing the canvas sweep, and two harnesses that proved nothing (2026-08-23)
+
+The sweep's 12 conditions were the last real gap. Extraction was tried and reverted (the
+body-resolution logic only type-checks inline), so it is tested where it lives: `mountCanvasHost`
+takes its inputs as callbacks, and the only globals it needs are the ones `observe.test.ts`
+already stubs plus a `createRoot` that records what it was handed. Assertions are on the
+`Canvas[]` the panel is rendered with — what the reader sees. Canvas `index.ts` went from **0 of
+12** caught to **6**.
+
+Three traps, each of which produced a passing test that measured nothing:
+
+- **`mock.module`, not namespace assignment.** An ESM namespace object is read-only
+  (`TypeError: Attempted to assign to readonly property`), and the import binding resolves at
+  evaluation time — so the mock must be registered *before* the module under test is imported,
+  which is why that import is dynamic.
+- **Import the module under test with a cache-busting suffix; import its collaborators
+  without one.** `index.ts` imports `../runtime/observe.ts` plainly, so `observe.ts?<suffix>` is
+  a *different* module with its own listener set and its `scheduleSweep` drives nothing. My
+  "extra sweeps" did not sweep, and every test still passed because the first sweep was enough.
+- **A tool call that was present at mount never changes anything.** The re-list is keyed on the
+  settled-opaque *count changing*, so both listing tests had to push their call in **between**
+  sweeps. Written the obvious way — all calls present from the start — they passed with the
+  `canvases` clause deleted from `OPAQUE_WRITE`.
+
+The third is the one worth generalising: **a test for "X causes Y" must make X happen during
+the observation, not before it.** All three were caught the same way, by mutating the code the
+test claimed to cover and finding it still green.
