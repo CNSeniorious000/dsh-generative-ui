@@ -2913,3 +2913,22 @@ naming the bad form is exactly what §4.5 warns turns into a classifier the mode
 
 The useful number is the denominator: **99.2% of everything the model has ever written into a
 fence compiles.** Parser bugs, not generation quality, were the whole story.
+
+### The remount checker had never seen a real card (2026-08-23)
+
+`replay-stream.ts` has always run on the six curated cards in `test/cards` and always
+reported zero. Pointed at **362 unique cards extracted from the corpus**, it reported 35
+visible remounts — 9.7%, which would have been the largest quality problem in the project.
+
+Every one was the checker's own off-by-one. It tested `defaultPaints` on the frame where the
+hook count *changed*, so a card whose `useState` and `return (<` land in the same 1/60 chunk
+— which is most cards, the two lines are usually adjacent — counted as blanking a card that
+had never appeared. Comparing against the *previous* frame's paint state instead: **0 of
+362.** Broken frames: 3, all inside cards that do not compile at all.
+
+The reason this sat undetected is worth more than the fix. **A checker whose corpus is six
+files it was written against cannot fail**, and one that reports zero is indistinguishable
+from one that is broken. The only thing that separated them here was a deliberate positive
+control (`/tmp/latehook.tsx`, a hook in a helper component below a long default export) —
+it fires, so the zero is a measurement. This is `verify-real-path-not-happy-path` again:
+success and "never ran" look identical from the outside.
