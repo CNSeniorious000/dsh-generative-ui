@@ -3688,3 +3688,22 @@ hardest to notice.
 Two consequences worth carrying: a browser-side retry must change the specifier or the document,
 and **a failure that reproduces identically four times in a row is evidence about caching, not
 about the server** — the tell was `curl` succeeding while the page did not.
+
+The classifiers now have tests, and writing them turned up the thing the retry fix depends on.
+Every input is a string **captured from Chromium**, by importing a module that fails in that
+particular way — a 404, an unknown esm.sh package, a dead host, an unresolvable bare specifier:
+
+| what failed | message | retried? |
+| --- | --- | --- |
+| 404, unknown package, dead host | `Failed to fetch dynamically imported module: …` | yes |
+| bare specifier with no map entry | `Failed to resolve module specifier '…'` | **no** |
+
+The second row is correct and worth protecting with a test: an unresolvable specifier means the
+import map has no entry, and no number of retries adds one — `mergeFallbackImports` is what fixes
+that, and it runs on an import-set change rather than on an error. Widening the pattern to
+`failed to (fetch|resolve)` now fails a test.
+
+All three engines' wordings are covered (`NetworkError…` for Firefox, `Load failed` for Safari),
+which was already true and is now held. **Chromium produces exactly one string for three quite
+different failures**, so testing against invented messages would have proved almost nothing
+about the one that matters.
