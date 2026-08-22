@@ -3005,3 +3005,27 @@ skill, 30% of 10 without. The direction survives every control I could apply, an
 is still too thin to move a prompt rule over** — recorded as a lead, not a finding. What the
 resident layer says about `fs` is already the skill's rule almost verbatim ("that card is a
 photograph"), so if this is real the fix is not more words there.
+
+### The sixth runtime bug: a fence closed by a shorter run (2026-08-23)
+
+Pairing every opener with its closer across the corpus: **18 of 385 are mismatched**, nine of
+them `open=6 close=4`. Markdown says a shorter run does not close the fence, so `findClose`
+returned -1 and each of those cards went down the `complete: false` path — a card that streams
+forever and never settles. This is the failure the reader experiences as "it just kept
+loading", and it is nine times more common than the tool-call leak fixed this morning.
+
+`findClose` now falls back to any standalone run of three-plus, **tried last**. Measured: 16
+rescued, 0 cut short. The single card where a shorter run precedes the exact one turned out to
+have closed itself twice (```` then `````), so cutting at the first yields the identical body.
+
+The ordering is the whole subtlety and it needed its own test. "Try short, then exact" passes
+every other test in the file — including the existing longer-fence one — and breaks the case
+the four-backtick convention exists for: a ```js block inside the card's own template string
+ends the card at its first line. The mutation that reorders the two branches now fails.
+
+Corpus-wide: **370 closed fences before, 379 after**, with the same 3 model-authored compile
+errors. Found by chasing the "loaded the skill and built nothing" cell — 140 sessions, of
+which 72 correctly wrote a canvas instead, and among the rest were cards that *had* been
+written and that my own classifier could not see, for the same reason the runtime could not.
+**When a measurement and the product disagree about whether something exists, suspect they
+share a bug** — here they literally shared the function.
