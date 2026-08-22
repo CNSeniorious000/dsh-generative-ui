@@ -3036,6 +3036,12 @@ ASCII form never showed. So the native spelling is **three times more common tha
 built the guard from**, and a regex written from a single sample was blind to all of it. The
 lesson is narrower than "generalise your regex": I had a corpus of 1012 sessions and matched
 on the one example I had already read. **Grep the corpus for the shape, not for the string you
-saw** — `</` before a fence's end, not `</parameter>`. With both spellings covered, every
-opener in the corpus now closes: **382 cards, 0 left streaming**, 3 failing to compile for
-reasons that are the model's own.
+saw** — `</` before a fence's end, not `</parameter>`.
+
+What the fix buys is worth stating precisely, because I first wrote it down wrong. The counts
+do **not** move: still 379 closed and 3 unclosed, because those three replies have no closing
+fence at all and `complete` is derived from finding one. What changes is that all three now
+compile through the streaming path instead of dying on the tags — **the reader sees a rendered
+card that never settles, rather than an error boundary.** A guard that fixes rendering does not
+have to move the parse counters, and checking the number I expected to move rather than the
+behaviour I actually changed nearly put a false claim in this file.
