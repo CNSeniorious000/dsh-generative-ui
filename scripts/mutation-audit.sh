@@ -18,7 +18,13 @@ cd "$(dirname "$0")/.."
 # a bad combination: a failure between the mutation and the restore leaves the tree broken, which
 # is exactly what happened once — the run aborted mid-loop and left `bindings.ts` inverted.
 current=""
-restore() { [[ -n "$current" ]] && cp "/tmp/ma-$(basename "$current")" "$current" && current=""; }
+restore() {
+  if [[ -n "$current" ]]; then
+    cp "/tmp/ma-$(basename "$current")" "$current"
+    current=""
+  fi
+  return 0
+}
 trap restore EXIT INT TERM
 [[ -z "$(git status --porcelain)" ]] || { echo "working tree must be clean: this script rewrites source files"; exit 2 }
 for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
