@@ -36,12 +36,28 @@ type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string;
  * **Compiling is not the same as having something to look at.** Mid-stream the default
  * export usually exists while the body is still an empty shell, so hiding the source block
  * at claim time leaves a blank gap that fills in with a pop seconds later — and the source
- * was sitting right there the whole time. Text, an svg, a canvas or an image is the signal;
- * a wrapper div with layout classes is not. **A game is the case that forces canvas into that
- * list** — 2048, Life and Snake paint pixels and carry neither text nor svg, so on `svg` alone
- * they scored as never-painted and sat under their own source forever.
+ * was sitting right there the whole time. Text, or an element that draws its own
+ * pixels **and has a box**, is the signal; a wrapper with layout classes is not.
+ *
+ * Measured against the alternatives: a bare `getBoundingClientRect()` test passes a styled-but-
+ * empty `div` — `height: 200px`, a grid with a gap, a padded skeleton card — which is precisely
+ * the mid-stream shell this exists to reject. Enumerating tags alone missed `<video>`, custom
+ * elements and iframes. Requiring both catches everything the tag list caught, plus those three,
+ * and still rejects all three empty shells.
  */
-const hasPainted = (mount: HTMLElement) => (mount.textContent ?? "").trim() !== "" || mount.querySelector("svg, canvas, img") !== null;
+/** Elements that paint their own pixels; a custom element (any tag with a dash) counts too. */
+const DRAWS = new Set(["SVG", "CANVAS", "IMG", "VIDEO", "IFRAME", "PICTURE"]);
+
+const hasPainted = (mount: HTMLElement) => {
+  if ((mount.textContent ?? "").trim() !== "") return true;
+  for (const el of mount.querySelectorAll("*")) {
+    const tag = el.tagName.toUpperCase();
+    if (!DRAWS.has(tag) && !tag.includes("-")) continue;
+    const box = el.getBoundingClientRect();
+    if (box.width > 0 && box.height > 0) return true;
+  }
+  return false;
+};
 
 /** The block's source. `pre` when the grammar was unknown, the highlighted div otherwise. */
 const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";

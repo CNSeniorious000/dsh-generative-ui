@@ -2037,3 +2037,32 @@ does not depend on dsh's JSON spacing.
 Verified against a live 400 (sonnet with web search re-enabled), a synthetic error turn, and two
 real successes. **Three versions of this check were pattern-matching where a structural answer
 existed** — the tell each time was having to add a new pattern for the next failure.
+
+### `hasPainted`, third version, measured against its alternatives (2026-08-22)
+
+The review said enumerating tags (`svg, canvas, img`) would need a fourth entry the next time a
+card uses something unusual, and suggested a bounding-box test instead. Measured all three in a
+browser rather than picking:
+
+| mount | tags | box | both |
+| --- | --- | --- | --- |
+| empty shell, layout classes | · | · | · |
+| text / svg / canvas / img | ✓ | ✓ | ✓ |
+| `<video>` / custom element / iframe | **·** | ✓ | ✓ |
+| empty `div` at `height: 200px` | · | **✓** | · |
+| empty grid with a gap | · | **✓** | · |
+| padded skeleton card | · | **✓** | · |
+
+**The box test alone is worse, not better**: a styled-but-empty wrapper has a box and paints
+nothing, and that is exactly the mid-stream shell the function exists to reject. Requiring both —
+an element that draws its own pixels *and* has a non-zero box — catches everything the tag list
+caught, adds the three it missed, and still rejects all three shells.
+
+Two mistakes while writing it, both caught by the table: skipping elements with children dropped
+`<svg><rect/></svg>`, and `el.tagName` is lowercase for SVG elements but uppercase for HTML ones.
+
+Verified on the three real cards after: all three still read as painted.
+
+The generalisation the review was reaching for is right, but **the version that generalises has to
+be measured against the case the special-casing protected** — the obvious form of it regressed the
+one thing that mattered.
