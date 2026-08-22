@@ -60,4 +60,21 @@ console.log(`serving ${cards.length} cards on ${port}`);
  * When clicking a control from script, dispatch the whole sequence
  * (pointerdown, mousedown, pointerup, mouseup, click) — a bare `.click()` on a React button
  * can leave state untouched and looks exactly like a broken card.
+ *
+ * The loop that worked, with the two things that each cost a wasted run:
+ *
+ * ```js
+ * const tsx = await import("https://esm.sh/@esm.sh/tsx@1.0.5"); await tsx.default()
+ * // `.code` is a STRING here, not bytes — decoding it throws and every card reports THREW.
+ * const out = tsx.transform({ filename: "_.tsx", code, target: "es2022", jsxImportSource: "react" }).code
+ * const mod = await import(URL.createObjectURL(new Blob([out], { type: "text/javascript" })))
+ * // Capture console.error around the render. React renders an EMPTY TREE on a throw and says
+ * // nothing visible — all four blank cards in the corpus were only explicable this way.
+ * const errs = []; const real = console.error; console.error = (...a) => errs.push(String(a[0]))
+ * createRoot(mount).render(React.createElement(mod.default))
+ * await new Promise(r => setTimeout(r, 90)); console.error = real
+ * ```
+ *
+ * Waiting longer does not turn a blank card into a painted one: measured at 90ms, 400ms and
+ * 1200ms, `innerHTML.length` stayed 0. A blank card is broken, not slow.
  */
