@@ -25,7 +25,11 @@ calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
 # A blacklist of known failure strings only catches failures already seen — three of today's
 # four were discovered only after their zero had been read as a model judgement. The positive
 # test is stronger: no session transcript means the run never reached a model at all.
-if [ ! -s "$out" ] || [ -z "$sess" ] || grep -qE '^(Error|dsh: (QUOTA|RATE))' "$out"; then
+# A transcript exists as soon as the request reaches the gateway, so its presence is not enough:
+# an upstream 400 (unsupported tool, bad params) writes a session, prints an error, and leaves an
+# empty reply. Treat any `dsh: <UPPER_SNAKE>:` line as a crash — that prefix is the launcher
+# reporting, never the model answering.
+if [ ! -s "$out" ] || [ -z "$sess" ] || grep -qE '^(Error|dsh: [A-Z_]+:)' "$out"; then
   echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
   exit 2
 fi

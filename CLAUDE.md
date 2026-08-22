@@ -1900,3 +1900,32 @@ Two habits to fix, both of which I already apply to browser sessions and not to 
 
 Killed with SIGTERM (clean exit); the user's own instance, started from an interactive shell in a
 different directory, was identified by cwd and parent process and left alone.
+
+### A 400 from upstream reads as a model judgement (2026-08-22)
+
+Ran three more gateway models against two fixtures. `claude-sonnet-5` returned `fence=0` on
+`帮我算下房贷` — a clean-looking miss on a fixture every other model gets right. The transcript
+said otherwise: **0 reply characters, 0 tool calls.**
+
+The reply file held a 400:
+
+```
+dsh: INVALID_REQUEST: 400: … AnthropicException … "The use of the web search tool is not supported."
+No fallback model group found for original model_group=claude-sonnet-5
+```
+
+The crash check missed it because the check I had just tightened — *no transcript means no model*
+— is satisfied here: **a transcript exists as soon as the request reaches the gateway.** The
+request was made, refused upstream, and left a session behind with nothing in it.
+
+Widened to treat any `dsh: <UPPER_SNAKE>:` line as a crash; that prefix is the launcher
+reporting, never the model answering. Verified both ways.
+
+**Tenth measurement artefact today, and the second to slip through a check written to catch the
+previous one.** The blacklist missed unseen failures, so I replaced it with a positive test — and
+the positive test has its own blind spot. There is no final version of this check; each new
+backend brings a new way to look like a zero.
+
+(`glm-5.2` also produced a card for `什么是闭包？`. Reading it, the card is a clickable walk
+through a closure's scope — the same "a process, not a rule" case as 尾递归优化, so that is the
+fixture being over-specified rather than a miss.)
