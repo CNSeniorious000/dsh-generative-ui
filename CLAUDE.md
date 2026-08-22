@@ -3653,9 +3653,13 @@ network, so a retry loop can never recover. Reloading the page cleared it and th
 succeeded immediately.
 
 This directly contradicts how §4's cold-start entry says to respond ("re-measure before writing
-it down") — re-measuring *in the same page* is the one thing that cannot work. The retry has to
-happen in a fresh document, and `GenUISurface`'s `TRANSIENT_LOAD` path is correct precisely
-because it re-renders through a new blob URL rather than re-importing the failed one.
+it down") — re-measuring *in the same page* is the one thing that cannot work. This has a direct bearing on `GenUISurface`'s `TRANSIENT_LOAD` retry, and **I do not know
+whether that path works.** It calls `renderer.clear()` and re-renders the card, which mints a
+fresh blob URL for the *card* — but the thing that failed is a dependency the card imports
+(`esm.sh/recharts`), and whether a new card module re-attempts a bare specifier that already
+rejected is partial-react's business, not visible from here. The three-retry backoff was written
+against a real esm.sh cold start and never verified end to end. **Recorded as unknown rather than
+claimed as correct** — the honest version of what today's finding implies.
 
 Two consequences worth carrying: a browser-side retry must change the specifier or the document,
 and **a failure that reproduces identically four times in a row is evidence about caching, not
