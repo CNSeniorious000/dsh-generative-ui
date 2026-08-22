@@ -1706,3 +1706,32 @@ asked for, not about refusing an explicit request — and it draws that line by 
 
 Every resident rule now has a fixture. The method for this one is written into
 `test/eval-fixtures.md`, since "assert no `run_code`" needs the transcript, not the reply.
+
+### Does loading the skill change the answer? (2026-08-22)
+
+Several of today's misses share a shape: the trace ends at *"no interface needed really"* and
+`tools=[]` — **the skill was never loaded.** Worth quantifying, so: every session from the last
+three hours, restricted to the fixtures that are supposed to produce UI.
+
+| | produced UI | did not |
+| --- | --- | --- |
+| skill loaded | **41** | 11 |
+| not loaded | 3 | 9 |
+
+79% against 25%, n=64. Real, and **not a demonstrated cause**. The likely arrow points the other
+way: deciding to build is what makes the model call `skill`, so this may be measuring the
+decision rather than its effect. Settling it needs an intervention — change only the catalog
+`description` (the entire routing signal, per `skill.ts:10`) and re-measure — which is a real
+experiment, not a note.
+
+Two artefacts corrected while getting the number:
+
+1. Counting `ui4a/tsx` **anywhere in the transcript** scored 120 of 120 runs as producing UI —
+   the resident prompt contains the string. Must count the assistant's reply text only.
+2. Counting fences alone put 2048 and the piano in the "skill loaded, no UI" column. They wrote
+   **canvases**; the canvas path shows up in tool-call arguments, not in the reply.
+
+Same lesson as §"Counting fences does not count canvases", met again in a new disguise, plus a
+new one: **a corpus spanning a rule change is not one population.** The first cut included
+sessions from before today's edits and put `帮我算下房贷` in the failure column, where it has not
+belonged for hours.
