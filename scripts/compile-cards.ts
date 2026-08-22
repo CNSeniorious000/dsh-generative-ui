@@ -36,6 +36,16 @@ const SCREENS = {
   // React error #321 — the class §4 says only rendering catches, except this one is visible in
   // the source: a hook at **column 0** is in no component by definition. Anchored there and
   // nowhere else; allowing leading whitespace matches the `useEffect` inside 109 of 378 cards.
+  // `const [a, setA] = useMemo(…)`. Only `useState` and `useReducer` return a pair; the others
+  // return one value, so destructuring throws "not iterable" at render and the card is blank.
+  "DESTRUCTURED-HOOK": (src: string) => /(?:const|let)\s*\[[^\]]+\]\s*=\s*(?:useMemo|useCallback|useRef|useEffect)\s*\(/.test(src),
+  // A React export used without importing it — `<Fragment>` with only `useState` imported.
+  // Skipped entirely when the card does a namespace or default import, which brings everything.
+  "MISSING-REACT-IMPORT": (src: string) => {
+    if (/import\s+\*\s+as\s+\w+\s+from\s*["']react["']|import\s+React\s*(?:,|from)/.test(src)) return false;
+    const imported = new Set([...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim())));
+    return [...src.matchAll(/<(Fragment)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef)\s*[(<]/g)].some((m) => !imported.has(m[1] ?? m[2]));
+  },
   "MODULE-SCOPE-HOOK": (src: string) => /^(?:(?:const|let|var)\s+[\w{}[\],\s:]+=\s*)?use[A-Z]\w*\s*\(/m.test(src),
 } as const;
 
@@ -69,11 +79,14 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"] } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
-    if (SCREENS[want](readFileSync(`test/cards-negative/${name}`, "utf8"))) console.log(`control ${name}: ok, ${want} fires`);
-    else { console.log(`control ${name}: DETECTOR BLIND — ${want} no longer fires`); bad++ }
+    const src = readFileSync(`test/cards-negative/${name}`, "utf8");
+    for (const screen of Array.isArray(want) ? want : [want]) {
+      if (SCREENS[screen](src)) console.log(`control ${name}: ok, ${screen} fires`);
+      else { console.log(`control ${name}: DETECTOR BLIND — ${screen} no longer fires`); bad++ }
+    }
   }
 }
 
