@@ -3678,6 +3678,20 @@ Proved end to end with a probe page that imports a missing module three times �
 then a busted URL — and counts **`PerformanceObserver` resource entries**: `2 entries for 3
 imports`, the same-URL retry making no request and the busted one making a real one.
 
+Then A/B'd against a **genuinely flaky dependency** — a local server that 503s the first two
+requests for `/dep.js` and serves it on the third, which is exactly the esm.sh cold start the
+backoff was written for:
+
+| | requests the server saw | outcome |
+| --- | --- | --- |
+| old (same URL each retry) | **1** for 4 attempts | NEVER RECOVERED |
+| new (`&ui4a-retry=n`) | **3** for 3 attempts | RECOVERED on attempt 2 |
+
+The dependency was healthy by the third request and the old code never asked for it. That is
+the whole defect in one line, and it needed a server that fails *transiently* to show — a
+permanently-missing module makes both versions look equally broken, which is why the first
+probe could only prove the mechanism and not the consequence.
+
 That measurement method is the part to remember. My first probe wrapped `window.fetch` and
 reported "0 network requests" for *both* retries, which I read as confirmation. **A module
 `import()` does not go through `window.fetch`** — the counter could not see any module load at
