@@ -3279,3 +3279,25 @@ just checks no state leaks a raw `${` or an `undefined` into the prompt.
 Final audit: node `index.ts` **10 → 36** caught of 29 sites. Every remaining zero is DOM-bound
 (`mount.ts`, `useDismissable.ts`, `claimInlineFences`, the canvas `index.ts` sweep) or
 operator-inapplicable. 122 tests.
+
+### A fake has to reproduce the contract, not the method names (2026-08-23)
+
+`whenFrameReady` and `hasPainted` were the last two "needs a DOM" modules, and neither did.
+`hasPainted` touches four members (`textContent`, `querySelectorAll`, `tagName`,
+`getBoundingClientRect`); `whenFrameReady` touches `querySelector`, `MutationObserver` and the
+timer pair. A hand-written fake of exactly that surface is smaller than a DOM dependency and
+depends on precisely what the function depends on — 133 tests now, no new packages.
+
+The lesson came from a red test against correct code. My `MutationObserver` fake implemented
+`observe` and `disconnect` as counters, so firing a mutation after disposal still invoked the
+callback and "disposing cancels the observer" failed. **A real observer stops delivering after
+`disconnect()`** — the fake had the method but not the behaviour, and the part it left out was
+the exact part the code relies on. When a stub-backed test fails, suspect the stub's fidelity
+before the code: the third possibility, that the fake is *too permissive*, is what makes a green
+stub-backed suite worth so much less than it looks.
+
+Worth keeping from `hasPainted` too: it measures the *box*, not the presence, of a drawing
+element. React mounts an `<svg>` before it lays out, so present-but-zero-sized is a card that
+has not drawn yet — and treating it as painted hides the source block under an empty card.
+Custom elements count by their dash rather than by a list, because a card may render one this
+project has never heard of.
