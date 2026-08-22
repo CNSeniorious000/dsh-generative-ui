@@ -8,7 +8,7 @@
  * responses.
  */
 import { describe, expect, test } from "bun:test";
-import { isPaintedText, matchSegment, sameCode } from "../src/client/runtime/inline-fence.ts";
+import { hasPainted, isPaintedText, matchSegment, sameCode } from "../src/client/runtime/inline-fence.ts";
 
 describe("isPaintedText", () => {
   test("a rendered card counts", () => {
@@ -67,5 +67,54 @@ describe("matchSegment", () => {
   test("a trailing newline does not break the match", () => {
     expect(sameCode("const a = 1\n", "const a = 1")).toBe(true);
     expect(sameCode("const a = 1", "const b = 1")).toBe(false);
+  });
+});
+
+/**
+ * `hasPainted` — the whole rule, not just its text half.
+ *
+ * A card that draws instead of writing (a chart, a canvas game, a bare `<svg>`) has no text at
+ * all, so the text check alone would leave the source block visible under a perfectly good
+ * card. The element half exists for that, and it is measured on the *box*: an element that is
+ * present but zero-sized has not painted anything the reader can see.
+ *
+ * Only four DOM members are touched, so a fake mount is cheaper and more honest than a DOM
+ * library — the test then depends on exactly the surface the function depends on.
+ */
+describe("hasPainted", () => {
+  const el = (tagName: string, box: { width: number; height: number }) => ({ tagName, getBoundingClientRect: () => box });
+  const mount = (textContent: string, children: ReturnType<typeof el>[] = []) => ({ textContent, querySelectorAll: () => children }) as unknown as HTMLElement;
+  const box = { width: 300, height: 200 };
+  const zero = { width: 0, height: 0 };
+
+  test("text alone counts", () => {
+    expect(hasPainted(mount("月供 4890.17 元"))).toBe(true);
+  });
+
+  test("a chart with no text counts", () => {
+    expect(hasPainted(mount("", [el("svg", box)]))).toBe(true);
+    expect(hasPainted(mount("", [el("canvas", box)]))).toBe(true);
+  });
+
+  // A custom element is anything with a dash, because a card may render one this list has
+  // never heard of — the naming rule is the only reliable signal that it is not a layout div.
+  test("a custom element counts", () => {
+    expect(hasPainted(mount("", [el("my-widget", box)]))).toBe(true);
+  });
+
+  // The reason it measures the box: React mounts the element before it has laid out, and an
+  // `<svg>` with no size is a card that has not drawn yet.
+  test("a zero-sized element does not count", () => {
+    expect(hasPainted(mount("", [el("svg", zero)]))).toBe(false);
+  });
+
+  // A plain layout div is not evidence of anything: an empty card is full of them.
+  test("ordinary elements do not count", () => {
+    expect(hasPainted(mount("", [el("div", box), el("span", box)]))).toBe(false);
+  });
+
+  // The case the whole rule exists for: the error boundary's text must not hide the source.
+  test("an error boundary does not count, even though it has text", () => {
+    expect(hasPainted(mount("ERROR: item.difficulty is undefined"))).toBe(false);
   });
 });
