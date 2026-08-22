@@ -279,7 +279,7 @@ Data visualization is the one exception — chart series need their own hues to 
 - **publint's `client.js` warning cannot be fixed.** It wants the CJS `lib/client.js` renamed to `.cjs` (because `"type": "module"` makes it parse as ESM). But the host builds that URL as a hardcoded `/plugins/<id>/client.js`, so changing the extension means the plugin never loads. **Re-checked 2026-08-23: the package this used to name (`dsh-client-modules`) is not in the dependency tree at all, and `/plugins/` appears in no `@deepseek-ai` package here** — the name has moved or was read elsewhere. The conclusion still holds on its own evidence: `bunx publint` still emits exactly this one warning, and §2.3 records the hardcoded route independently. Cite the behaviour, not a package you cannot point at. That's a requirement of the host shape, not an oversight of ours.
 - **cordis enforces `inject` at access time, not declaration time.** Reading an undeclared service (`ctx.sessions`) doesn't fail at apply; it throws `cannot get property "sessions" without inject` **inside the request handler**, which `dsh-host-webserver` turns into a **400 with no body and nothing in the logs**. It looks exactly like an unregistered route and is actually a missing dependency. Bypassing the type system (`as unknown as`) to dodge a client-side type conflict does not dodge this runtime check — the service still has to be declared, just inside a `ctx.inject([...])` scope.
 - **`/dsh-generative-ui/canvas` must validate `cwd`.** The route answers **any** page the user has open (a plain GET skips preflight), so without validation it is a whole-disk file-existence oracle — `?cwd=/tmp/leak-probe` was measured returning file contents. The allowlist comes from each session's `header.cwd` in `ctx.sessions.list()`; the client only ever sends the current session's cwd, so nothing legitimate is caught by it.
-- **A settings panel is impossible**: `dsh-host-apiproxy` only exposes settings for a compiled-in allowlist, and a third-party `ctx.settings.register` gets `settings-not-exposed`. Configuration goes through `cordis.patch.yml`.
+- **A settings panel is impossible — right conclusion, wrong reason.** Measured 2026-08-23 in a real `dsh web`: `ctx.inject(["settings"], …)` **never fires its callback**, so the client ctx carries no `settings` service at all and there is nothing to be refused by. Every claim in the old wording was wrong: `settings-not-exposed` appears nowhere in the tree (`dsh-host-apiproxy` has `settings-rejected` and `settings-conflict`), and its `settingsNs` allowlist belongs to the **model provider directory**, not to plugin settings. Built-in plugins (`dsh-client-locale`, `dsh-client-ui-conversation`) do call `settings.register`, so the service exists somewhere — just not on the context a third-party client plugin is given. Configuration goes through `cordis.patch.yml`.
 - **dsh is a developer preview** (devDependencies sat at `0.1.0-rc.8` when this was written; package.json is the source of truth) and openly warns about breaking changes. On every version bump, re-verify the platform table, slot names, and event signatures — rc.7→rc.8 already changed `ChatNodeSeat`'s props (`loadImage` → `renderMessageImages`), we just didn't use them.
 
 ## 4.5 Empirical basis for the prompt (2026-08-20, 40 prompts)
@@ -2606,3 +2606,24 @@ whole `canvas` object while depending on its fields. Destructured to scalars —
 that object every sweep, so depending on it would re-resolve every sub-page of an unchanged canvas
 on each pass. **My own warning, introduced today, and worth fixing rather than leaving for whoever
 reads the log next.**
+
+### Proving a negative needs its control first (2026-08-23)
+
+The settings entry was the third §4 trap with a citation that had rotted, and the only one where
+the *reason* was wrong too. Settling it took a real `dsh web` — a fake ctx cannot tell you what the
+host declines to provide.
+
+The instructive part is the run that nearly became the answer. First attempt: `injected: false`,
+which reads as a clean proof that `settings` is unavailable. It was worthless — a control in the
+same call showed `pluginStyles: false`, meaning **the plugin had not loaded at all**, because the
+`web` profile's `node_modules` was empty while I had been testing against `headless`. An
+unloaded plugin injects nothing, exactly like a plugin denied a service.
+
+With the plugin actually installed and the page reloaded: `pluginStyles: true`, `injected: false`.
+Same number, opposite standing. **A negative result is only evidence once something positive in the
+same measurement proves the subject ran** — the fence-count lesson from §4.5, met again in a
+setting where the metric is a boolean.
+
+Cleanup that this session's own record demanded: the probe server was killed by pid (§"A dev server
+outlived its session by a day"), the browser task space closed by name, and the temporary probe in
+`src/client/index.ts` reverted rather than left behind a comment.
