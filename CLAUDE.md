@@ -112,6 +112,12 @@ Re-measured against **post-merge `main`** (not the PR snapshot) on 2026-08-22: w
 cleanups applied, `bun run check` is green, bare `tsc` exits 0, and `import.meta` / `Bun.` /
 `import.meta.resolve` all read **0** in `lib/client.js`.
 
+The shim's removal was checked head-on rather than assumed: with `compiler-shim.ts` gone, all
+three cards in `test/cards` still compile and paint in a real browser, so the browser compiler
+works against upstream's own `compiler.ts` now that it no longer reaches for `import.meta.resolve`.
+`bun run check` also stops printing the `[upstream, ignored] 2 error(s)` line it has carried all
+week.
+
 **Blocked on a release, not on the merge.** npm `partial-react` is still `0.0.5`, published
 2026-08-19 12:09 — three days before the merge — and its `src/compiler.ts` still carries both
 `import.meta.resolve` and `typeof Bun`. Nothing changes here until a version above 0.0.5 ships.
