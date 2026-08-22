@@ -20,8 +20,11 @@ const initCompiler = () =>
   }));
 
 /**
- * Starts loading the ~2.5 MB wasm so it is warm before the first real frame (a cold init
- * costs 400-500 ms). Never throws: `apply()` calls this and nothing else awaits it, so a
+ * Starts loading the 2.6 MB wasm file so it is warm before the first real frame (a cold init
+ * costs 400-500 ms). The *file* is 2.6 MB; an instantiated compiler costs roughly 16 MB of
+ * heap, which is why `disposeCompiler` exists — the two numbers have been confused before.
+ *
+ * Never throws: `apply()` calls this and nothing else awaits it, so a
  * synchronous failure inside `initTsx` — an unfetchable wasm path, say — would otherwise
  * take the whole plugin's registration down with it and leave the shell loading forever.
  * A cold compile on the first card is a far better outcome than no plugin at all.
