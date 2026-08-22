@@ -3453,3 +3453,23 @@ model offered options and waited — which is what `skill.ts`'s "ask first" sect
 do. So the honest count of "should have built and did not" is closer to **2 or 3 in 1012**, not
 68, and the cell that looked like the biggest behavioural gap in the corpus is mostly a
 scheduling artefact plus rules working as written.
+
+### Guarding the numbers in this file (2026-08-23)
+
+`audit-record.py` catches one prompt scored differently in two sections. It does not catch the
+failure this file actually suffered twice today: **a measurement recorded against a corpus that
+had since grown.** "183 sessions" was true when written and stale an hour later, and a search
+bounded to those 183 reported an absence that the full 1012 contradicted.
+
+I tried extending the audit to flag unfamiliar denominators and reverted it — it fires on every
+legitimate sub-population (`72 of 72` canvas writes, `28 of 29` mutation sites, `7 of 21`
+streaming cards), which is most of them. A mechanical staleness check also cannot distinguish a
+stale claim from correct history: the 183 entries above are properly historical, and one is
+already annotated as corrected.
+
+`scripts/corpus-size.sh` is what was actually missing — it prints the current session count and
+says where the other denominators come from. **Re-run it before writing a new "N of M" here.**
+Two rules that would have prevented both mistakes: a count is only meaningful with the date and
+corpus size beside it, and **a fence count must come from `parseUi4aSegments`, never a grep** —
+which language opens a card and which run closes it are both things the parser decides, and
+today both of those answers changed.
