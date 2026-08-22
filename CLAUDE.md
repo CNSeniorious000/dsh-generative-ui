@@ -3140,7 +3140,11 @@ and in bun each test file is its own scope, which is what makes the isolation wo
 **The final→streaming fallback.** `createBrowserTsxCompiler` retries a failed `final` compile as
 `streaming`, and the comment calls it essential without a number. Measured across every prefix
 of all 362 corpus cards: `final` fails where `streaming` succeeds in **718 of 13589 prefixes**
-(5.3%). Load-bearing, not defensive. My first four hand-written candidates for such an input —
+(5.3%). Load-bearing, not defensive — but read that number carefully: in **241 of the 718 the
+rescued module has no default export left**, because cutting the half-typed tail cut past
+everything renderable. `type T` alone normalizes to the empty string. So the fallback turns an
+exception into a real card 477 times and into a blank surface 241 times; both beat throwing
+mid-stream, and neither is "718 cards saved". My first four hand-written candidates for such an input —
 unterminated string, unterminated template, mid-attribute, mid-JSX-text — were all handled fine
 by `final`, so **guessing at the input would have concluded the fallback was dead code.** The
 smallest real case is a truncated `type T`, which `final` cannot close.
