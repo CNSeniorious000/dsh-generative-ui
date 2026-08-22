@@ -10,7 +10,11 @@ prompts=$(awk '
   on && /^\| `/ { line=$0; sub(/^\| `/, "", line); sub(/`.*/, "", line); print line }
 ' test/eval-fixtures.md)
 
-# Run every prompt concurrently — serially this takes longer than a tool timeout.
+# Run concurrently but capped — serially the grid outlives a tool timeout, and unbounded it
+# exhausts the account's balance partway through, which turns the rest of the table into `crash`
+# rows. Unbounded, a 23x3 grid ran the balance out partway through; four lanes is a guess at a
+# safe width, not a measured one.
+lanes=${LANES:-4}
 tmp=$(mktemp -d)
 i=0
 while IFS= read -r p; do
@@ -29,6 +33,8 @@ while IFS= read -r p; do
     done
     printf '%-46s %s\n' "$(printf %s "$p" | cut -c1-44)" "$out" > "$tmp/$(printf %02d "$i")"
   ) &
+  # throttle: keep at most $lanes prompts in flight
+  while [ "$(jobs -pr | wc -l)" -ge "$lanes" ]; do wait -n 2>/dev/null || sleep 1; done
 done <<< "$prompts"
 wait
 cat "$tmp"/* 2>/dev/null
