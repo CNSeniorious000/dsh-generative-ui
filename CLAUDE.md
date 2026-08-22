@@ -154,7 +154,7 @@ Two separate concerns:
 
 - **Teaching the model** splits in two, along the line of "what you pay for every turn."
   - `src/prompt.ts` is injected **permanently** via `ctx.systemPrompt.section()`: triggers, fence syntax, canvas paths, palette. Nothing else.
-  - `src/skill.ts` is loaded **on demand** via `ctx.skills.register()`: the judgement calls (should there be UI at all, inline or canvas), framing rules, layout constraints. `dsh-base`'s bundle ships `dsh-skill` + `dsh-tool-skill` by default, so a runtime-registered skill lands in the model's `<available_skills>` catalog and the body is only fetched when it calls the `skill` tool.
+  - `src/skill.ts` is loaded **on demand** via `ctx.skills.register()`: the judgement calls (should there be UI at all, inline or canvas), framing rules, layout constraints. `dsh-base`'s bundle ships the skill tooling by default (the installed package is `@deepseek-ai/dsh-skill`; this used to cite a `dsh-tool-skill` that does not exist under that name), so a runtime-registered skill lands in the model's `<available_skills>` catalog and the body is only fetched when it calls the `skill` tool.
   - Note the catalog carries **only `name` and `description`** (neither `whenToUse` nor the body). The description is therefore the sole routing signal — write triggers into it, not a summary of the contents.
   - Register it as `modelInvocable: true, userInvocable: false`: this is a spec written for the model, and exposing it as a user `/` command would just dump a long guide at the user.
   - Under the PTC profile every tool is called from inside `run_code`, so don't write a concrete call form like `` call `skill({name})` `` into the prompt (the model tries it directly once, gets `unknown tool`, then recovers). Just say "load the X skill first."
@@ -2711,3 +2711,27 @@ a rule about something we choose not to do: the cost of wrongly avoiding a slot 
 nothing, and the cost of wrongly registering into a `single` slot is a broken app-wide panel. But
 the paragraph now says outright that its mechanism is unverifiable, so nobody re-derives confidence
 from a chain that no longer holds.
+
+### Auditing the identifiers, and three methods that did not work (2026-08-23)
+
+Having found that every rotted citation was an identifier, the obvious next move is to check all of
+them at once: 18 package names are cited in backticks in this file. Nine are absent from
+`node_modules`. **That number is not a finding, and getting to why is the useful part.**
+
+- **Checking `node_modules` alone is the wrong scope.** `dsh-base` is cited as a profile bundle, and
+  profiles live in their own tree — so it reported missing from a directory it was never going to be
+  in. My checker's false positive, not the note's error.
+- **Checking the profile's tree does not work either.** Its `pnpm-lock.yaml` contains no
+  `@deepseek-ai/dsh-*` at all: those bundles ship inside the dsh binary rather than being installed,
+  so there is no directory to test for.
+- **Grepping the shell bundle does not work for server-side names.** All eight come back 0, but the
+  bundle is minified — package names survive only where they are string keys, which is exactly why
+  `dsh-client-ui-slots` was findable earlier and `dsh-host-frontend-static` is not. A zero here
+  means nothing.
+
+What is genuinely established: `dsh-tool-skill` does not exist under that name (the installed
+package is `@deepseek-ai/dsh-skill`), and `dsh-client-modules` was already shown absent. The rest —
+`dsh-base`, `dsh-skill-filesystem`, `dsh-host-frontend-static`, and the rc.7 packages cited
+deliberately as history — **cannot be decided with anything available here**, and saying so is the
+result. Three methods, each plausible, each measuring something other than what I wanted; recording
+the dead ends so the next audit does not re-walk them.
