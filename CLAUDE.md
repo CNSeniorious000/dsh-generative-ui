@@ -72,7 +72,7 @@ Two constraints: the path **must be namespaced by package name** (a duplicate `(
 | `conversation.view` | list | **Canvas view tab**, alongside Conversation / Trace |
 | `shell.overlay` | list | Frame-wide overlay, available if we need it |
 
-**`details` (the right-hand column) is off-limits.** It's `kind: 'single'` and currently held by ui-conversation's `DetailsPanel`. A dynamically loaded package gets a ctx facade that overrides priority (decrementing into the negatives per install), so **we necessarily beat the shipped 0** — registering silently evicts DetailsPanel, taking the `conversation.details.tool` sub-slot it declares with it, which **breaks tool-call inspection app-wide**. There is no handoff API.
+**`details` (the right-hand column) is off-limits — and as of 2026-08-23 the mechanism below can no longer be found.** Checked against rc.8: the shell bundle contains exactly one `kind:"single"` and it belongs to the `root` slot (`declaredBy: "(built-in)"`), while `conversation.details` appears **nowhere in any implementation or in the shell bundle** — only in two READMEs of `dsh-client-ui-conversation`, whose text describes tool presentation dispatching through `conversation.chat.node`, the slot we already use. So the specific chain recorded here cannot be reproduced. Kept as a prohibition anyway: it describes something we deliberately do not do, the priority mechanic that makes a `single` slot evictable is unchanged, and nothing was gained by registering there. **Treat the reasoning below as history, not as current fact.** It's `kind: 'single'` and currently held by ui-conversation's `DetailsPanel`. A dynamically loaded package gets a ctx facade that overrides priority (decrementing into the negatives per install), so **we necessarily beat the shipped 0** — registering silently evicts DetailsPanel, taking the `conversation.details.tool` sub-slot it declares with it, which **breaks tool-call inspection app-wide**. There is no handoff API.
 
 Registration must be wrapped in `ctx.slots.inject(name, () => ...)`: these slots are declared by ui-conversation at runtime, and registering early throws `slot "..." is not declared`.
 
@@ -2683,3 +2683,31 @@ that cannot parse the bundle → 2.
 Port hygiene per §"A dev server outlived its session by a day": every probe server was started on
 47321-47329 and killed by that port. Two other `dsh web` instances (47341, 47361) are the user's
 own and were identified by port and left alone.
+
+### Four rotted citations, and what they have in common (2026-08-23)
+
+The §2.4 `details` prohibition is the fourth entry whose evidence no longer exists. With the set
+complete, the pattern is sharp:
+
+| entry | citation | what it was |
+| --- | --- | --- |
+| publint | `dsh-client-modules` | a package name |
+| settings panel | `settings-not-exposed` | an error code |
+| wasm leak | `~2.5MB` | a number (and the wrong one) |
+| `details` off-limits | `conversation.details.tool` | a slot name |
+
+**Every rotted citation is an identifier.** Every entry that survived verification cites a
+behaviour instead: `external` matches sub-paths (reproduce with a build), `define` changes the byte
+count (reproduce with a build), the slot merge needs an import (reproduce with a type query), the
+platform table has seven entries (reproduce with a fetch).
+
+Identifiers go stale silently — the package is renamed, the error code is reworded, the slot is
+removed — and nothing fails when they do, because nothing executes a note. A behaviour cannot rot
+without something breaking. So when writing one of these down: **name what you did and what
+happened, and cite the identifier only as a pointer to it.**
+
+The `details` entry keeps its prohibition despite losing its reasoning, which is the right call for
+a rule about something we choose not to do: the cost of wrongly avoiding a slot we never needed is
+nothing, and the cost of wrongly registering into a `single` slot is a broken app-wide panel. But
+the paragraph now says outright that its mechanism is unverifiable, so nobody re-derives confidence
+from a chain that no longer holds.
