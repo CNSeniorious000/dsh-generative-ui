@@ -32,6 +32,11 @@ const SCREENS = {
   // closes, a type argument continues into `,` or `>`.
   "JSX-SUBSCRIPT": (src: string) => /<[A-Z]\w*\[[^\]]+\]\s*(\/?>|[a-zA-Z-]+=)/.test(src),
   "VIEWPORT-UNITS": (src: string) => /100v[wh]|position:\s*["']?fixed/.test(src),
+  // A hook called outside every function body. Compiles perfectly and dies at first render with
+  // React error #321 — the class §4 says only rendering catches, except this one is visible in
+  // the source: a hook at **column 0** is in no component by definition. Anchored there and
+  // nowhere else; allowing leading whitespace matches the `useEffect` inside 109 of 378 cards.
+  "MODULE-SCOPE-HOOK": (src: string) => /^(?:(?:const|let|var)\s+[\w{}[\],\s:]+=\s*)?use[A-Z]\w*\s*\(/m.test(src),
 } as const;
 
 await initTsxFromDisk();
@@ -64,7 +69,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     if (SCREENS[want](readFileSync(`test/cards-negative/${name}`, "utf8"))) console.log(`control ${name}: ok, ${want} fires`);

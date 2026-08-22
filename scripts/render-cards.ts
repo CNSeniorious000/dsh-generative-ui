@@ -20,7 +20,7 @@ Bun.serve({
     "/": () =>
       new Response(
         `<!doctype html><meta charset=utf8><div id=root></div>
-<script type="importmap">{"imports":{"react":"https://esm.sh/react@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime","lucide-react":"https://esm.sh/lucide-react@0.400.0?external=react","recharts":"https://esm.sh/recharts@2?external=react"}}</script>
+<script type="importmap">{"imports":{"react":"https://esm.sh/react@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime","lucide-react":"https://esm.sh/lucide-react@0.400.0?external=react","recharts":"https://esm.sh/recharts@2?external=react","motion/react":"https://esm.sh/motion@11/react?external=react","partial-json":"https://esm.sh/partial-json@0.1.7","minimatch":"https://esm.sh/minimatch@10","micromatch":"https://esm.sh/micromatch@4","picomatch":"https://esm.sh/picomatch@4","semver":"https://esm.sh/semver@7","react-markdown":"https://esm.sh/react-markdown@9?external=react","remark-gfm":"https://esm.sh/remark-gfm@4","$dsh/ai":"/shim/ai","$dsh/fs":"/shim/fs","$dsh/exec":"/shim/exec","$dsh/chat":"/shim/chat","$ui4a/chat":"/shim/chat","$ui4a/state":"/shim/state"}}</script>
 <script type="module">
 window.__cards = ${JSON.stringify(cards)};
 window.__src = {};
@@ -28,6 +28,27 @@ window.__src = {};
         { headers: { "content-type": "text/html" } },
       ),
     "/card/:name": req => new Response(readFileSync(`${dir}/${req.params.name}`, "utf8"), { headers: { "content-type": "text/plain" } }),
+    // Capability shims. Without them ~90 of the corpus cards fail to import and the run reports
+    // them as broken for a reason that is the harness's, not the card's. They resolve and return
+    // inert values — enough to mount, which is what is being measured.
+    "/shim/:group": () =>
+      new Response(
+        [
+          "const inert = () => {};",
+          "export const readFile = async () => '';",
+          "export const writeFile = async () => {};",
+          "export const readdir = async () => [];",
+          "export const bash = async () => ({ stdout: '', stderr: '', exitCode: 0 });",
+          "export const sendMessage = inert;",
+          // `$ui4a/*` is the pre-rename prefix. Nothing resolves it in production — that is the
+          // point of the rename — but 22 corpus cards were written against it, and leaving them
+          // to fail here would report a build-lag artefact as a broken card.
+          "export const usePersistedState = (k, v) => [v, inert];",
+          "export async function* streamText() {}",
+          "export default {};",
+        ].join("\n"),
+        { headers: { "content-type": "text/javascript" } },
+      ),
   },
 });
 console.log(`serving ${cards.length} cards on ${port}`);
