@@ -8,6 +8,9 @@ prompt=$1; seed=${2:-/dev/null}
 d=$(mktemp -d)
 # `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
+# A seed may need more than files — `git 历史` wants commits, and a checked-in `.git` would
+# nest inside this repo. `setup.sh` runs in the copy, never in the seed.
+[ -x "$d/setup.sh" ] && ( cd "$d" && ./setup.sh >/dev/null 2>&1 && rm -f setup.sh )
 # DSH_HOME can point at an isolated home with a different default model — used to keep
 # measuring when the primary account runs out of balance, and to compare models.
 ( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )

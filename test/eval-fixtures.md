@@ -14,6 +14,15 @@ and `把咱们这次聊的东西整理成小册子` in a headless single turn, w
 integrate. Every time the reply was correct — it said what was missing and often described the
 card it would have built — and every time the run looked like a refused rule.
 
+`test/seed/` is that workspace, checked in: a `.env` with three set and three empty keys, a
+`.gitignore`, a real `src/lib` + `src/components` tree carrying one each of `.ts` / `.tsx` /
+`.d.ts` / `.js` (the extensions the glob fixture has to tell apart), a README and a package.json.
+`setup.sh` inside it runs in the throwaway copy after `cp -R` and then deletes itself — that is
+where the three git commits come from, since a checked-in `.git` would nest inside this repo.
+
+Measured with it, 3 runs each: `.env`, `这个目录下都有啥文件`, `git 历史` and the glob all produce
+UI **12/12** (three of them choosing a canvas once, which is a shape choice, not a miss).
+
 `run-fixtures.sh` passes ONE seed directory to every prompt. A prompt that names a file, a repo,
 or prior turns needs its own seed, and the check is cheap: read the prompt, ask what it points at,
 confirm that thing is on disk before the run. A short reply (under ~800 bytes) on a prompt that
