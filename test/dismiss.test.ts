@@ -20,7 +20,7 @@ beforeEach(() => {
   };
 });
 
-const press = (target: unknown) => { for (const l of [...listeners]) l({ target }) };
+const press = (target: unknown) => { for (const listener of listeners.slice()) listener({ target }) };
 /** An anchor that contains exactly the nodes given to it. */
 const anchorOf = (...children: unknown[]) => ({ contains: (node: unknown) => children.includes(node) }) as unknown as HTMLElement;
 
