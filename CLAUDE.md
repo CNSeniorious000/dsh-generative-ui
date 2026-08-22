@@ -3110,3 +3110,15 @@ assertions are now `status === 400` plus "the body does not contain the secret" 
 the fence fails it. §4's rule about verifying the real path applies to security tests with
 extra force: **a traversal test that cannot reach anything proves only that nothing was
 there**, and it stays green forever while the fence rots.
+
+Auditing the other four routes for the same gap: `serveFs` and `serveExec` both hand path
+safety to `ctx.fs.resolve` / the session's sandbox rather than checking anything themselves,
+which is correct — that fence is the host's and testing it here would test someone else's code.
+The only fence this plugin owns is the `liveWorkspaces` gate, applied at all four
+workspace-taking routes, and now covered.
+
+`serveAsset` was the one worth adding. It is registered as a **prefix** route, so every path
+beneath `ASSET_PREFIX` reaches it and a single `pathname !== WASM_PATH` line is all that keeps
+it to one file — nothing else in the plugin has that shape. Deleting that line now fails, as
+does serving the wasm under any content-type but `application/wasm` (`instantiateStreaming`
+rejects everything else, silently). The suite is 52 tests across 9 files.
