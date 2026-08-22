@@ -20,7 +20,14 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   [[ "$sites" == "0" ]] && { echo "$(basename $src): mutationSites=0 (operator does not apply)"; continue }
   cp "$src" "/tmp/ma-$(basename $src)"
   perl -0pi -e 's/\bif \(([^)]*)\)/if (!($1))/g' "$src"
-  fails=$(bun test 2>&1 | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9)
+  out=$(bun test 2>&1)
+  fails=$(echo "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9)
+  # A module that THROWS on import collapses its whole file into one error, so the count reads
+  # like poor coverage when it is the opposite. `segments.ts` reported 1 for this reason; its six
+  # conditions each fail 1-14 tests when inverted alone.
+  errors=$(echo "$out" | grep -cE '^ *[0-9]+ error')
   cp "/tmp/ma-$(basename $src)" "$src"
-  echo "$(basename $src): mutationSites=$sites failingTests=${fails:-0}"
+  note=""
+  [[ "$errors" != "0" ]] && note="  (module threw on import — count is a floor, mutate conditions singly)"
+  echo "$(basename $src): mutationSites=$sites failingTests=${fails:-0}$note"
 done
