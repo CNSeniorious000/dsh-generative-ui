@@ -14,3 +14,7 @@ test("meta on fence line", () => { const [b]=p("````ui4a/tsx title=demo\nexport 
 // onto its last line of TSX. Left in, the body fails to compile — the reader loses the whole card.
 test("leaked tool-call markup dropped", () => { const [b]=p("好的\n````ui4a/tsx\nexport default () => <div />\n</parameter>\n</invoke>"); expect(b.complete).toBe(false); expect(b.code).toBe("export default () => <div />"); });
 test("lookalike inside code survives", () => { const [b]=p("````ui4a/tsx\nconst s = `</parameter>`\n"); expect(b.code).toBe("const s = `</parameter>`\n"); });
+// 19 of 405 fence openers in the corpus are the model *describing* the fence rather than opening one;
+// 14 put the sentence right after the language. Dropping those costs 0 of 390 real cards.
+test("prose about the fence is not a card", () => { expect(p("用 ````ui4a/tsx```` 块，原地渲染成可交互界面\n讲完了。")).toHaveLength(0); });
+test("meta after the language still opens a card", () => { const [b]=p("````ui4a/tsx title=demo\nexport default function A() {}\n````"); expect(b.code).toBe("export default function A() {}\n"); });

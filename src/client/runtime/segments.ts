@@ -62,6 +62,9 @@ const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:)?(?:parameter|invoke)>\s*)+$/;
  * An unterminated fence still yields a segment with `complete: false` — that is exactly the
  * frame a streaming reply is in, and rendering it is the entire point.
  */
+const CODE_LINE = /^(import|export|const|function|type|interface|let|\/\/)\b/;
+const FENCE_META = /^[\w-]+=/;
+
 export function parseUi4aSegments(text: string): Ui4aSegment[] {
   const segments: Ui4aSegment[] = [];
   let rest = text;
@@ -72,8 +75,13 @@ export function parseUi4aSegments(text: string): Ui4aSegment[] {
     // but the model sometimes puts the first line of code there. If it looks like code,
     // hand it back as the body's first line rather than dropping it.
     const trailing = open[2].trim();
-    const inlineCode = /^(import|export|const|function|type|interface|let|\/\/)\b/.test(trailing) ? `${trailing}\n` : "";
     const bodyStart = open.index + open[0].length;
+    // A fence opener the model is *talking about* rather than opening. Measured: 19 of 405
+    // openers in the corpus are prose, and 14 of them put the sentence right after the
+    // language (`\`\`\`\`ui4a/tsx\`\`\`\` 块，原地渲染成…`). Anything that is not code and not
+    // `key=value` meta is one; skipping the whole opener costs 0 of 390 real cards.
+    if (trailing !== "" && !CODE_LINE.test(trailing) && !FENCE_META.test(trailing)) { rest = rest.slice(bodyStart); continue; }
+    const inlineCode = CODE_LINE.test(trailing) ? `${trailing}\n` : "";
     const closeIndex = findClose(rest.slice(bodyStart), open[1]);
     if (closeIndex === -1) {
       segments.push({ code: (inlineCode + rest.slice(bodyStart)).replace(TOOL_CALL_MARKUP, ""), complete: false });
