@@ -9,6 +9,8 @@
 import { describe, expect, test } from "bun:test";
 import { inlineSubPages } from "../src/client/canvas/subpages.ts";
 
+const ENTRY = ".dsh/ui4a/canvases/c.ui4a.tsx";
+
 const run = async (files: Record<string, string>, entry: string) => {
   let minted = 0;
   const original = URL.createObjectURL;
@@ -18,6 +20,7 @@ const run = async (files: Record<string, string>, entry: string) => {
     const urls: string[] = [];
     const code = await inlineSubPages(
       entry,
+      ENTRY,
       async (specifier) => {
         reads += 1;
         const source = files[specifier];
@@ -67,6 +70,58 @@ describe("inlineSubPages", () => {
     // as before this feature existed, rather than a new one.
     expect(settled.urls).toHaveLength(0);
     expect(settled.code).toContain("./t/a");
+  });
+
+  test("the same specifier from two files is two different targets", async () => {
+    // The bug this guards: a real split gives every child a sibling import, so `./types`
+    // appears in several files at once. Keyed by specifier rather than by resolved path,
+    // the first target was served to all of them.
+    let minted = 0;
+    const original = URL.createObjectURL;
+    URL.createObjectURL = () => `blob:test/${(minted += 1)}`;
+    try {
+      const files: Record<string, string> = {
+        [`${ENTRY}|./c/a`]: 'import {t} from "./types"; export const a=t;',
+        [`${ENTRY}|./c/lib/b`]: 'import {t} from "./types"; export const b=t;',
+        [".dsh/ui4a/canvases/c/a.ts|./types"]: "export const t=1;",
+        [".dsh/ui4a/canvases/c/lib/b.ts|./types"]: "export const t=2;",
+      };
+      const seen: string[] = [];
+      const urls: string[] = [];
+      const compiled = new Map<string, string>();
+      await inlineSubPages(
+        'import {a} from "./c/a"; import {b} from "./c/lib/b"; export default a+b;',
+        ENTRY,
+        async (specifier, from) => {
+          const source = files[`${from}|${specifier}`];
+          if (source === undefined) return null;
+          // Resolve the way the contract does: relative to the importer's directory.
+          const dir = from === ENTRY ? ".dsh/ui4a/canvases" : from.split("/").slice(0, -1).join("/");
+          const filename = `${dir}/${specifier.replace(/^\.\//, "")}.ts`;
+          seen.push(filename);
+          return { source, filename };
+        },
+        async (filename, source) => {
+          compiled.set(filename, source);
+          return source;
+        },
+        urls,
+      );
+      // Four distinct files, not two: the two `./types` are different targets.
+      expect(new Set(seen).size).toBe(4);
+      expect(urls).toHaveLength(4);
+      // And each importer must point at ITS OWN target: the two `./types` are different
+      // files, so the two rewritten sources must name different blobs. A specifier-keyed
+      // map hands both importers whichever blob was minted first, and these become equal.
+      const urlIn = (source: string | undefined) => source?.match(/blob:test\/\d+/)?.[0];
+      const aTarget = urlIn(compiled.get(".dsh/ui4a/canvases/c/a.ts"));
+      const bTarget = urlIn(compiled.get(".dsh/ui4a/canvases/c/lib/b.ts"));
+      expect(aTarget).toBeDefined();
+      expect(bTarget).toBeDefined();
+      expect(aTarget).not.toBe(bTarget);
+    } finally {
+      URL.createObjectURL = original;
+    }
   });
 
   test("a missing child keeps its specifier", async () => {

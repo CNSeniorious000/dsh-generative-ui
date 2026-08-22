@@ -2464,3 +2464,32 @@ proposed hard-coding `ui4a/`.
 
 Declined. The proposal is not wrong about the risk being real; it is wrong about where the risk is
 answered, and it costs a third of the use cases to add nothing.
+
+### A relative import is relative to its importer (2026-08-23)
+
+`docs/examples.md:1250` — 「帮我把这个 canvas 拆一下，都塞一个文件里我看不动了」 — run against the
+repo's own 2048 card (766 lines, 23KB) copied in as `game.ui4a.tsx`. **3/3 split it into a `game/`
+sub-directory of 7–9 files**: entry plus `types.ts`, `boardLogic.ts`, `Board.tsx`, `ai.ts`,
+`Styles.tsx`, `useGame.ts`, `Controls.tsx`. Before this morning all three would have been blank.
+
+And the real output exposed a bug the constructed case could not. The entry writes
+`./game/useGame` — relative to the canvases directory — but **the children write `./types` and
+`./tileStyle`, relative to themselves**. `canvasChildPath` required the specifier to open with the
+canvas id, so every sibling import resolved to null. `tarot.ui4a.tsx` had one import and one level;
+this has seven files all cross-importing, which is what an actual split looks like.
+
+The fix takes a `from` — the path the specifier was written in — through the route, the client
+reader and the walk. Two consequences worth stating:
+
+- **The map has to be keyed by the resolved filename, not the specifier.** `./types` written in two
+  different children is two different files, and a specifier-keyed map serves the first to both.
+- Attempting the old dedup as a mutation **hung the test suite** rather than failing it: keying the
+  visited set by specifier while storing by filename means the entry never registers as visited and
+  the frontier grows forever. A terminating mutation had to be built instead to check the test.
+
+That second point cost a round: my first version of the new test asserted only that four distinct
+files were *read*, which the by-name mutation passes happily. **An assertion on an intermediate
+call is not an assertion on the output** — rewritten to compare the blob URL each importer's
+rewritten source actually names, it fails under the mutation and only under it.
+
+End to end on the model's own split: **8 children minted, zero unresolved specifiers in the entry.**

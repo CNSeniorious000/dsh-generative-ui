@@ -25,65 +25,70 @@ const SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*)["'](\.[^"']*)["']/g;
  */
 export async function inlineSubPages(
   code: string,
-  read: (specifier: string) => Promise<{ source: string; filename: string } | null>,
+  entry: string,
+  read: (specifier: string, from: string) => Promise<{ source: string; filename: string } | null>,
   compile: (filename: string, source: string) => Promise<string>,
   urls: string[],
 ): Promise<string> {
-  // Collected breadth-first, then compiled in one pass. Resolving a child's own imports
-  // *during* its fetch deadlocks on a cycle — a imports b imports a, and each awaits the
-  // other's URL forever. Measured: it hung. Reading every reachable child first, and only
-  // then handing out URLs, has no such wait.
-  const sources = new Map<string, { source: string; filename: string }>();
+  // Keyed by the RESOLVED filename, never by the specifier: `./types` written in two different
+  // child files is two different targets, and a specifier-keyed map silently serves the first
+  // one to both. Measured on a real split — the model gives every child a sibling import.
+  const sources = new Map<string, { source: string; filename: string; specifiers: Map<string, string> }>();
   const missing = new Set<string>();
 
   const specifiersIn = (source: string) => new Set([...source.matchAll(SPECIFIER)].map((match) => match[2]));
 
-  let frontier = [...specifiersIn(code)];
+  // Collected breadth-first, then compiled in one pass. Resolving a child's own imports
+  // *during* its fetch deadlocks on a cycle — a imports b imports a, and each awaits the
+  // other's URL forever. Measured: it hung. Reading every reachable child first, and only
+  // then handing out URLs, has no such wait.
+  let frontier: { specifier: string; from: string }[] = [...specifiersIn(code)].map((specifier) => ({ specifier, from: entry }));
+  const entryTargets = new Map<string, string>();
   while (frontier.length > 0) {
-    const wanted = frontier.filter((specifier) => !sources.has(specifier) && !missing.has(specifier));
-    const bodies = await Promise.all(wanted.map(async (specifier) => [specifier, await read(specifier)] as const));
-    frontier = [];
-    for (const [specifier, found] of bodies) {
+    const bodies = await Promise.all(frontier.map(async (want) => [want, await read(want.specifier, want.from)] as const));
+    const next: { specifier: string; from: string }[] = [];
+    for (const [want, found] of bodies) {
+      const targets = want.from === entry ? entryTargets : sources.get(want.from)?.specifiers;
       if (found === null) {
-        missing.add(specifier);
+        missing.add(want.specifier);
         continue;
       }
-      sources.set(specifier, found);
-      frontier.push(...specifiersIn(found.source));
+      targets?.set(want.specifier, found.filename);
+      if (sources.has(found.filename)) continue;
+      sources.set(found.filename, { ...found, specifiers: new Map() });
+      for (const specifier of specifiersIn(found.source)) next.push({ specifier, from: found.filename });
     }
+    frontier = next;
   }
 
   // A blob's contents are fixed at creation, so a child can only be minted once every sibling
   // it imports already has a URL. Repeat until nothing moves: a cycle never becomes mintable
   // and keeps its original specifiers, failing exactly as it does today rather than hanging.
   const urlFor = new Map<string, string>();
-  for (const specifier of sources.keys()) urlFor.set(specifier, "");
+  for (const filename of sources.keys()) urlFor.set(filename, "");
 
-  const rewrite = (source: string) => {
+  const rewrite = (source: string, specifiers: Map<string, string>) => {
     let out = source;
-    for (const [specifier, url] of urlFor) {
-      if (url === "") continue;
+    for (const [specifier, filename] of specifiers) {
+      const url = urlFor.get(filename);
+      if (url === undefined || url === "") continue;
       out = out.replaceAll(`"${specifier}"`, JSON.stringify(url)).replaceAll(`'${specifier}'`, JSON.stringify(url));
     }
     return out;
   };
 
-  // Children whose imports are all already minted can be minted next; repeat until nothing
-  // moves. A cycle never becomes mintable, and its members keep their original specifiers —
-  // failing exactly as they do today rather than hanging.
   for (let progress = true; progress; ) {
     progress = false;
-    // One round at a time: every child whose siblings are already minted, compiled together.
-    const ready = [...sources].filter(([specifier, found]) =>
-      urlFor.get(specifier) === "" && [...specifiersIn(found.source)].filter((dep) => sources.has(dep)).every((dep) => urlFor.get(dep) !== ""));
-    const built = await Promise.all(ready.map(async ([specifier, found]) => [specifier, await compile(found.filename, rewrite(found.source))] as const));
-    for (const [specifier, compiled] of built) {
+    const ready = [...sources].filter(([filename, found]) =>
+      urlFor.get(filename) === "" && [...found.specifiers.values()].every((dep) => urlFor.get(dep) !== ""));
+    const built = await Promise.all(ready.map(async ([filename, found]) => [filename, await compile(filename, rewrite(found.source, found.specifiers))] as const));
+    for (const [filename, compiled] of built) {
       const url = URL.createObjectURL(new Blob([compiled], { type: "text/javascript" }));
-      urlFor.set(specifier, url);
+      urlFor.set(filename, url);
       urls.push(url);
       progress = true;
     }
   }
 
-  return rewrite(code);
+  return rewrite(code, entryTargets);
 }

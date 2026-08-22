@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { compiler, GenUISurface } from "../runtime/GenUISurface.tsx";
+import { canvasPath } from "../../contract.ts";
 import { readCanvasChild } from "./read.ts";
 import { inlineSubPages } from "./subpages.ts";
 import { useDismissable } from "./useDismissable.ts";
@@ -44,7 +45,7 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
     let live = true;
     const urls: string[] = [];
     const compile = async (filename: string, source: string) => (await compiler().compile(source, { filename })).code;
-    void inlineSubPages(canvas.code, (specifier) => readCanvasChild(cwd, canvas.id, specifier), compile, urls).then((code) => {
+    void inlineSubPages(canvas.code, canvasPath(canvas.id), (specifier, from) => readCanvasChild(cwd, canvas.id, specifier, from), compile, urls).then((code) => {
       if (!live) return void urls.forEach((url) => URL.revokeObjectURL(url));
       setResolved({ key, code });
     });

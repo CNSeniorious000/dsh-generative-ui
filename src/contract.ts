@@ -48,24 +48,37 @@ export const canvasPath = (id: string) => `${CANVAS_DIR}/${id}${CANVAS_SUFFIX}`;
 export const canvasChildDir = (id: string) => `${CANVAS_DIR}/${id}`;
 
 /**
- * Resolves a relative specifier written inside `<id>.ui4a.tsx` to a workspace path.
+ * Resolves a relative specifier written inside a canvas to a workspace path.
  *
- * The canvas file sits in `${CANVAS_DIR}/`, so `./<id>/deck` lands in that canvas's own
- * child directory — which is the only place it may land. Every segment goes through the
- * same exclusion test as an id (no separators, no dots, no traversal), so `..` cannot
- * appear and the result cannot escape `canvasChildDir(id)`.
+ * `from` is the path the specifier was written in — the canvas file itself, or one of its
+ * children — because **a relative specifier is relative to its importer, not to the canvas
+ * root**. The entry writes `./<id>/board`; a child of that entry writes `./types` for its
+ * sibling, and resolving both against the canvases directory sends the second one nowhere.
+ * Measured on a real split: the model produced 7 files whose cross-imports are all sibling
+ * form, and every one of them resolved to null before `from` existed.
  *
- * Returns null for anything outside that shape rather than throwing: the caller is a
- * route answering an arbitrary page, and a bad specifier is a 400, not a crash.
+ * Every segment goes through the same exclusion test as an id, and the result must stay
+ * inside `canvasChildDir(id)` — `..` is rejected outright rather than normalised, so there
+ * is no arithmetic that could walk out.
+ *
+ * Returns null for anything outside that shape rather than throwing: the caller is a route
+ * answering an arbitrary page, and a bad specifier is a 400, not a crash.
  */
-export function canvasChildPath(id: string, specifier: string): string | null {
+export function canvasChildPath(id: string, specifier: string, from?: string): string | null {
   if (!isCanvasId(id)) return null;
-  const bare = specifier.replace(/^\.\//, "");
-  const segments = bare.split("/");
-  // The specifier is written relative to the canvases dir, so it must open with the id itself.
-  if (segments.length < 2 || segments[0] !== id) return null;
-  if (!segments.every(isCanvasId)) return null;
-  return `${canvasChildDir(id)}/${segments.slice(1).join("/")}`;
+  const segments = specifier.replace(/^\.\//, "").split("/");
+  if (segments.length === 0 || !segments.every(isCanvasId)) return null;
+  const root = canvasChildDir(id);
+  // No `from`, or one naming the entry file: the specifier is written beside the canvas, so
+  // it must open with the id. With a `from` inside the child directory, it is written beside
+  // that file instead and the id never appears.
+  const within = from === undefined ? null : from.replace(/\\/g, "/").split(`${root}/`)[1];
+  if (within === undefined || within === null) {
+    if (segments.length < 2 || segments[0] !== id) return null;
+    return `${root}/${segments.slice(1).join("/")}`;
+  }
+  const dir = within.split("/").slice(0, -1);
+  return [root, ...dir, ...segments].join("/");
 }
 
 /**

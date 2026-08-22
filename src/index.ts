@@ -105,7 +105,7 @@ async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: Incom
   // confines it to this canvas's own child directory — see canvasChildPath.
   const child = url.searchParams.get("child");
   if (child !== null) {
-    const path = canvasChildPath(id, child);
+    const path = canvasChildPath(id, child, url.searchParams.get("from") ?? undefined);
     if (path === null) return void res.writeHead(400).end();
     // A specifier carries no extension, so the server is what decides which file it names —
     // and the client needs to know, because the compiler picks its syntax from the extension.
