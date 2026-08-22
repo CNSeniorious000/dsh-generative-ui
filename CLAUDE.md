@@ -3605,8 +3605,18 @@ actually be empty**: the other three build their array from a literal or a count
 screen is restricted to arrays filled from *outside* the card (`$dsh/exec`, `fs`, `ai` plus a
 `setX` setter), which takes it from 4 hits to 1 — the difference between a screen and noise.
 
-The glob-in-JSX is the one that stays unscreenable: knowing `{ts,tsx}` was meant as text and
-`{count}` was not requires knowing what the author meant.
+The glob-in-JSX I first recorded as unscreenable — "knowing `{ts,tsx}` was meant as text and
+`{count}` was not requires knowing what the author meant". **That was wrong, and it is now the
+seventh screen.** The author's meaning is not needed: a real JSX expression names something
+**bound somewhere in the file**, and a glob's parts are bound nowhere. `GLOB-IN-JSX` flags a
+brace pair in JSX text holding only comma-separated bare identifiers, none of which has a
+declaration, parameter, or import binding it — exactly 1 hit in 378.
+
+Getting there needed one correction. My first `declared` filter asked whether the name appeared
+on a line containing a keyword, which matches `.tsx` inside any string on an `import` line, so
+every candidate looked declared and the screen reported **0** — a clean zero from a filter that
+was too loose, not an absence. Requiring a genuine binding site fixed it. **All four
+blank-render causes are now screened.**
 
 **`compile-cards.ts` now runs five screens, and three of them exist only because the cards were
 actually rendered.** Compiling proved 375 of 378 fine; mounting found 10 failures. That ratio is
