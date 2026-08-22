@@ -3338,3 +3338,19 @@ inside CSS strings. And the set of bare specifiers real cards import is small an
 345, recharts 49, lucide-react 30, partial-json 21, then minimatch/motion/micromatch/
 react-markdown/remark-gfm/semver/picomatch in single digits. All eleven resolve on esm.sh, none
 pulls a `node:` builtin.
+
+Checking three more skill rules the same way, all of which land:
+
+- **"You are a component on someone else's page"** — `100vw/100vh` or `position: fixed` appears
+  in **1 of 362** cards. (The same one `compile-cards.ts` flags; it is a true positive and the
+  only one.)
+- **The AudioContext gate** — 3 cards use Web Audio, **0 build the context at module scope**.
+  All three use the taught shape exactly: a `ctxRef` plus an `ensureCtx()` that constructs
+  lazily inside the first click handler. That paragraph is long and specific and it is being
+  followed verbatim.
+- **`sendMessage`** appears in 26 cards, so the click-is-the-reply pattern is in real use.
+
+The one rule I could not check is **"a bordered box inside a bordered box"**: counting `border:
+1px` occurrences flags 130 of 362, which measures how many cards draw borders, not how many
+nest them. Left unmeasured rather than reported — same failure as the streaming-JSON detector,
+caught before it produced a number this time.
