@@ -6,7 +6,8 @@
 set -u
 prompt=$1; seed=${2:-/dev/null}
 d=$(mktemp -d)
-[ -d "$seed" ] && cp -r "$seed"/* "$d"/ 2>/dev/null
+# `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
+[ -d "$seed" ] && cp -R "$seed"/. "$d"/
 ( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )
 out="$d/o.txt"
 if grep -qE '^(Error|.*EPERM|.*Cannot find package)' "$out" || [ ! -s "$out" ]; then

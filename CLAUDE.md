@@ -1239,3 +1239,24 @@ three: *the failure mode and the interesting result look the same at the metric*
 not "repeat the run" — repetition would have given 0/9 every time. It is **check that the thing
 under test actually ran** before believing a zero. A byte count would have caught this instantly:
 4598 bytes of stack trace does not look like 0 bytes of nothing.
+
+### The write rule does not over-trigger (2026-08-22)
+
+Checking the `.env` rule's edges with three write-shaped prompts against a seeded workspace:
+
+| prompt | shape | verdict |
+| --- | --- | --- |
+| `帮我把 package.json 里的 scripts 整理一下，我想加几个` | fence | card, right |
+| `帮我改下 package.json 的依赖版本` | fence | card, right |
+| `这个 .gitignore 缺了点东西，帮我补上` | **0/3 prose** | **also right** |
+
+The third rewrote the file directly — 2 lines to 45 — and said what it added. That is the correct
+answer, and it draws the boundary the `.env` rule needed: *有几个值我要改* withholds the values, so
+the card is where the user supplies them; *帮我补上* is an instruction whose content the model
+already knows, so a form would only add a click. **The rule fires on the missing value, not on the
+word 改.**
+
+Method bug found on the way: the harness copied fixtures with `cp -r "$seed"/*`, which omits
+dotfiles — so the `.gitignore` fixture was never there and the model's *"其实里面还没有
+`.gitignore`"* was simply true. Fixed to `cp -R "$seed"/.`. Worth noticing that the model's
+report is what exposed the broken harness; the run looked plausible either way.
