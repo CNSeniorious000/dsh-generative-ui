@@ -44,6 +44,15 @@ function findClose(body: string, fence: string): number {
 }
 
 /**
+ * Tool-call markup the model leaked into its own prose. Measured once in a 183-session
+ * corpus: the reply ended mid-fence with `</parameter></invoke>` glued to the last line of
+ * TSX, so the body reaches the compiler with those tags in it and fails to parse — the whole
+ * card is lost, not just the closing fence. Only stripped at the very end of an unterminated
+ * body, where nothing legitimate can follow.
+ */
+const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:)?(?:parameter|invoke)>\s*)+$/;
+
+/**
  * The prompt asks for four backticks — generated TSX contains triple-backtick strings often
  * enough that a triple-backtick fence would be closed early by its own body. Three or more
  * are accepted anyway: models do not always comply, and one backtick short should not
@@ -67,7 +76,7 @@ export function parseUi4aSegments(text: string): Ui4aSegment[] {
     const bodyStart = open.index + open[0].length;
     const closeIndex = findClose(rest.slice(bodyStart), open[1]);
     if (closeIndex === -1) {
-      segments.push({ code: inlineCode + rest.slice(bodyStart), complete: false });
+      segments.push({ code: (inlineCode + rest.slice(bodyStart)).replace(TOOL_CALL_MARKUP, ""), complete: false });
       return segments;
     }
     segments.push({ code: inlineCode + rest.slice(bodyStart, bodyStart + closeIndex), complete: true });
