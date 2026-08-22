@@ -2810,3 +2810,32 @@ designing around its absence.**
 (The patch that wrote this correction failed its own anchor assertion on the first attempt, and the
 `check exit=0` printed afterwards was the *previous* commit's state — the same trap recorded earlier
 today when a regex matched nothing and the build output read as a result.)
+
+### The skill-load correlation at n=183 (2026-08-23)
+
+`$DSH_HOME/sessions/` turned out to hold **183 sessions** from today's runs — a corpus I had been
+treating as disposable. Re-running §4.5's skill-load question over all of them, counting fences in
+the reply *and* canvas files on disk:
+
+| | produced UI | did not |
+| --- | --- | --- |
+| loaded the skill | **99** | 33 |
+| did not | **4** | 47 |
+
+75% against 7.8%, against the 79%/25% recorded from a three-hour window. Same direction, wider gap,
+seven times the sample.
+
+The four counter-examples are the interesting cell, and **two of them are my counter's fault**:
+`什么是尾递归优化` and `什么是闭包` scored `fence=4` because the model wrote ordinary ```js blocks in
+its prose, and my predicate counted any two fences as a card. The other two are real — a log-triage
+card and a canvas fix, both produced without loading the skill. So the true rate of "UI without the
+skill" is **2 in 183**, and §4.5's conclusion (the decision precedes the load) is stronger at this
+sample size than it was at the original one.
+
+Three counting traps hit while getting here, all of them already in this file: `"name":"skill"`
+appears 5 times in a session where the tool was called **once** (the rest are the definition and the
+catalog, so the count has to be restricted to `tool/call` records); `grep -c` over several files
+emits one line each and silently breaks `[ "$n" -gt 0 ]`; and an unexpanded glob left a path
+variable empty, so `zstd` printed a "no such file" and a `0` that read exactly like a measurement.
+**A corpus this size makes a bad predicate look authoritative** — 183 rows of a wrong number are
+still wrong, and the only thing that caught it was one cell being implausibly empty.
