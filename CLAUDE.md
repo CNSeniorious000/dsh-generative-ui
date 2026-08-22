@@ -3045,3 +3045,24 @@ compile through the streaming path instead of dying on the tags — **the reader
 card that never settles, rather than an error boundary.** A guard that fixes rendering does not
 have to move the parse counters, and checking the number I expected to move rather than the
 behaviour I actually changed nearly put a false claim in this file.
+
+### The canvas path holds, and the one miss is not a prompt problem (2026-08-23)
+
+`owningCanvasIdOf` matches the trailing `.dsh/ui4a/canvases/…`, so a canvas written to
+`ui4a/canvases/` without the `.dsh` prefix is not a canvas — no panel, silently. Across the
+corpus **89 of 159 canvas writes miss**, which reads like the biggest defect in the plugin
+until it is split at `7df29f9` (the 2026-08-21 19:39 move under `.dsh/`): **72 of 72 before,
+17 of 87 after**, and 14 of those 17 ran a build older than the move. Same shape as the
+`$ui4a/` rename — a corpus split by commit date is really split by rebuild date.
+
+The remaining **one** session is the interesting one, and it is not the prompt's fault: it had
+the correct `.dsh/ui4a/canvases` text in context and wrote `ui4a/canvases/` anyway, then read a
+`stopwatch.ui4a.tsx` from that same wrong directory *afterwards*. So it was not copying a
+sibling — I checked, expecting that to be the answer. One unexplained miss in 87 is not a rule
+worth writing, and I am recording the negative result so the next person does not re-run the
+same query: **the sibling-imitation hypothesis is tested and false.**
+
+Method note: my first pass reported `recognisedAsCanvas=0` for all 159 writes including 86
+plain `write` calls, which would mean canvases never render at all. That was the harness
+passing `{ argsRaw }` when the field is `arguments` — **a checker that reports total failure is
+as suspect as one that reports zero problems**, and both mean "measure the measurement first."
