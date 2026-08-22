@@ -34,6 +34,18 @@ const EMPTY: ReadonlySet<string> = new Set();
  * even the 27 whose path is built from a variable — and without that clause a session doing
  * ordinary shell work re-lists once per command (measured: median 0, but one session hit 94).
  */
+/**
+ * What a sweep would paint, as a string. Equal signatures mean nothing to do.
+ *
+ * The observer fires on every streamed token, so this is what stands between the panel and a
+ * React render per token. `code.length` rather than the code: a growing card changes length on
+ * every frame, which is exactly when it should repaint, and comparing megabytes of source per
+ * token would cost more than the render. The offerable list belongs in it too — closing the
+ * last canvas changes nothing about the visible list, and without it the launcher never paints.
+ */
+export const paintSignature = (canvases: readonly Canvas[], offerable: readonly string[]): string =>
+  `${canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|")}#${offerable.join(",")}`;
+
 export const OPAQUE_WRITE = /"(?:code|command)"\s*:[\s\S]*canvases/;
 
 export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
@@ -171,10 +183,7 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
       // whose file has not landed yet. Sorted so the button does not reshuffle between sweeps.
       const offerable = [...new Set([...workspaceIds, ...collected.canvases.map((canvas) => canvas.id)])].toSorted();
 
-      // Re-render only on a real change: the observer fires on every streamed token. The
-      // offerable list belongs in the signature too — closing the last canvas changes nothing
-      // about the visible list, and without it the launcher would never paint.
-      const next = `${canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|")}#${offerable.join(",")}`;
+      const next = paintSignature(canvases, offerable);
       if (next === signature) return;
       signature = next;
       if (canvases.length === 0) column.setWidth(0);
