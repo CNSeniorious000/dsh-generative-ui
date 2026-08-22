@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 /** Mount the host with a fixed set of tool calls, and return what the panel was rendered with. */
-const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void } = {}) => {
+const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void; open?: string } = {}) => {
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
   // module resolves its import binding at evaluation time — so the mock has to be registered
   // before `index.ts` is imported, which is why the import below is dynamic.
@@ -57,6 +57,7 @@ const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; betwee
   scheduleSweepAgain = (await import("../src/client/runtime/observe.ts")).scheduleSweep;
   const host = mountCanvasHost({ calls: () => calls, cwd: () => over.cwd ?? "/w", sessionId: () => "s1" });
   await settle();
+  if (over.open !== undefined) { host.show(over.open); await settle() }
   // Extra sweeps stand in for the stream continuing — the observer fires once per token.
   for (let i = 1; i < (over.sweeps ?? 1); i++) { over.between?.(); scheduleSweepAgain(); await settle() }
   host.dispose();
@@ -127,4 +128,42 @@ describe("when the sweep asks the disk", () => {
     await sweep(calls, { sweeps: 3, between: () => calls.push({ argsRaw: JSON.stringify({ command: "ls -la", description: "list" }), settled: true }) });
     expect(listings).toBe(1);
   });
+});
+
+describe("the launcher", () => {
+  // A canvas outlives the session that wrote it, so the launcher offers everything on disk plus
+  // anything written this session whose file has not landed yet.
+  test("offers what is on disk and what this session wrote", async () => {
+    listed = ["yesterday"];
+    const { offerable } = await sweep([write("today", "body")]);
+    expect(offerable).toEqual(["today", "yesterday"]);
+  });
+
+  // Opening one has no tool call to reconstruct it from, so its body comes off disk.
+  test("opening a canvas from the launcher reads its body", async () => {
+    listed = ["yesterday"];
+    files.yesterday = "export default () => <div>from yesterday</div>";
+    const { canvases } = await sweep([write("today", "body")], { open: "yesterday" });
+    expect(canvases.map((c) => c.id).toSorted()).toEqual(["today", "yesterday"]);
+    expect(canvases.find((c) => c.id === "yesterday")?.code).toBe("export default () => <div>from yesterday</div>");
+  });
+
+  // Read once and kept: nothing this session does can change a canvas it never wrote.
+  test("a launcher-opened body is not re-read on later sweeps", async () => {
+    listed = ["yesterday"];
+    files.yesterday = "body";
+    await sweep([write("today", "x")], { open: "yesterday", sweeps: 4 });
+    expect(reads.filter((id) => id === "yesterday").length).toBe(1);
+  });
+});
+
+// Opening from the launcher something this session already wrote. Without the dedup guard the
+// same id is pushed twice and the reader gets two identical panels — and the second carries the
+// disk body, so a streaming canvas would show its stale file beside itself.
+test("a canvas already shown is not added twice by the launcher", async () => {
+  listed = ["dice"];
+  files.dice = "stale body from disk";
+  const { canvases } = await sweep([write("dice", "live body")], { open: "dice" });
+  expect(canvases.map((c) => c.id)).toEqual(["dice"]);
+  expect(canvases[0].code).toBe("live body");
 });
