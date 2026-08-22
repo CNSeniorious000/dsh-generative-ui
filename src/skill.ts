@@ -34,7 +34,8 @@ export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} 
  * body is how this file broke twice, and the two maps have genuinely different lifetimes —
  * the type one may exist while the stub one does not.
  */
-function mapNotes(typesMap: string | undefined, standaloneMap: string | undefined): string {
+/** Exported for `test/skill.test.ts`: three states, and this file has broken on them twice. */
+export function mapNotes(typesMap: string | undefined, standaloneMap: string | undefined): string {
   if (typesMap === undefined) return "";
   const check = [
     `The \`-i\` is not optional when the card imports \`${CAPABILITY_PREFIX}/*\`: without it every one of those lines`,
