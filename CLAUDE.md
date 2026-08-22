@@ -2839,3 +2839,18 @@ emits one line each and silently breaks `[ "$n" -gt 0 ]`; and an unexpanded glob
 variable empty, so `zstd` printed a "no such file" and a `0` that read exactly like a measurement.
 **A corpus this size makes a bad predicate look authoritative** — 183 rows of a wrong number are
 still wrong, and the only thing that caught it was one cell being implausibly empty.
+
+### The fence language slip is gone; a different one replaced it (2026-08-23)
+
+Counting every fence opener across the 183 sessions: **73 `````ui4a/tsx`, and not one bare
+`tsx`**. The ~5% slip recorded twice in §4.5 did not occur once today. Recorded as a fixed
+rate rather than a live risk.
+
+Openers 73, closers 72. The one unbalanced reply ends not with a fence but with
+**`</parameter></invoke>`** — the model emitting tool-call markup into its own prose, on a turn
+whose `turn/end` reason is `completed`, so nothing truncated it.
+
+That corrects an attribution I made hours earlier: a Monitor event carried what looked like
+tool-call syntax and I treated it as noise from the monitored process. It was the model's own
+output, arriving through a session's reply file. **A stray XML-ish tag in a reply is a generation
+artefact, not a transport artefact** — and it costs a card, because the fence never closes.
