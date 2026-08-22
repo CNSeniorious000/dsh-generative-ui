@@ -2066,3 +2066,36 @@ Verified on the three real cards after: all three still read as painted.
 The generalisation the review was reaching for is right, but **the version that generalises has to
 be measured against the case the special-casing protected** — the obvious form of it regressed the
 one thing that mattered.
+
+### The skill-load correlation, settled: the arrow points the other way (2026-08-22)
+
+§"Does loading the skill change the answer?" recorded 79% against 25% and could not say which
+way it ran. Two clones differing only in the catalog `description`, five conversational prompts
+outside the fixture set, ten runs each on venti:
+
+| | produced a card | loaded the skill |
+| --- | --- | --- |
+| old description ("Load this before you build any interface") | 7/10 | 7/10 |
+| new ("Load it before you decide … most questions that should have been an interface do not ask") | 8/9 | 8/9 |
+
+The description barely moves the number. What settles the direction is that **the two columns are
+identical in every one of the twenty runs** — no run ever loaded the skill and then wrote prose,
+and none ever wrote a card without loading it.
+
+The reasoning says why, in the model's own words:
+
+> *"I don't think I need to load the generative-ui skill here because this is genuinely a
+> conversational exchange, not a request for a tool or interface."*
+
+**The decision comes first and the load follows it.** So the 25% column was never a population of
+runs that would have produced UI if only they had read the skill — it was runs that had already
+decided not to. A description cannot route a request the model has already classified.
+
+Which retires the experiment rather than passing it: the resident layer in `prompt.ts` is where
+that classification happens, and every rule that has moved a number today lives there. The skill
+is what you read **after** deciding to build, and its job is how to build well.
+
+(One process note: the reworded description reached `main` inside `1bcd3ef`, whose message is
+about keeping three cards. I had edited `src/skill.ts` on a branch, switched back, and `git add -A
+src` picked it up. **An unmeasured change rode in on an unrelated commit** — which is exactly the
+accident that makes a later measurement meaningless if nobody notices.)
