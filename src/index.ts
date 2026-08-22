@@ -86,7 +86,8 @@ async function serveAsset(req: IncomingMessage, res: ServerResponse, file: strin
  * the plugin into a file-existence oracle for the whole disk. The client only ever sends
  * the cwd it read off the current session, so matching against live sessions costs nothing.
  */
-async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+/** Exported for `test/canvas-route.test.ts`: the listing is the launcher's only source of truth and had no test. */
+export async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "GET") return void res.writeHead(405).end();
   const url = new URL(req.url ?? "/", "http://x");
   const cwd = url.searchParams.get("cwd");
