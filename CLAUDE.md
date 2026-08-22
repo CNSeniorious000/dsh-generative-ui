@@ -1216,3 +1216,26 @@ Recovery was `git clone` of the pushed remote into `/tmp` and re-applying the on
 change, which was possible only because the preceding work had been committed and pushed as it
 was verified. **Commit each verified step rather than batching** — the working copy is not the
 durable artefact, and on this machine it can stop being readable without warning.
+
+### A crashed process reads exactly like a rejected rule (2026-08-22)
+
+With the Desktop unreadable, I re-ran the generalisation check for the new phrasing rule on three
+fresh subjects and got **0/9**. The rule names "a protocol handshake" explicitly, so
+`什么是 TCP 三次握手` scoring 0/3 looked like a clean refutation, and I was one keystroke from
+writing "did not generalise".
+
+The nine replies were `EPERM` stack traces. The globally-installed plugin is a **symlink into
+`~/Desktop`**, so the moment that grant went away, every `dsh` run died before reaching a model —
+and a dead run and a rejected rule produce the identical observable: `fence=0`.
+
+Repointing three symlinks (`~/.bun/.../node_modules`, and one inside *each* profile's own
+`node_modules` — the profile copy is separate and failed after the global one was fixed) at the
+`/tmp` clone brought it back. Re-measured: **8/9** — TCP 3/3, OAuth 3/3, 事件冒泡 2/3. The rule
+generalises well.
+
+**Third time this session that a measurement artefact nearly became a finding** (fences without
+canvases; one flap read as a regression; now a crash read as a refusal). The pattern in all
+three: *the failure mode and the interesting result look the same at the metric*. So the rule is
+not "repeat the run" — repetition would have given 0/9 every time. It is **check that the thing
+under test actually ran** before believing a zero. A byte count would have caught this instantly:
+4598 bytes of stack trace does not look like 0 bytes of nothing.
