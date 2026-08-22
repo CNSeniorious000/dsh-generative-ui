@@ -3259,3 +3259,23 @@ anything could disconnect; then two microtask turns still were not enough to rea
 fix was to stop guessing at timing and **wait on the event itself** — the fake `run` resolves a
 promise when it is entered, and the test aborts after that. Three red runs against correct code
 is the shape of a concurrency test that measures its own scheduling assumptions.
+
+Two more after that. The **AI stream** had no test, and its own comment names a bug that already
+shipped once: `chunk.reason` is an object with a `kind`, so interpolating it directly writes
+`[object Object]` into the card's output. That regression, swallowing a mid-stream throw, and
+adding a trailer to a clean finish are now three mutations that fail. The thing worth
+remembering about this route is that **once the headers are out, nothing can become a status
+code** — a failed call finishes rather than throwing, so without the trailer the card sees a
+clean empty 200 and reports "the model said nothing", which is indistinguishable from a real
+empty answer.
+
+And **`skill.ts`'s `mapNotes`**, whose comment says the file "broke twice" on exactly this: three
+states (no type map, type map only, both), generating advice about which `-i` flag serves which
+command. The failure mode is not an exception, it is **bad advice reaching the model** — a wrong
+flag makes every `$dsh/*` import report `Cannot find module`, and the model then goes and
+"fixes" imports that were correct. Both branches now have a mutation that fails, and one test
+just checks no state leaks a raw `${` or an `undefined` into the prompt.
+
+Final audit: node `index.ts` **10 → 36** caught of 29 sites. Every remaining zero is DOM-bound
+(`mount.ts`, `useDismissable.ts`, `claimInlineFences`, the canvas `index.ts` sweep) or
+operator-inapplicable. 122 tests.
