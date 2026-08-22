@@ -1,5 +1,5 @@
 /**
- * The canvas read route, against a real directory.
+ * The plugin's HTTP routes, against a real directory.
  *
  * The listing is the launcher's only source of truth for a canvas this session did not write —
  * including one written by executed code, which `collect.ts` cannot see at all (see the
@@ -11,7 +11,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CANVAS_DIR } from "../src/contract.ts";
-import { serveCanvas } from "../src/index.ts";
+import { ASSET_PREFIX, WASM_PATH } from "../src/contract-assets.ts";
+import { serveAsset, serveCanvas } from "../src/index.ts";
 
 const cwd = mkdtempSync(join(tmpdir(), "ui4a-route-"));
 mkdirSync(join(cwd, CANVAS_DIR), { recursive: true });
@@ -96,5 +97,30 @@ describe("sub-page reads", () => {
   test("a specifier naming no file is a 404, not a 200 with an empty body", async () => {
     const { status } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./missing")}&from=${encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`)}`);
     expect(status).toBe(404);
+  });
+});
+
+// Registered as a PREFIX route, so every path under it reaches this handler and only the
+// pathname check keeps it to one file. Nothing else in the plugin has that shape.
+describe("wasm asset route", () => {
+  const fetchAsset = async (path: string) => {
+    let status = 0, headers: Record<string, string> = {};
+    const res = { writeHead(code: number, h?: Record<string, string>) { status = code; headers = h ?? {}; return res }, end() { return res } };
+    await serveAsset({ method: "GET", url: path } as never, res as never, join(cwd, "fake.wasm"));
+    return { status, headers };
+  };
+
+  test("serves the wasm as application/wasm", async () => {
+    writeFileSync(join(cwd, "fake.wasm"), "\0asm");
+    const { status, headers } = await fetchAsset(WASM_PATH);
+    expect(status).toBe(200);
+    // instantiateStreaming rejects anything else, and the failure is silent.
+    expect(headers["content-type"]).toBe("application/wasm");
+  });
+
+  test("any other path under the prefix is a 404", async () => {
+    for (const path of [`${ASSET_PREFIX}/../../etc/passwd`, `${ASSET_PREFIX}/anything.js`, ASSET_PREFIX]) {
+      expect((await fetchAsset(path)).status).toBe(404);
+    }
   });
 });

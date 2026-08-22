@@ -60,7 +60,8 @@ const standaloneImportMap = (importMetaUrl: string): string | undefined => {
   }
 };
 
-async function serveAsset(req: IncomingMessage, res: ServerResponse, file: string): Promise<void> {
+/** Exported for `test/routes.test.ts`: a prefix route that stops checking its pathname serves the whole prefix. */
+export async function serveAsset(req: IncomingMessage, res: ServerResponse, file: string): Promise<void> {
   if (req.method !== "GET" && req.method !== "HEAD") return void res.writeHead(405).end();
   const pathname = new URL(req.url ?? "/", "http://x").pathname;
   if (pathname !== WASM_PATH) return void res.writeHead(404).end();
@@ -86,7 +87,7 @@ async function serveAsset(req: IncomingMessage, res: ServerResponse, file: strin
  * the plugin into a file-existence oracle for the whole disk. The client only ever sends
  * the cwd it read off the current session, so matching against live sessions costs nothing.
  */
-/** Exported for `test/canvas-route.test.ts`: the listing is the launcher's only source of truth and had no test. */
+/** Exported for `test/routes.test.ts`: the listing is the launcher's only source of truth and had no test. */
 export async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "GET") return void res.writeHead(405).end();
   const url = new URL(req.url ?? "/", "http://x");
