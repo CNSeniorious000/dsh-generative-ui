@@ -46,6 +46,18 @@ const SCREENS = {
     const imported = new Set([...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim())));
     return [...src.matchAll(/<(Fragment)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef)\s*[(<]/g)].some((m) => !imported.has(m[1] ?? m[2]));
   },
+  // `xs[xs.length - 1].field` on an array that came from outside the card. A `!xs` guard passes
+  // for `[]`, so an empty result — a repo with no commits, a failed command, an empty directory —
+  // renders blank. Restricted to externally-filled arrays on purpose: three other cards in 378
+  // index the last element of an array they built from a literal or a counted loop, which cannot
+  // be empty, and flagging those is how a screen becomes noise.
+  "UNGUARDED-LAST-INDEX": (src: string) => {
+    const found = /(\w+)\[\s*(\w+)\.length\s*-\s*1\s*\]\s*\./.exec(src);
+    if (found === null || found[1] !== found[2]) return false;
+    const name = found[1];
+    if (new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src)) return false;
+    return new RegExp(`set${name[0].toUpperCase()}${name.slice(1)}\\b`).test(src) && /\$dsh\/(exec|fs|ai)/.test(src);
+  },
   "MODULE-SCOPE-HOOK": (src: string) => /^(?:(?:const|let|var)\s+[\w{}[\],\s:]+=\s*)?use[A-Z]\w*\s*\(/m.test(src),
 } as const;
 
@@ -79,7 +91,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"] } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
