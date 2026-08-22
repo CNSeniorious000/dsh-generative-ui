@@ -1781,3 +1781,32 @@ three real generations kept in `test/cards` as fixed input.
 command and the check: `bun run x | tail -2; echo $?` reports `tail`'s status, so a genuine
 failure read as success. Twice today that briefly made a working gate look broken. When the exit
 code is the measurement, do not pipe.
+
+### The checker command never worked, and a model change is what showed it (2026-08-22)
+
+`## Check it before you hand it over` has told the model to run
+`npx --yes <cli> check <file>` since the day it was written. Sandboxed — which is where the
+model's commands run — a bare `npx` **always fails**:
+
+```
+npm error code EPERM
+npm error syscall mkdtemp
+npm error path /Users/muspi-merol/.npm/_cacache/tmp/o63SrT
+npm error Your cache folder contains root-owned files …
+```
+
+The message is a red herring: nothing under `~/.npm` is root-owned (checked: 0 files). The cache
+is simply not writable from inside the sandbox. The same command in my own shell prints `OK`,
+which is why it went unnoticed for two days.
+
+Fixed by prefixing both commands with `npm_config_cache="$TMPDIR/npm-cache"`, verified from
+inside the sandbox in both directions: bare fails, prefixed prints `OK`.
+
+**It surfaced only because the model changed.** DeepSeek never ran the checker at all, so the
+broken command cost nothing. `macaron-v1-venti` follows that section literally — writes the card
+to a temp file, runs `check`, fixes the reported TypeScript errors over three rounds, re-runs
+until `OK`, then pastes the result into the fence — and it hit the failure on its first attempt,
+worked around it with `npm_config_cache` on its own, and carried on.
+
+**Instructions nobody follows cannot be wrong.** A second model is a test of the prompt, not just
+of the answers.

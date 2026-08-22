@@ -47,7 +47,7 @@ function mapNotes(typesMap: string | undefined, standaloneMap: string | undefine
     `${check} \`build\` and \`dev\` want runnable JS, so they take a different one:`,
     "",
     "```",
-    `npx --yes ${CLI_URL} build <file> -i ${standaloneMap}`,
+    `npm_config_cache="$TMPDIR/npm-cache" npx --yes ${CLI_URL} build <file> -i ${standaloneMap}`,
     "```",
     "",
     `That second map stubs \`${CAPABILITY_PREFIX}/*\` — the exported page has no dsh around it, so those calls log to`,
@@ -345,10 +345,13 @@ A canvas is a file, so you can run a checker over it. \`@genui/cli\` validates e
 kind of TSX:
 
 \`\`\`
-npx --yes ${CLI_URL} check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
+npm_config_cache="$TMPDIR/npm-cache" npx --yes ${CLI_URL} check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
 \`\`\`
 
-\`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. \`check\` includes
+\`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. The
+\`npm_config_cache\` prefix is not optional: your commands run sandboxed and npm's default cache
+under \`~/.npm\` is not writable there, so a bare \`npx\` dies with \`EPERM mkdtemp\` and a message
+about root-owned files that has nothing to do with the real cause. \`check\` includes
 TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
 
 ${maps}
