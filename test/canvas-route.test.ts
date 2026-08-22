@@ -63,3 +63,38 @@ describe("canvas listing", () => {
     rmSync(bare, { recursive: true, force: true });
   });
 });
+
+describe("sub-page reads", () => {
+  test("a sibling specifier resolves to the child file", async () => {
+    mkdirSync(join(cwd, CANVAS_DIR, "tarot"), { recursive: true });
+    writeFileSync(join(cwd, CANVAS_DIR, "tarot", "deck.tsx"), "export const DECK = []");
+    const { status, body } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./deck")}&from=${encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`)}`);
+    expect(status).toBe(200);
+    expect(body).toBe("export const DECK = []");
+  });
+
+  // The fence. `canvasChildPath` is unit-tested, but nothing checked that the ROUTE refuses what
+  // it rejects — and this is the parameter an attacker controls.
+  //
+  // Each escape must name a file that REALLY EXISTS and really is outside the child directory.
+  // The first version of this test used `../../../../etc/passwd` and passed with the entire
+  // fence deleted: relative to a tmpdir that path resolves to nothing, so the 404 looked like a
+  // refusal. A traversal test that cannot reach a real file tests nothing.
+  test("a specifier escaping the child directory is refused", async () => {
+    writeFileSync(join(cwd, "secret.txt"), "SECRET");
+    mkdirSync(join(cwd, CANVAS_DIR, "other"), { recursive: true });
+    writeFileSync(join(cwd, CANVAS_DIR, "other", "private.tsx"), "OTHER CANVAS");
+    const from = encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`);
+    for (const escape of ["../../../secret.txt", "../other/private", "./../other/private"]) {
+      const { status, body } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent(escape)}&from=${from}`);
+      expect(status).toBe(400);
+      expect(body).not.toContain("SECRET");
+      expect(body).not.toContain("OTHER CANVAS");
+    }
+  });
+
+  test("a specifier naming no file is a 404, not a 200 with an empty body", async () => {
+    const { status } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./missing")}&from=${encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`)}`);
+    expect(status).toBe(404);
+  });
+});
