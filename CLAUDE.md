@@ -2349,3 +2349,43 @@ real card, and a check written to catch an error message must not eat one that m
 would be a dependency bought to test four lines. Split out `isPaintedText` instead, which is the
 whole rule and needs nothing. Mutation checked in both directions: dropping the `(:|$)` anchor
 fails the log-viewer case only, and reverting to the old rule fails the error cases only.
+
+### Two retractions in one investigation (2026-08-23)
+
+Chasing `docs/examples.md:1296` — the mostly-empty card — produced two findings, and measuring
+each one properly killed both. Worth keeping because the failure mode is *my* method, not the
+model's behaviour.
+
+**The runtime half is fine.** §2.5's container-query work was only ever verified one way (narrow →
+wide adds columns) and the corpus flags a design that *refuses* columns as untested. Both rules in
+one container: at 640px `.grid` goes to three columns while `.big` only scales 48px → 96px. Both
+intents are supported; no gap.
+
+**Retraction 1: "the model looks for the subject in the wrong place" is not established.**
+`还有多久发布` in an empty workspace scored 0/3 — correctly, there is nothing to point at, and the
+replies were 432–558 bytes of asking which release. With a seeded repo (`RELEASE.md` naming
+`target: 2026-09-01`, a CHANGELOG, a `v2.3.0` tag) it went 1/3, and the two failures never looked
+at the workspace at all — they queried Chronicle and a pidfile, found neither, and asked. That
+looked like a new variant of "gathering data eats the turn". But it rests on **one prompt**, and
+§4.5 already records that one prompt's five samples cannot separate a cluster from noise.
+
+Two unambiguous prompts against the same repo went **5/6** (3 fences, 2 canvases). The single
+prose reply is right: the seed has one commit and a two-line `Unreleased`, and two bullets do not
+want a card. So the shape is not general — it is that prompt, filed like
+`帮我搭个东西记录点什么` was: recorded, not acted on.
+
+**Retraction 2: "announced the card and delivered nothing" does not reproduce.** One run of
+`现在到哪一步了` replied with 90 bytes — *"我来做一个实时状态卡片，直接读取仓库文件"* — and stopped.
+The transcript says `stopReason: "stop"`, `turn/end: completed`, 12 steps, 9 bash calls, an empty
+`.dsh/ui4a/canvases/` directory, and 55 seconds spent on the final step. Not a truncation. I called
+it a shape nobody had recorded: decision right, work done, output empty. Six repeats: **zero
+recurrences** (2 produced UI, 4 asked back).
+
+**And that fixture was invalid anyway.** All six runs opened with `get_goal` — a real dsh tool —
+because *"现在到哪一步了"* most naturally asks about **the session's own progress**, not the repo.
+The model answering "this session has no tracked goal" is correct. I had picked a sentence that
+means something else inside the system under test, and scored its zero against the model.
+
+The general lesson, which is new: **a prompt is not a neutral probe.** It is interpreted by a
+harness with its own tools and vocabulary, and a fixture that collides with one measures the
+collision. Check what a prompt means *to dsh* before reading its result as a fact about the rules.
