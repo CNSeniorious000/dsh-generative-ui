@@ -3510,6 +3510,8 @@ file a dozen times today the same way. A `str.replace(old, new)` whose `old` doe
 **does nothing and reports nothing** — my first attempt at the correction above wrapped the
 anchor differently than the file did, `git commit` said "nothing to commit", and the only reason
 that registered as a failure rather than a no-op was that the commit had nothing to add. Every
-Python edit to this file now carries `assert old in s`. **A silent no-op edit is the same
+Python edit to this file now carries `assert old in s`. (Audited the other 91 CLAUDE.md commits
+from today for the same failure — every one has a real insertion or replacement; this was the
+only near-miss.) **A silent no-op edit is the same
 failure class as a search window too small to reach the evidence** — the tool succeeds, the
 result is empty, and empty reads as "already fine".
