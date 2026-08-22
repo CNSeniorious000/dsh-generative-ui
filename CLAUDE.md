@@ -3775,3 +3775,11 @@ Asserting on the final padding passed three times running. Recording every width
 the real difference: `[420, 0, 0]` working versus `[420, 0]` broken, and the assertion has to be
 "a collapse happened **before** teardown" (`widths.slice(0, -1)`). **When cleanup does the same
 thing as the feature, the end state cannot distinguish them — only the sequence can.**
+
+A process note from the same session, because it nearly shipped: I ran `bun run check`, read the
+`154 pass` from the `bun test` line, and committed — while `check` had actually **exited 1** on a
+lint error two steps later. The passing line I read was real and belonged to a stage that ran
+before the failing one. **`bun run check` prints many summaries and only its exit code is the
+answer**; the fix landed a commit later, but a less obvious lint failure would have gone in.
+Every check in this session that mattered was run without a pipe for exactly this reason, and
+this is the one time I looked at the text instead.
