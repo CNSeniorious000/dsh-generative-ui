@@ -2854,3 +2854,22 @@ That corrects an attribution I made hours earlier: a Monitor event carried what 
 tool-call syntax and I treated it as noise from the monitored process. It was the model's own
 output, arriving through a session's reply file. **A stray XML-ish tag in a reply is a generation
 artefact, not a transport artefact** — and it costs a card, because the fence never closes.
+
+### What the leaked markup actually costs (2026-08-23)
+
+"It costs a card" above was a guess about the missing closing fence. Measured on the real
+303-line body: an unterminated fence goes down the `complete: false` path in `segments.ts` —
+the same path as any mid-stream frame — so `</parameter></invoke>` reaches the compiler as
+code. `normalizeGeneratedTsx` does not absorb it in either mode; both fail at the tag's line
+with `Expression expected`. Stripping the tags, both modes compile. So the cost is not the
+closing fence: it is **every line of the card**, and the reader sees a permanent "still
+writing" frame that will never render.
+
+`TOOL_CALL_MARKUP` now strips the tags, anchored to the very end of an unterminated body
+where nothing legitimate can follow. Two mutations kill the tests: removing the strip, and
+dropping the `$` anchor (which would eat a lookalike inside a template string).
+
+The method that found it is the same one that found the four runtime bugs before it: **read
+the corpus as a specification for the parser, not as a sample of model behaviour.** A count
+that comes out 73/72 is not a rounding error — the one row that does not balance is a bug
+report written by production.
