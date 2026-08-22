@@ -3373,9 +3373,10 @@ violations of a rule nothing violated.
 
 Recorded earlier today as fixed: "73 `ui4a/tsx` openers and not one bare `tsx`". Recounted
 across all 1012 sessions with a predicate that reads the **whole fence body** rather than its
-first 400 characters: **389 `ui4a/tsx` fences and 9 bare ```` ```tsx ```` blocks that are
-unmistakably cards** — a `sendMessage` option picker, a full component with hooks — 2.3%, which
-is the same order as the ~5% §4.5 recorded originally.
+first 400 characters: **389 `ui4a/tsx` fences and 9 bare ```` ```tsx ```` blocks
+holding a full component**. Two of those nine are not slips at all — the user asked to *read a
+canvas file back*, and quoting a `.ui4a.tsx` in a `tsx` fence is the correct answer there. So
+the real rate is **7 in 396, 1.8%**, the same order as the ~5% §4.5 recorded originally.
 
 Two separate windows hid it. The first count only looked at openers in sessions that already
 contained `ui4a/tsx`, so a reply that slipped on *every* fence was invisible. The second, when
@@ -3391,3 +3392,21 @@ The cost is a card silently rendered as a code listing — the reader sees TSX w
 should be. Nothing in the runtime can fix it: `FENCE_LANG` is what claims a block, and claiming
 every ```` ```tsx ```` block would swallow every legitimate code sample the model writes about
 React. This one belongs to the prompt, which already carries the rule as its first bullet.
+
+Two more things the recount established, both the opposite of what I first wrote down:
+
+- **A reply that slips, slips completely.** Not one of the seven mixes a correct fence with a
+  slipped one — the whole reply commits either way. My first check said the opposite because it
+  searched the *session* for `ui4a/tsx`, and the prompt contains that string, so every session
+  matched and the column measured nothing.
+- **The skill is not the factor.** 7 of 9 slipping sessions had loaded it, against 310 of 374
+  correct ones — 78% versus 83%, no signal. Nor is the resident rule missing: seven of the nine
+  carried it verbatim.
+
+What the seven do share is the *ask*: `帮我搭个东西记录点什么` three times out of twelve, and the
+"explain this expression" family (regex, cron, quicksort) four times. Both are cases where the
+model writes prose about code first and the card second — which is exactly the situation the
+resident rule already describes ("you decide to build the interface, write the whole component
+correctly, and then open the fence with the language your fingers know"). The rule is right and
+the residual is 1.8%; nothing here argues for changing the wording, and §4.5's warning about
+naming a failing form applies with full force.
