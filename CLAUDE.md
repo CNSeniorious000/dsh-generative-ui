@@ -3224,6 +3224,14 @@ what exposed `compiler.test.ts` testing a re-implementation. After the fixes abo
 | `read.ts`, `compiler.ts`, `segments.ts` | | covered after today |
 | `index.ts` (canvas), `mount.ts`, `useDismissable.ts`, `inline-fence.ts` | 12 / 2 / 2 / 14 | **0** |
 
+**As of the end of this session no module scores zero.** Every source file with mutation sites
+has at least one test that fails when it breaks — the last three were `useDismissable.ts` (the
+dismiss effect extracted so its four rules are testable without a renderer), `register.ts` (the
+document import map: install once, defer to a host-owned map, prepend not append), and the
+canvas sweep's final two conditions. `mount.ts` scores 16 on 2 sites because `whenFrameReady`
+gates every canvas test, which is a real dependency rather than an inflated number — verified by
+running the mutation by hand.
+
 **Read the two columns together, and do not read a zero as a verdict.** Three separate reasons
 a module scores 0 without being untested: the operator does not apply (`observe.ts` and
 `register.ts` are nearly `if`-free — hand-mutated instead); the covered exports are arrow
