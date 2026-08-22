@@ -3504,3 +3504,12 @@ So no conclusion changes, which is the useful part of having re-derived them: th
 stable under a 4% corpus growth. **A measurement taken through code you are actively changing
 has a version, not just a date** — and the fence parser was changed three times today, each time
 altering what counts as a card at all.
+
+A near-miss from that same re-verification pass, worth its own line because I have edited this
+file a dozen times today the same way. A `str.replace(old, new)` whose `old` does not match
+**does nothing and reports nothing** — my first attempt at the correction above wrapped the
+anchor differently than the file did, `git commit` said "nothing to commit", and the only reason
+that registered as a failure rather than a no-op was that the commit had nothing to add. Every
+Python edit to this file now carries `assert old in s`. **A silent no-op edit is the same
+failure class as a search window too small to reach the evidence** — the tool succeeds, the
+result is empty, and empty reads as "already fine".
