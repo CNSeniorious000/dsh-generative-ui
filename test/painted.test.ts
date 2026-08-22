@@ -8,7 +8,7 @@
  * responses.
  */
 import { describe, expect, test } from "bun:test";
-import { isPaintedText } from "../src/client/runtime/inline-fence.ts";
+import { isPaintedText, matchSegment, sameCode } from "../src/client/runtime/inline-fence.ts";
 
 describe("isPaintedText", () => {
   test("a rendered card counts", () => {
@@ -27,5 +27,45 @@ describe("isPaintedText", () => {
 
   test("an empty mount does not", () => {
     expect(isPaintedText((""))).toBe(false);
+  });
+});
+
+/**
+ * Which segment a rendered block belongs to.
+ *
+ * Mid-stream the DOM shows a prefix of the segment, so the match is `startsWith`; once settled
+ * they are equal, modulo the one trailing newline CodeBlock trims for display. Getting this
+ * wrong shows the reader a different card than the one they are looking at — and with two cards
+ * in one reply, a prefix match against the wrong one is entirely possible.
+ */
+describe("matchSegment", () => {
+  const seg = (code: string) => ({ code, complete: true });
+
+  test("a settled block matches its own segment", () => {
+    const segments = [seg("export default function A() {}\n"), seg("export default function B() {}\n")];
+    expect(matchSegment(segments, "export default function B() {}")?.code).toBe("export default function B() {}\n");
+  });
+
+  test("a mid-stream prefix matches the segment it is a prefix of", () => {
+    const segments = [seg("export default function Counter() { return <div /> }")];
+    expect(matchSegment(segments, "export default function Coun")).toBe(segments[0]);
+  });
+
+  // Document order decides ties: two cards that begin identically are indistinguishable until
+  // the stream diverges, and the first is the one the reader is looking at.
+  test("an ambiguous prefix takes the first segment", () => {
+    const segments = [seg("import { useState } from \"react\"\nconst A = 1"), seg("import { useState } from \"react\"\nconst B = 2")];
+    expect(matchSegment(segments, "import { useState } from \"react\"\n")).toBe(segments[0]);
+  });
+
+  test("a block belonging to no segment matches nothing", () => {
+    expect(matchSegment([seg("export default function A() {}")], "console.log('unrelated')")).toBeUndefined();
+  });
+
+  // The trailing-newline tolerance: CodeBlock trims one for display, so an exact compare would
+  // fail on every settled card and the source block would never be hidden.
+  test("a trailing newline does not break the match", () => {
+    expect(sameCode("const a = 1\n", "const a = 1")).toBe(true);
+    expect(sameCode("const a = 1", "const b = 1")).toBe(false);
   });
 });

@@ -77,14 +77,14 @@ export const hasPainted = (mount: HTMLElement) => {
 const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";
 
 /** CodeBlock trims one trailing newline for display, so compare on trimmed ends. */
-const sameCode = (a: string, b: string) => a.trimEnd() === b.trimEnd();
+export const sameCode = (a: string, b: string) => a.trimEnd() === b.trimEnd();
 
 /**
  * The segment a rendered block belongs to.
  *
  * Mid-stream the block shows a prefix of its segment; once settled the two are equal.
  */
-const matchSegment = (segments: readonly Ui4aSegment[], rendered: string) => segments.find((segment) => sameCode(segment.code, rendered) || segment.code.startsWith(rendered));
+export const matchSegment = (segments: readonly Ui4aSegment[], rendered: string) => segments.find((segment) => sameCode(segment.code, rendered) || segment.code.startsWith(rendered));
 
 export type InlineFenceOptions = {
   /** Every ui4a segment currently in the transcript, in document order. */
