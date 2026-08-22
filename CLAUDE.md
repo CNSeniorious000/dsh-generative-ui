@@ -2319,3 +2319,33 @@ the fix stated as a shape rather than a rule: **store the start timestamp, deriv
 Verified before writing it down, because advice that merely sounds right is how a prompt acquires
 a claim nobody checked: the same remount, with the start persisted, reads 600ms → **800ms** and
 keeps counting, against 490 → 290 for the elapsed-count version.
+
+### An error hid the one thing worth seeing (2026-08-23)
+
+`docs/examples.md:918` calls runtime failure in the user's hands "the one product state with zero
+measurement and the highest cost". Measured, and there was a real bug in it.
+
+Neither consumer passes `onError` — inline nor canvas — so what the reader gets is partial-react's
+own boundary output: a bare text node, `ERROR: <message>`. `hasPainted` returned true for it,
+because its first line only asked whether there was text. So the host's code block was hidden
+underneath, and the reader was left with one red line and no way to see what the model wrote.
+
+§4 already records that an empty mount and an `ERROR:` mount are both zero-children and **want
+opposite responses**. This is that table's other half, on the hide/keep decision rather than the
+diagnosis:
+
+| mount | whose bug | before | after |
+| --- | --- | --- | --- |
+| `ERROR: item.difficulty is undefined` | the generated code's | **source hidden** | source kept |
+| `ERROR` | the generated code's | **source hidden** | source kept |
+| empty (dead module graph) | ours | source kept | source kept |
+| mid-stream shell | nobody's | source kept | source kept |
+| `ERROR 404 是什么意思？共 12 条日志` | — | hidden | **still hidden** |
+
+That last row is why the test is `/^ERROR(:|$)/` and not `startsWith("ERROR")`: a log viewer is a
+real card, and a check written to catch an error message must not eat one that merely mentions it.
+
+`hasPainted` needs a DOM, and the repo has no DOM test environment — adding one for a string rule
+would be a dependency bought to test four lines. Split out `isPaintedText` instead, which is the
+whole rule and needs nothing. Mutation checked in both directions: dropping the `(:|$)` anchor
+fails the log-viewer case only, and reverting to the old rule fails the error cases only.

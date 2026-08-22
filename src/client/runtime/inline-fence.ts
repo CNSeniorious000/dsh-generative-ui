@@ -48,8 +48,22 @@ type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string;
 /** Elements that paint their own pixels; a custom element (any tag with a dash) counts too. */
 const DRAWS = new Set(["SVG", "CANVAS", "IMG", "VIDEO", "IFRAME", "PICTURE"]);
 
-const hasPainted = (mount: HTMLElement) => {
-  if ((mount.textContent ?? "").trim() !== "") return true;
+/**
+ * partial-react's error boundary renders a bare text node — `ERROR` or `ERROR: <message>`.
+ * That is text, so a naive check reads it as a painted card and hides the source block
+ * underneath it, leaving the reader one red line and no way to see what the model wrote.
+ * Measured: exactly the case where the source is most worth keeping.
+ */
+const BOUNDARY_ERROR = /^ERROR(:|$)/;
+
+/** Split out from `hasPainted` so the rule can be tested without a DOM. */
+export const isPaintedText = (text: string) => {
+  const trimmed = text.trim();
+  return trimmed !== "" && !BOUNDARY_ERROR.test(trimmed);
+};
+
+export const hasPainted = (mount: HTMLElement) => {
+  if (isPaintedText(mount.textContent ?? "")) return true;
   for (const el of mount.querySelectorAll("*")) {
     const tag = el.tagName.toUpperCase();
     if (!DRAWS.has(tag) && !tag.includes("-")) continue;
