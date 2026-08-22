@@ -26,3 +26,6 @@ test("an exact closer still wins over an earlier shorter one", () => { const [b]
 // the card's own strings ends the card at its first line. This is the entire reason the prompt asks
 // for four backticks, and "try short, then exact" passes every other test in this file.
 test("a triple-backtick run inside the body does not close a longer fence", () => { const [b]=p("`````ui4a/tsx\nconst help = `\n```js\nfoo()\n```\n`\nexport default function A() {}\n`````"); expect(b.complete).toBe(true); expect(b.code.includes("export default")).toBe(true); });
+// The model's own tool-call spelling, three times in the corpus against one for the ASCII form.
+// Those bars are U+FF5C. A regex written from the single ASCII sample could not see any of them.
+test("the DSML tool-call spelling is dropped too", () => { const [b]=p("````ui4a/tsx\nexport default () => <div />\n</｜｜DSML｜｜parameter>\n</｜｜DSML｜｜invoke>\n</｜｜DSML｜｜tool_calls>"); expect(b.code).toBe("export default () => <div />"); });

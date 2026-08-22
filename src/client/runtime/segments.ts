@@ -51,13 +51,17 @@ function findClose(body: string, fence: string): number {
 }
 
 /**
- * Tool-call markup the model leaked into its own prose. Measured once in a 183-session
- * corpus: the reply ended mid-fence with `</parameter></invoke>` glued to the last line of
- * TSX, so the body reaches the compiler with those tags in it and fails to parse — the whole
- * card is lost, not just the closing fence. Only stripped at the very end of an unterminated
- * body, where nothing legitimate can follow.
+ * Tool-call markup the model leaked into its own prose. The reply ends mid-fence with the
+ * closing tags glued to the last line of TSX, so the body reaches the compiler with those tags
+ * in it and fails to parse — the whole card is lost, not just the closing fence.
+ *
+ * Two spellings, and the rarer one was found first: `</parameter></invoke>` appeared once in
+ * the corpus, while the model's own `</｜｜DSML｜｜parameter>` form accounts for three more and
+ * was invisible to a regex written from that single sample. Those full-width bars are U+FF5C,
+ * not ASCII `|`. Only stripped at the very end of an unterminated body, where nothing
+ * legitimate can follow.
  */
-const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:)?(?:parameter|invoke)>\s*)+$/;
+const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:|｜｜DSML｜｜)?(?:parameter|invoke|tool_calls)>\s*)+$/;
 
 /**
  * The prompt asks for four backticks — generated TSX contains triple-backtick strings often
