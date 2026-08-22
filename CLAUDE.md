@@ -3721,3 +3721,10 @@ All three engines' wordings are covered (`NetworkError…` for Firefox, `Load fa
 which was already true and is now held. **Chromium produces exactly one string for three quite
 different failures**, so testing against invented messages would have proved almost nothing
 about the one that matters.
+
+`scripts/flaky-dep-server.py` is the fixture, checked in with both pages (`/` the fixed retry,
+`/old` the pre-fix one, `/hits` the true request count). It exists because **a permanently
+missing module cannot show the difference** — both versions fail identically against one, and
+only a dependency that recovers on its third request separates "retried and failed" from "never
+retried at all". Threaded, because a single-threaded server deadlocks the moment the page
+fetches `/hits` while the browser still holds the HTML connection.
