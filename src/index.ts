@@ -246,7 +246,8 @@ const EXEC_TIMEOUT_MS = 15_000;
  * A non-zero exit is a RESULT, not an error: a card wants to show `git status` failing in a
  * non-repo as much as it wants to show it succeeding. Only infrastructure failures reject.
  */
-async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+/** Exported for `test/exec-route.test.ts`. */
+export async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://x");
   const cwd = url.searchParams.get("cwd");
   if (cwd === null || !liveWorkspaces().has(cwd)) return void res.writeHead(cwd === null ? 400 : 403).end();
