@@ -1286,3 +1286,22 @@ from `deepseek-v4-pro` at `reasoningEffort: high`, and a rule kept on one model'
 evidence about another's. The unmeasured rule was pushed to the branch
 `unverified/history-is-a-set` instead of merged, with the measurement it still needs written into
 the commit message.
+
+### Cards that compile, mounted for real (2026-08-22)
+
+`compile-cards.ts` only proves a card compiles, and §4 lists three ways a card compiles cleanly
+and renders blank — so the cards had never actually been run. Added `scripts/render-cards.ts`,
+which serves them, and drove it with ego-browser: compile in-page through `@esm.sh/tsx`, import
+the result as a blob module, `createRoot().render()`, read `innerText` back.
+
+Three of today's canvases, all **ok**: `guitar-start` 428 chars, `running-plan` 761,
+`jizhang` 26 (an empty-state — correct). `localStorage` held four keys including
+`canvas:jizhang:draft`, which is the half-typed value the edit-remount rule asked for, saved
+without being told to.
+
+Nearly filed a bug on the way. Clicking a checklist item with `.click()` left the counter at
+`已完成 0/32` and `done:{}` — looked like broken state wiring. Dispatching the full
+`pointerdown → mousedown → pointerup → mouseup → click` sequence moved it to `2` with both keys
+persisted. **The card was fine; the synthetic click was not.** Same lesson as the crash-vs-refusal
+one, from the other direction: verify the instrument before believing what it says about the
+subject.
