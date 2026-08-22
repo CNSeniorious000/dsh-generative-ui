@@ -3310,3 +3310,31 @@ across an inline early return. That clause is noise added for the compiler, in a
 whole style is the opposite — so the extraction was reverted. **The last 12 conditions stay
 untested rather than making the code worse to reach them**, and any real coverage there needs
 a DOM in tests, which is a dependency decision rather than a cleanup.
+
+### The streaming-JSON rule is fully effective (2026-08-23)
+
+`skill.ts` spends a paragraph on the failure mode of `partial-json`: every field is optional
+until the stream ends, so one `item.difficulty.includes(…)` on an early frame throws inside
+render and unmounts the whole card mid-generation. It calls this "the failure mode of this API,
+not an edge case".
+
+**21 corpus cards import `partial-json`. All 21 guard correctly. Zero unguarded accesses.** The
+forms vary — `Array.isArray(d?.steps) ? … : []`, `if (data && Array.isArray(data.items))`,
+`data.items.filter((it) => it && it.name)`, plus a `try/catch` around the parse in every one —
+but the rule lands every time. That is the strongest evidence in the corpus that a skill
+paragraph changes what gets written, and it is worth knowing before anyone "simplifies" that
+section for length.
+
+My first pass reported **7 of 21 at risk**, which would have been the largest quality problem
+found today. The detector looked for `??` or `?.` on the exact property path and knew nothing
+about `Array.isArray(x)`, `if (obj?.names)`, or a `try/catch` two lines up — every single hit
+was a false positive, confirmed by reading all seven. **A safety-property detector that only
+recognises the idiom you happened to think of measures your imagination, not the code**, and
+its false positives all point the same direction: toward a problem that is not there.
+
+Two other corpus checks with nothing to report, recorded so they are not re-run: unquoted CSS
+units (`fontSize: 11px`) appear in **1 of 362** cards — the other two matches were `gap:8px}`
+inside CSS strings. And the set of bare specifiers real cards import is small and stable: react
+345, recharts 49, lucide-react 30, partial-json 21, then minimatch/motion/micromatch/
+react-markdown/remark-gfm/semver/picomatch in single digits. All eleven resolve on esm.sh, none
+pulls a `node:` builtin.
