@@ -1489,3 +1489,24 @@ Third runtime finding in a row from reading the corpus as a specification, and t
 three is the same — **the failure is invisible in the small case.** One short English answer
 spreads to a few dozen iterations and nobody notices; the cost only appears at the length and the
 language the examples actually target.
+
+### Auditing the `.d.ts` files the model actually reads (2026-08-22)
+
+`types/check.ts` proves the declarations stay *assignable* to the implementation. It says nothing
+about whether the prose in them is true, and that prose is the only thing the model has when it
+writes a card. Checked every claim in the four files against the code:
+
+- 15-second exec timeout — matches `EXEC_TIMEOUT_MS = 15_000`
+- 8MB `readBytes` cap — matches `MAX_BINARY`
+- `FS_SANDBOX_DENIED` on a read-only write — the code maps that code to 403
+- *"`scripts/check-types.ts` asserts the two stay assignable"* — **that file does not exist**; it
+  is `types/check.ts`. A dead pointer in the one document written for the model to follow.
+- *"`size` is absent for directories"* — unverifiable from here (see below), so reworded to
+  *treat it as optional and draw nothing rather than `0 B`*, which is true either way.
+
+Trying to verify the `size` claim ran into the sandbox: `GET /dsh-generative-ui/fs?...&list=1`
+against a live web instance returns **403** with no session, confirming §"addressed by session
+id, not cwd" from the other direction. The route cannot be exercised without a real conversation,
+so that one waits for quota.
+
+`types/*.d.ts` needs the same suspicion as any other measurement: **assignable is not accurate.**

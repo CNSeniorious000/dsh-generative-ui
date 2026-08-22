@@ -2,7 +2,7 @@
 declare module "$dsh/fs" {
   /** The file's text. Rejects when it does not exist or the session may not read it. */
   export function readFile(path: string): Promise<string>;
-  /** One directory entry. `size` is absent for directories. */
+  /** One directory entry. Treat `size` as optional — draw nothing rather than `0 B` when it is missing. */
   export type DirEntry = { name: string; type?: "file" | "directory"; size?: number };
   /** A directory's entries — enough to draw a tree without probing each name. */
   export function readdir(path: string): Promise<DirEntry[]>;
