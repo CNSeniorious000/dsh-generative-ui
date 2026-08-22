@@ -1985,3 +1985,28 @@ Four properties they share:
 
 Which is why `scripts/eval.sh` prints `bytes=` and `tools=[]` next to the count, and why a zero
 is not evidence until the reply it came from has been read.
+
+### Four models, one table (2026-08-22)
+
+| | terra | venti | sonnet | glm |
+| --- | --- | --- | --- | --- |
+| 23 fixtures | **23/23** | **23/23** | 21/23 | 22/23 |
+
+**Nineteen of twenty-three cells are identical across all four.** The four that differ:
+
+- **sonnet, `.env`** — ran 13 `bash` calls looking for a `.env`, found none (the seed workspace
+  genuinely has none), and asked where it lives. Its reply then **promises the card**: *"每行一个
+  变量、值默认打码、缺的键高亮置顶、改完给出 diff 预览再落盘"*. The rule fired; the fixture
+  failed to supply the file.
+- **sonnet, `二分查找的原理是什么`** — prose. The only real miss in the grid.
+- **glm, `什么是尾递归优化`** — a card, and inspecting it, a step-through of the stack. Same
+  over-specified fixture as noted before.
+- **glm `.env` → canvas, sonnet `git 历史` → canvas** — shape choices, not errors.
+
+So: **one genuine disagreement out of 92 cells.** Two models agree completely with rules tuned on
+neither, and the two that differ do so in ways that are either the fixture's fault or a legitimate
+choice.
+
+The `.env` row is worth keeping as a caution about fixtures: `run-fixtures.sh` passes one seed
+directory to every prompt, and a prompt that names a file needs that file. sonnet is the only
+model that **checked** rather than assuming — which is why it is the only one the gap showed up on.
