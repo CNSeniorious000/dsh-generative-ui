@@ -35,6 +35,7 @@ def score_for(prompt, line):
     return (found.group(1), found.group(2)) if found else None
 
 
+conflicts = 0
 for p, rows in sorted(hits.items()):
     if len({t for t, _ in rows}) < 2:
         continue
@@ -48,7 +49,11 @@ for p, rows in sorted(hits.items()):
         num, den = got
         firsts.setdefault(den, {}).setdefault(num, []).append((title, line))
     for group in (v for v in firsts.values() if len(v) > 1):
+        conflicts += 1
         print("==", p)
         for lines in group.values():
             for t, l in lines:
                 print("   ", t[:44], "|", l)
+
+# Non-zero so `bun run check` fails on a contradiction rather than printing one and moving on.
+sys.exit(1 if conflicts else 0)
