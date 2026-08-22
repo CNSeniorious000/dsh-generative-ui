@@ -3354,3 +3354,14 @@ The one rule I could not check is **"a bordered box inside a bordered box"**: co
 1px` occurrences flags 130 of 362, which measures how many cards draw borders, not how many
 nest them. Left unmeasured rather than reported — same failure as the streaming-JSON detector,
 caught before it produced a number this time.
+
+The two *suppression* rules — "do not restate the reply as a card", "do not decorate an answer"
+— are harder to check because they show up as cards that were never written, but the residue is
+testable: a card with no interaction at all. **22 of 362 are non-interactive, and 21 of those
+are charts** (recharts, or hand-drawn SVG), which is a picture answering better than a
+paragraph, not decoration. The 22nd is a CSS bar chart comparing three languages — a
+comparison, which the resident prompt names as card-worthy in the same breath.
+
+So **zero decorative cards in the corpus**, and the check that would have found them is "static
+AND draws nothing", not "static". Filtering on interaction alone would have reported 22
+violations of a rule nothing violated.
