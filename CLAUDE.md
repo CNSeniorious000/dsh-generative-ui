@@ -3664,9 +3664,20 @@ end to end rather than argued:
    module imports the **same** dependency URL that already rejected. Nothing re-fetches.
 
 The three-retry 0.4/0.8/1.2s backoff was written against a real esm.sh cold start and cannot
-recover from one. A fix has to change the URL (a `?retry=n` parameter) or the document; nothing
-else reaches the network. Not fixed here — `TRANSIENT_LOAD` is unreachable anyway since no
-caller passes `onError` — but it is now a known-dead path rather than a plausible-looking one.
+recover from one. **Fixed.** `retryRef` now re-runs `mergeFallbackImports` and appends `&ui4a-retry=<attempt>` to
+every `https://esm.sh/` entry before re-rendering; blob URLs are left alone, and esm.sh returns
+200 for the unknown parameter.
+
+Proved end to end with a probe page that imports a missing module three times — same URL twice,
+then a busted URL — and counts **`PerformanceObserver` resource entries**: `2 entries for 3
+imports`, the same-URL retry making no request and the busted one making a real one.
+
+That measurement method is the part to remember. My first probe wrapped `window.fetch` and
+reported "0 network requests" for *both* retries, which I read as confirmation. **A module
+`import()` does not go through `window.fetch`** — the counter could not see any module load at
+all, so it reported zero for the working case too. A zero from an instrument that cannot observe
+the thing is not a measurement, and it agreed with my hypothesis, which is exactly when it is
+hardest to notice.
 
 Two consequences worth carrying: a browser-side retry must change the specifier or the document,
 and **a failure that reproduces identically four times in a row is evidence about caching, not
