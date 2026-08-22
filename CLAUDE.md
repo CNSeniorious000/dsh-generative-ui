@@ -1183,7 +1183,7 @@ whether the phrasing itself already carried a signal, so: same subject, four wor
 | `二分查找是怎么工作的` | **3/3** |
 | `给我讲讲快速排序的过程` | **3/3** |
 | `二分查找的原理是什么` | 1/3 |
-| `什么是二分查找` | 1/3 |
+| `什么是二分查找` | 2/3 |
 
 **Nothing about the subject changed — only the phrasing did.** 怎么工作 and 过程 already work;
 什么是 and 原理 are the same wish worded as a dictionary lookup. That is a trigger visible in the
@@ -1193,7 +1193,7 @@ request, which is the property every rule that has held this session shares.
 | --- | --- | --- |
 | `二分查找的原理是什么` | 1/3 | **3/3** |
 | `什么是快速排序` | 1/3 | **3/3** |
-| `什么是二分查找` | 1/3 | **5/6** |
+| `什么是二分查找` | 2/3 (4/6 over two batches) | **5/6** |
 | `什么是闭包？` | prose 3/3 | prose **3/3** |
 | `什么是尾递归优化` | prose 3/3 | prose 5/7 |
 
@@ -1305,3 +1305,16 @@ Nearly filed a bug on the way. Clicking a checklist item with `.click()` left th
 persisted. **The card was fine; the synthetic click was not.** Same lesson as the crash-vs-refusal
 one, from the other direction: verify the instrument before believing what it says about the
 subject.
+
+### Cross-checking the record against itself (2026-08-22)
+
+With 46 sections of measurements, a number transcribed wrong is more dangerous than a missing
+one — every later reader, including a research agent, treats it as fact. Scanned CLAUDE.md for
+any prompt scored differently in two places: one real conflict, `什么是二分查找` recorded as
+both 2/3 and 1/3.
+
+The surviving output settles it: two batches of three, `fence=1` twice each — **2/3 both times,
+4/6 overall.** The 1/3 was a transcription slip while writing the second section up. Corrected.
+
+Cheap and worth repeating: group every backticked prompt that appears near an `N/M` and print the
+ones whose sections disagree.
