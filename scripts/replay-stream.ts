@@ -15,7 +15,9 @@ const hooks = (s: string) => (s.match(/\buse[A-Z]\w*\s*\(/g) ?? []).length;
 // `return` earlier in the file says nothing about whether the card paints yet.
 const defaultPaints = (s: string) => {
   const at = s.search(/export\s+default\s+function/);
-  return at !== -1 && /return\s*\(/.test(s.slice(at));
+  // `return (` is not enough: an effect's cleanup is `return () => {`, and a metronome writes
+  // several of those before any markup exists. Require a JSX tag right after the paren.
+  return at !== -1 && /return\s*\(\s*</.test(s.slice(at));
 };
 for (const path of process.argv.slice(2)) {
   const src = await Bun.file(path).text();

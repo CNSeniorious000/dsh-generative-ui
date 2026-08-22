@@ -1630,3 +1630,29 @@ Also worth recording as a **non**-finding: `给我推荐几个周末能做的菜
 not reach for `$dsh/ai`, and the reasoning defends it — *"the user asked for a curated few to
 browse, not for an open answer space"*. That is a fair reading, and unlike the Tokyo case in the
 skill it does not claim the knowledge is fixed. Left alone.
+
+### The metronome, and the sixth measurement artefact (2026-08-22)
+
+`给我个节拍器，能调速度那种` — 1/1, 280 lines, and it follows both rules written during the
+outage without being asked:
+
+- the `AudioContext` is created lazily **inside the click**, and `ctx.resume()` is called
+  without `await` — exactly what the *never settles* note is for;
+- `clearInterval` plus every pending `setTimeout` cleared in the effect's cleanup, and a separate
+  unmount effect that calls `close()`, commented 卸载时清理.
+
+It also uses lookahead scheduling (a 25ms poll against `nextNoteTime`), which is the correct way
+to build one and nothing told it to.
+
+Then `replay-stream.ts` reported **2 visible remounts** — a real-looking hit on a card whose hooks
+are all declared at lines 43–55, which is suspicious on its face. It was the probe again: my
+`paints` predicate matched `return (`, and an effect's cleanup is `return () => {`. A metronome
+writes several of those before any markup exists. Tightened to `return\s*\(\s*<`.
+
+All four cards on disk: **0 visible remounts.** Verified the probe still fires by feeding it a
+card whose second component gains a hook after the default export paints — it reports 1.
+
+**Sixth artefact today, and the second from this same probe.** The first version was too loose
+about *which* `return`, the second about *whose*. Both times the wrong answer was the alarming
+one, which is the direction that gets written up. A detector needs a known-bad input every time
+it changes, not just when it is written.
