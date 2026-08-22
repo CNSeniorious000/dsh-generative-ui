@@ -1136,3 +1136,39 @@ words but loses the run-up. **Reverted.** 162 tokens is not worth a rule that fi
 Two things to carry: **legibility to a human reader is not the objective function here**, and a
 refactor of prose is a behavioural change that needs the same 3-run treatment as a new rule.
 Nothing about the tidy version looked worse — that is why it had to be run.
+
+### The fifth escape, unresolved — and why the fix was worse (2026-08-22)
+
+Teaching prompts, 3 runs each in a populated workspace: `flex-grow/shrink/basis` 3/3,
+`JS reduce 怎么用` 3/3, `什么是二分查找` 2/3. The miss **quotes the rule and overrules it**:
+
+> *"The generative-ui guidance says 'concept with nothing to compute is the one thing prose
+> genuinely cannot convey.' But binary search is actually very well served by prose + a small
+> example. The user just asked 'what is binary search' — a definitional question."*
+
+Broadened to the `什么是X` shape: **4/9** across 二分查找 / 快速排序 / 哈希表. A real pattern,
+not a flap.
+
+The attempted fix drew the line at *rule vs process* — a closure is a rule you can state, binary
+search is a process that unfolds; if you are about to write 第一步…第二步, you have found a
+process. Measured:
+
+| | before | after |
+| --- | --- | --- |
+| 二分查找 | 1/3 | **3/3** |
+| 快速排序 | 1/3 | **3/3** |
+| 哈希表 | 2/3 | 2/3 |
+| 什么是闭包？ (must stay prose) | 3/3 prose | **2/3** |
+| 什么是尾递归优化 (must stay prose) | 3/3 prose | **2/3** |
+
+Two rescued, two broken. Net negative, so **reverted**; prose side back to 6/6 after.
+
+Why it failed is the useful part. Every rule that has worked this session keys on **something
+visible in the request** — an expression is handed over, a plan is asked for, a value is named as
+changing. *Rule vs process* is a property of **the answer**, so the model has to fetch the answer
+to apply it, and by then §"gathering data eats the turn" has already decided the shape. Worse, it
+is a judgement call, which makes it leak: 闭包 and 二分查找 are the same seven-character question,
+and pushing on one moved the other.
+
+**Recorded open, deliberately unfixed.** The right fix is not a longer sentence — it needs a
+trigger visible in the phrasing, and I do not have one yet.
