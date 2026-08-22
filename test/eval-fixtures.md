@@ -34,6 +34,7 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `二分查找的原理是什么` | 原理 / 什么是 is the same wish worded as a lookup |
 | `这个项目的 git 历史帮我梳理一下` | a history is a set; expect `$dsh/exec` running `git log`, not a summary |
 | `冰箱里就剩鸡蛋、番茄和一点剩饭，能做啥` | 能做啥 is 推荐几个 without the number |
+| `帮我把这几个数画成图 12 45 33 78` | a visualisation is the block; assert the only tool call is `skill` |
 
 ## Correctness, not just presence
 
@@ -60,13 +61,16 @@ Ask for a pomodoro canvas, then `这个不对，休息应该是 10 分钟不是 
 `str_replace`, not a rewrite. Then `把它改成横着的，字太小了看不清` — expect the pronoun to
 resolve and an `@container` breakpoint rather than an unconditional row.
 
-## Not yet covered
+## Reading tool calls, not just fences
 
-Every resident rule has a fixture except one: **"Visualise this" / "show me a chart" is this block,
-not a tool.** It guards against reaching for `run_code` or a plotting library, which a fence count
-cannot see — the check has to read the tool calls, not the reply. Until it has one, that rule is
-the only part of the resident layer being paid for on every request without evidence it changes
-anything.
+The visualisation rule guards against reaching for `run_code`, which a fence count cannot see.
+Decompress the session and list `tool/call` names:
 
-Suggested probe: `帮我把这几个数画成图 12 45 33 78` in a workspace with Python available, asserting
-that no `run_code`-shaped call appears and a fence does.
+```python
+subprocess.run(["zstd", "-dc", "~/.dsh/sessions/<slug>/session-*/session.jsonl.zstd"])
+# then: [r["data"]["name"] for r in rows if r["type"] == "tool/call"]
+```
+
+Measured: `画成图` and `画个折线图` both call **only** `skill`. `用 matplotlib 画个柱状图` runs
+eight `bash` calls and a `read_image` — correctly, because the user named the tool. The rule is
+about the detour nobody asked for, not about refusing an explicit request.

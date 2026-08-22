@@ -1687,3 +1687,22 @@ scheduler plus the probe's own waits. Identical either way, so the cleanup works
 
 **Seventh artefact, first one caught before it was written down** — because the control was run
 first this time rather than after the result looked alarming.
+
+### The last unmeasured rule, and where it correctly stops (2026-08-22)
+
+`"Visualise this" is this block, not a tool` was the one resident rule with no fixture, because a
+fence count cannot see the failure it prevents. Read the session's `tool/call` names instead:
+
+| prompt | tool calls | fence |
+| --- | --- | --- |
+| `帮我把这几个数画成图 12 45 33 78` | `[skill]` | yes |
+| `这组数据画个折线图看看 3,7,2,9,5,8` | `[skill]` | yes |
+| `用 matplotlib 画个柱状图 10 20 30` | `[bash ×6, read_image, bash]` | yes |
+
+The first two quote the rule in the reasoning and go straight to the block. The third is the
+interesting one and it is **right**: the user named the tool, so it produced `chart.png`, showed
+the script for reuse, *and* added an interactive card on top. The rule is about the detour nobody
+asked for, not about refusing an explicit request — and it draws that line by itself.
+
+Every resident rule now has a fixture. The method for this one is written into
+`test/eval-fixtures.md`, since "assert no `run_code`" needs the transcript, not the reply.
