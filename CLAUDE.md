@@ -80,7 +80,7 @@ Registration must be wrapped in `ctx.slots.inject(name, () => ...)`: these slots
 
 The loader's `claimStyles(id)` runs `document.querySelectorAll('style:not([data-plugin])')` and **claims every match** for whichever plugin is currently materializing. So every `<style>` this plugin appends must carry `data-plugin="dsh-generative-ui"` itself, or HMR and unload will tear each other's styles out. `injectStyles` in `canvas/mount.ts` is the one place that appends one.
 
-**There is no CSS framework here, and that is a deliberate split from the playground.** The panel is hand-written CSS in `panel.css` (compiled into `panel-css.ts` at build time) over the host's `--dsw-alias-*` tokens, and §3.7's prompt tells the model to write inline `style` from those same tokens. Measured across 16 canvases this prompt produced: **0 utility classes, 592 inline `style` objects** — so there is nothing for an atomic-CSS engine to generate, and nothing needing class-name scoping.
+**There is no CSS framework here, and that is a deliberate split from the playground.** The panel is hand-written CSS in `panel.css` (compiled into `panel-css.ts` at build time) over the host's `--dsw-alias-*` tokens, and §3.7's prompt tells the model to write inline `style` from those same tokens. Measured across 16 canvases this prompt produced: **0 atomic/utility classes** (Tailwind-shaped ones — the model does write semantic class names like `wrap`/`score-box` alongside its own `<style>` block, 37 of them across the three cards in `test/cards`, which is not what an atomic engine would generate) **and 592 inline `style` objects** — so there is nothing for an atomic-CSS engine to generate, and nothing needing class-name scoping.
 
 `ui4a-playground` runs a real UnoCSS generator in the browser (`ui4a-playground/src/runtime/uno.ts`) because its prompt teaches Tailwind v4 syntax, and the model's classes therefore do not exist in any build-time stylesheet. Worth reading before dismissing it — it is **scoped**, not the global runtime §5 warns about: passing a string as `important` makes UnoCSS treat it as a selector prefix, so every rule comes out `.ui4a-root .hidden{…}`. That scoping is not optional, and their comment records why: the runtime sheet is appended last, so an unscoped `hidden` from generated code overrode the app's own `@md:flex` and made a sidebar vanish.
 
@@ -262,7 +262,7 @@ not a JSON payload.
 
 Generated UI doesn't know the host is dark by default and will paint white cards onto a dark app. The fix isn't runtime CSS rewriting — it's **listing the 14 `--dsw-alias-*` semantic tokens in the system prompt** and stating flatly that literal colors are never allowed. Measured: 106 token uses across the generated code, zero literal hex.
 
-Data visualization is the one exception — chart series need their own hues to be distinguishable, and the prompt carves that out explicitly.
+Data visualization is the stated exception — chart series need their own hues to be distinguishable — and **a thing's own identity is the same case**, which the wording did not originally cover. Measured 2026-08-23 on the three cards in `test/cards`: 12-22 token uses each, and the 24 literal hexes are all `TILE_COLORS` in 2048 (the game's own palette) and the black and white of piano keys. `metro` has zero. So the rule holds where it should: chrome takes tokens, the subject keeps its colours.
 
 ## 4. Known traps
 
