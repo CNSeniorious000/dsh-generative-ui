@@ -90,7 +90,7 @@ If an atomic engine is ever added anyway, the trap waiting is that the host them
 
 See `scripts/build.ts`. All four let the plugin **build fine and blow up at runtime**, with errors far from their cause, which is why `bun run smoke` catches every one of them without opening a browser:
 
-- **`external` lists only the platform table, and mind that bun matches sub-paths too.** Listing `react-dom` also externalizes `react-dom/server` — which is **not** in the platform table, so materialization throws `missed the module table`. A plugin that resolves it to an absolute path sidesteps specifier matching. (bun defaults to `--packages bundle`, so unlike tsdown there's no need for a reverse `noExternal`.)
+- **`external` lists only the platform table, and mind that bun matches sub-paths too.** Verified 2026-08-23 by removing `bundleReactDomServer` from `plugins:` and rebuilding: `require("react-dom/server")` appears in `lib/client.js` and `renderToString` drops from 4 occurrences (the inlined implementation) to 1 (the call site alone). Put the plugin back and only the two platform modules are required. The one trap in this file that held exactly as written. Listing `react-dom` also externalizes `react-dom/server` — which is **not** in the platform table, so materialization throws `missed the module table`. A plugin that resolves it to an absolute path sidesteps specifier matching. (bun defaults to `--packages bundle`, so unlike tsdown there's no need for a reverse `noExternal`.)
 - **The `browser` resolution condition must be explicit.** `react-dom`'s `exports["./server"]` only points at `server.browser.js` under that condition; otherwise you get the Node build and drag `require("stream"/"url"/"util")` into a browser bundle.
 - **`define` away `import.meta.url`.** `@esm.sh/tsx`'s entry reads it. We always pass the wasm path explicitly, so a constant is enough.
 
@@ -2627,3 +2627,21 @@ setting where the metric is a boolean.
 Cleanup that this session's own record demanded: the probe server was killed by pid (§"A dev server
 outlived its session by a day"), the browser task space closed by name, and the temporary probe in
 `src/client/index.ts` reverted rather than left behind a comment.
+
+### One trap that was exactly right (2026-08-23)
+
+After three rotted citations and three wrong conclusions, §2.6's `external` sub-path trap holds
+verbatim. Removing `bundleReactDomServer` and rebuilding puts `require("react-dom/server")` into
+`lib/client.js` — a specifier the shell's module table does not carry — and `renderToString` falls
+from 4 occurrences to 1, the difference between an inlined implementation and a bare call to
+something that will not resolve.
+
+Worth recording alongside the failures, because the audit would otherwise read as "old notes are
+unreliable". The distinguishing feature is what the entry cites: this one names a **behaviour you
+can reproduce with a build** (`external` matches sub-paths), while the three that rotted named
+packages, error codes, and a byte count — identifiers that go stale without anything failing.
+
+A method slip on the way, caught by its own assertion: my first patch used a regex that matched
+nothing, and the script printed the *unmodified* build's output. It looked like "removing the
+plugin changes nothing". **When a patch step fails, everything printed after it is about the old
+state** — the `assert` in the patch is what stopped me reading it as a result.
