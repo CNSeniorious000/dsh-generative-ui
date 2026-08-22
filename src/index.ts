@@ -320,7 +320,8 @@ const MAX_BINARY = 8 * 1024 * 1024;
  * Same `cwd` allowlist as the canvas route, and for the same reason: any page the user has
  * open can POST here, so without it this is an open model proxy for anything on the machine.
  */
-async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+/** Exported for `test/ai-route.test.ts`. */
+export async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== "POST") return void res.writeHead(405).end();
   const url = new URL(req.url ?? "/", "http://x");
   const cwd = url.searchParams.get("cwd");
