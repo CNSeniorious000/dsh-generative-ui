@@ -3766,3 +3766,12 @@ Three traps, each of which produced a passing test that measured nothing:
 The third is the one worth generalising: **a test for "X causes Y" must make X happen during
 the observation, not before it.** All three were caught the same way, by mutating the code the
 test claimed to cover and finding it still green.
+
+A fourth, from the last two conditions, took five attempts: **teardown produced the same
+observable as the behaviour under test.** The panel collapses the column when its last canvas
+goes away (`setWidth(0)`, restoring the frame's original padding) — but `dispose` restores that
+padding too, so the working code and the version with the collapse *deleted* both end at `8px`.
+Asserting on the final padding passed three times running. Recording every width change shows
+the real difference: `[420, 0, 0]` working versus `[420, 0]` broken, and the assertion has to be
+"a collapse happened **before** teardown" (`widths.slice(0, -1)`). **When cleanup does the same
+thing as the feature, the end state cannot distinguish them — only the sequence can.**
