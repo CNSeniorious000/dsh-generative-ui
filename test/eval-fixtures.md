@@ -54,3 +54,14 @@ read 1 once in seven while its true rate was 0, which nearly attributed a regres
 Ask for a pomodoro canvas, then `这个不对，休息应该是 10 分钟不是 5 分钟` — expect a one-line
 `str_replace`, not a rewrite. Then `把它改成横着的，字太小了看不清` — expect the pronoun to
 resolve and an `@container` breakpoint rather than an unconditional row.
+
+## Not yet covered
+
+Every resident rule has a fixture except one: **"Visualise this" / "show me a chart" is this block,
+not a tool.** It guards against reaching for `run_code` or a plotting library, which a fence count
+cannot see — the check has to read the tool calls, not the reply. Until it has one, that rule is
+the only part of the resident layer being paid for on every request without evidence it changes
+anything.
+
+Suggested probe: `帮我把这几个数画成图 12 45 33 78` in a workspace with Python available, asserting
+that no `run_code`-shaped call appears and a fence does.
