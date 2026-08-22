@@ -6,6 +6,19 @@ prompt changes — it is the only thing that catches a new rule eating its neigh
 Count BOTH fences in the reply AND files under `.dsh/ui4a/canvases/`. Counting only fences
 misses every canvas, which is the shape most likely on requests about a whole set of things.
 
+## Whatever the prompt names has to be there
+
+Three separate investigations on 2026-08-23 chased a zero that was the fixture's fault, not the
+model's: `.env` against a seed with no `.env`, `还有多久发布` against a workspace with no project,
+and `把咱们这次聊的东西整理成小册子` in a headless single turn, which has no conversation to
+integrate. Every time the reply was correct — it said what was missing and often described the
+card it would have built — and every time the run looked like a refused rule.
+
+`run-fixtures.sh` passes ONE seed directory to every prompt. A prompt that names a file, a repo,
+or prior turns needs its own seed, and the check is cheap: read the prompt, ask what it points at,
+confirm that thing is on disk before the run. A short reply (under ~800 bytes) on a prompt that
+should have produced UI is the tell — `eval.sh` prints `bytes=` for this.
+
 ## Must stay prose
 
 | prompt | why |

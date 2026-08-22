@@ -2389,3 +2389,31 @@ means something else inside the system under test, and scored its zero against t
 The general lesson, which is new: **a prompt is not a neutral probe.** It is interpreted by a
 harness with its own tools and vocabulary, and a fixture that collides with one measures the
 collision. Check what a prompt means *to dsh* before reading its result as a fact about the rules.
+
+### The sub-page contract works and the model does not reach for it (2026-08-23)
+
+`docs/examples.md:1260` is the larger probe of the gap fixed earlier today: not one relative
+import but a whole tree plus a router. Its own wording — *「把咱们这次聊的东西整理成一个能翻页的
+小册子」* — scored 0/3, and for the third time today the fixture was the problem: **there is no
+"this conversation" in a headless single turn.** The model refused to invent material and named
+exactly what it would build. Rewritten against a real `notes.md` with five `##` sections:
+
+**3/3 canvases**, all correct in shape — `localStorage` for the page position, `height: 100%`,
+`@container`, and the five topic names **absent from the source**, because the card calls
+`readFile("notes.md")` and parses the headings itself rather than pasting in what the model read.
+
+**And all three are a single file** of 7.8–10.6KB. Nobody used a sub-directory. So the contract
+being usable did not make it used: at this size one file is simpler and that judgement is right.
+The path the morning's fix opened is exercised only when the model reaches for it on its own,
+which it does (`tarot.ui4a.tsx` was unprompted) but not on demand. **Capability available and
+capability used are separate measurements, and only the first one is up to us.**
+
+A screen was missing on that path and is now in `compile-cards.ts`: a card with a relative import
+compiles cleanly whether or not the file it names exists, which is the same "clean build, blank
+card" family as the three screens already there. `DANGLING-IMPORT`, verified in three states —
+missing child exits 1, present child exits 0, the real cards exit 0.
+
+**The fixture rule this earns**, having cost three separate investigations today (`.env` with no
+file, `还有多久发布` with no repo, this one with no conversation): **whatever the prompt refers to
+has to exist in the workspace before the run, not be discovered missing from the reply.** Each
+time, the model's answer was correct and the zero was mine.

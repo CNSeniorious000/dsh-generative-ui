@@ -9,7 +9,7 @@
  * which is exactly backwards.
  */
 import { normalizeGeneratedTsx } from "partial-tsx";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
 
@@ -29,7 +29,15 @@ for (const f of cardsIn(dir)) {
     // difference is what follows the bracket — an index expression, never an immediate `]`.
     const subscript = /<[A-Z]\w*\[[^\]]+\]/.test(src) && !/<[A-Z]\w*\[\]/.test(src);
     const vw = /100v[wh]|position:\s*["']?fixed/.test(src);
-    const flags = [shadow && "SHADOWED-EXPORT", subscript && "JSX-SUBSCRIPT", vw && "VIEWPORT-UNITS"].filter(Boolean);
+    // A relative import only resolves because `canvas/subpages.ts` rewrites it to a blob URL
+    // before compiling — `blob:` cannot host one otherwise (CLAUDE.md §3). A card with one is
+    // fine, but the file it names has to exist, and this compiles cleanly either way.
+    const relatives = [...src.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*)["'](\.[^"']*)["']/g)].map((m) => m[1]);
+    const dangling = relatives.filter((specifier) => {
+      const base = `${dir}/${specifier.replace(/^\.\//, "")}`;
+      return ![".tsx", ".ts", "/index.tsx", "/index.ts", ""].some((suffix) => existsSync(base + suffix));
+    });
+    const flags = [shadow && "SHADOWED-EXPORT", subscript && "JSX-SUBSCRIPT", vw && "VIEWPORT-UNITS", dangling.length > 0 && `DANGLING-IMPORT ${dangling.join(" ")}`].filter(Boolean);
     console.log(`${f.padEnd(22)} ok  ${(out.code.length/1024).toFixed(1)}kb  ${flags.length ? "⚠ " + flags.join(",") : ""}`);
     if (flags.length) bad++;
   } catch (e) {
