@@ -25,7 +25,7 @@ let bad = 0;
 for (const path of paths) {
   const src = await Bun.file(path).text();
   const step = Math.max(100, Math.floor(src.length / 60));
-  let prev = -1, changes = 0, late = 0, frames = 0, broken = 0;
+  let prev = -1, painted = false, changes = 0, late = 0, frames = 0, broken = 0;
   for (let n = step; n <= src.length; n += step) {
     let out: string;
     try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
@@ -37,8 +37,14 @@ for (const path of paths) {
     // normalize.
     try { compileCard("f.tsx", out) } catch { broken += 1 }
     const h = hooks(out);
-    if (prev !== -1 && h !== prev) { changes += 1; if (defaultPaints(out)) late += 1 }
+    // `painted` is the PREVIOUS frame's state, deliberately. A hook and the card's first
+    // markup arriving in the same frame is not a visible remount — there was nothing on
+    // screen to blank. Testing the current frame counted every card whose `useState` and
+    // `return (<` land in one chunk, which is most of them: 35 of 362 real cards were
+    // reported as late remounts and every one was this.
+    if (prev !== -1 && h !== prev) { changes += 1; if (painted) late += 1 }
     prev = h;
+    painted ||= defaultPaints(out);
   }
   if (late > 0 || broken > 0) bad += 1;
   console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${late ? "  <-- visible remount" : ""}`);
