@@ -2261,3 +2261,30 @@ checked: reverting the dependency guard fails it and nothing else.
 One more instrument lie, the twelfth today and the first self-inflicted: `rg -rn 'CanvasPanel'`
 printed the filename as `n.tsx`. `-r` is *replace*, and it had eaten the `n`. **An unfamiliar
 flag combination is a measurement instrument like any other.**
+
+### `$dsh/exec` had no way to cancel, and the server was already waiting for one (2026-08-23)
+
+`docs/examples.md:1284` records the gap: a card that polls a command cannot cancel the previous
+run. Checked rather than trusted, and the interesting half is that **the server side was already
+complete** — `src/index.ts:278` hangs an `AbortController` off `req.on("close")` and passes its
+signal into `ctx.shell.resolve`. Killing the command really works; only the client never offered
+the handle. `bash(command, { signal })` now forwards it to `fetch`.
+
+**And the type checker that was supposed to guard this has a blind spot.** `types/check.ts` says
+it "asserts the hand-written `$dsh/*` declarations still describe what `bind()` returns". It does
+not: TypeScript cannot import an ambient `declare module` as a value type, so the file compares a
+**hand transcription** against the implementation. Measured — rewriting `exec.d.ts`'s
+`bash(command: string)` to `bash(command: number)` leaves `tsc` completely silent.
+
+What it does catch is real: a legal-but-narrower implementation (`{ signal?: never }`) fails at
+`types/check.ts:34` naming `exec.bash` exactly. So the file guards implementation drift and not
+declaration drift, and that limit is now written at the top of it.
+
+Two method notes:
+
+- **The first mutation did not count.** Dropping the whole parameter produced `Cannot find name
+  'options'` — an ordinary unbound-identifier error from the function body, not the assertion.
+  A mutation has to leave the code legal, or it tests the compiler rather than the check.
+- `types/*.d.ts` was audited once before for prose accuracy (§"Auditing the `.d.ts` files the
+  model actually reads"). This is the structural version of the same finding: **the file the
+  model reads is not the file the gate reads.**

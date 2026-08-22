@@ -218,6 +218,14 @@ someone, give it a visible pause as well — a demo you cannot stop is a demo yo
 with \`{stdout, stderr, exitCode, truncated, timedOut}\`. It runs under the session's own sandbox
 mode, so it opens nothing your own bash tool has not already opened.
 
+**A card that re-runs a command needs \`signal\`.** Polling on a timer, or running one per
+keystroke, stacks a second command on top of a slow first — and the panel then paints whichever
+finishes last, which is not necessarily the newest. Pass an \`AbortController\`'s signal and abort
+the previous run: it kills the command itself, not just your wait. The abort rejects, and that
+one rejection is not a failure — \`if (error.name === "AbortError") return;\` before you show
+anything. In an effect, abort in the cleanup, and stop polling on \`document.hidden\` so a canvas
+nobody is looking at is not shelling out every two seconds.
+
 **A non-zero exit resolves.** Check \`exitCode\` and show what the command said —
 \`git status\` failing outside a repo is a thing the card should display, not an
 exception to swallow. Only a failure to run at all rejects.

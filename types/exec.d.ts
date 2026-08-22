@@ -7,6 +7,11 @@ declare module "$dsh/exec" {
    *
    * A non-zero exit RESOLVES — check `exitCode` rather than catching. Only a failure to run
    * at all rejects. Commands are killed after 15 seconds.
+   *
+   * Pass a `signal` when the card runs commands on a timer or per keystroke: aborting kills
+   * the command itself, not just the wait, so a slow run cannot pile up behind the next one.
+   * An aborted call REJECTS with an `AbortError` — the one rejection that is not a failure,
+   * so ignore it rather than showing it (`if (e.name === "AbortError") return`).
    */
-  export function bash(command: string): Promise<ExecResult>;
+  export function bash(command: string, options?: { signal?: AbortSignal }): Promise<ExecResult>;
 }

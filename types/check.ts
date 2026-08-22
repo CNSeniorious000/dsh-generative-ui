@@ -10,7 +10,13 @@ import type { bind } from "../src/client/runtime/bindings.ts";
 
 type Bound = ReturnType<typeof bind>;
 
-/** What the three `.d.ts` files declare, transcribed. Keep in step with them, not with `bind`. */
+/**
+ * What the `.d.ts` files declare, TRANSCRIBED BY HAND. The `.d.ts` themselves are not read
+ * here — TypeScript cannot import an ambient `declare module` as a value type — so this
+ * transcription is the thing being checked, and editing a `.d.ts` alone changes nothing.
+ * Verified: replacing `bash(command: string)` with `bash(command: number)` in exec.d.ts
+ * leaves `tsc` silent. Keep it in step with the `.d.ts` by hand, not with `bind`.
+ */
 type Declared = {
   chat: { sendMessage: (text: string) => void };
   ai: { streamText: (options: { prompt: string; system?: string } | string) => AsyncIterable<string> };
@@ -20,7 +26,7 @@ type Declared = {
     readBytes: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
     writeFile: (path: string, content: string) => Promise<void>;
   };
-  exec: { bash: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: { stdout: boolean; stderr: boolean }; timedOut: boolean }> };
+  exec: { bash: (command: string, options?: { signal?: AbortSignal }) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: { stdout: boolean; stderr: boolean }; timedOut: boolean }> };
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one
