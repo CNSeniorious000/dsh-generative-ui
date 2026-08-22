@@ -158,7 +158,8 @@ type FsTargetLike = { targetKey: unknown; displayPath: string };
  * The `cwd` allowlist is still required, for the reason the canvas route documents: any page
  * the user has open can call this, so without it the workspace is not the workspace.
  */
-async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+/** Exported for `test/fs-route.test.ts`. */
+export async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? "/", "http://x");
   const cwd = url.searchParams.get("cwd");
   const path = url.searchParams.get("path");
