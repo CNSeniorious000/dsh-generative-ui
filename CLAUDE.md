@@ -1535,3 +1535,23 @@ So the good behaviour is not luck, but it is **conditional on hooks being declar
 place**. A hook added after the markup, or one behind an `if` that flips, moves a remount into the
 middle of a visible card. Written up in the skill with the measurement, since "put your hooks at
 the top" reads as style advice until you know it costs a redraw.
+
+### Replaying every card, and a probe bug that read as a card bug (2026-08-22)
+
+Turned the prefix replay into `scripts/replay-stream.ts` and ran it over the three canvases on
+disk. First result: `guitar-start` showed **4 of 4** hook changes landing after a `return` existed
+— exactly the visible blank-and-rebuild the new skill section warns about, found in the wild.
+
+It was wrong. The file defines a helper component before the default export, so its `return (` at
+line 128 satisfied the probe long before the *card* could paint; the default export's own hooks
+start at line 166. Changed the predicate to "the default export has begun returning markup":
+
+| card | hook changes | after the card paints |
+| --- | --- | --- |
+| guitar-start | 4 | **0** |
+| jizhang | 2 | 0 |
+| running-plan | 3 | 0 |
+
+All clean. **Fifth time today a measurement artefact impersonated a finding** — and the first one
+where the tell was that the result was too interesting: a rule written an hour earlier, confirmed
+on the first card tried. That is worth distrusting on its own.

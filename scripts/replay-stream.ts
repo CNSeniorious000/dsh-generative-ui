@@ -1,0 +1,30 @@
+/**
+ * Replays a card as streamed prefixes and reports whether any remount lands on a visible card.
+ *
+ * The renderer keeps state only while the hook signature holds, so a hook gained mid-stream
+ * remounts the tree. Early ones are free; one after the card paints is a visible blank-and-rebuild.
+ *
+ * Usage: bun scripts/replay-stream.ts <card.tsx>...
+ */
+import { normalizeGeneratedTsx } from "partial-tsx";
+const hooks = (s: string) => (s.match(/\buse[A-Z]\w*\s*\(/g) ?? []).length;
+// "visible" means the DEFAULT export has begun returning markup — a helper component's
+// `return` earlier in the file says nothing about whether the card paints yet.
+const defaultPaints = (s: string) => {
+  const at = s.search(/export\s+default\s+function/);
+  return at !== -1 && /return\s*\(/.test(s.slice(at));
+};
+for (const path of process.argv.slice(2)) {
+  const src = await Bun.file(path).text();
+  const step = Math.max(100, Math.floor(src.length / 60));
+  let prev = -1, changes = 0, late = 0, frames = 0;
+  for (let n = step; n <= src.length; n += step) {
+    let out: string;
+    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
+    frames += 1;
+    const h = hooks(out);
+    if (prev !== -1 && h !== prev) { changes += 1; if (defaultPaints(out)) late += 1 }
+    prev = h;
+  }
+  console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late}${late ? "  <-- visible remount" : ""}`);
+}
