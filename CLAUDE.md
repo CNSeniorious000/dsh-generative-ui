@@ -2932,3 +2932,25 @@ from one that is broken. The only thing that separated them here was a deliberat
 control (`/tmp/latehook.tsx`, a hook in a helper component below a long default export) —
 it fires, so the zero is a measurement. This is `verify-real-path-not-happy-path` again:
 success and "never ran" look identical from the outside.
+
+### Every screen now has a card that must trip it (2026-08-23)
+
+Running `compile-cards.ts` over the 362 real cards fired each of its three §4 screens exactly
+once — and one of the three was wrong. `JSX-SUBSCRIPT` matched `Record<Step["channel"],
+string>`: the discriminator was "an index expression that is not an immediate `[]`", which a
+type argument satisfies as readily as a JSX tag. What actually separates them is what follows
+the bracket — a JSX tag continues into attributes or closes (`/>`), a type argument continues
+into `,` or `>`. Retightened; the false positive is gone and the curated cards still pass.
+
+`SHADOWED-EXPORT` was a true positive: `export default function Pie` beside `import { Pie }
+from "recharts"`. `VIEWPORT-UNITS` was a true positive too. **1 real hit each in 362 cards** —
+the traps are real and rare, which is the correct shape for a screen and the reason none of
+them had ever been observed firing.
+
+So `test/cards-negative/` now holds one card per checker, each compiling cleanly and each
+*required* to be flagged, and both scripts exit non-zero if a control goes quiet. The screens
+moved into a shared `SCREENS` table so the control exercises the same predicate the checker
+does — a control that re-implements its rule proves only that two copies agree. Mutating
+`JSX-SUBSCRIPT` to `() => false` now fails `bun run check`; before today nothing in this repo
+could tell a working screen from a dead one. These cards are in `.oxlintrc.json`'s ignore
+list: deliberately-illegal JSX is not lintable source.
