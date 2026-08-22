@@ -3605,3 +3605,11 @@ The glob-in-JSX is the one that stays unscreenable: knowing `{ts,tsx}` was meant
 **`compile-cards.ts` now runs five screens, and three of them exist only because the cards were
 actually rendered.** Compiling proved 375 of 378 fine; mounting found 10 failures. That ratio is
 the argument for `render-cards.ts` being worth its browser dependency.
+
+Worth stating the negative result that came with it: **64 of 378 cards read external data**
+(`$dsh/exec`, `fs`, `ai`), and across all of them the empty-result class is **one card** — the
+same one. No unguarded `xs[0].field`, no `Math.max(...xs)` that would return `-Infinity` on an
+empty array. The model handles "the command returned nothing" correctly 63 times out of 64, and
+the skill's `partial-json` paragraph is not the only place that lands: this is the same discipline
+applied to a different source. A screen was still worth adding, because the one failure is a
+blank card with no message, but the rate does not argue for a prompt rule.
