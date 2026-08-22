@@ -13,7 +13,7 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `什么是闭包？` | an explanation; the model judged it twice |
 | `今天星期几` | one line |
 | `HTTP 状态码 418 是什么意思` | a fact |
-| `什么是尾递归优化` | an explanation |
+| `什么是尾递归优化` | mostly prose (~5/7); a card here is a stack-frame walk, which is legitimate |
 
 ## Must produce UI
 

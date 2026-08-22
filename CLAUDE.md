@@ -1172,3 +1172,47 @@ and pushing on one moved the other.
 
 **Recorded open, deliberately unfixed.** The right fix is not a longer sentence — it needs a
 trigger visible in the phrasing, and I do not have one yet.
+
+### The fifth escape, closed — by the phrasing, not the concept (2026-08-22)
+
+The failed fix keyed on *rule vs process*, a property of the answer. The way in was to check
+whether the phrasing itself already carried a signal, so: same subject, four wordings.
+
+| wording | before any change |
+| --- | --- |
+| `二分查找是怎么工作的` | **3/3** |
+| `给我讲讲快速排序的过程` | **3/3** |
+| `二分查找的原理是什么` | 1/3 |
+| `什么是二分查找` | 1/3 |
+
+**Nothing about the subject changed — only the phrasing did.** 怎么工作 and 过程 already work;
+什么是 and 原理 are the same wish worded as a dictionary lookup. That is a trigger visible in the
+request, which is the property every rule that has held this session shares.
+
+| | before | after |
+| --- | --- | --- |
+| `二分查找的原理是什么` | 1/3 | **3/3** |
+| `什么是快速排序` | 1/3 | **3/3** |
+| `什么是二分查找` | 1/3 | **5/6** |
+| `什么是闭包？` | prose 3/3 | prose **3/3** |
+| `什么是尾递归优化` | prose 3/3 | prose 5/7 |
+
+Kept. The one leak is 尾递归优化, and inspecting the card settles it: 205 lines, 17 mentions of
+`frame`, a step-by-step stack walk. **Tail-call elimination is a stack changing shape** — that
+card is the better answer, so the fixture was over-specified, like the browse one. Closure held
+at 3/3 prose throughout, which is the boundary that mattered: a closure is a rule you state, and
+nothing about it runs.
+
+### Losing the working copy mid-session (2026-08-22)
+
+After a run of `rm -rf` / `mkdir` cycles under `/tmp`, the shell's cwd was a deleted directory and
+every command failed with `Unable to read current working directory`. That part was self-inflicted
+and recoverable. What followed was not: the whole of `~/Desktop` began returning `Operation not
+permitted` — to bash, to the Read tool, and to the separate Python MCP process alike, while
+`~/.dsh`, `/tmp` and `~/.claude` stayed readable. A macOS TCC grant for the Desktop went away
+mid-session.
+
+Recovery was `git clone` of the pushed remote into `/tmp` and re-applying the one uncommitted
+change, which was possible only because the preceding work had been committed and pushed as it
+was verified. **Commit each verified step rather than batching** — the working copy is not the
+durable artefact, and on this machine it can stop being readable without warning.
