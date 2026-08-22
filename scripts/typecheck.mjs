@@ -8,9 +8,10 @@ import { spawnSync } from "node:child_process";
 
 const { stdout } = spawnSync("tsc", ["--noEmit", "--pretty", "false"], { encoding: "utf8", shell: true });
 const lines = stdout.split("\n").filter((line) => line.trim() !== "");
-// Match anywhere, not as a prefix: run from a symlinked directory (/tmp -> /private/tmp) tsc
-// reports these as `../../private/tmp/.../node_modules/...` and a prefix test lets them through.
-const isUpstream = (line) => line.includes("node_modules/");
+// Match the path, not the message: run from a symlinked directory (/tmp -> /private/tmp) tsc
+// reports these as `../../private/tmp/.../node_modules/...`, so a prefix test lets them through —
+// but a bare `includes` would also swallow a first-party error whose text mentions node_modules.
+const isUpstream = (line) => /^[^(]*node_modules\//.test(line);
 const ours = lines.filter((line) => !isUpstream(line) && !line.startsWith(" "));
 const upstream = lines.filter(isUpstream);
 

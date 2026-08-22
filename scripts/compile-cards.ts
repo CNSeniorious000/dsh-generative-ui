@@ -8,18 +8,19 @@
  * first version's subscript regex matched `useState<number[]>` and missed `<META[k].icon />`,
  * which is exactly backwards.
  */
-import initTsx, { transform } from "@esm.sh/tsx";
 import { normalizeGeneratedTsx } from "partial-tsx";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 
-await initTsx(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer());
+import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
+
+await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
-for (const f of readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted()) {
+for (const f of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${f}`, "utf8");
   // the shape a settled card takes: normalize final, then transform
   try {
-    const out = transform({ filename: f, code: normalizeGeneratedTsx(src, { mode: "final" }), target: "es2022", jsxImportSource: "react" });
+    const out = compileCard(f, normalizeGeneratedTsx(src, { mode: "final" }));
     // the checks CLAUDE.md says nothing catches at compile time
     const imports = [...src.matchAll(/import\s*\{([^}]+)\}\s*from/g)].flatMap(m => m[1].split(",").map(s => s.trim().split(/\s+as\s+/).pop()!.trim()));
     const def = src.match(/export default function (\w+)/)?.[1];

@@ -17,11 +17,6 @@ for section in re.split(r"\n(?=### )", text):
             if 5 <= len(p) <= 40 and re.search(r"\b\d/\d\b", line):
                 hits[p].append((title, line.strip()[:110]))
 
-def scores(line):
-    """Every N/M in a line, as fractions — a table row often carries before and after."""
-    return {(int(a), int(b)) for a, b in re.findall(r"\b(\d)/(\d)\b", line)}
-
-
 def score_for(prompt, line):
     """The N/M that belongs to this prompt: the first one after its mention.
 

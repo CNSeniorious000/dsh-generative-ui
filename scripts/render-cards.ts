@@ -6,10 +6,12 @@
  * Serves a page that imports the card as a blob module and mounts it, then the caller
  * drives it with ego-browser and reads `window.__cardResult`.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+
+import { cardsIn } from "./tsx-node.ts";
 
 const dir = process.argv[2] ?? ".research/cards";
-const cards = readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted();
+const cards = cardsIn(dir);
 const port = Number(process.argv[3] ?? 47771);
 
 Bun.serve({

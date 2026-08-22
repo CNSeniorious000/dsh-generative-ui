@@ -6,12 +6,11 @@
  *
  * Usage: bun scripts/replay-stream.ts <card.tsx>...
  */
-import { readdirSync } from "node:fs";
-
-import initTsx, { transform } from "@esm.sh/tsx";
 import { normalizeGeneratedTsx } from "partial-tsx";
 
-await initTsx(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer());
+import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
+
+await initTsxFromDisk();
 const hooks = (s: string) => (s.match(/\buse[A-Z]\w*\s*\(/g) ?? []).length;
 // "visible" means the DEFAULT export has begun returning markup — a helper component's
 // `return` earlier in the file says nothing about whether the card paints yet.
@@ -21,7 +20,7 @@ const defaultPaints = (s: string) => {
   // several of those before any markup exists. Require a JSX tag right after the paren.
   return at !== -1 && /return\s*\(\s*</.test(s.slice(at));
 };
-const paths = process.argv.length > 2 ? process.argv.slice(2) : readdirSync("test/cards").filter(n => n.endsWith(".tsx")).toSorted().map(n => `test/cards/${n}`);
+const paths = process.argv.length > 2 ? process.argv.slice(2) : cardsIn("test/cards").map(n => `test/cards/${n}`);
 let bad = 0;
 for (const path of paths) {
   const src = await Bun.file(path).text();
@@ -36,7 +35,7 @@ for (const path of paths) {
     // braces) and shrugs at odd expressions, which is the right sensitivity here since truncation
     // produces exactly the structural kind: 58 of 65 raw prefixes of a real card fail, 0 after
     // normalize.
-    try { transform({ filename: "f.tsx", code: out, target: "es2022", jsxImportSource: "react" }) } catch { broken += 1 }
+    try { compileCard("f.tsx", out) } catch { broken += 1 }
     const h = hooks(out);
     if (prev !== -1 && h !== prev) { changes += 1; if (defaultPaints(out)) late += 1 }
     prev = h;
