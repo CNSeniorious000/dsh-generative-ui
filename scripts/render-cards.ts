@@ -61,6 +61,16 @@ console.log(`serving ${cards.length} cards on ${port}`);
  * (pointerdown, mousedown, pointerup, mouseup, click) — a bare `.click()` on a React button
  * can leave state untouched and looks exactly like a broken card.
  *
+ * Two more rules, each of which produced a wrong number before it was found:
+ *
+ * - **Click ONE control, not every control.** A segmented group (`linear`/`log`, a filter row,
+ *   a tab strip) is set and immediately unset by a loop that clicks all of its buttons, so the
+ *   card ends exactly where it started and reads as inert. Four of six re-tested cards flipped
+ *   from "inert" to "responded" on this change alone.
+ * - **Diff `innerHTML`, not `innerText`.** A highlighted tab, a changed border, a chart axis —
+ *   every visual-only state change is invisible to a text diff. Even HTML misses a recharts
+ *   re-render that happens to produce identical SVG, so "no change" is weak evidence at best.
+ *
  * The loop that worked, with the two things that each cost a wasted run:
  *
  * ```js
