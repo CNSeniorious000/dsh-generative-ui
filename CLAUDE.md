@@ -3539,3 +3539,36 @@ today.
 The one thing salvaged: `smoke.ts`'s comment still called the capability shims `$ui4a/*`, two
 days after the rename. Same class as the four rotted identifiers §4 already lists, and found
 only because I was reading a file I thought I had to write.
+
+### 368 of 378 cards actually paint (2026-08-23)
+
+Everything above measures whether a card **compiles**. §4 lists three ways a card compiles
+cleanly and renders blank, and `scripts/render-cards.ts` exists to settle that — it had never
+been run against real cards. Mounted all 378 in Chromium through ego-browser, each into a real
+`createRoot`, and read back `innerText` plus a zero-size check on any `svg`/`canvas`/`img`:
+
+**368 painted, 6 threw, 4 blank — 97.4%.**
+
+Four of the six throws are the compile failures already known. The two new ones are the payoff,
+and neither is reachable by compiling:
+
+- **React error #321** — `const fib = useMemo(…)` at module scope, a hook outside every
+  component. Perfect TSX, dead on first render.
+- **`unreachable`** — the wasm compiler panicking on a 204-line card, which is a `@esm.sh/tsx`
+  bug rather than the model's.
+
+The first is now a screen. A hook at **column 0** is in no function body by definition, and
+`compile-cards.ts` flags exactly that one card in 378. Anchoring matters more than the pattern:
+allowing leading whitespace matches the ordinary `useEffect` inside **109 of 378** cards, which
+is the same false-positive shape as the streaming-guard detector. There is a control card and
+blinding the screen fails `bun run check`.
+
+Two harness lessons, since the first run reported 28 failures and 22 were mine:
+
+- **The importmap must cover what the corpus imports, not what the checker's author remembered.**
+  `partial-json`, `motion/react`, `minimatch` and every `$dsh/*` were missing, so ~90 cards
+  failed to import for a reason that was not theirs.
+- **Including the dead prefix.** 22 cards import `$ui4a/chat`, which nothing resolves in
+  production — that is the point of the rename — but they are real cards from before it, and
+  leaving them unresolvable reports a rebuild-lag artefact as a broken card. Shimmed, and the
+  failure count fell from 28 to 6.
