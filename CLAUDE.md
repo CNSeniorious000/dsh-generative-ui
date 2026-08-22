@@ -1880,3 +1880,23 @@ where the 25% column came from.
 
 Recording this rather than assembling a weaker control: a group picked to be small is a group
 picked to produce an answer.
+
+### A dev server outlived its session by a day (2026-08-22)
+
+The user noticed Edge opening a dsh web page by itself that then did nothing. It was **my**
+server: `dsh web --port 39181`, started 2026-08-21 14:23, still listening 24 hours later.
+
+The chain is worth keeping. Starting a server this session, I probed `curl 127.0.0.1:39181` and
+got a 200, so I recorded "up" — but the 200 came from **yesterday's process**. The log then showed
+`EADDRINUSE`; I moved to another port and left the old one running, reasoning about it as
+"someone else's port" rather than as mine.
+
+Two habits to fix, both of which I already apply to browser sessions and not to processes:
+
+- **A 200 on the port you asked for is not proof your server started.** Check the log, or the pid.
+- **Name and close what you start** — every ego-browser task space this session was closed by
+  name; every `dsh web` was too, *except* the one from a previous session, which fell outside the
+  bookkeeping precisely because it was not this session's.
+
+Killed with SIGTERM (clean exit); the user's own instance, started from an interactive shell in a
+different directory, was identified by cwd and parent process and left alone.
