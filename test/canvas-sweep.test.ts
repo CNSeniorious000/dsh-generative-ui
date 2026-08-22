@@ -17,6 +17,8 @@ let listed: string[] = [];
 let files: Record<string, string> = {};
 let reads: string[] = [];
 let listings = 0;
+let frame: any;
+let widths: number[] = [];
 let frames: (() => void)[] = [];
 
 const paint = () => { const due = frames; frames = []; for (const cb of due) cb() };
@@ -27,12 +29,17 @@ let scheduleSweepAgain = () => {};
 const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve(); paint() } };
 
 beforeEach(() => {
-  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0;
+  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = [];
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
   (globalThis as any).cancelAnimationFrame = () => {};
   (globalThis as any).MutationObserver = class { observe() {} disconnect() {} };
   const el = () => ({ style: { setProperty() {} }, setAttribute() {}, append() {}, remove() {}, prepend() {}, querySelector: () => null, classList: { add() {}, remove() {} } });
-  (globalThis as any).document = { body: el(), head: el(), createElement: el, querySelector: () => el() };
+  // One frame element, reused: `createColumn` reads and writes its `paddingRight`, which is how
+  // `setWidth(0)` is observable — it restores whatever padding the frame had before the panel.
+  // `setWidth` is only observable through the frame's `paddingRight`, so the setter records it:
+  // 0 means "collapsed back to the original padding", which is the branch under test.
+  frame = { ...el(), style: { setProperty() {}, _p: "8px", get paddingRight() { return this._p }, set paddingRight(v: string) { this._p = v; widths.push(v.endsWith("px") && v !== "8px" ? Number.parseInt(v, 10) : 0) } } };
+  (globalThis as any).document = { body: el(), head: el(), createElement: el, querySelector: () => frame };
   (globalThis as any).fetch = (url: string) => {
     const parsed = new URL(url, "http://x");
     const id = parsed.searchParams.get("id");
@@ -44,11 +51,13 @@ beforeEach(() => {
 });
 
 /** Mount the host with a fixed set of tool calls, and return what the panel was rendered with. */
-const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void; open?: string } = {}) => {
+const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void; open?: string; width?: number } = {}) => {
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
   // module resolves its import binding at evaluation time — so the mock has to be registered
   // before `index.ts` is imported, which is why the import below is dynamic.
   mock.module("react-dom/client", () => ({ createRoot: () => ({ render: (node: any) => painted.push(node), unmount() {} }) }));
+  // Renders from a previous `sweep()` in the same test would make `.at(-1)` pick a stale panel.
+  painted = [];
   const { mountCanvasHost } = await import(`../src/client/canvas/index.ts?${Math.random()}`);
   // Canonical specifier, NO suffix. `index.ts` imports `../runtime/observe.ts` plainly, so that
   // is the instance holding its listener; importing `observe.ts?<anything>` yields a separate
@@ -58,12 +67,14 @@ const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; betwee
   const host = mountCanvasHost({ calls: () => calls, cwd: () => over.cwd ?? "/w", sessionId: () => "s1" });
   await settle();
   if (over.open !== undefined) { host.show(over.open); await settle() }
+  // Stand in for the user having dragged the panel wider, so a collapse is observable.
+  if (over.width !== undefined) { const panel = painted.map((n) => n?.props).filter((p) => p?.onWidth).at(-1); panel?.onWidth(over.width) }
   // Extra sweeps stand in for the stream continuing — the observer fires once per token.
   for (let i = 1; i < (over.sweeps ?? 1); i++) { over.between?.(); scheduleSweepAgain(); await settle() }
   host.dispose();
   // The panel is the first child whose props carry `canvases`.
   const withCanvases = painted.map((n) => n?.props).filter((p) => p && Array.isArray(p.canvases)).at(-1);
-  return { canvases: (withCanvases?.canvases ?? []) as any[], offerable: (withCanvases?.offerable ?? []) as string[] };
+  return { canvases: (withCanvases?.canvases ?? []) as any[], offerable: (withCanvases?.offerable ?? []) as string[], renders: painted.length };
 };
 
 const write = (id: string, code: string, settled = true) => ({ argsRaw: JSON.stringify({ file_path: `/w/.dsh/ui4a/canvases/${id}.ui4a.tsx`, content: code }), settled });
@@ -166,4 +177,38 @@ test("a canvas already shown is not added twice by the launcher", async () => {
   const { canvases } = await sweep([write("dice", "live body")], { open: "dice" });
   expect(canvases.map((c) => c.id)).toEqual(["dice"]);
   expect(canvases[0].code).toBe("live body");
+});
+
+describe("what the sweep does not do", () => {
+  // The observer fires on every streamed token. Without the signature check every one of those
+  // is a React render of the whole panel — this is what stands between the panel and that.
+  test("an unchanged sweep does not re-render", async () => {
+    // Two renders, not one: the first paint happens before the workspace listing resolves, and
+    // the listing changes the offerable half of the signature. What matters is that the count
+    // does not grow with the sweep count — the observer fires once per streamed token, so a
+    // panel that re-rendered per sweep would re-render dozens of times a second.
+    //
+    // Counted inside ONE mount: `painted` accumulates across calls and `beforeEach` only resets
+    // between tests, so comparing two separate `sweep()` calls compares 2 against 2+2.
+    const { renders } = await sweep([write("dice", "body")], { sweeps: 12 });
+    expect(renders).toBeLessThanOrEqual(2);
+  });
+
+  // The column collapses and the frame gets its original padding back when the last canvas goes
+  // away — otherwise closing the panel leaves a gap where it used to be.
+  //
+  // The canvas has to be shown FIRST and then dismissed. Mounting with none never calls
+  // `setWidth` at all, so asserting on the padding there passes with the collapse deleted — the
+  // padding was simply never touched.
+  test("the frame's padding is restored when the last canvas goes away", async () => {
+    const calls: any[] = [write("dice", "body")];
+    await sweep(calls, { sweeps: 3, width: 420, between: () => calls.splice(0, calls.length) });
+    expect(widths).toContain(420);
+    // The collapse happens WHILE the host is alive, not at teardown. `dispose` restores the
+    // padding too, so both the working and the broken version end at 0 — the difference is that
+    // the working one records an extra collapse before it. Asserting on the final value passed
+    // with the line deleted three times running; asserting that a collapse happened before
+    // teardown is what actually distinguishes them.
+    expect(widths.slice(0, -1)).toContain(0);
+  });
 });
