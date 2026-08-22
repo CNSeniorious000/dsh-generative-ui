@@ -2873,3 +2873,21 @@ The method that found it is the same one that found the four runtime bugs before
 the corpus as a specification for the parser, not as a sample of model behaviour.** A count
 that comes out 73/72 is not a rounding error — the one row that does not balance is a bug
 report written by production.
+
+### The `$ui4a/` → `$dsh/` rename took completely (2026-08-23)
+
+Counting capability imports across every card the corpus delivered (403 fences in
+`assistant/message` records, 1012 sessions): **25 import `$ui4a/…`, a prefix nothing
+resolves.** Split at the rename commit `9209104` (2026-08-21 17:57) the number stops looking
+like a live defect: **23 of 115 before, 2 of 288 after**.
+
+Both post-rename cards are from sessions whose reply text still contains the old prompt line
+verbatim — they ran a `lib/` built before the rename, not a hallucination. **The model never
+once invented the prefix**; every occurrence is quotation. That is the same lesson as the
+profile-symlink episode, arriving from the other direction: a session measures the *built*
+prompt, so a corpus split by commit date is really split by rebuild date, and the two rows
+that look like a regression are the lag between them.
+
+Worth keeping for the shape of the check rather than the result: **when a corpus shows a rule
+being violated, split it at the commit that introduced the rule before believing the rate.**
+A pooled 6.2% and a post-fix 0.7% are the same 25 cards.
