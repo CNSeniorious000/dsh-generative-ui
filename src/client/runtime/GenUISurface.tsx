@@ -77,6 +77,16 @@ const MAX_RETRIES = 3;
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
 const RETRY_BACKOFF_MS = 400;
 
+/**
+ * The same import map with a fresh query on every fetched entry.
+ *
+ * Only `https://esm.sh/` URLs are touched. Local blob URLs are minted per render and already
+ * fresh, and appending a query to a `blob:` URL makes it unresolvable — which would break every
+ * card rather than fixing one.
+ */
+export const bustFetchedImports = (imports: Record<string, string>, attempt: number): Record<string, string> =>
+  Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url]));
+
 export function GenUISurface({ code, streaming = false, preserveState = true, onError, onRendered, className }: GenUISurfaceProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   // State, not a ref: `create` is async, so readiness must be able to trigger the
@@ -107,7 +117,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     const attempt = retriesRef.current;
     void mergeFallbackImports(localImports(), code).then((imports) => {
       // Only the fetched esm.sh entries need busting; the local blob URLs are already fresh.
-      renderer.setImportMap({ imports: Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url])) });
+      renderer.setImportMap({ imports: bustFetchedImports(imports, attempt) });
       renderer.clear({ preserveVisualState: true });
       renderer.render(code);
     });
