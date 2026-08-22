@@ -107,7 +107,7 @@ the shim existed to protect. `lib/client.js` also lost 70KB, the shim's duplicat
 
 ### 2.7 Two traps in the type system
 
-- `SlotMap` is stitched together from each package's `declare module`. **Miss one package and the official d.ts stops compiling** (without `dsh-client-ui-layout`, `'conversation'` / `'details'` raise TS2344). Installing isn't enough either — some file has to `import type {} from ".../client"` to trigger the merge.
+- `SlotMap` is stitched together from each package's `declare module`, and **the merge only happens for packages some file actually imports**. Measured 2026-08-23 by asking the type system directly: drop `import type {} from "@deepseek-ai/dsh-client-ui-layout/client"` (line 8 of `src/client/index.ts`) and `"conversation" extends keyof SlotMap` becomes **false** — the keys simply vanish. Note what does *not* happen: `tsc` stays green, because our own code never indexes `SlotMap` by those names. So the failure is silent until someone writes a slot registration that needs one. The entry used to claim TS2344 here; removing the *package* raises TS2307 (that same import names it), and removing only the import raises nothing at all. **A type-level trap has to be probed at the type level** — `tsc` passing says nothing about a merge that did not occur.
 - `allowImportingTsExtensions` must be on, because the source imports across files with `.ts` / `.tsx` suffixes.
 
 ## 3. The ui4a contract
