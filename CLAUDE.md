@@ -3122,3 +3122,34 @@ beneath `ASSET_PREFIX` reaches it and a single `pathname !== WASM_PATH` line is 
 it to one file — nothing else in the plugin has that shape. Deleting that line now fails, as
 does serving the wasm under any content-type but `application/wasm` (`instantiateStreaming`
 rejects everything else, silently). The suite is 52 tests across 9 files.
+
+### Two tests that passed while proving nothing (2026-08-23)
+
+Filling in the untested runtime modules turned up the same failure twice in one sitting, and it
+is the traversal-test lesson in a different costume.
+
+**`warmCompiler` never rejects.** `apply()` calls it and nothing awaits it, so a rejection takes
+the plugin's registration down and the shell loads forever. Written as a test inside
+`compiler.test.ts` — which runs `initTsx` from disk at its top level. The wasm was therefore
+already warm, `initCompiler` never failed, and **deleting the entire try/catch still passed**.
+Moved to its own file, where `WASM_PATH` really is an unfetchable HTTP route, and the mutation
+now fails. *A guard against a failure can only be tested where the failure actually happens* —
+and in bun each test file is its own scope, which is what makes the isolation work at all
+(verified: a global set in one file is `undefined` in the next).
+
+**The final→streaming fallback.** `createBrowserTsxCompiler` retries a failed `final` compile as
+`streaming`, and the comment calls it essential without a number. Measured across every prefix
+of all 362 corpus cards: `final` fails where `streaming` succeeds in **718 of 13589 prefixes**
+(5.3%). Load-bearing, not defensive. My first four hand-written candidates for such an input —
+unterminated string, unterminated template, mid-attribute, mid-JSX-text — were all handled fine
+by `final`, so **guessing at the input would have concluded the fallback was dead code.** The
+smallest real case is a truncated `type T`, which `final` cannot close.
+
+Also corrected `compiler.ts`'s "~2.5 MB wasm" comment, which is right about the file (2610857
+bytes) and was the source of the 16 MB confusion recorded earlier — the file is 2.6 MB and an
+instantiated compiler is ~16 MB of heap. Both numbers now stated, with which is which.
+
+Runtime coverage after this pass: `registry.ts` (generated re-export modules, checked by
+*parsing* the output rather than matching text — three mutations die), `observe.ts` (coalescing,
+single observer, teardown at zero — three mutations die), `compiler.ts`. Only `GenUISurface.tsx`
+remains, which is React and wants a DOM. 65 tests.
