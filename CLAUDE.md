@@ -3613,3 +3613,29 @@ empty array. The model handles "the command returned nothing" correctly 63 times
 the skill's `partial-json` paragraph is not the only place that lands: this is the same discipline
 applied to a different source. A screen was still worth adding, because the one failure is a
 blank card with no message, but the rate does not argue for a prompt rule.
+
+### Clicking every card: nothing breaks (2026-08-23)
+
+The render pass only proved cards *mount*. 279 of 378 have clickable controls and none had ever
+been clicked. Dispatching the full `pointerdown/mousedown/pointerup/mouseup/click` sequence on
+up to three controls per card, with `console.error` captured around each:
+
+**0 blanked, 0 threw.** The only failures are the same 10 that already fail at mount. A card
+that renders survives being used — which is the result worth having, and it is the first
+evidence for it in this project.
+
+The other two numbers from that run are both my harness, not the cards:
+
+- **91 "inert"** (no text change after clicking). 47 are cards whose buttons call `sendMessage`
+  or `streamText`, which the harness shims to no-ops — correctly inert. Of the rest, the sample
+  I re-tested responded once I **clicked one control instead of three**: a segmented control
+  (`linear`/`log`, a filter row, a tab strip) gets set and immediately unset by a loop that
+  clicks every button in it, ending exactly where it began. Four of six flipped to "responded"
+  on that change alone.
+- **`innerText` cannot see a state change that is visual.** A highlighted tab, a chart axis, a
+  changed border — all invisible to a text diff. Comparing `innerHTML` catches most of them, and
+  a recharts re-render that produces identical SVG catches none.
+
+So the click harness needs two rules: **one control per card, and diff the HTML**. Recorded
+rather than implemented, because the finding it was built to test — do cards survive
+interaction — is already answered.
