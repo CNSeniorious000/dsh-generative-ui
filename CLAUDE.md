@@ -1953,3 +1953,35 @@ twelve rows were measured by a checker that could not see the failure the last e
 
 With the tool disabled, sonnet answers `帮我算下房贷` with a **canvas** where venti and terra both
 use a fence — and it runs the checker (`bash ×4`, `str_replace_editor ×3`) the way venti does.
+
+### Ten ways a measurement lied today — the list (2026-08-22)
+
+Scattered across the sections above; collected because the count is the point. Every one of these
+produced a plausible, publishable-looking result that was wrong.
+
+| # | what looked true | what was true | the tell |
+| --- | --- | --- | --- |
+| 1 | a rule failed, `fence=0` | it wrote a **canvas** | count canvases too |
+| 2 | a commit caused a regression | one flap in seven | repeat the *old* side as well |
+| 3 | a rule did not generalise, 0/9 | plugin symlink dead, 9 crashes | check the subject ran |
+| 4 | a rule was refused, six zeros | `QUOTA: Insufficient Balance` | short well-formed output is suspicious |
+| 5 | a card's state was broken | a bare `.click()` unlocks nothing | drive it as input |
+| 6 | an early `AudioContext` was unrecoverable | a real gesture repairs it | same as #5, opposite sign |
+| 7 | a card remounted while visible | probe matched any `return (` | a helper component has those too |
+| 8 | a metronome remounted twice | probe matched `return () => {}` | an effect cleanup is not markup |
+| 9 | a gate was broken, exit 0 | `cmd \| tail; echo $?` reads `tail` | never pipe when the code is the measurement |
+| 10 | sonnet refused a fixture | gateway 400, empty reply | a transcript exists before the model answers |
+
+Four properties they share:
+
+- **The failure and the interesting result are identical at the metric.** Repetition does not
+  help — #3 would have given 0/9 every time.
+- **The wrong answer is the alarming one.** Both probe bugs (#7, #8) over-reported; that is the
+  direction that gets written up.
+- **A check written for one of these has a blind spot for the next.** #10 slipped past the check
+  added for #4, which had replaced the blacklist that missed #3.
+- **The tell is never in the number.** It is in the byte count, the first line of the reply, the
+  presence of a transcript — everything the summary throws away.
+
+Which is why `scripts/eval.sh` prints `bytes=` and `tools=[]` next to the count, and why a zero
+is not evidence until the reply it came from has been read.
