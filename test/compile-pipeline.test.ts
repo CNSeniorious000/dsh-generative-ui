@@ -97,3 +97,21 @@ test("a rescue can be empty, and that is still a rescue", async () => {
   const { code } = await compile('import { useState } from "react"\n\ntype T');
   expect(code).not.toContain("export default");
 });
+
+/**
+ * `partial: true` is the streaming path and must not take the settled one.
+ *
+ * The two branches differ only in that `final` tries to close the card before cutting it back,
+ * so on most inputs they agree — which is why inverting this one condition passed every test
+ * above. The unclosed array literal separates them: `final` keeps the body and fails to parse,
+ * `streaming` cuts back to a bare component that renders.
+ */
+test("a partial frame takes the streaming path", async () => {
+  // The input has to be one where BOTH modes compile, or the settled path's catch falls back to
+  // streaming and the two produce identical output — which is how the first two candidates I
+  // tried passed with the condition inverted. An unclosed `.map(` is the separating case:
+  // `final` closes it as `{items.map(i => (null))}`, `streaming` cuts back to `<div></div>`.
+  const frame = "export default function A() {\n  return <div>{items.map(i => (\n";
+  expect((await compile(frame, { partial: true })).source).not.toContain("items.map");
+  expect((await compile(frame)).source).toContain("items.map");
+});
