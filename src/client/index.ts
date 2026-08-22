@@ -8,6 +8,8 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
+import { disposeCompiler } from "./runtime/compiler.ts";
+import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
 import { registerUi4aHost, releaseBindings, localImports } from "./runtime/bindings.ts";
 import { claimInlineFences } from "./runtime/inline-fence.ts";
@@ -81,6 +83,12 @@ export function apply(ctx: ClientContext): void {
   // its URL is revoked (the module graph holds it), so this only reclaims URLs nothing can
   // reach any more. Without it every HMR round leaks one per registered specifier.
   ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
+  // The wasm half of the same problem: ~16MB per instance, one per HMR round, and upstream
+  // offers no dispose — dropping the reference is all there is (see `disposeCompiler`).
+  ctx.effect(() => () => {
+    disposeCompiler();
+    dropSharedCompiler();
+  }, "dsh-generative-ui: tsx wasm instance");
   // What `$dsh/chat` calls into. A nested fiber, not a static inject: every name in
   // `inject` is a hard dependency, and a profile without `conversation` would otherwise
   // take the whole plugin down rather than just this one capability.

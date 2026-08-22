@@ -37,17 +37,22 @@ export type CanvasPanelProps = {
  */
 function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
   const [resolved, setResolved] = useState<{ key: string; code: string } | null>(null);
+  // Destructured so the effect depends on scalars: the store rebuilds `canvas` on every sweep,
+  // and depending on the object would re-run the whole resolve for an unchanged canvas.
+  const id = canvas?.id;
+  const code = canvas?.code;
+  const streaming = canvas?.streaming;
 
   useEffect(() => {
-    if (cwd === undefined || canvas === undefined || canvas.streaming) return;
-    if (!RELATIVE_IMPORT.test(canvas.code)) return;
-    const key = `${canvas.id}:${canvas.code.length}`;
+    if (cwd === undefined || id === undefined || code === undefined || streaming) return;
+    if (!RELATIVE_IMPORT.test(code)) return;
+    const key = `${id}:${code.length}`;
     let live = true;
     const urls: string[] = [];
     const compile = async (filename: string, source: string) => (await compiler().compile(source, { filename })).code;
-    void inlineSubPages(canvas.code, canvasPath(canvas.id), (specifier, from) => readCanvasChild(cwd, canvas.id, specifier, from), compile, urls).then((code) => {
+    void inlineSubPages(code, canvasPath(id), (specifier, from) => readCanvasChild(cwd, id, specifier, from), compile, urls).then((next) => {
       if (!live) return void urls.forEach((url) => URL.revokeObjectURL(url));
-      setResolved({ key, code });
+      setResolved({ key, code: next });
     });
     return () => {
       live = false;
@@ -55,10 +60,10 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
       // revoking on the next resolve rather than here would leak one set per edit.
       for (const url of urls) URL.revokeObjectURL(url);
     };
-  }, [cwd, canvas?.id, canvas?.code, canvas?.streaming]);
+  }, [cwd, id, code, streaming]);
 
-  if (canvas === undefined) return "";
-  return resolved !== null && resolved.key === `${canvas.id}:${canvas.code.length}` ? resolved.code : canvas.code;
+  if (id === undefined || code === undefined) return "";
+  return resolved !== null && resolved.key === `${id}:${code.length}` ? resolved.code : code;
 }
 
 /** Cheap gate: only a canvas that actually writes a relative import pays for the pass. */

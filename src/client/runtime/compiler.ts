@@ -35,6 +35,17 @@ export const warmCompiler = (): Promise<unknown> => {
   }
 };
 
+/**
+ * Drops the wasm instance so GC can take it. `@esm.sh/tsx` exports no dispose — only
+ * `init`/`initSync`/`transform` — so releasing the reference is the whole of what we can do.
+ * Measured 2026-08-23: an instance costs ~16MB, and each HMR round made a fresh one while the
+ * previous stayed reachable through this module-level promise. Dev-only, but a dozen reloads
+ * is 200MB.
+ */
+export function disposeCompiler(): void {
+  initPromise = null;
+}
+
 export function createBrowserTsxCompiler(): TsxCompiler {
   return {
     async compile(code, options = {}) {
