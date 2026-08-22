@@ -2,6 +2,6 @@
 declare module "$dsh/ai" {
   /** One user turn plus an optional system prompt; there is no conversation here. */
   export type StreamOptions = { prompt: string; system?: string };
-  /** Yields characters as they arrive. Inherits the app's model and credentials. */
+  /** Yields text as it arrives, one piece per network chunk. Inherits the app's model and credentials. */
   export function streamText(options: StreamOptions | string): AsyncIterable<string>;
 }

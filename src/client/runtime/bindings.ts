@@ -63,7 +63,7 @@ export function bind() {
   };
   const ai = {
     /**
-     * Streams text from the app's own model, yielded character by character.
+     * Streams text from the app's own model, one piece per network chunk.
      *
      * Nothing here holds a credential: the Node half forwards to `ctx.llm`, which owns the
      * provider route and the keys. Reach for it when the *content* is the variable part —
