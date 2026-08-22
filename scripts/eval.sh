@@ -8,13 +8,15 @@ prompt=$1; seed=${2:-/dev/null}
 d=$(mktemp -d)
 # `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
+# DSH_HOME can point at an isolated home with a different default model — used to keep
+# measuring when the primary account runs out of balance, and to compare models.
 ( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )
 out="$d/o.txt"
 # Tool calls live in the session transcript, not the reply — the visualisation rule
 # ("this block, not a tool") is invisible without them.
 # The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
 # path has been through /private, so match on the trailing mktemp name instead of rebuilding it.
-sess=$(ls -td "$HOME/.dsh/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
+sess=$(ls -td "${DSH_HOME:-$HOME/.dsh}/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
 # `name` sits inside `data`, well past the first `}` — grep the whole record, take the last name.
 calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
   | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
