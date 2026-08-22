@@ -1851,3 +1851,32 @@ Where the models differ is process, not outcome: venti writes each card to a tem
 `@genui/cli check`, fixes what it reports over about three rounds, and only then answers. That
 habit is what exposed the two-day-old broken `npx` command; the outcome column would never have
 shown it.
+
+### The skill-description experiment has no control group on this model (2026-08-22)
+
+§"Does loading the skill change the answer?" left an intervention open: change the catalog
+`description` and re-measure, since 79% against 25% is a correlation whose arrow is unknown.
+
+With venti available, tried to assemble the control group it needs — prompts that **should**
+produce UI but do not load the skill. Six candidates outside the fixture set:
+
+| prompt | tools |
+| --- | --- |
+| `帮我看看这个月该还多少信用卡` | `skill, bash` |
+| `我每天喝多少水合适` | `skill, bash×2, write` |
+| `npm 和 pnpm 有啥区别` | `skill` |
+| `帮我看看这几个端口都被谁占了` | `skill, bash×2` |
+| `这台机器磁盘都被什么占满了` | `skill, bash×13` |
+| `我这些依赖哪些能升级` | `skill, bash×8, glob, read` |
+
+Six for six, all producing UI. The only two that skipped the skill —
+`这个报错啥意思 EADDRINUSE` and `为什么我的 git push 总是要输密码` — are single-fault diagnoses where
+prose is the right answer, so they are not misses.
+
+**venti loads the skill on essentially everything that could want an interface**, which leaves no
+control group: the description cannot be shown to matter on a model that already reaches for it.
+The experiment is not abandoned, it is **inapplicable here** and would have to run on DeepSeek,
+where the 25% column came from.
+
+Recording this rather than assembling a weaker control: a group picked to be small is a group
+picked to produce an answer.
