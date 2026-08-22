@@ -2843,8 +2843,11 @@ still wrong, and the only thing that caught it was one cell being implausibly em
 ### The fence language slip is gone; a different one replaced it (2026-08-23)
 
 Counting every fence opener across the 183 sessions: **73 `````ui4a/tsx`, and not one bare
-`tsx`**. The ~5% slip recorded twice in §4.5 did not occur once today. Recorded as a fixed
-rate rather than a live risk.
+`tsx`**. The ~5% slip recorded twice in §4.5 did not occur once today.
+
+**That conclusion was wrong and is corrected below** — see "the slip was never gone". Left in
+place because the way it was wrong is the lesson: a search window too small to reach the
+evidence returns zero and reads exactly like an absence.
 
 Openers 73, closers 72. The one unbalanced reply ends not with a fence but with
 **`</parameter></invoke>`** — the model emitting tool-call markup into its own prose, on a turn
@@ -3365,3 +3368,26 @@ comparison, which the resident prompt names as card-worthy in the same breath.
 So **zero decorative cards in the corpus**, and the check that would have found them is "static
 AND draws nothing", not "static". Filtering on interaction alone would have reported 22
 violations of a rule nothing violated.
+
+### The fence-language slip was never gone (2026-08-23)
+
+Recorded earlier today as fixed: "73 `ui4a/tsx` openers and not one bare `tsx`". Recounted
+across all 1012 sessions with a predicate that reads the **whole fence body** rather than its
+first 400 characters: **389 `ui4a/tsx` fences and 9 bare ```` ```tsx ```` blocks that are
+unmistakably cards** — a `sendMessage` option picker, a full component with hooks — 2.3%, which
+is the same order as the ~5% §4.5 recorded originally.
+
+Two separate windows hid it. The first count only looked at openers in sessions that already
+contained `ui4a/tsx`, so a reply that slipped on *every* fence was invisible. The second, when
+I went looking deliberately, matched `[\s\S]{0,400}` after the fence and required an
+`export default` inside it — and a card that opens with imports and a `const options = [...]`
+puts its default export past character 400. The first version of that check printed a clean
+`0` and I nearly filed it as confirmation.
+
+**A zero from a bounded search is not an absence, it is a bound.** Both times the fix was to
+stop truncating and match to the closing fence.
+
+The cost is a card silently rendered as a code listing — the reader sees TSX where an interface
+should be. Nothing in the runtime can fix it: `FENCE_LANG` is what claims a block, and claiming
+every ```` ```tsx ```` block would swallow every legitimate code sample the model writes about
+React. This one belongs to the prompt, which already carries the rule as its first bullet.
