@@ -8,8 +8,11 @@ import { spawnSync } from "node:child_process";
 
 const { stdout } = spawnSync("tsc", ["--noEmit", "--pretty", "false"], { encoding: "utf8", shell: true });
 const lines = stdout.split("\n").filter((line) => line.trim() !== "");
-const ours = lines.filter((line) => !line.startsWith("node_modules/") && !line.startsWith(" "));
-const upstream = lines.filter((line) => line.startsWith("node_modules/"));
+// Match anywhere, not as a prefix: run from a symlinked directory (/tmp -> /private/tmp) tsc
+// reports these as `../../private/tmp/.../node_modules/...` and a prefix test lets them through.
+const isUpstream = (line) => line.includes("node_modules/");
+const ours = lines.filter((line) => !isUpstream(line) && !line.startsWith(" "));
+const upstream = lines.filter(isUpstream);
 
 if (upstream.length > 0) console.error(`[upstream, ignored] ${upstream.length} error(s) in partial-react/partial-tsx — see macaron-genui-demo#1717`);
 for (const line of ours) console.error(line);

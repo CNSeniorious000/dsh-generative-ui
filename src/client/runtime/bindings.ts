@@ -27,6 +27,14 @@ export type Ui4aHost = {
 const INTERNAL = capabilityModule("internal");
 let host: Ui4aHost | null = null;
 
+/** Named so the round trip can be tested against the real code rather than a copy of it. */
+export function decodeBase64(base64: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 export function registerUi4aHost(next: Ui4aHost): () => void {
   host = next;
   registerModules({ [INTERNAL]: { bind } });
@@ -88,12 +96,7 @@ export function bind() {
      * `decodeAudioData`, a MIDI parser or an image decoder has to come through here.
      */
     readBytes: (path: string) =>
-      request<{ base64: string }>("GET", path, undefined, "bytes=1").then((body) => {
-        const binary = atob(body.base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        return bytes;
-      }),
+      request<{ base64: string }>("GET", path, undefined, "bytes=1").then((body) => decodeBase64(body.base64)),
     /**
      * Writes the file, subject to the session's own access mode.
      *

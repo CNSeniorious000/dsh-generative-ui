@@ -1380,3 +1380,34 @@ code, only about itself.
 Note the fixture had to be hand-written for the `\u` case: `JSON.stringify` emits `→` literally,
 so a fixture built with it never exercises the branch. My first draft did exactly that and its
 three failures were all mine, not the parser's.
+
+### Testing the `?bytes=1` round trip, and two bugs found doing it (2026-08-22)
+
+The binary path — route answers `Buffer.toString("base64")`, `readBytes` decodes with an `atob`
+char loop — is what everything fed to `decodeAudioData`, a MIDI parser or an image decoder rests
+on, and it had no test. Added three: all 256 byte values survive; lengths either side of a base64
+group; and the failure the route exists to avoid, where the same bytes read as text come back
+**512 long instead of 256**.
+
+Two things fell out of writing them.
+
+**A test that re-types the implementation tests only itself.** The loop was an anonymous arm of
+`readBytes` and could not be imported, so the first draft copied it — and would have kept passing
+through any edit to the real code. Extracted `decodeBase64`, which is one named function rather
+than a layer, and the test now imports it. Mutation-checked with `& 0x7f`: 2 of 3 fail.
+
+**The extraction changed an inferred type, and `types/check.ts` caught it.** A bare
+`: Uint8Array` return annotation widened to `Uint8Array<ArrayBufferLike>` where the inline version
+had inferred `Uint8Array<ArrayBuffer>`, and the two-way assertion failed exactly as §2.7 says it
+should. Second time that check has earned itself.
+
+### A prefix test that only fires outside your home directory (2026-08-22)
+
+`scripts/typecheck.mjs` splits tsc output with `line.startsWith("node_modules/")`. Working from
+the `/tmp` clone, tsc emits `../../private/tmp/recover/node_modules/...` — because `/tmp` is a
+symlink to `/private/tmp` — so upstream's two known errors were counted as ours and `bun run
+check` failed on a clean tree. Changed to `includes`.
+
+The bug was always there; it took being forced out of the usual working directory to see it.
+**Path predicates written against one location are assertions about the environment**, and this
+one had been true for two days by luck.
