@@ -157,7 +157,7 @@ at first render.
 
 **But one click unlocks the whole page, not just that handler.** Chromium's gate is
 "has this document ever been activated", so after a single press anywhere in the card, a
-context created later — on a timer, in an effect — is born \`running\`. That is what makes a
+context created later — on a timer, in an effect — is born \`running\`. **And the context you already built wakes up with it** — the \`resume()\` promise that was hanging since load resolves on that same press, and its state flips to \`running\`. So there is no need to delay construction: build the context whenever you like, keep the \`resume()\` off the render path, and the first real press repairs it. That is what makes a
 metronome or a sequencer possible: only the *first* press has to be a real gesture. Build the
 context lazily inside that first click, or build it eagerly and gate every sound behind a
 "someone has pressed something" flag.

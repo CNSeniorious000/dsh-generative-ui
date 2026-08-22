@@ -1318,3 +1318,30 @@ The surviving output settles it: two batches of three, `fence=1` twice each — 
 
 Cheap and worth repeating: group every backticked prompt that appears near an `N/M` and print the
 ones whose sections disagree.
+
+### Re-checking the Web Audio facts, and one that was half true (2026-08-22)
+
+The `## Sound` section drives real card behaviour and was measured days ago, so it was re-run
+against a probe page. Four of five reproduced exactly: a pre-gesture context is born
+`suspended`; `osc.start()` on it throws nothing; `OfflineAudioContext` renders 44100 frames with
+no interaction; a context created after one real press is born `running`.
+
+The fifth was **incomplete, and in the direction that matters**. The note said `await
+ctx.resume()` before any gesture *never settles* — true — which reads as *that context is beyond
+saving, so build it lazily inside the click*. Measured: on the first real press, the promise that
+had been hanging since page load **resolves**, and the early context flips to `running` too.
+
+The two runs that disagreed are the useful part:
+
+| | early ctx after | its pending resume() |
+| --- | --- | --- |
+| real gesture (ego-browser `click`) | `running` | **resolved** |
+| scripted `element.click()` | `suspended` | still pending |
+
+A scripted click unlocks nothing — same trap as the checklist button earlier today, where a bare
+`.click()` made a working card look broken. **Twice in one session a synthetic click produced a
+false negative**, so: when a measurement depends on user activation, drive it as input, never as
+a method call.
+
+Skill updated: build the context whenever you like, keep `resume()` off the render path, and the
+first real press repairs it.
