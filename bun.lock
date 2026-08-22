@@ -23,6 +23,7 @@
         "@types/node": "^26.0.0",
         "@types/react": "~18.3.1",
         "@types/react-dom": "~18.3.1",
+        "partial-react": "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-react@1718",
         "oxfmt": "^0.64.0",
         "oxlint": "^1.79.0",
         "pkg-pr-new": "^0.0.88",
@@ -37,6 +38,7 @@
         "@deepseek-ai/dsh-client-ui-conversation": "^0.1.0-rc.7",
         "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.7",
         "@deepseek-ai/dsh-host-webserver": "^0.1.0-rc.7",
+        "@deepseek-ai/dsh-llm": "^0.1.0-rc.7",
         "@deepseek-ai/dsh-skill": "^0.1.0-rc.7",
         "react": "^18.2.0",
       },
@@ -491,7 +493,7 @@
 
     "oxlint": ["oxlint@1.79.0", "", { "optionalDependencies": { "@oxlint/binding-android-arm-eabi": "1.79.0", "@oxlint/binding-android-arm64": "1.79.0", "@oxlint/binding-darwin-arm64": "1.79.0", "@oxlint/binding-darwin-x64": "1.79.0", "@oxlint/binding-freebsd-x64": "1.79.0", "@oxlint/binding-linux-arm-gnueabihf": "1.79.0", "@oxlint/binding-linux-arm-musleabihf": "1.79.0", "@oxlint/binding-linux-arm64-gnu": "1.79.0", "@oxlint/binding-linux-arm64-musl": "1.79.0", "@oxlint/binding-linux-ppc64-gnu": "1.79.0", "@oxlint/binding-linux-riscv64-gnu": "1.79.0", "@oxlint/binding-linux-riscv64-musl": "1.79.0", "@oxlint/binding-linux-s390x-gnu": "1.79.0", "@oxlint/binding-linux-x64-gnu": "1.79.0", "@oxlint/binding-linux-x64-musl": "1.79.0", "@oxlint/binding-openharmony-arm64": "1.79.0", "@oxlint/binding-win32-arm64-msvc": "1.79.0", "@oxlint/binding-win32-ia32-msvc": "1.79.0", "@oxlint/binding-win32-x64-msvc": "1.79.0" }, "peerDependencies": { "oxlint-tsgolint": ">=7.0.2001", "vite-plus": "*" }, "optionalPeers": ["oxlint-tsgolint", "vite-plus"], "bin": { "oxlint": "bin/oxlint" } }, "sha512-hVJ9hq9m2unPS+Of4eJJgCPdIeCC+3DHEUX3tkmrPJr3OK2hz7PhXwgC+ZP71ZcYu8cCDEtQrqLxWNvxBppBVg=="],
 
-    "partial-react": ["partial-react@0.0.5", "", { "dependencies": { "@esm.sh/tsx": "^1.5.3", "partial-tsx": "0.0.3" }, "peerDependencies": { "react": "^18.3.0 || ^19.0.0", "react-dom": "^18.3.0 || ^19.0.0" } }, "sha512-4zTWEC8fmi3B4hTkdjXP6FW1qvjJOOaM4XrhwIAroggq6J6V20RtR7c9QWYJBXaJvGB5llB7+Hxgq4wSFJlMlw=="],
+    "partial-react": ["partial-react@https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-react@1718", { "dependencies": { "@esm.sh/tsx": "^1.5.3", "partial-tsx": "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-tsx@367cf08a40bbf66a207b65f18c4277cb363c6cc5" }, "peerDependencies": { "react": "^18.3.0 || ^19.0.0", "react-dom": "^18.3.0 || ^19.0.0" } }, "sha512-ClhfTQfzxTPZ0/O9B9IjfczviGyAOefDZuIB3AKKd9w+wGbT6O0LxYdzWjuNIjuEbMZDFvEfsurraQZYb9Dr+A=="],
 
     "partial-tsx": ["partial-tsx@0.0.3", "", {}, "sha512-6Y83ErwEIWlHAzF0o/Yv7D6BMAo4MtFoziVfkLiCTuhsCwvjeIrNAbWQHzE3q8GVpKK0ysxKA+i3GftnrE9W5Q=="],
 
@@ -554,5 +556,7 @@
     "@deepseek-ai/dsh-client-connection/@deepseek-ai/dsh-llm": ["@deepseek-ai/dsh-llm@0.1.0-rc.7", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-attachment": "^0.1.0-rc.7", "@deepseek-ai/dsh-brand": "^0.1.0-rc.7", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.7", "@deepseek-ai/dsh-timeout": "^0.1.0-rc.7" } }, "sha512-VaB9kQ8XOA+R5jtsWf92QMc1WpaatEAFUvQePGUYrzQ7Z86b9VhQQzmchh5VmknT4oRSSdn0re5tReCvfcYNXQ=="],
 
     "@deepseek-ai/dsh-host-apiproxy/@deepseek-ai/dsh-llm": ["@deepseek-ai/dsh-llm@0.1.0-rc.7", "", { "dependencies": { "@deepseek-ai/schemastery": "^3.18.1" }, "peerDependencies": { "@deepseek-ai/cordis": "^4.0.1", "@deepseek-ai/dsh-attachment": "^0.1.0-rc.7", "@deepseek-ai/dsh-brand": "^0.1.0-rc.7", "@deepseek-ai/dsh-invariants": "^0.1.0-rc.7", "@deepseek-ai/dsh-timeout": "^0.1.0-rc.7" } }, "sha512-VaB9kQ8XOA+R5jtsWf92QMc1WpaatEAFUvQePGUYrzQ7Z86b9VhQQzmchh5VmknT4oRSSdn0re5tReCvfcYNXQ=="],
+
+    "partial-react/partial-tsx": ["partial-tsx@https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-tsx@367cf08a40bbf66a207b65f18c4277cb363c6cc5", {}, "sha512-1RNCQ9RBIw64/FNLMrKsee5MxXFczkjAqV28BurpPtWl0/CnGTaI59JXXC3Kx8V3GRD3CNjdZOypHI+/YXm4Hg=="],
   }
 }

@@ -1318,3 +1318,23 @@ The surviving output settles it: two batches of three, `fence=1` twice each — 
 
 Cheap and worth repeating: group every backticked prompt that appears near an `N/M` and print the
 ones whose sections disagree.
+
+### The upstream cleanup, pre-verified against the PR build (2026-08-22)
+
+MindLab-Research/macaron-genui-demo#1718 is still open — green, mergeable, reviewed clean,
+untouched since Aug 19. Merging it is not mine to do, but `pkg.pr.new` publishes its build, so
+whether our three cleanups actually work is answerable **now** rather than on merge day.
+
+Installed `partial-react@1718` in a scratch clone and did all three:
+
+- dropped the `replaceUpstreamCompiler` plugin from `scripts/build.ts` and deleted
+  `src/client/runtime/compiler-shim.ts`
+- deleted `scripts/typecheck.mjs`, pointing the script at plain `tsc --noEmit`
+
+Result: `bun run check` fully green, and the three greps that justify the workaround all read
+**0** in `lib/client.js` (`import.meta`, `Bun.`, `import.meta.resolve`). Bare `tsc` exits 0, so
+the filter script has nothing left to filter.
+
+Parked on `trial/drop-workaround` rather than merged: it pins a PR preview build, which must not
+reach main. On merge day the branch is the recipe — swap the pinned dependency for the released
+version and it is done.

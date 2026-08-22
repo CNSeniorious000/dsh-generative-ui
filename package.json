@@ -53,7 +53,7 @@
   "scripts": {
     "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
-    "typecheck": "node scripts/typecheck.mjs",
+    "typecheck": "tsc --noEmit",
     "test": "bun test",
     "smoke": "bun scripts/smoke.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run build && bun run smoke",
@@ -93,6 +93,7 @@
     "@types/react-dom": "~18.3.1",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
+    "partial-react": "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-react@1718",
     "pkg-pr-new": "^0.0.88",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
