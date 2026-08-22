@@ -1603,3 +1603,30 @@ Prose fixtures 5/5 after. Merged.
 The wider lesson repeats the day's theme from a new angle: **a number recorded during a broken
 environment poisons the comparison, not just the run.** Had I trusted `0/2`, the rule would have
 looked twice as effective as it is.
+
+### 能做啥 is 推荐几个 with the number taken out (2026-08-22)
+
+Testing the streaming change against a card that would really use `$dsh/ai`:
+`冰箱里就剩鸡蛋、番茄和一点剩饭，能做啥` — **0/4**, four numbered dishes in prose, each with
+steps, ending on *"要不要我帮你把其中一道的详细火候列一下？"*.
+
+The same subject one wording over produced a **302-line card**:
+`给我推荐几个周末在家能做的菜，我想边看边挑` → 1/1, filters and expandable recipes. Third time
+today the phrasing decides and the subject does not.
+
+The trace is 724 characters and never reaches the rule layer:
+
+> *"This is a simple factual/casual question. No tools needed, no interface needed really."*
+
+The `asking for a few of something` rule already lists *a dinner suggestion* — it was never
+consulted, because 能做啥 does not look like asking for a few. Added the counter with the measured
+pair in it, and the give-away stated as **a list where every item has a body**: steps, times, a
+reason to pick one. 这就是个闲聊问题 describes the tone, not what they will do with the answer.
+
+After: **3/3**. Prose fixtures held — `什么是闭包？` came back once as a card and then 4/4 prose on
+a re-run, so that was flap, not leakage.
+
+Also worth recording as a **non**-finding: `给我推荐几个周末能做的菜` hardcodes its dishes and does
+not reach for `$dsh/ai`, and the reasoning defends it — *"the user asked for a curated few to
+browse, not for an open answer space"*. That is a fair reading, and unlike the Tokyo case in the
+skill it does not claim the knowledge is fixed. Left alone.
