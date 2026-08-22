@@ -3321,7 +3321,10 @@ until the stream ends, so one `item.difficulty.includes(…)` on an early frame 
 render and unmounts the whole card mid-generation. It calls this "the failure mode of this API,
 not an edge case".
 
-**21 corpus cards import `partial-json`. All 21 guard correctly. Zero unguarded accesses.** The
+**22 corpus cards import `partial-json`. All 22 guard correctly. Zero unguarded accesses.**
+(21 of 21 when first measured; re-verified at 22 of 22 after the parser fix grew the corpus,
+this time with a predicate that recognises `Array.isArray`, optional chaining and truthiness
+guards rather than only `??`.) The
 forms vary — `Array.isArray(d?.steps) ? … : []`, `if (data && Array.isArray(data.items))`,
 `data.items.filter((it) => it && it.name)`, plus a `try/catch` around the parse in every one —
 but the rule lands every time. That is the strongest evidence in the corpus that a skill
