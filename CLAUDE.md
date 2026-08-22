@@ -3814,3 +3814,23 @@ theme-independent by construction, and a detector that cannot tell those apart r
 real rate. This is the fourth time today a first-pass detector over-reported by an order of
 magnitude — streaming guards (7 → 0), remounts (35 → 0), nested borders (130 → unmeasurable),
 and now colours (80 → 2). Every one of them pointed at a problem that was not there.
+
+The pattern is consistent enough to state as a rule. **A first-pass detector for a code-quality
+property over-reports by roughly an order of magnitude, and it over-reports in the direction you
+expected.** Four for four today, each caught only by reading the individual hits:
+
+| property | first pass | after reading the hits |
+| --- | --- | --- |
+| unguarded streamed fields | 7 of 21 | **0** |
+| mid-stream remounts | 35 of 362 | **0** |
+| hardcoded colours | 80 of 378 | **2** |
+| nested borders | 130 of 362 | unmeasurable, abandoned |
+
+The mechanism is the same every time: the regex encodes the *shape* of the mistake and knows
+nothing about the shapes of the correct code around it — `Array.isArray(x)` guards, white text on
+a painted chip, a segmented control returning to its initial state. So the rule is not "write a
+better regex", it is procedural: **never report a count from a new detector without reading
+every hit, or a sample if there are more than a dozen.** If reading them is too expensive, the
+number is not worth having. And the direction is not random — a detector built while suspecting
+a problem finds that problem, which is exactly when the reading is most necessary and feels
+least so.
