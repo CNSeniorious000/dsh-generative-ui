@@ -49,7 +49,7 @@ Consequences:
 
   Note that **`skipLibCheck` does nothing here** — that option only skips `.d.ts`, and these two packages ship `.ts` source, so a value import really does compile them.
 
-  **Do not patch around this.** What's left is the undeclared `typeof Bun` guard in `compiler.ts:13` (2 errors, tracked as MindLab-Research/macaron-genui-demo#1717 — #1715 was the peer-range half and is closed), which affects neither our runtime nor our build — only `tsc` complains. Patching trades long-term maintenance for one line of prettier output, hides the problem locally, and takes the pressure off upstream. `scripts/typecheck.mjs` prints upstream errors without counting them, and only judges `src/` — delete the script along with them once upstream lands the fix.
+  This is why the packages' own source used to fail `tsc`; **`partial-react@0.0.6` fixed it** (see §2.6), so `typecheck` is plain `tsc --noEmit` again and there is nothing left to filter.
 - `partial-tsx` / `partial-react` use `toSorted` / `findLast` / `toReversed`, so `lib` must be ≥ `ES2023`.
 
 ### 2.3 Non-JS assets only reach the browser through your own route
@@ -92,40 +92,18 @@ See `scripts/build.ts`. All four let the plugin **build fine and blow up at runt
 
 - **`external` lists only the platform table, and mind that bun matches sub-paths too.** Listing `react-dom` also externalizes `react-dom/server` — which is **not** in the platform table, so materialization throws `missed the module table`. A plugin that resolves it to an absolute path sidesteps specifier matching. (bun defaults to `--packages bundle`, so unlike tsdown there's no need for a reverse `noExternal`.)
 - **The `browser` resolution condition must be explicit.** `react-dom`'s `exports["./server"]` only points at `server.browser.js` under that condition; otherwise you get the Node build and drag `require("stream"/"url"/"util")` into a browser bundle.
-- **`partial-react/src/compiler.ts` must be swapped for `src/client/runtime/compiler-shim.ts`.** It has a top-level `import.meta.resolve`, which is a **syntax-level** error inside a CJS factory — it throws whether or not that branch runs, surfacing as the whole plugin `loaded without registering`. We ship our own compiler anyway, and the swap also drops its `Bun` global and its node:fs read path.
 - **`define` away `import.meta.url`.** `@esm.sh/tsx`'s entry reads it. We always pass the wasm path explicitly, so a constant is enough.
 
-**MindLab-Research/macaron-genui-demo#1718 merged on 2026-08-22** (`515c7c5`), and three things
-come out together the moment a release carries it — the
-bullet above, its shim, and the type-error filter. This was verified against the PR's own
-`pkg.pr.new` build on 2026-08-22 rather than assumed, on the branch `trial/drop-workaround`
-(now far behind main; keep it as evidence, not as something to merge):
+**The upstream compiler no longer needs patching around** — `partial-react@0.0.6`
+(2026-08-22, from macaron-genui-demo#1718) dropped the `import.meta.resolve` and `typeof Bun` its
+`compiler.ts` used to carry. Three things came out together on release day: the build plugin that
+swapped in a shim, `src/client/runtime/compiler-shim.ts` itself, and `scripts/typecheck.mjs`,
+whose only job was filtering upstream's two type errors — `typecheck` is now plain `tsc --noEmit`.
 
-1. `bun add -d partial-react@<the release>` — the branch pins
-   `https://pkg.pr.new/MindLab-Research/macaron-genui-demo/partial-react@1718`, which must not
-   reach main.
-2. Delete the `replaceUpstreamCompiler` plugin from `scripts/build.ts` and
-   `src/client/runtime/compiler-shim.ts` with it.
-3. Delete `scripts/typecheck.mjs`; point the `typecheck` script at plain `tsc --noEmit`.
-
-Re-measured against **post-merge `main`** (not the PR snapshot) on 2026-08-22: with all three
-cleanups applied, `bun run check` is green, bare `tsc` exits 0, and `import.meta` / `Bun.` /
-`import.meta.resolve` all read **0** in `lib/client.js`.
-
-The shim's removal was checked head-on rather than assumed: with `compiler-shim.ts` gone, all
-three cards in `test/cards` still compile and paint in a real browser, so the browser compiler
-works against upstream's own `compiler.ts` now that it no longer reaches for `import.meta.resolve`.
-`bun run check` also stops printing the `[upstream, ignored] 2 error(s)` line it has carried all
-week.
-
-**Only `partial-react` needs the release.** `partial-tsx` is clean — checked its sources for
-`import.meta.resolve` and `typeof Bun` (neither appears) and read what `tsc` actually reports:
-both errors are `partial-react/src/compiler.ts(13,…)`. The filter script's message named both
-packages, which is what made me guess otherwise; reworded.
-
-**Blocked on a release, not on the merge.** npm `partial-react` is still `0.0.5`, published
-2026-08-19 12:09 — three days before the merge — and its `src/compiler.ts` still carries both
-`import.meta.resolve` and `typeof Bun`. Nothing changes here until a version above 0.0.5 ships.
+Verified rather than assumed: `bun run check` green with no `[upstream, ignored]` line, bare
+`tsc` exits 0, `import.meta` / `Bun.` / `import.meta.resolve` all read **0** in `lib/client.js`,
+and all three cards in `test/cards` compile and paint in a real browser — that last one being what
+the shim existed to protect. `lib/client.js` also lost 70KB, the shim's duplicate compiler.
 
 ### 2.7 Two traps in the type system
 

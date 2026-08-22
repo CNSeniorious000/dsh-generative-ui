@@ -53,7 +53,7 @@
   "scripts": {
     "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
-    "typecheck": "node scripts/typecheck.mjs",
+    "typecheck": "tsc --noEmit",
     "test": "bun test",
     "smoke": "bun scripts/smoke.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run audit && bun run replay && bun run cards && bun run build && bun run smoke",
@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "@esm.sh/tsx": "^1.5.3",
-    "partial-react": "~0.0.5",
+    "partial-react": "~0.0.6",
     "partial-tsx": "~0.0.3"
   },
   "peerDependencies": {

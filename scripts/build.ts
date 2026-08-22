@@ -40,14 +40,6 @@ const bundleReactDomServer: import("bun").BunPlugin = {
  * syntax error inside a CJS factory regardless of whether that branch runs. We ship our own
  * browser compiler anyway, so swap the module out at resolve time.
  */
-const replaceUpstreamCompiler: import("bun").BunPlugin = {
-  name: "replace-upstream-compiler",
-  setup(build) {
-    const shim = resolve(import.meta.dir, "../src/client/runtime/compiler-shim.ts");
-    build.onResolve({ filter: /^\.\/compiler$/ }, (args) => (args.importer.includes("partial-react") ? { path: shim } : undefined));
-  },
-};
-
 const node = await Bun.build({
   entrypoints: ["src/index.ts"],
   outdir: "lib",
@@ -67,7 +59,7 @@ const client = await Bun.build({
   // server.browser.js under the `browser` condition — without it the Node build comes in and
   // drags require("stream"/"url"/"util") into a browser bundle.
   conditions: ["browser"],
-  plugins: [bundleReactDomServer, replaceUpstreamCompiler],
+  plugins: [bundleReactDomServer],
   define: {
     // @esm.sh/tsx's entry reads `import.meta.url`, which does not exist in a CJS factory.
     // Only read on the branches taken when no wasm path was passed, and we always pass one.
