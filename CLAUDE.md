@@ -1360,3 +1360,23 @@ both rows.
 
 Nothing was wrong here, which is the point: an accurate note can still mislead if the quantity it
 names is not the one the reader will type.
+
+### Tests for the streaming JSON walk (2026-08-22)
+
+`collect.ts` parses a canvas out of tool-call arguments **by hand**, because the arguments arrive
+a few bytes at a time and can stop inside a `\t` or halfway through a `\u2192`. It had no tests:
+every failure it guards against is a canvas that vanishes or flickers mid-generation, which is
+exactly what nobody notices until a demo.
+
+Four tests, the middle one carrying the real property: **feed every prefix of a settled write and
+assert the code only ever grows.** That is the streaming invariant stated directly — no throw, no
+shrink — rather than a handful of hand-picked cut points.
+
+Both were mutation-checked before being trusted, which is the only reason to believe them:
+making the half-escape guard emit `?` fails the escape test, and making an unterminated backslash
+drop a character fails the prefix test. Without that step a passing test proves nothing about the
+code, only about itself.
+
+Note the fixture had to be hand-written for the `\u` case: `JSON.stringify` emits `→` literally,
+so a fixture built with it never exercises the branch. My first draft did exactly that and its
+three failures were all mine, not the parser's.
