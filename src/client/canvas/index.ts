@@ -23,6 +23,19 @@ export type CanvasHostOptions = {
 
 const EMPTY: ReadonlySet<string> = new Set();
 
+/**
+ * A call whose arguments carry executable code rather than a file operation.
+ *
+ * Matched on the argument text, not the tool name, for the same reason `collect.ts` classifies
+ * by shape: the day the host renames `run_code`, a name list stops matching and canvases
+ * silently stop appearing.
+ *
+ * It must also mention the canvases directory. All 29 opaque canvas writes in the corpus do,
+ * even the 27 whose path is built from a variable — and without that clause a session doing
+ * ordinary shell work re-lists once per command (measured: median 0, but one session hit 94).
+ */
+export const OPAQUE_WRITE = /"(?:code|command)"\s*:[\s\S]*canvases/;
+
 export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
   /**
    * Canvas bodies re-read from disk, for the ones a patch left stale.
@@ -55,6 +68,8 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
   /** Every canvas on disk, for the launcher. Refreshed per workspace, not per sweep. */
   let workspaceIds: readonly string[] = [];
   let listedFor: string | undefined;
+  /** Settled opaque calls at the time of the last listing — see the sweep for why. */
+  let listedAfter = -1;
   // `null` until the first paint, so an empty first paint is still a paint. An empty string
   // would collide with the signature of "no canvases" and skip it.
   let signature: string | null = null;
@@ -88,8 +103,16 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
       const hidden = dismissed.get(session) ?? EMPTY;
       // The workspace listing backs the launcher. Fetched once per workspace rather than per
       // sweep — the sweep runs per streamed token, and a directory listing is not free.
-      if (workspace !== undefined && workspace !== listedFor) {
+      // A call that ran arbitrary code may have written a canvas without any argument saying
+      // so: 29 canvas writes in the corpus go through `run_code`, and in 27 of them the path is
+      // built from a variable, so nothing in the arguments names the id. `collect.ts` cannot
+      // classify what the arguments do not contain — but the workspace listing already knows,
+      // it just never refreshed. Counting settled opaque calls re-lists once each time one
+      // finishes, which is a directory read per code execution and nothing per streamed token.
+      const opaque = calls().filter((call) => call.settled && OPAQUE_WRITE.test(call.argsRaw)).length;
+      if (workspace !== undefined && (workspace !== listedFor || opaque !== listedAfter)) {
         listedFor = workspace;
+        listedAfter = opaque;
         void listCanvasIds(workspace).then((ids) => {
           workspaceIds = ids;
           signature = null;
