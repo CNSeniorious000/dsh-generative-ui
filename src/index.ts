@@ -22,7 +22,7 @@ import type {} from "@deepseek-ai/dsh-skill";
 // and this is the constructor that stamps the identity and source tags it requires.
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
-import { CANVAS_DIR, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
+import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 
@@ -100,6 +100,25 @@ async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req: Incom
     const ids = await readdir(join(cwd, CANVAS_DIR)).then((names) => names.flatMap((name) => { const found = canvasIdOf(`${CANVAS_DIR}/${name}`); return found === null ? [] : [found]; }), () => []);
     res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     return void res.end(JSON.stringify(ids));
+  }
+  // A relative specifier written inside the canvas. Resolved through the contract, which
+  // confines it to this canvas's own child directory — see canvasChildPath.
+  const child = url.searchParams.get("child");
+  if (child !== null) {
+    const path = canvasChildPath(id, child);
+    if (path === null) return void res.writeHead(400).end();
+    // A specifier carries no extension, so the server is what decides which file it names —
+    // and the client needs to know, because the compiler picks its syntax from the extension.
+    for (const suffix of [".tsx", ".ts", "/index.tsx", "/index.ts", ""]) {
+      try {
+        const body = await readFile(join(cwd, path + suffix), "utf8");
+        res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-ui4a-filename": path + suffix });
+        return void res.end(body);
+      } catch {
+        // Next candidate; a specifier that names none of them is a 404 below.
+      }
+    }
+    return void res.writeHead(404).end();
   }
   try {
     const code = await readFile(join(cwd, canvasPath(id)), "utf8");

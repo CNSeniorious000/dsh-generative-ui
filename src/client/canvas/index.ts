@@ -164,6 +164,7 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
           ? createElement(CanvasPanel, {
               canvases,
               offerable,
+              cwd: cwd(),
               onOpen: show,
               onWidth: column.setWidth,
               onClose: () => {

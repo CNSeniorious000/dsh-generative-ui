@@ -35,3 +35,21 @@ export async function readCanvasFile(cwd: string, id: string): Promise<string | 
     return null;
   }
 }
+
+/**
+ * Reads one of a canvas's sub-page files, named by the relative specifier as written in the
+ * canvas source. The server resolves it through the contract; anything outside this canvas's
+ * own child directory comes back 400 and reads here as null.
+ */
+export async function readCanvasChild(cwd: string, id: string, specifier: string): Promise<{ source: string; filename: string } | null> {
+  readSerial += 1;
+  const url = `${CANVAS_READ_PATH}?cwd=${encodeURIComponent(cwd)}&id=${encodeURIComponent(id)}&child=${encodeURIComponent(specifier)}&r=${readSerial}`;
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+    // The server resolved the extension; the compiler needs it to pick a syntax.
+    return { source: await response.text(), filename: response.headers.get("x-ui4a-filename") ?? `${specifier}.tsx` };
+  } catch {
+    return null;
+  }
+}

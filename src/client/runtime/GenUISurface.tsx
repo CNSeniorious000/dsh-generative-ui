@@ -45,7 +45,7 @@ function useLatest<T>(value: T) {
 
 /** The compiler owns a single wasm instance; one per document is both enough and what we can afford. */
 let sharedCompiler: ReturnType<typeof createBrowserTsxCompiler> | null = null;
-const compiler = () => {
+export const compiler = () => {
   if (sharedCompiler === null) {
     sharedCompiler = createBrowserTsxCompiler();
   }

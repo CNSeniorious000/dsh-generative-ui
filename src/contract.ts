@@ -48,6 +48,27 @@ export const canvasPath = (id: string) => `${CANVAS_DIR}/${id}${CANVAS_SUFFIX}`;
 export const canvasChildDir = (id: string) => `${CANVAS_DIR}/${id}`;
 
 /**
+ * Resolves a relative specifier written inside `<id>.ui4a.tsx` to a workspace path.
+ *
+ * The canvas file sits in `${CANVAS_DIR}/`, so `./<id>/deck` lands in that canvas's own
+ * child directory — which is the only place it may land. Every segment goes through the
+ * same exclusion test as an id (no separators, no dots, no traversal), so `..` cannot
+ * appear and the result cannot escape `canvasChildDir(id)`.
+ *
+ * Returns null for anything outside that shape rather than throwing: the caller is a
+ * route answering an arbitrary page, and a bad specifier is a 400, not a crash.
+ */
+export function canvasChildPath(id: string, specifier: string): string | null {
+  if (!isCanvasId(id)) return null;
+  const bare = specifier.replace(/^\.\//, "");
+  const segments = bare.split("/");
+  // The specifier is written relative to the canvases dir, so it must open with the id itself.
+  if (segments.length < 2 || segments[0] !== id) return null;
+  if (!segments.every(isCanvasId)) return null;
+  return `${canvasChildDir(id)}/${segments.slice(1).join("/")}`;
+}
+
+/**
  * Reduces a path to its workspace-relative form.
  *
  * Tool arguments carry absolute paths, so the contract is matched on the trailing

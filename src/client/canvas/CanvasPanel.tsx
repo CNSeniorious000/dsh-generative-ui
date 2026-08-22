@@ -7,7 +7,9 @@
  * same surface back both this and the inline cards.
  */
 import { useEffect, useRef, useState } from "react";
-import { GenUISurface } from "../runtime/GenUISurface.tsx";
+import { compiler, GenUISurface } from "../runtime/GenUISurface.tsx";
+import { readCanvasChild } from "./read.ts";
+import { inlineSubPages } from "./subpages.ts";
 import { useDismissable } from "./useDismissable.ts";
 
 export type Canvas = { id: string; code: string; streaming: boolean };
@@ -16,11 +18,50 @@ export type CanvasPanelProps = {
   canvases: readonly Canvas[];
   /** Every canvas in the workspace, so the header can reach ones this session never wrote. */
   offerable: readonly string[];
+  /** The session's workspace, needed to fetch a canvas's sub-page files. */
+  cwd: string | undefined;
   onOpen: (id: string) => void;
   onClose: () => void;
   /** Reports the panel's width so the host frame can reserve matching space. */
   onWidth: (width: number) => void;
 };
+
+/**
+ * Rewrites a canvas's relative sub-page imports into blob URLs before it is compiled.
+ *
+ * Only for a settled canvas: mid-stream the sibling files are usually not written yet, and a
+ * canvas does not stream under the default PTC mode anyway (see CLAUDE.md §3.6). Until the
+ * rewrite lands the original source is rendered, which fails exactly as it does today rather
+ * than blanking a canvas that was working.
+ */
+function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
+  const [resolved, setResolved] = useState<{ key: string; code: string } | null>(null);
+
+  useEffect(() => {
+    if (cwd === undefined || canvas === undefined || canvas.streaming) return;
+    if (!RELATIVE_IMPORT.test(canvas.code)) return;
+    const key = `${canvas.id}:${canvas.code.length}`;
+    let live = true;
+    const urls: string[] = [];
+    const compile = async (filename: string, source: string) => (await compiler().compile(source, { filename })).code;
+    void inlineSubPages(canvas.code, (specifier) => readCanvasChild(cwd, canvas.id, specifier), compile, urls).then((code) => {
+      if (!live) return void urls.forEach((url) => URL.revokeObjectURL(url));
+      setResolved({ key, code });
+    });
+    return () => {
+      live = false;
+      // The surface holds the previous code, so its blobs stay reachable until it re-renders;
+      // revoking on the next resolve rather than here would leak one set per edit.
+      for (const url of urls) URL.revokeObjectURL(url);
+    };
+  }, [cwd, canvas?.id, canvas?.code, canvas?.streaming]);
+
+  if (canvas === undefined) return "";
+  return resolved !== null && resolved.key === `${canvas.id}:${canvas.code.length}` ? resolved.code : canvas.code;
+}
+
+/** Cheap gate: only a canvas that actually writes a relative import pays for the pass. */
+const RELATIVE_IMPORT = /(\bfrom\s*|\bimport\s*\(\s*)["']\.[^"']*["']/;
 
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
@@ -53,7 +94,7 @@ function useResize(initial: number) {
   return { width, start };
 }
 
-export function CanvasPanel({ canvases, offerable, onOpen, onClose, onWidth }: CanvasPanelProps) {
+export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth }: CanvasPanelProps) {
   const { width, start } = useResize(420);
   useEffect(() => onWidth(width), [width, onWidth]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -65,6 +106,7 @@ export function CanvasPanel({ canvases, offerable, onOpen, onClose, onWidth }: C
   // selection that disappears needs no cleanup: the fallback already covers it, and
   // clearing the state as well would only be a second render saying the same thing.
   const active = canvases.find((canvas) => canvas.id === activeId) ?? canvases[canvases.length - 1];
+  const resolved = useSubPages(cwd, active);
 
   return (
     <div className="dgu-panel" style={{ "--dgu-panel-width": `${width}px` } as React.CSSProperties}>
@@ -121,7 +163,7 @@ export function CanvasPanel({ canvases, offerable, onOpen, onClose, onWidth }: C
         ) : (
           // A canvas arrives as whole files, so recompiles replace rather than extend —
           // preserving state would make an edited canvas silently keep the old render.
-          <GenUISurface key={active.id} code={active.code} streaming={active.streaming} preserveState={false} />
+          <GenUISurface key={active.id} code={resolved} streaming={active.streaming} preserveState={false} />
         )}
       </div>
     </div>

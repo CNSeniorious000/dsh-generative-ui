@@ -120,6 +120,20 @@ Inherited from `../ui4a-playground/src/fs/contract.ts`; **the only difference is
 └── canvases/<id>/*.tsx      # → that mini app's sub-tree
 ```
 
+**Sub-pages are inlined before compiling, because `blob:` cannot host a relative import.**
+`src/prompt.ts` tells the model to keep a canvas's components in `<id>/` and import them with
+relative paths, and the model does — `.dsh/ui4a/canvases/tarot.ui4a.tsx` ships a 26KB
+`tarot/deck.ts`. That card was blank: a card is imported as a blob URL, and the browser rejects
+`./tarot/deck` with *"Invalid relative url or base scheme isn't hierarchical"* before any import
+map is consulted. Measured, so `setImportMap` is not the fix: **an import map keyed on the
+relative specifier fails identically**, because resolution against the importer's URL happens
+first. What works is rewriting the specifier to the child's own blob URL — an absolute URL has
+no base to resolve against — and nesting works for the same reason. `canvas/subpages.ts` does
+that, `serveCanvas`'s `child` branch reads the file through `canvasChildPath`, and the route
+returns the resolved filename in `x-ui4a-filename` because **a specifier carries no extension
+and the compiler picks its syntax from one** — passing `./tarot/deck` to it makes a `.ts` file
+fail to parse.
+
 **`.dsh/` is the harness's own project convention, not ours** — `dsh-skill-filesystem` reads
 `join(projectRoot, ".dsh/skills")` and labels that source `project-dsh`. Sitting beside it
 keeps a plain `ls` of the user's repo clean and puts these files where anyone would look for
@@ -2198,3 +2212,52 @@ layers are not symmetric, and a principle derived on one does not port to the ot
 Also: the fix that worked and the fix that failed were **indistinguishable in argument quality**.
 Both named a real contradiction, both kept the test and dropped the category, both read better
 afterwards. Only the six-run boundary check separated them.
+
+### The sub-page promise had never worked (2026-08-23)
+
+`src/prompt.ts` has always told the model that a canvas's sub-pages live in `<id>/` and are
+imported with relative paths. The model followed it: `.dsh/ui4a/canvases/tarot.ui4a.tsx:3`
+imports `./tarot/deck`, beside a **26KB `tarot/deck.ts`**. That card could never have rendered.
+
+Traced with the model's own file rather than a constructed one:
+
+| step | result |
+| --- | --- |
+| compile | **succeeds**, 22628 bytes, `./tarot/deck` untouched |
+| import map installed (as `registry.ts` does) | react / jsx-runtime / `$dsh/chat` all resolve |
+| import the blob | **`Invalid relative url or base scheme isn't hierarchical`** |
+
+`docs/examples.md:1254` predicted the breakage and got the **mechanism wrong**: it said the
+compiler rewrites the specifier into `_.tsx/deck` when no `filename` is passed. Measured, the
+compiler leaves it alone under either filename. The break is at import, not compile.
+
+Two negative results decided the fix:
+
+- **An import map cannot rescue it.** A map keyed on `"./tarot/deck"` fails with the same error:
+  a relative specifier is resolved against the importer's URL *before* the map is consulted, and
+  `blob:` is not hierarchical. So `renderer.setImportMap` — the existing injection point — is
+  useless here.
+- **Rewriting the source works, and nests.** Replacing the specifier with the child's blob URL
+  removes the question; a child importing a sibling works for the same reason.
+
+Three bugs of my own on the way, each caught only by running the next step:
+
+1. **The first cycle guard deadlocked.** Registering a pending promise per specifier prevents a
+   double fetch but not mutual waiting: A awaits B's URL, B awaits A's. I reasoned it was safe;
+   it hung. Fixed by reading every reachable child first, then minting in dependency order — a
+   cycle simply never becomes mintable and keeps its specifiers, failing as it does today.
+2. **The module was untestable.** It imported `readCanvasChild` directly, and ESM exports are
+   read-only, so the cycle test could not run at all. Reading is a parameter now, like `compile`.
+   *Untestable is a design defect, not a reason to skip the test.*
+3. **The compiler picks its syntax from the filename.** Passing the specifier (`./tarot/deck`,
+   no extension) made the real `deck.ts` fail to parse. The route now resolves the extension and
+   returns it in `x-ui4a-filename`.
+
+End to end in a browser, same card, same path: **`IMPORT OK — default is function`**.
+
+`test/subpages.test.ts` keeps five cases; the cycle one is the reason the file exists. Mutation
+checked: reverting the dependency guard fails it and nothing else.
+
+One more instrument lie, the twelfth today and the first self-inflicted: `rg -rn 'CanvasPanel'`
+printed the filename as `n.tsx`. `-r` is *replace*, and it had eaten the `n`. **An unfamiliar
+flag combination is a measurement instrument like any other.**
