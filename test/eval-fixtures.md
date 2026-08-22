@@ -32,6 +32,7 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `98 华氏度是多少摄氏度` | a conversion is never asked once — expect a pair of fields |
 | `git reset --soft --mixed --hard 有啥区别` | a concept with nothing to compute; expect three boxes and a button |
 | `二分查找的原理是什么` | 原理 / 什么是 is the same wish worded as a lookup |
+| `这个项目的 git 历史帮我梳理一下` | a history is a set; expect `$dsh/exec` running `git log`, not a summary |
 
 ## Correctness, not just presence
 

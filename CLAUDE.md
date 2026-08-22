@@ -1578,3 +1578,28 @@ them. Previously that layer had only a synthetic benchmark behind it (2000 unclo
 
 `scripts/replay-stream.ts` now reports `brokenFrames` alongside the remount count, with the
 sensitivity limits written next to the call so nobody reads a zero as "this card is fine".
+
+### A git history is a set, measured after the outage (2026-08-22)
+
+Parked on a branch when the quota ran out, with the note that it still needed measuring. It did —
+and the first thing measuring corrected was **my own baseline**. The pre-outage record said
+`0/2`; those two runs sat right around the plugin-symlink failure. The honest baseline is
+**4/9**.
+
+| | `git 历史帮我梳理一下` + `最近都改了啥` |
+| --- | --- |
+| without the rule | 4/9 |
+| with it | **6/6** |
+
+Both cards inspected: 195 and 293 lines, each importing `$dsh/exec`, running `git log` through it
+rather than pasting a summary, and offering an author filter. **That is the first time `$dsh/exec`
+has appeared in a produced card** — the adversarial critique in `docs/examples.md` counted 0 uses
+across 11 canvases and called the capability demand invented downstream. It was, for browsing
+files. For history it is the difference between a card that re-runs tomorrow and a story about
+last week.
+
+Prose fixtures 5/5 after. Merged.
+
+The wider lesson repeats the day's theme from a new angle: **a number recorded during a broken
+environment poisons the comparison, not just the run.** Had I trusted `0/2`, the rule would have
+looked twice as effective as it is.
