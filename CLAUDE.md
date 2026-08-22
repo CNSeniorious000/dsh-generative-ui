@@ -3653,13 +3653,20 @@ network, so a retry loop can never recover. Reloading the page cleared it and th
 succeeded immediately.
 
 This directly contradicts how §4's cold-start entry says to respond ("re-measure before writing
-it down") — re-measuring *in the same page* is the one thing that cannot work. This has a direct bearing on `GenUISurface`'s `TRANSIENT_LOAD` retry, and **I do not know
-whether that path works.** It calls `renderer.clear()` and re-renders the card, which mints a
-fresh blob URL for the *card* — but the thing that failed is a dependency the card imports
-(`esm.sh/recharts`), and whether a new card module re-attempts a bare specifier that already
-rejected is partial-react's business, not visible from here. The three-retry backoff was written
-against a real esm.sh cold start and never verified end to end. **Recorded as unknown rather than
-claimed as correct** — the honest version of what today's finding implies.
+it down") — re-measuring *in the same page* is the one thing that cannot work. **This makes `GenUISurface`'s `TRANSIENT_LOAD` retry a no-op**, and the chain is now measured
+end to end rather than argued:
+
+1. A probe page imports a dead URL twice, counting `fetch` calls in between: the second import
+   rejects with **0 network requests**. Same URL, same rejection, no attempt.
+2. `mergeFallbackImports` (partial-react's `toEsmShImportUrl`) maps each bare specifier to a
+   **deterministic** esm.sh URL — `https://esm.sh/<pkg>?target=es2022`, no cache-buster.
+3. So `renderer.clear()` + `render(code)` mints a fresh blob for the *card*, and that new card
+   module imports the **same** dependency URL that already rejected. Nothing re-fetches.
+
+The three-retry 0.4/0.8/1.2s backoff was written against a real esm.sh cold start and cannot
+recover from one. A fix has to change the URL (a `?retry=n` parameter) or the document; nothing
+else reaches the network. Not fixed here — `TRANSIENT_LOAD` is unreachable anyway since no
+caller passes `onError` — but it is now a known-dead path rather than a plausible-looking one.
 
 Two consequences worth carrying: a browser-side retry must change the specifier or the document,
 and **a failure that reproduces identically four times in a row is evidence about caching, not
