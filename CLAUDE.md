@@ -3572,3 +3572,27 @@ Two harness lessons, since the first run reported 28 failures and 22 were mine:
   production — that is the point of the rename — but they are real cards from before it, and
   leaving them unresolvable reports a rebuild-lag artefact as a broken card. Shimmed, and the
   failure count fell from 28 to 6.
+
+The four blank cards each had a **different** cause, and all four were invisible until
+`console.error` was captured during the mount — React renders an empty tree and says nothing the
+reader can see:
+
+| card | cause |
+| --- | --- |
+| `401f703946a0` | `const [h, setH] = useMemo(…)` — only `useState`/`useReducer` return a pair |
+| `83d06aa1ce20` | `<Fragment>` used with only `useState` imported |
+| `acec9f8e5f4c` | `Cannot read properties of undefined (reading 'date')` |
+| `2f815f802de5` | `<code>src/*.{ts,tsx}</code>` — **a glob in JSX text is an expression** |
+
+That last one is worth remembering on its own: inside JSX, `{ts,tsx}` is a comma expression over
+two undefined identifiers, so a card explaining glob syntax breaks by *quoting the glob*. It
+compiles, and `ReferenceError: ts is not defined` arrives at render.
+
+Two of the four are now screens (`DESTRUCTURED-HOOK`, `MISSING-REACT-IMPORT`), each firing on
+exactly its own card in 378 and each with a control that fails `bun run check` when blinded.
+The other two are not screenable — an undefined field access needs types, and the glob needs to
+know which braces the author meant as text.
+
+**`compile-cards.ts` now runs five screens, and three of them exist only because the cards were
+actually rendered.** Compiling proved 375 of 378 fine; mounting found 10 failures. That ratio is
+the argument for `render-cards.ts` being worth its browser dependency.
