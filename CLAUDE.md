@@ -268,7 +268,7 @@ Data visualization is the one exception — chart series need their own hues to 
 - **`GenUIRenderer.create` is async**, so the renderer must live in state, not a ref: in a ref, the first render's effect sees `null` and bails, and since `code` no longer changes it never re-runs — a surface that mounted and stays blank forever.
 - **`preserveStateOnUpdate` only suits streaming growth.** It decides reuse by hook signature, so a whole-file replacement whose hooks happen to match will silently discard the new content. The canvas therefore passes `preserveState={false}`; inline keeps the default.
 - **Pick a signal that actually renders.** Verifying file readback, I wrote the marker into a TSX comment — comments never reach the UI, so the "it's broken" conclusion was entirely fake and cost a lot of time. Writing the marker into JSX text found the truth.
-- **Preflight steals the global `console.error`**: `partial-react/src/runtime.ts:215-224` swaps it and restores in `finally`. With concurrent cards the inner `finally` restores the *outer* collector, and **the host's console.error is lost permanently**. A chat node is multi-card by nature, so this needs refcounting or serialization.
+- **Preflight swaps the global `console.error` — and on 0.0.6 that is safe.** `partial-react/src/runtime.ts:211-224` replaces it with a collector and restores in `finally`. This was recorded here as a concurrency bug needing refcounting: with two cards, the inner `finally` would restore the *outer* collector and the host's console.error would be lost for good. **Measured on 2026-08-23: it cannot happen.** Each frame captures its own `previousConsoleError`, so nesting unwinds correctly, and interleaving would need a yield point between the swap and the `finally` — `canRenderComponent` has none (`renderToString` is synchronous, no `await` anywhere in 209-229, one call site at :404 inside a synchronous `renderComponent`). Driving two cards concurrently leaves `console.error === the real one`. Left as a note rather than deleted because it is exactly the shape that *would* break if upstream ever awaits inside that block — and because the entry as written would send the next reader to build refcounting nothing needs.
 - **An `edit` to a canvas resets every `useState` in it.** `canvas/index.ts` re-reads the body off disk when a patch marks it stale, so `code` changes, `GenUISurface` delivers it, and `renderComponent` runs — which increments `renderRound`, and with `preserveState={false}` the boundary key is `boundary:${renderRound}`, so the whole tree unmounts. Ask the model to tweak one colour in a running timer and the timer resets. The `preserveState={false}` above is deliberate and the comment explains why, but it is a trade, not a free choice: `localStorage` survives an edit and `useState` does not, which is the real reason a canvas must persist through storage rather than memory. Traced through the code, not yet reproduced on a machine — the honest status.
 - **HMR has no react-refresh**: React state inside the plugin is lost on every reload, and adding or removing a plugin requires restarting dsh.
 - **wasm instances leak, and upstream offers no release.** `@esm.sh/tsx` exports only `transform`/`init`/`initSync` — no dispose, no free — so "release explicitly" is not an option; dropping the `initPromise` reference and waiting for GC is. Each HMR round leaves another ~2.5MB instance behind, dev-only. The blob-URL half is already wired up (`disposeRegistry` hangs off a `ctx.effect` disposer).
@@ -2541,3 +2541,26 @@ about who absorbs the discount, and I had promoted one reading to the answer. Th
 survives is conservation, not equality with my arithmetic. The two cards that redistribute are the
 more general model — they answer for three people too, which the prompt does not mention and a
 group bill always eventually does.
+
+### A trap that needed a yield point it does not have (2026-08-23)
+
+§4 has carried this since the early days: preflight swaps the global `console.error`, so with two
+cards *"the inner `finally` restores the outer collector and the host's console.error is lost
+permanently"*, and a chat node is multi-card by nature. It was never reproduced — the multi-card
+probe only ever checked that two cards coexist.
+
+Reproduced now, and it does not happen. Two things have to be true for the swap to leak, and
+neither is:
+
+- **Nesting is already correct.** Each call captures its own `previousConsoleError`, so an inner
+  `finally` restores what the inner call replaced. A stack unwinds; that is what a stack does.
+- **Interleaving needs a yield between the swap and the `finally`,** and `canRenderComponent`
+  has none: `renderToString` is synchronous, there is no `await` anywhere in `runtime.ts:209-229`,
+  and its only call site (`:404`) sits inside a synchronous `renderComponent`. Two cards driven
+  concurrently leave `console.error` as the host set it.
+
+Kept as a note rather than deleted, reworded to say when it *would* become true — an `await`
+inside that block is all it takes. The entry as written would have sent the next reader to build
+refcounting for a bug that is not there, which is a specific cost: **an unreproduced trap is a
+standing instruction to do unnecessary work.** Traps deserve the same "verified against a
+known-bad input" discipline as checkers.
