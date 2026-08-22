@@ -1114,3 +1114,25 @@ Full regression 7/7.
 Four escapes, four sentences, same rule. **They are not rejections of the rule — each is a reason
 it doesn't apply here, locally reasonable every time.** Which is why volume does not help and
 naming the specific thought does.
+
+### Tidying the prompt cost accuracy (2026-08-22, reverted)
+
+The expression rule had grown to 1954 characters — four times the next longest line — because
+four escapes were answered inside one sentence. I rewrote it as a lead paragraph plus a four-item
+list, one per escape: same content, clearer, and 162 tokens cheaper (4119 → 3957).
+
+Then measured, because a rewrite is a change:
+
+| | glob | chmod | git | conversion |
+| --- | --- | --- | --- | --- |
+| flowing paragraph | 3/3, later 4/4 | 3/3 | 3/3 | 3/3 |
+| tidy bulleted list | **4/7** | 3/3 | 3/3 | 3/3 |
+
+Only glob moved, and it moved a lot. The likely reason is that the list form compressed exactly
+its clause — the flowing version spelled out *put their real files on one side and a tick or a
+cross on the other, and let them edit the pattern until the crosses move*; the bullet keeps the
+words but loses the run-up. **Reverted.** 162 tokens is not worth a rule that fires half the time.
+
+Two things to carry: **legibility to a human reader is not the objective function here**, and a
+refactor of prose is a behavioural change that needs the same 3-run treatment as a new rule.
+Nothing about the tidy version looked worse — that is why it had to be run.
