@@ -1810,3 +1810,24 @@ worked around it with `npm_config_cache` on its own, and carried on.
 
 **Instructions nobody follows cannot be wrong.** A second model is a test of the prompt, not just
 of the answers.
+
+### First look at `macaron-v1-venti` (2026-08-22)
+
+Wired the fixtures at a second model — `macaron-v1-venti` on the sd litellm gateway (:24000) —
+after the DeepSeek balance ran out. `scripts/eval.sh` honours `DSH_HOME`, so this is an isolated
+dsh home rather than an edit to the user's global `settings.yaml`; see `profiles/README.md`.
+
+What differs, from the first 22 sessions:
+
+- **It runs the checker.** Every card goes to a temp file, through `@genui/cli check`, and back
+  through three rounds of fixing what the checker reports before reaching the fence. DeepSeek has
+  never once done this, which is how the broken `npx` command survived two days.
+- **It reaches for the workspace.** `.env` cost it `glob + grep + read ×5` where DeepSeek reads
+  the two files and stops.
+- Canvases land in the right place (`.dsh/ui4a/canvases/`), replay clean (0 visible remounts, 0
+  broken frames), and carry `localStorage` — so today's persistence and hook-ordering rules hold
+  on a model they were not tuned against.
+
+Two fixtures look weaker so far (`git reset`, `二分查找`, both 3/3 on DeepSeek). Waiting on the
+full grid before drawing anything from that: shape counts need the canvas column, and this model
+writes canvases where DeepSeek writes fences.
