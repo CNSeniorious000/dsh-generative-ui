@@ -174,7 +174,7 @@ Four details you have to get right:
 
 **The data source is tool calls, not a new session event.** The model writes `ui4a/canvases/<id>.ui4a.tsx` with the host's own `write`, and the client reads `root.call.argsRaw` off the snapshot's `tool-call` nodes. No `SessionEventMap` extension, no touching the persistence contract, zero involvement from the Node half.
 
-**But the canvas gets no streaming under the web profile's default PTC mode** (measured 2026-08-20 with a probe inside `calls()`, 5000+ samples): under PTC every tool is called from `run_code`, and the host only exposes `write` as a subCall once `run_code` has **finished**, so the very first `write` frame we see is already `settled: true` with all 14388 characters. The outer `run_code`'s own `argsRaw` is just 165 characters (the calling code, not the file body). The panel therefore appears whole the moment the write lands — 490 samples on a real machine, **0** state changes. **Not re-verified 2026-08-23**, and worth saying why: the claim is about a code path that only exists inside a live PTC session, so it needs a canvas being written while something samples the store. `test/collect.test.ts` covers both branches of the logic (a settled write is not streaming, an unsettled one is), which is a different claim — that the *unsettled* branch is unreachable under PTC cannot be shown from a transcript after the fact. The sessions on disk that did write canvases live in `mktemp` directories that do not survive. The `streaming: !call.settled` code is itself correct and would work off-PTC where `write` is a top-level call; the default path just never reaches it. Inline is unaffected (see §3.5).
+**But the canvas gets no streaming under the web profile's default PTC mode** (measured 2026-08-20 with a probe inside `calls()`, 5000+ samples): under PTC every tool is called from `run_code`, and the host only exposes `write` as a subCall once `run_code` has **finished**, so the very first `write` frame we see is already `settled: true` with all 14388 characters. The outer `run_code`'s own `argsRaw` is just 165 characters (the calling code, not the file body). The panel therefore appears whole the moment the write lands — 490 samples on a real machine, **0** state changes. **Not re-verified 2026-08-23**, and worth saying why: the claim is about a code path that only exists inside a live PTC session, so it needs a canvas being written while something samples the store. `test/collect.test.ts` covers both branches of the logic (a settled write is not streaming, an unsettled one is), which is a different claim — that the *unsettled* branch is unreachable under PTC cannot be shown from a transcript after the fact. **Corrected an hour later:** the sessions do survive — 183 under `$DSH_HOME/sessions/`, the canvas-splitting run among them, because only the *working directory* is a `mktemp` and the session directory merely encodes its name. The real obstacle is more final: **`settled` is never persisted.** `collect.ts` derives it from a live snapshot's shape (`argsRaw` inline means running, wrapped in `call` means settled), so the 73 frames carrying a canvas path in that session contain no such field. This needs a probe in a live session, not an archive. The `streaming: !call.settled` code is itself correct and would work off-PTC where `write` is a top-level call; the default path just never reaches it. Inline is unaffected (see §3.5).
 
 `edit`-class tools are the exception: their arguments are a patch, not the full text. Those calls only mark the canvas stale (with an incrementing version as the cache key), and the truth is read back from the file through the Node half's `/dsh-generative-ui/canvas` route. The file is the one source that stays correct under every way of changing it, including edits made outside the agent.
 
@@ -2788,3 +2788,25 @@ claim reading as measured**, because the next person will stop trying to derive 
 Two shell traps hit while chasing this, both familiar by now: a `[ "$n" -gt 0 ]` test where `n` had
 picked up multiple lines from `grep -c` over several files, and a glob left unexpanded inside a
 `zstd -dc` argument. Both produced empty output that looked exactly like "no hits".
+
+### Retracting "the data is gone" (2026-08-23)
+
+An hour after recording that §3.6 could not be re-verified because the sessions lived in `mktemp`
+directories, that turned out to be false. Only the **working directory** is temporary; dsh writes
+the session under `$DSH_HOME/sessions/` keyed by that directory's name, and 183 are on disk with
+the canvas-splitting run included.
+
+The claim remains unverifiable for a better reason: **`settled` never reaches the transcript.** It
+is computed by `collect.ts` from the live snapshot's shape, so the 73 frames in that session that
+carry a canvas path have no such field. An archive cannot answer a question about a value that only
+exists in memory.
+
+The two failures deserve separating, because they call for opposite responses. *The data is gone*
+is a reason to capture more next time — and I nearly wrote a change to `eval.sh` to preserve
+working directories that were never the problem. *The value is derived, not stored* means no amount
+of archiving helps and only a live probe will do. **Check that a thing is actually missing before
+designing around its absence.**
+
+(The patch that wrote this correction failed its own anchor assertion on the first attempt, and the
+`check exit=0` printed afterwards was the *previous* commit's state — the same trap recorded earlier
+today when a regex matched nothing and the build output read as a result.)
