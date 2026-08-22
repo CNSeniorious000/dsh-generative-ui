@@ -327,6 +327,13 @@ something you did not think of. Yours is the interface; the content is theirs.
 
 It inherits the app's model, so there is no key to ask for and no setup.
 
+**A second call must cancel the first.** Regenerating as the user types, or offering a Stop
+button, means two generations in flight and the reader sees whichever finishes last — not the
+newest. Pass an \`AbortController\`'s signal in the options and abort the previous one; that
+stops the generation itself, not just your reading of it. The abort rejects with an
+\`AbortError\`, which is the one rejection that is not a failure — return on it rather than
+showing it.
+
 Ask for JSON and parse the buffer as it grows, so items land one at a time rather than all
 at once at the end:
 

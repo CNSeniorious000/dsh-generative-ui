@@ -19,7 +19,7 @@ type Bound = ReturnType<typeof bind>;
  */
 type Declared = {
   chat: { sendMessage: (text: string) => void };
-  ai: { streamText: (options: { prompt: string; system?: string } | string) => AsyncIterable<string> };
+  ai: { streamText: (options: { prompt: string; system?: string; signal?: AbortSignal } | string) => AsyncIterable<string> };
   fs: {
     readFile: (path: string) => Promise<string>;
     readdir: (path: string) => Promise<{ name: string; type?: "file" | "directory"; size?: number }[]>;

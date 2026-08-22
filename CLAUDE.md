@@ -2417,3 +2417,21 @@ missing child exits 1, present child exits 0, the real cards exit 0.
 file, `还有多久发布` with no repo, this one with no conversation): **whatever the prompt refers to
 has to exist in the workspace before the run, not be discovered missing from the reply.** Each
 time, the model's answer was correct and the zero was mine.
+
+### `$dsh/ai` had the same missing handle as `$dsh/exec` (2026-08-23)
+
+`docs/examples.md:1290` describes the keeps-generating case and notes the API is single-turn with
+**no abort**. Checked while it was fresh, and it is the identical shape to the exec gap fixed an
+hour earlier: `src/index.ts:350` already hangs an `AbortController` off `req.on("close")`, so
+dropping the request really stops the generation — the client just never offered the handle.
+`streamText({ prompt, signal })` now forwards it to `fetch`, which covers both the connection and
+the read loop.
+
+Worth naming the pattern rather than the two instances: **both routes were built to be cancellable
+and neither exposed it.** The server was written by someone thinking about a dropped connection;
+the client surface was written by someone thinking about one call at a time. Anywhere else the
+plugin fetches on the card's behalf is worth the same check.
+
+`types/check.ts` caught the narrowed variant at line 34 naming `ai.streamText`, the same way it did
+for `exec.bash` — which is the half of that file that does work (see the note there about the half
+that does not).

@@ -73,7 +73,8 @@ export function bind() {
       if (host === null) throw new Error("[dsh-generative-ui] no host bound");
       const workspace = host.cwd();
       if (workspace === undefined) throw new Error("[dsh-generative-ui] $dsh/ai needs a session workspace");
-      return streamFrom(workspace, typeof options === "string" ? { prompt: options } : options);
+      const request = typeof options === "string" ? { prompt: options } : options;
+      return streamFrom(workspace, request, request.signal);
     },
   };
 
@@ -162,7 +163,7 @@ async function execRequest(cwd: string, sessionId: string, command: string, sign
 export type Ui4aDirEntry = { name: string; type?: "file" | "directory"; size?: number };
 
 /** One user turn plus an optional system prompt — see the route's note on why not more. */
-export type Ui4aStreamOptions = { prompt: string; system?: string };
+export type Ui4aStreamOptions = { prompt: string; system?: string; signal?: AbortSignal };
 
 /**
  * Decodes the route's plain-text stream into characters.
@@ -171,11 +172,15 @@ export type Ui4aStreamOptions = { prompt: string; system?: string };
  * generated cards append to a buffer and re-parse it, and a card that grows by whole network
  * chunks reads as stuttering rather than typing.
  */
-async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterable<string> {
+async function* streamFrom(cwd: string, request: Ui4aStreamOptions, signal?: AbortSignal): AsyncIterable<string> {
+  // Aborting stops the model too, not just the reading: the route drops its own generation when
+  // the request closes. A card that regenerates per keystroke needs that, or what the reader
+  // ends up seeing is whichever of several in-flight calls happens to finish last.
   const response = await fetch(`${AI_STREAM_PATH}?cwd=${encodeURIComponent(cwd)}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(request),
+    signal,
   });
   if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/ai: ${response.status} ${response.statusText}`);
   if (response.body === null) throw new Error("[dsh-generative-ui] $dsh/ai: no response body");
