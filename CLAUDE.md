@@ -3473,3 +3473,24 @@ Two rules that would have prevented both mistakes: a count is only meaningful wi
 corpus size beside it, and **a fence count must come from `parseUi4aSegments`, never a grep** —
 which language opens a card and which run closes it are both things the parser decides, and
 today both of those answers changed.
+
+### Every "of 362" in this file was measured before the parser was fixed (2026-08-23)
+
+Applying the rule from the section above to my own day's work: the card corpus was extracted
+with `parseUi4aSegments` **before** the shorter-closing-fence fix landed, so the 18 cards that
+fix rescued were never in it. Re-extracted through the current parser: **378 unique cards, not
+362.** The counts in the sections above are correct as of the parser they were run on and low by
+about 4%.
+
+Re-running the three checks that matter on the corrected corpus:
+
+- **Compile failures: 3 of 379 closed cards.** One is new — an arrow function spliced into the
+  middle of a boolean (`cur.lo >= 0 && (i: number) => i >= cur.lo`), which is the model writing
+  invalid TSX, same class as the other two.
+- **Visible remounts: still 0**, now over 378 cards.
+- **Screens: `SHADOWED-EXPORT` 1, `VIEWPORT-UNITS` 2** (one new), `JSX-SUBSCRIPT` 0.
+
+So no conclusion changes, which is the useful part of having re-derived them: the rates were
+stable under a 4% corpus growth. **A measurement taken through code you are actively changing
+has a version, not just a date** — and the fence parser was changed three times today, each time
+altering what counts as a card at all.
