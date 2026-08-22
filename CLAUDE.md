@@ -3791,3 +3791,26 @@ before the failing one. **`bun run check` prints many summaries and only its exi
 answer**; the fix landed a commit later, but a less obvious lint failure would have gone in.
 Every check in this session that mattered was run without a pipe for exactly this reason, and
 this is the one time I looked at the text instead.
+
+### The colour rule lands too (2026-08-23)
+
+The resident prompt's token table is the longest thing in `prompt.ts` that is not a trigger rule,
+and it works: **371 of 378 cards use `--dsw-alias-*` tokens** (98%).
+
+Getting the failure rate right took three passes, each narrower than the last, and the narrowing
+is the whole lesson:
+
+- **80 cards contain a literal colour** in a background/color/border. Meaningless — the prompt
+  explicitly permits chart series hues.
+- **59 hardcode black or white.** Still meaningless: almost all are `color: "#fff"` on a
+  *coloured* background (a brand-tinted chip, a filled button), which is correct and stays
+  correct in dark mode.
+- **2 hardcode a black or white *background*.** That is the real defect — a white panel with
+  `color: "#374151"` text becomes a white slab in a dark theme. Both are genuine, both in long
+  cards, and 2 in 378 is 0.5%.
+
+**Only the background is theme-dependent.** Text colour on a surface the card itself painted is
+theme-independent by construction, and a detector that cannot tell those apart reports 30× the
+real rate. This is the fourth time today a first-pass detector over-reported by an order of
+magnitude — streaming guards (7 → 0), remounts (35 → 0), nested borders (130 → unmeasurable),
+and now colours (80 → 2). Every one of them pointed at a problem that was not there.
