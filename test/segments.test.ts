@@ -18,3 +18,11 @@ test("lookalike inside code survives", () => { const [b]=p("````ui4a/tsx\nconst 
 // 14 put the sentence right after the language. Dropping those costs 0 of 390 real cards.
 test("prose about the fence is not a card", () => { expect(p("用 ````ui4a/tsx```` 块，原地渲染成可交互界面\n讲完了。")).toHaveLength(0); });
 test("meta after the language still opens a card", () => { const [b]=p("````ui4a/tsx title=demo\nexport default function A() {}\n````"); expect(b.code).toBe("export default function A() {}\n"); });
+// 18 of 385 openers in the corpus are closed by a SHORTER run — markdown says that does not close
+// the fence, so each was a card that streamed forever. `open=6 close=4` is the common shape.
+test("a shorter closing fence still closes", () => { const [b]=p("``````ui4a/tsx\nexport default function A() {}\n````\n收尾"); expect(b.complete).toBe(true); expect(b.code).toBe("export default function A() {}\n"); });
+test("an exact closer still wins over an earlier shorter one", () => { const [b]=p("`````ui4a/tsx\nconst md = `\\`\\`\\``\n`````"); expect(b.complete).toBe(true); expect(b.code).toBe("const md = `\\`\\`\\``\n"); });
+// Ordering, not just presence: the exact-length closer must be tried FIRST, or a ```js block inside
+// the card's own strings ends the card at its first line. This is the entire reason the prompt asks
+// for four backticks, and "try short, then exact" passes every other test in this file.
+test("a triple-backtick run inside the body does not close a longer fence", () => { const [b]=p("`````ui4a/tsx\nconst help = `\n```js\nfoo()\n```\n`\nexport default function A() {}\n`````"); expect(b.complete).toBe(true); expect(b.code.includes("export default")).toBe(true); });
