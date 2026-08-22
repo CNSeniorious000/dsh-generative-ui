@@ -37,6 +37,10 @@ misses every canvas, which is the shape most likely on requests about a whole se
 | `帮我算下 30 年期 100 万贷款利率 4.2% 的月供` | 4890.17 |
 | `5 公斤 3 两 是多少磅` | 11.35 |
 
+Use `scripts/eval.sh '<prompt>' [seed-dir]`. It reports `crash` with a non-zero exit when the run
+never reached a model, because a dead run and a refused rule both read as `fence=0` — that has been
+mistaken for a finding three times.
+
 Run these in a workspace with **real files in it**. An empty directory changes the answer, and not
 always in the direction you would guess: the glob fixture scored 2/3 empty and 0/3 against a real
 `src/` tree, because having something to look at made the model explain instead of show.
