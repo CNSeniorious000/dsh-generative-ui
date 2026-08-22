@@ -2991,3 +2991,17 @@ so `JSON.stringify(rec)` double-escapes it and a `"name":"…"` regex silently m
 characters `\n` — a `/```ui4a\/tsx\n(import|…)/` predicate found 0 sessions, and the naive fix
 found 999 by matching the prompt's own examples. **Both wrong answers were round numbers at
 the ends of the range**, which is the only reason they were caught.
+
+Narrowing the capability gap above: it is **almost entirely `$dsh/fs`**. Inside workspace
+sessions, `exec` is nearly matched (25% with the skill, 18% without) while `fs` is 34% against
+**0 of 17**. That looks decisive and mostly is not — reading the seventeen questions, only
+three of them (`git 历史帮我梳理一下`, `看看我这个仓库最近都改了啥`, `这个 glob 会匹配到啥`)
+ever wanted a file read; the rest are pomodoro timers, unit conversions and a tarot deck, which
+correctly reach for nothing. **A zero cell with a plausible reason is not evidence.**
+
+Restricting to sessions whose card is genuinely *about* the workspace (the model used
+`read`/`glob`/`grep`, or ran `git`/`rg`/`ls`/`du`): 73% of 48 reach the workspace with the
+skill, 30% of 10 without. The direction survives every control I could apply, and **ten cards
+is still too thin to move a prompt rule over** — recorded as a lead, not a finding. What the
+resident layer says about `fs` is already the skill's rule almost verbatim ("that card is a
+photograph"), so if this is real the fix is not more words there.
