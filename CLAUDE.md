@@ -34,6 +34,8 @@ Everything here was **measured**, not read out of a doc. Read it before changing
 
 rc.7 also had `dsh-client-web-react` / `dsh-client-ui-attachment` / `dsh-client-schema-form`; rc.8 dropped them (diff `PLATFORM_MODULES` in `@deepseek-ai/dsh-client-web`'s `lib/index.js` across the two versions). **This table shrinks**, so re-check it on every dsh upgrade: listed = resolved at runtime via `require()` to the host's singleton; not listed = bundled into our own output; **listed but absent from the host = the `require()` fails and the whole client dies**.
 
+**Re-checking it is now one command: `./scripts/platform-table.sh`** — verified 2026-08-23, the host still exposes exactly the 7 entries `PLATFORM_MODULES` lists. The table is **not in any installed package** (70 `@deepseek-ai` packages here, not one contains the string `"react/jsx-runtime"`, and `dsh-client-web` is not among them); it is compiled into the shell's own frontend bundle, so the script serves the app, fetches `/assets/index-*.js`, and diffs. It exits 1 on a mismatch and **2 when the probe itself cannot read the bundle** — the first version reported "matches" with both sides empty because `rg` was not on the script's PATH.
+
 It lives in `scripts/build.ts` as `PLATFORM_MODULES` (`scripts/smoke.ts`'s `PLATFORM` mirrors it — change one and you must change both, or smoke stops catching it).
 
 **Neither `scheduler` nor `react-dom/server` is in the table.** The latter is required for preflight, so it has to be inlined, and **pinned to 18** to match the React bridged in.
@@ -2660,3 +2662,24 @@ The `define` one is the useful correction. The entry explained *why* the setting
 reads **0 with or without it**. What actually changes is the byte count, a leaked absolute path
 from the build machine, and a module outside the platform table. **When a note gives the reason but
 not the symptom, the reader will invent a check for the reason and it will pass.**
+
+### The one note that asked to be re-run, made runnable (2026-08-23)
+
+§2.1 is the only entry in this file that asks for periodic re-verification — *"this table shrinks,
+so re-check it on every dsh upgrade"* — and it said to diff two versions of a package by hand.
+That is not something anyone does. Finding it took the detour worth recording: **the table is in
+no installed package at all.** Seventy `@deepseek-ai` packages, none containing the string
+`"react/jsx-runtime"`; it is compiled into the shell's frontend bundle, reachable only by serving
+the app and fetching its asset. Current state: the host's 7 entries match `PLATFORM_MODULES`
+exactly.
+
+`scripts/platform-table.sh` does it in one command, and the interesting part is its third exit
+code. The first version used `rg`, which was not on the script's PATH, so both sides of the diff
+came out empty and it printed **"platform table matches (1 entries)"**. A checker that passes when
+it is itself broken is worse than no checker, so it now asserts it read at least five entries and
+exits **2** otherwise. All three states verified: match → 0, an injected bogus entry → 1, a probe
+that cannot parse the bundle → 2.
+
+Port hygiene per §"A dev server outlived its session by a day": every probe server was started on
+47321-47329 and killed by that port. Two other `dsh web` instances (47341, 47361) are the user's
+own and were identified by port and left alone.
