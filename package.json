@@ -56,12 +56,13 @@
     "typecheck": "node scripts/typecheck.mjs",
     "test": "bun test",
     "smoke": "bun scripts/smoke.ts",
-    "check": "bun run lint && bun run typecheck && bun run test && bun run audit && bun run replay && bun run build && bun run smoke",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run audit && bun run replay && bun run cards && bun run build && bun run smoke",
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts",
     "audit": "python3 scripts/audit-record.py CLAUDE.md",
-    "replay": "bun scripts/replay-stream.ts"
+    "replay": "bun scripts/replay-stream.ts",
+    "cards": "bun scripts/compile-cards.ts"
   },
   "dependencies": {
     "@esm.sh/tsx": "^1.5.3",

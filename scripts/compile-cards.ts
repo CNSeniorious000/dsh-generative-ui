@@ -1,5 +1,5 @@
 /**
- * Compiles the cards in `.research/cards/` and screens them for the three failures that
+ * Compiles the cards in `test/cards/` (or a directory given as argv[2]) and screens them for the three failures that
  * compile cleanly and break at runtime (CLAUDE.md §4): a default export shadowing an import
  * (React #185, a blank card), a JSX subscript `<a[k] />` (illegal where `<a.b />` is fine),
  * and viewport units in something that is a component on someone else's page.
@@ -13,7 +13,7 @@ import { normalizeGeneratedTsx } from "partial-tsx";
 import { readdirSync, readFileSync } from "node:fs";
 
 await initTsx(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer());
-const dir = ".research/cards";
+const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
 for (const f of readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted()) {
   const src = readFileSync(`${dir}/${f}`, "utf8");
@@ -37,3 +37,6 @@ for (const f of readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted()) {
   }
 }
 console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
+// It has counted `bad` since it was written and never acted on it — a checker that only ever
+// prints is one nothing can fail against.
+if (bad > 0) process.exit(1);
