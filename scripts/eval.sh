@@ -22,14 +22,18 @@ calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
   | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
   | sort | uniq -c | awk '{print $2"x"$1}' | tr '\n' ' ')
 
-# A blacklist of known failure strings only catches failures already seen — three of today's
-# four were discovered only after their zero had been read as a model judgement. The positive
-# test is stronger: no session transcript means the run never reached a model at all.
-# A transcript exists as soon as the request reaches the gateway, so its presence is not enough:
-# an upstream 400 (unsupported tool, bad params) writes a session, prints an error, and leaves an
-# empty reply. Treat any `dsh: <UPPER_SNAKE>:` line as a crash — that prefix is the launcher
-# reporting, never the model answering.
-if [ ! -s "$out" ] || [ -z "$sess" ] || grep -qE '^(Error|dsh: [A-Z_]+:)' "$out"; then
+# Ask the transcript how the turn ended rather than pattern-matching stdout. dsh writes a
+# `turn/end` record whose reason is `completed` on success and `{kind: error, code: …}` when the
+# request failed — an upstream 400, an exhausted balance, a refused tool. Three earlier versions
+# of this check grepped for error strings and each missed the next failure to come along; this
+# one asks the structure. A missing transcript still means the run never reached a model at all.
+if [ ! -s "$out" ] || [ -z "$sess" ]; then
+  echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
+  exit 2
+fi
+# Matched loosely on purpose: `"kind": "completed"` with or without spaces, so the check does
+# not turn on dsh's JSON formatting.
+if ! zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null | grep -qE '"kind" *: *"completed"'; then
   echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
   exit 2
 fi

@@ -2010,3 +2010,30 @@ choice.
 The `.env` row is worth keeping as a caution about fixtures: `run-fixtures.sh` passes one seed
 directory to every prompt, and a prompt that names a file needs that file. sonnet is the only
 model that **checked** rather than assuming — which is why it is the only one the gap showed up on.
+
+### Asking the transcript how the turn ended (2026-08-22)
+
+The crash check has now had four versions, and the first three were all the same mistake:
+
+1. a blacklist of error strings — missed every failure not yet seen;
+2. *no transcript means no model* — a real structural signal, but a gateway 400 writes a
+   transcript before it fails;
+3. any `dsh: <UPPER_SNAKE>:` line — a launcher-prefix convention, one wording change from useless;
+4. **`turn/end` carries `reason.kind`**: `completed` on success, `error` with a `code` when the
+   request failed.
+
+Comparing a good session against sonnet's 400s made it obvious — both have `turn/start` and
+`turn/end`, and the reason is the only thing that differs:
+
+```
+good     {"turn":1,"reason":{"kind":"completed"}}
+400      {"turn":1,"reason":{"kind":"error","error":{"code":"INVALID_REQUEST", …}}}
+```
+
+Now: no transcript → crash (never reached a model); transcript without a completed turn → crash
+(reached it, failed); otherwise report the shape. Matched as `"kind" *: *"completed"` so the check
+does not depend on dsh's JSON spacing.
+
+Verified against a live 400 (sonnet with web search re-enabled), a synthetic error turn, and two
+real successes. **Three versions of this check were pattern-matching where a structural answer
+existed** — the tell each time was having to add a new pattern for the next failure.
