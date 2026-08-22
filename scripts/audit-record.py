@@ -17,8 +17,38 @@ for section in re.split(r"\n(?=### )", text):
             if 5 <= len(p) <= 40 and re.search(r"\b\d/\d\b", line):
                 hits[p].append((title, line.strip()[:110]))
 
+def scores(line):
+    """Every N/M in a line, as fractions — a table row often carries before and after."""
+    return {(int(a), int(b)) for a, b in re.findall(r"\b(\d)/(\d)\b", line)}
+
+
+def score_for(prompt, line):
+    """The N/M that belongs to this prompt: the first one after its mention.
+
+    A line often names several prompts (`JS reduce 3/3, 二分查找 2/3`), so taking the line's
+    first score attributes a neighbour's number to this one.
+    """
+    at = line.find(f"`{prompt}`")
+    if at == -1:
+        return None
+    found = re.search(r"\b(\d)/(\d)\b", line[at:])
+    return (found.group(1), found.group(2)) if found else None
+
+
 for p, rows in sorted(hits.items()):
-    if len({t for t, _ in rows}) > 1:
+    if len({t for t, _ in rows}) < 2:
+        continue
+    # Two mentions are usually a before/after pair or a restatement. The conflict signal is the
+    # score immediately after the prompt — the "before" — disagreeing across sections.
+    firsts = {}
+    for title, line in rows:
+        got = score_for(p, line)
+        if got is None:
+            continue
+        num, den = got
+        firsts.setdefault(den, {}).setdefault(num, []).append((title, line))
+    for group in (v for v in firsts.values() if len(v) > 1):
         print("==", p)
-        for t, l in rows:
-            print("   ", t[:44], "|", l)
+        for lines in group.values():
+            for t, l in lines:
+                print("   ", t[:44], "|", l)
