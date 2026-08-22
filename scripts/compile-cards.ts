@@ -15,7 +15,7 @@ import { readdirSync, readFileSync } from "node:fs";
 await initTsx(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer());
 const dir = ".research/cards";
 let bad = 0;
-for (const f of readdirSync(dir).filter(n => n.endsWith(".tsx")).sort()) {
+for (const f of readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted()) {
   const src = readFileSync(`${dir}/${f}`, "utf8");
   // the shape a settled card takes: normalize final, then transform
   try {

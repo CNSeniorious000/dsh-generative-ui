@@ -9,7 +9,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 const dir = process.argv[2] ?? ".research/cards";
-const cards = readdirSync(dir).filter(n => n.endsWith(".tsx")).sort();
+const cards = readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted();
 const port = Number(process.argv[3] ?? 47771);
 
 Bun.serve({
