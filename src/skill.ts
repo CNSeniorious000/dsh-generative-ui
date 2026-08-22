@@ -173,6 +173,29 @@ A bare \`OscillatorNode\` sine reads as a test tone. Layer two or three partials
 \`GainNode\` envelope and it reads as an instrument instead. Close the context on unmount, or
 every reload leaves another one behind.
 
+## Anything that keeps running
+
+A game loop, an AutoPlay demo, a metronome, a clock, a progress animation — anything on
+\`requestAnimationFrame\`, \`setInterval\` or a \`MediaStream\` — **must be returned from its
+effect's cleanup.** Measured: after the card is unmounted, a loop with a \`cancelAnimationFrame\`
+cleanup stops dead, and one without keeps ticking for as long as the tab is open.
+
+This matters here more than in an ordinary app, because **a card is replaced every time the
+user asks for a change.** Ten revisions of a Snake card leaves ten loops running, each still
+painting into a canvas nobody can see, and the symptom is not a broken card — it is the whole
+conversation getting slower for reasons that look like someone else's fault.
+
+\`\`\`tsx
+useEffect(() => {
+  let id = requestAnimationFrame(function tick() { step(); id = requestAnimationFrame(tick) })
+  return () => cancelAnimationFrame(id)
+}, [])
+\`\`\`
+
+The same goes for \`setInterval\` (\`clearInterval\`), listeners on \`window\` or \`document\`
+(\`removeEventListener\`), and an \`AudioContext\` (\`close()\`). If AutoPlay is meant to be shown to
+someone, give it a visible pause as well — a demo you cannot stop is a demo you cannot talk over.
+
 ## Running a command
 
 \`bash(command)\` from \`$dsh/exec\` runs one command in the workspace and resolves

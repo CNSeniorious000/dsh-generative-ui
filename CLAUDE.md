@@ -1436,3 +1436,29 @@ the function exists for — widening the test must not cost the thing it was pro
 This one was found by **reading the code against the intended examples** rather than by running
 prompts. Worth doing more of while the quota is out: the corpus says what cards will look like,
 and the runtime can be checked against that without a single model call.
+
+### A loop outlives the card that started it (2026-08-22)
+
+Following the same thread as the canvas fix — check the runtime against the examples the research
+promised — the next one is **AutoPlay**, which the user asked for by name so a demo can be shown
+to someone else. AutoPlay means a `requestAnimationFrame` loop that runs unattended, and the skill
+said nothing about stopping one.
+
+Measured with two React roots side by side, one loop with a `cancelAnimationFrame` cleanup and one
+without:
+
+| | at unmount | 2s later |
+| --- | --- | --- |
+| with cleanup | 134 ticks | **134** |
+| without | 134 ticks | **375** |
+
+The cost is peculiar to this product: **a card is replaced on every revision.** Ten passes over a
+Snake card leaves ten loops painting into canvases nobody can see, and it does not present as a
+broken card — it presents as the conversation getting slower for no visible reason.
+
+New skill section covering `requestAnimationFrame`, `setInterval`, window listeners and
+`AudioContext`, plus the point that an AutoPlay meant for showing to someone needs a visible
+pause — a demo you cannot stop is one you cannot talk over.
+
+Two runtime bugs now found this way in a row, without a single model call. **The corpus is a
+specification: read it as one and test the runtime against it.**
