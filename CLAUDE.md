@@ -2891,3 +2891,25 @@ that look like a regression are the lag between them.
 Worth keeping for the shape of the check rather than the result: **when a corpus shows a rule
 being violated, split it at the commit that introduced the rule before believing the rate.**
 A pooled 6.2% and a post-fix 0.7% are the same 25 cards.
+
+### Compiling every card the corpus ever delivered (2026-08-23)
+
+Ran all 1012 sessions through `parseUi4aSegments` + `normalizeGeneratedTsx` + the real
+compiler. **370 closed fences, 6 fail.** Two classes, and only one of them was ours:
+
+**Ours (fixed).** 19 of 405 fence openers are the model *describing* the fence rather than
+opening one — `用 ````ui4a/tsx```` 块，原地渲染成…`. The parser opened a card on each, so a
+sentence about cards became a card that could never compile. The fence line's trailing text
+discriminates: empty or code is a card, `key=value` is meta, anything else is prose.
+Skipping those openers kills 14 of the 19 and costs **0 of 390 real cards**. The five that
+survive put the prose on the *next* line, where nothing distinguishes it from a card that
+starts with a comment — left alone rather than guessed at.
+
+**Theirs (not fixable here).** The last three are the model writing invalid TSX: `fontSize:
+11px` unquoted inside a style object, and `^\w+@\w+\.\w{2,}$` as bare JSX text where `{2,}`
+parses as an expression. Both produce a boundary error the reader can see, which is the
+correct outcome — a 3-in-370 authoring error rate does not earn a prompt rule, and a rule
+naming the bad form is exactly what §4.5 warns turns into a classifier the model matches on.
+
+The useful number is the denominator: **99.2% of everything the model has ever written into a
+fence compiles.** Parser bugs, not generation quality, were the whole story.
