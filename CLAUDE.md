@@ -1735,3 +1735,26 @@ Same lesson as §"Counting fences does not count canvases", met again in a new d
 new one: **a corpus spanning a rule change is not one population.** The first cut included
 sessions from before today's edits and put `帮我算下房贷` in the failure column, where it has not
 belonged for hours.
+
+### The whole table, three runs each (2026-08-22)
+
+```
+什么是闭包？ / 今天星期几 / 418 / 尾递归优化        0 0 0   (prose, correct)
+房贷 / BMI / 五个猫名 / cron / chmod / 目录        1 1 1
+98 华氏度 / git reset / 能做啥 / 画成图 / 月供      1 1 1
+5 公斤 3 两 / cron 一年多少次                      1 1 1
+glob                                              1 C C
+.env / 跑步计划 / 学吉他                           C C C  (跑步 first run: K)
+二分查找原理 / git 历史                            1 1 C
+```
+
+Every fixture that completed is at its recorded value, prose included. The nine `C`s are the
+quota running out partway through — I had 69 calls in flight plus an unrelated experiment.
+
+**That is the harness earning its keep.** Without the crash check those nine are nine zeros, and
+the `.env` row reads as a regression on a rule measured 3/3 two hours earlier. The blacklist
+version added this morning would have caught them too, but only because `QUOTA` had already been
+seen once; the transcript-absence test added since covers the ones that have not been.
+
+`scripts/run-fixtures.sh` runs the table concurrently — serially it outlives a tool timeout — and
+prints `K` for a canvas so the shape is never scored as a miss.
