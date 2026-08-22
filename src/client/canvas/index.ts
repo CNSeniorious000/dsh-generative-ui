@@ -97,7 +97,8 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
     disposers.push(() => root.unmount(), column.remove);
 
     const paint = () => {
-      const collected = collectCanvases(calls());
+      const allCalls = calls();
+      const collected = collectCanvases(allCalls);
       const workspace = cwd();
       const session = sessionId();
       const hidden = dismissed.get(session) ?? EMPTY;
@@ -109,7 +110,8 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
       // classify what the arguments do not contain — but the workspace listing already knows,
       // it just never refreshed. Counting settled opaque calls re-lists once each time one
       // finishes, which is a directory read per code execution and nothing per streamed token.
-      const opaque = calls().filter((call) => call.settled && OPAQUE_WRITE.test(call.argsRaw)).length;
+      let opaque = 0;
+      for (const call of allCalls) if (call.settled && OPAQUE_WRITE.test(call.argsRaw)) opaque += 1;
       if (workspace !== undefined && (workspace !== listedFor || opaque !== listedAfter)) {
         listedFor = workspace;
         listedAfter = opaque;
