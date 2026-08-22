@@ -118,6 +118,11 @@ works against upstream's own `compiler.ts` now that it no longer reaches for `im
 `bun run check` also stops printing the `[upstream, ignored] 2 error(s)` line it has carried all
 week.
 
+**Only `partial-react` needs the release.** `partial-tsx` is clean — checked its sources for
+`import.meta.resolve` and `typeof Bun` (neither appears) and read what `tsc` actually reports:
+both errors are `partial-react/src/compiler.ts(13,…)`. The filter script's message named both
+packages, which is what made me guess otherwise; reworded.
+
 **Blocked on a release, not on the merge.** npm `partial-react` is still `0.0.5`, published
 2026-08-19 12:09 — three days before the merge — and its `src/compiler.ts` still carries both
 `import.meta.resolve` and `typeof Bun`. Nothing changes here until a version above 0.0.5 ships.

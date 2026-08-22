@@ -15,6 +15,6 @@ const isUpstream = (line) => /^[^(]*node_modules\//.test(line);
 const ours = lines.filter((line) => !isUpstream(line) && !line.startsWith(" "));
 const upstream = lines.filter(isUpstream);
 
-if (upstream.length > 0) console.error(`[upstream, ignored] ${upstream.length} error(s) in partial-react/partial-tsx — see macaron-genui-demo#1717`);
+if (upstream.length > 0) console.error(`[upstream, ignored] ${upstream.length} error(s) in partial-react — see macaron-genui-demo#1717`);
 for (const line of ours) console.error(line);
 process.exit(ours.length > 0 ? 1 : 0);
