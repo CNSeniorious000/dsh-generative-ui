@@ -3005,7 +3005,12 @@ correctly reach for nothing. **A zero cell with a plausible reason is not eviden
 Restricting to sessions whose card is genuinely *about* the workspace (the model used
 `read`/`glob`/`grep`, or ran `git`/`rg`/`ls`/`du`): 73% of 48 reach the workspace with the
 skill, 30% of 10 without. The direction survives every control I could apply, and **ten cards
-is still too thin to move a prompt rule over** — recorded as a lead, not a finding. What the
+is still too thin to move a prompt rule over** — recorded as a lead, not a finding.
+
+Re-run through the fixed parser on the grown corpus: **78% of 50 with the skill, 33% of 9
+without.** The gap widened and the thin cell got *thinner* (17 cards → 9), which is the useful
+outcome — a lead that survives a corpus change but never accumulates evidence is one to leave
+alone, not one to keep re-litigating. What the
 resident layer says about `fs` is already the skill's rule almost verbatim ("that card is a
 photograph"), so if this is real the fix is not more words there.
 
