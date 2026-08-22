@@ -3157,3 +3157,39 @@ Runtime coverage after this pass: `registry.ts` (generated re-export modules, ch
 *parsing* the output rather than matching text — three mutations die), `observe.ts` (coalescing,
 single observer, teardown at zero — three mutations die), `compiler.ts`. Only `GenUISurface.tsx`
 remains, which is React and wants a DOM. 65 tests.
+
+### A test file that tested a copy of the code (2026-08-23)
+
+`compiler.test.ts` never imported `compiler.ts`. It imported `@esm.sh/tsx`'s `transform` and
+`partial-tsx`'s `normalizeGeneratedTsx` and re-assembled the pipeline itself — so it asserted
+that a re-implementation agrees with itself, forever. **Rewriting every `return` in
+`compiler.ts` to `undefined` (six real substitutions) left it entirely green.**
+
+The obstacle was that the real `compile` fetches its wasm from `WASM_PATH`, an HTTP route, and
+there is no server in a test. Serving it from `Bun.serve({ port: 0 })` and wrapping `fetch` to
+absolutize the leading `/` is the whole of what was needed — the browser resolves that path
+against the page origin, and bun has no origin at all. Now the same blanket mutation fails all
+four tests.
+
+Two things fell out of writing it that no amount of reading would have produced:
+
+- I asserted **"a settled card keeps its tail"** and it was wrong. An unclosed array literal
+  normalizes under `final` to `[1, 2,\n return <div/>\n}];}` — every character preserved, and it
+  does not parse — so the catch falls back to `streaming`, which cuts back to
+  `export default function A() {}`. Losing the tail is the *correct* outcome there; a card that
+  compiles beats a card that does not. The guarantee is "something compiles", not "nothing is
+  lost", and only writing the assertion down exposed that I had it backwards.
+- The **718** figure recorded above needed qualifying. In 241 of those prefixes the rescued
+  module has no default export left, `type T` being the extreme (it normalizes to the empty
+  string). 477 real cards, 241 blank surfaces — corrected in place.
+
+The general form, now seen four times today: **a test that does not import the module under
+test cannot fail for it.** The others were a guard tested where its failure could not occur, a
+traversal test that could not reach a file, and a checker whose corpus was the six files it was
+written against.
+
+Auditing the rest by the same blanket mutation: `bindings.ts` 5 tests fail, `registry.ts` 6,
+`inline-fence.ts` 4 — all genuinely covered. `observe.ts` and `register.ts` score 0, but the
+operator rewrites `return <expr>;` and **neither module contains one**, so their score is a
+no-op rather than a verdict; both were mutation-checked by hand instead. A mutation audit needs
+its own control: count the substitutions actually applied before believing a zero.
