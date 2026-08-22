@@ -1260,3 +1260,29 @@ Method bug found on the way: the harness copied fixtures with `cp -r "$seed"/*`,
 dotfiles — so the `.gitignore` fixture was never there and the model's *"其实里面还没有
 `.gitignore`"* was simply true. Fixed to `cp -R "$seed"/.`. Worth noticing that the model's
 report is what exposed the broken harness; the run looked plausible either way.
+
+### Auditing the prose zeros after the crash (2026-08-22)
+
+The crash-reads-as-refusal finding casts doubt backwards: any `0` recorded today could have been
+a dead process. A `fence=1` cannot — a crashed run never emits a card — so only the **prose**
+numbers needed checking.
+
+Re-opened the surviving output directories for §"the fifth escape, closed" and measured bytes:
+`闭包` 2157/2570/3083 and `尾递归优化` 2837/3060/3416/3828, every one opening with real Chinese
+prose. No crashes in that batch; the record stands.
+
+Keep the habit: **a zero is only evidence once you have seen the reply it came from.** Byte count
+plus the first line is enough, and `scripts/eval.sh` now prints both.
+
+### Out of quota mid-session (2026-08-22)
+
+`deepseek-official` returned `dsh: QUOTA: Insufficient Balance` — six runs in a row, 34 bytes
+each, which the harness happily reported as `fence=0`. Exactly the failure the previous section
+is about, arriving one hour later in a new costume. `eval.sh` now treats a `dsh: QUOTA` line as a
+crash.
+
+Switching providers was available and deliberately not taken: every number recorded today comes
+from `deepseek-v4-pro` at `reasoningEffort: high`, and a rule kept on one model's behaviour is not
+evidence about another's. The unmeasured rule was pushed to the branch
+`unverified/history-is-a-set` instead of merged, with the measurement it still needs written into
+the commit message.
