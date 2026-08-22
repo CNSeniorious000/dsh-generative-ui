@@ -32,6 +32,7 @@
     "lib",
     "src/client/canvas/panel-css.ts",
     ".research",
-    "test/cards/**"
+    "test/cards/**",
+    "test/cards-negative/**"
   ]
 }

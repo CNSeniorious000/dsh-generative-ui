@@ -59,7 +59,9 @@ for (const path of paths) {
 // The positive control: a hook in a helper component below a long default export, so the card
 // is demonstrably painting before the hook count changes. If this stops being reported, the
 // detector has gone blind and every clean run above is meaningless.
-for (const name of cardsIn("test/cards-negative")) {
+// One named card, not the whole directory — `test/cards-negative/` holds a control per checker
+// and the others are supposed to be clean here.
+for (const name of ["late-hook.tsx"]) {
   const src = await Bun.file(`test/cards-negative/${name}`).text();
   const step = Math.max(100, Math.floor(src.length / 60));
   let prev = -1, painted = false, late = 0;
