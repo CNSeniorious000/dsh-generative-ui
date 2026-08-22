@@ -3515,3 +3515,27 @@ from today for the same failure — every one has a real insertion or replacemen
 only near-miss.) **A silent no-op edit is the same
 failure class as a search window too small to reach the evidence** — the tool succeeds, the
 result is empty, and empty reads as "already fine".
+
+### I rebuilt `smoke.ts` without noticing it existed (2026-08-23)
+
+Wanting to prove the shipped `lib/client.js` carries today's four parser fixes rather than just
+`src/`, I wrote a script that stubs `window.__ModuleLoader__`, captures the factory, hands it a
+real React, and checks the exports and the synthesized blob modules. It worked. It is also,
+line for line, what `scripts/smoke.ts` has been doing all along — same seam, same real React
+(`require("react")` for the two specifiers that need it), same blob capture and parse.
+
+Two things led me there, and both are the same mistake in different clothes. I first tried to
+confirm the fixes by **grepping the bundle for source text** — `grep -c` for a regex literal
+reported the shorter-closer fallback MISSING when it is plainly there, because the escaping
+differs after bundling. That is the failure this file already warns about for `import.meta`:
+grep the behaviour, not the spelling. Then, having decided a behavioural check was needed, I
+built one instead of looking for one.
+
+The rule worth keeping: **before writing a verification script, run the checks that already
+exist and read what they print.** `bun run smoke` prints the plugin id, the module table it
+asked for, and the effect count — all three were on screen every time I ran `bun run check`
+today.
+
+The one thing salvaged: `smoke.ts`'s comment still called the capability shims `$ui4a/*`, two
+days after the rename. Same class as the four rotted identifiers §4 already lists, and found
+only because I was reading a file I thought I had to write.
