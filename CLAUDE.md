@@ -56,7 +56,7 @@ Consequences:
 
 ### 2.3 Non-JS assets only reach the browser through your own route
 
-The `/plugins` route **hardcodes `/client.js` and `/client.js.map`**; everything else 404s. And `dsh-host-frontend-static` answers unmatched paths with **index.html + 200** (not 404), so dropping wasm into its dist "looks like it works" right up until `instantiateStreaming` reports a baffling magic-word error.
+The `/plugins` route **hardcodes `/client.js` and `/client.js.map`**; everything else 404s. The static handler **used to** answer unmatched paths with index.html + 200 (not 404), so dropping wasm into its dist "looked like it worked" right up until `instantiateStreaming` reported a baffling magic-word error. **Re-measured 2026-08-23: that is fixed** — `/some/spa/route`, `/assets/missing.js`, `/missing.wasm` and an unmatched path under our own prefix all return **404 with a zero-length body**. The route we serve ourselves is unchanged and still correct: `200 · application/wasm · cache-control: immutable`.
 
 The fix is a route from the Node half — `ctx.webServer.register({ kind: 'prefix', path: '/dsh-generative-ui/assets', ... })` — with the browser half hardcoding that URL. Measured: `200 · application/wasm · 2,610,857 B`.
 
@@ -2735,3 +2735,23 @@ package is `@deepseek-ai/dsh-skill`), and `dsh-client-modules` was already shown
 deliberately as history — **cannot be decided with anything available here**, and saying so is the
 result. Three methods, each plausible, each measuring something other than what I wanted; recording
 the dead ends so the next audit does not re-walk them.
+
+### A behaviour citation can rot too — but it rots loudly (2026-08-23)
+
+§2.3's warning was that the shell's static handler answers unmatched paths with index.html + 200,
+which turns a misplaced wasm file into a magic-word error far from its cause. Measured against
+rc.8: four unmatched paths, including an SPA-shaped one, all return **404 with an empty body**. The
+host fixed it.
+
+This qualifies the rule from the identifier audit. Behaviours go stale as well — but the difference
+is in how you find out. A stale identifier is invisible: nothing fails, the note simply points at
+something that is not there. A stale behaviour **fails a check you can write**, and this one took a
+single `curl` loop. The claim was falsifiable and so it got falsified; the four rotted identifiers
+sat unnoticed for weeks because there was nothing to run.
+
+Our own half of that entry still holds exactly: the plugin's `/dsh-generative-ui/assets` route
+answers `200 · application/wasm`, which is the part the note exists to justify.
+
+(Method note, twice today: `curl` and `head` were not on PATH inside a `for` loop, the same way `rg`
+was not inside `platform-table.sh`. Resolve binaries with `command -v` before looping, or the loop
+reports a tool failure as a measurement.)
