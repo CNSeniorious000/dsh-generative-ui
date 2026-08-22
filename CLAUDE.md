@@ -3066,3 +3066,28 @@ Method note: my first pass reported `recognisedAsCanvas=0` for all 159 writes in
 plain `write` calls, which would mean canvases never render at all. That was the harness
 passing `{ argsRaw }` when the field is `arguments` — **a checker that reports total failure is
 as suspect as one that reports zero problems**, and both mean "measure the measurement first."
+
+### The seventh bug: a canvas written by executed code is invisible (2026-08-23)
+
+`collect.ts` classifies a call by the SHAPE of its arguments, which §4 defends at length and
+correctly — but the shape only works when the arguments *describe* the write. **29 canvas
+writes in the corpus go through `run_code`**, holding the file body inside a JS or Python
+string literal, and in **27 of them the path is built from a variable**, so nothing in the
+arguments names the canvas. `collect.ts` sees none of them. In all **19 sessions** where this
+happens, `run_code` is the *only* write — there is no ordinary `write` to fall back on.
+
+The panel never opens, and the launcher does not rescue it either: `workspaceIds` is fetched
+**once per workspace**, before the write, and is never refreshed. So the canvas exists on disk
+and nothing in the UI knows.
+
+The fix is not in `collect.ts` — the id is genuinely absent from the arguments 27 times out of
+29, and no parser recovers what was never written. It is that the listing already knows and
+never asks again. The sweep now counts settled calls matching `OPAQUE_WRITE` — code-carrying
+arguments that also mention `canvases` — and re-lists when that count changes.
+
+Both halves of the predicate are load-bearing and measured. Without the `canvases` clause an
+ordinary shell session re-lists once per command (one session: 0 → 94 extra directory reads).
+With it: median 0, p90 0, max 18. And all 29 real opaque writes mention `canvases` somewhere
+even when the id is unrecoverable, so the clause costs no coverage. Matching on argument text
+rather than the tool name is the same principle as `collect.ts`: a name list stops matching the
+day the host renames the tool, silently.
