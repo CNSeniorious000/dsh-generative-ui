@@ -92,7 +92,7 @@ See `scripts/build.ts`. All four let the plugin **build fine and blow up at runt
 
 - **`external` lists only the platform table, and mind that bun matches sub-paths too.** Verified 2026-08-23 by removing `bundleReactDomServer` from `plugins:` and rebuilding: `require("react-dom/server")` appears in `lib/client.js` and `renderToString` drops from 4 occurrences (the inlined implementation) to 1 (the call site alone). Put the plugin back and only the two platform modules are required. The one trap in this file that held exactly as written. Listing `react-dom` also externalizes `react-dom/server` — which is **not** in the platform table, so materialization throws `missed the module table`. A plugin that resolves it to an absolute path sidesteps specifier matching. (bun defaults to `--packages bundle`, so unlike tsdown there's no need for a reverse `noExternal`.)
 - **The `browser` resolution condition must be explicit — and today it changes nothing, which is not a reason to drop it.** Measured 2026-08-23: removing `conditions: ["browser"]` and rebuilding produces a **byte-identical** `lib/client.js` (same md5, 295365 bytes, no `require("stream"/"url"/"util")`). The reason is the sibling fix above — `bundleReactDomServer` resolves straight to `server.browser.js` by absolute path, so the one dependency this condition was written for never consults exports conditions at all. It stays as a guard for the next dependency that ships a `browser` export: without it that one silently gets the Node build. `react-dom`'s `exports["./server"]` only points at `server.browser.js` under that condition; otherwise you get the Node build and drag `require("stream"/"url"/"util")` into a browser bundle.
-- **`define` away `import.meta.url`.** `@esm.sh/tsx`'s entry reads it. We always pass the wasm path explicitly, so a constant is enough.
+- **`define` away `import.meta.url`.** `@esm.sh/tsx`'s entry reads it. We always pass the wasm path explicitly, so a constant is enough. Measured 2026-08-23 by removing the `define` block and rebuilding, and the consequences are worse than "CJS has no `import.meta`" suggests: the bundle goes **295365 → 616551 bytes**, bun resolves the specifier to **`file:///private/tmp/recover/node…` — the build machine's absolute path, baked into a file shipped to other machines** — and it drags in `require("react/jsx-dev-runtime")`, which is not in the platform table and therefore dies at materialization. The `import.meta` count stays 0 either way, so grepping for it is not how you check this.
 
 **The upstream compiler no longer needs patching around** — `partial-react@0.0.6`
 (2026-08-22, from macaron-genui-demo#1718) dropped the `import.meta.resolve` and `typeof Bun` its
@@ -2645,3 +2645,18 @@ A method slip on the way, caught by its own assertion: my first patch used a reg
 nothing, and the script printed the *unmodified* build's output. It looked like "removing the
 plugin changes nothing". **When a patch step fails, everything printed after it is about the old
 state** — the `assert` in the patch is what stopped me reading it as a result.
+
+### §2.6 finished: two live, one dormant, one worse than recorded (2026-08-23)
+
+| setting | removing it does |
+| --- | --- |
+| `external` sub-path (`bundleReactDomServer`) | `require("react-dom/server")` enters the bundle — **live** |
+| `conditions: ["browser"]` | byte-identical output — **dormant**, kept as a guard |
+| `define` of `import.meta.url` | 295KB → 617KB, build path baked in, `jsx-dev-runtime` pulled in — **live, and understated** |
+| upstream compiler workaround | already removed and verified earlier today |
+
+The `define` one is the useful correction. The entry explained *why* the setting exists (CJS has no
+`import.meta`) and left the consequence implicit, so the obvious check — `rg -c 'import\.meta'` —
+reads **0 with or without it**. What actually changes is the byte count, a leaked absolute path
+from the build machine, and a module outside the platform table. **When a note gives the reason but
+not the symptom, the reader will invent a check for the reason and it will pass.**
