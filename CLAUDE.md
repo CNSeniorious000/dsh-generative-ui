@@ -174,7 +174,7 @@ Four details you have to get right:
 
 **The data source is tool calls, not a new session event.** The model writes `ui4a/canvases/<id>.ui4a.tsx` with the host's own `write`, and the client reads `root.call.argsRaw` off the snapshot's `tool-call` nodes. No `SessionEventMap` extension, no touching the persistence contract, zero involvement from the Node half.
 
-**But the canvas gets no streaming under the web profile's default PTC mode** (measured 2026-08-20 with a probe inside `calls()`, 5000+ samples): under PTC every tool is called from `run_code`, and the host only exposes `write` as a subCall once `run_code` has **finished**, so the very first `write` frame we see is already `settled: true` with all 14388 characters. The outer `run_code`'s own `argsRaw` is just 165 characters (the calling code, not the file body). The panel therefore appears whole the moment the write lands — 490 samples on a real machine, **0** state changes. The `streaming: !call.settled` code is itself correct and would work off-PTC where `write` is a top-level call; the default path just never reaches it. Inline is unaffected (see §3.5).
+**But the canvas gets no streaming under the web profile's default PTC mode** (measured 2026-08-20 with a probe inside `calls()`, 5000+ samples): under PTC every tool is called from `run_code`, and the host only exposes `write` as a subCall once `run_code` has **finished**, so the very first `write` frame we see is already `settled: true` with all 14388 characters. The outer `run_code`'s own `argsRaw` is just 165 characters (the calling code, not the file body). The panel therefore appears whole the moment the write lands — 490 samples on a real machine, **0** state changes. **Not re-verified 2026-08-23**, and worth saying why: the claim is about a code path that only exists inside a live PTC session, so it needs a canvas being written while something samples the store. `test/collect.test.ts` covers both branches of the logic (a settled write is not streaming, an unsettled one is), which is a different claim — that the *unsettled* branch is unreachable under PTC cannot be shown from a transcript after the fact. The sessions on disk that did write canvases live in `mktemp` directories that do not survive. The `streaming: !call.settled` code is itself correct and would work off-PTC where `write` is a top-level call; the default path just never reaches it. Inline is unaffected (see §3.5).
 
 `edit`-class tools are the exception: their arguments are a patch, not the full text. Those calls only mark the canvas stale (with an incrementing version as the cache key), and the truth is read back from the file through the Node half's `/dsh-generative-ui/canvas` route. The file is the one source that stays correct under every way of changing it, including edits made outside the agent.
 
@@ -2769,3 +2769,22 @@ an error code, or a number nobody can re-derive — it names **a string you can 
 Nine entries have now been re-verified this way; the two that were wrong (`console.error`
 refcounting, the wasm figure) and the four whose evidence had gone stale all cited identifiers,
 while every entry citing a fetchable or buildable fact survived.
+
+### The entry that could not be re-verified, and saying so (2026-08-23)
+
+§3.6's "the canvas does not stream under PTC — 490 samples, 0 state changes" resisted three
+attempts. Its logic is covered by tests (`collect.test.ts` asserts both branches), but the claim is
+that one branch is **unreachable in production**, which no unit test and no saved transcript can
+show — it needs a probe inside a live session while a canvas is being written.
+
+Two dead ends worth recording so the next attempt skips them: the `"name":"write"` string in a
+transcript is usually the **tool definition** (it carries `description` and `parameters`), not a
+call; and sessions that did write canvases today were in `mktemp` directories that are gone.
+
+The entry now says it is unverified rather than carrying its original number as if fresh. That is
+the point of the audit — **an unverifiable claim marked unverified is worth more than the same
+claim reading as measured**, because the next person will stop trying to derive confidence from it.
+
+Two shell traps hit while chasing this, both familiar by now: a `[ "$n" -gt 0 ]` test where `n` had
+picked up multiple lines from `grep -c` over several files, and a glob left unexpanded inside a
+`zstd -dc` argument. Both produced empty output that looked exactly like "no hits".
