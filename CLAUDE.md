@@ -3193,3 +3193,38 @@ Auditing the rest by the same blanket mutation: `bindings.ts` 5 tests fail, `reg
 operator rewrites `return <expr>;` and **neither module contains one**, so their score is a
 no-op rather than a verdict; both were mutation-checked by hand instead. A mutation audit needs
 its own control: count the substitutions actually applied before believing a zero.
+
+### Auditing which modules have tests that could fail (2026-08-23)
+
+`scripts/mutation-audit.sh` inverts every `if` in one source file at a time and counts failing
+tests. Not part of `bun run check` — it rewrites source and takes minutes — but it is the only
+thing here that distinguishes a covered module from a green one.
+
+The result that mattered: **`compiler.ts` had 8 mutation sites and 0 failing tests**, which is
+what exposed `compiler.test.ts` testing a re-implementation. After the fixes above:
+
+| | sites | caught |
+| --- | --- | --- |
+| `contract.ts` / `index.ts` (node) | 7 / 29 | 8 / 10 |
+| `collect.ts`, `subpages.ts`, `registry.ts`, `observe.ts`, `bindings.ts` | | all covered |
+| `read.ts`, `compiler.ts`, `segments.ts` | | covered after today |
+| `index.ts` (canvas), `mount.ts`, `useDismissable.ts`, `inline-fence.ts` | 12 / 2 / 2 / 14 | **0** |
+
+**Read the two columns together, and do not read a zero as a verdict.** Three separate reasons
+a module scores 0 without being untested: the operator does not apply (`observe.ts` and
+`register.ts` are nearly `if`-free — hand-mutated instead); the covered exports are arrow
+expressions with no `if` at all (`sameCode`/`matchSegment` in `inline-fence.ts`, which three
+hand mutations do kill); or the remaining conditions are genuinely DOM-bound and this project
+has no DOM in tests (`mount.ts`, `useDismissable.ts`, and `claimInlineFences`).
+
+What was extractable got extracted rather than left to a browser: `paintSignature` is now a pure
+function, and its three fields each have a mutation that kills a test — an id-blind signature
+skips a repaint between two equal-length canvases, a streaming-blind one never settles, and
+dropping the offerable list means the launcher never paints at all. That signature is what
+stands between the panel and a React render per streamed token.
+
+One more input-selection lesson from the same pass. Pinning `partial: true` to the streaming
+branch needs a case where **both modes compile and disagree** — otherwise the settled path's
+catch falls back to streaming and produces byte-identical output, which is how my first two
+attempts passed with the condition inverted. An unclosed `.map(` is the separator: `final`
+closes it as `{items.map(i => (null))}`, `streaming` cuts back to `<div></div>`.
