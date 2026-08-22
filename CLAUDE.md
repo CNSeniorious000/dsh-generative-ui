@@ -3301,3 +3301,12 @@ element. React mounts an `<svg>` before it lays out, so present-but-zero-sized i
 has not drawn yet — and treating it as painted hides the source block under an empty card.
 Custom elements count by their dash rather than by a list, because a card may render one this
 project has never heard of.
+
+The canvas sweep's body-resolution logic is where extraction stops paying. Pulling the
+three-state decision (no patch → the write's arguments are the canvas; cache hit → the file;
+otherwise read) into a `resolveBody` function type-checks only with an extra `|| version ===
+undefined` clause, because the checker cannot narrow `version` across the call the way it does
+across an inline early return. That clause is noise added for the compiler, in a file whose
+whole style is the opposite — so the extraction was reverted. **The last 12 conditions stay
+untested rather than making the code worse to reach them**, and any real coverage there needs
+a DOM in tests, which is a dependency decision rather than a cleanup.
