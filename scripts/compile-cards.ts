@@ -58,6 +58,23 @@ const SCREENS = {
     if (new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src)) return false;
     return new RegExp(`set${name[0].toUpperCase()}${name.slice(1)}\\b`).test(src) && /\$dsh\/(exec|fs|ai)/.test(src);
   },
+  // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
+  // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
+  // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
+  // quoting a glob. I first recorded this as unscreenable; it is not. A real expression names
+  // something **bound somewhere in the file**, and a glob's parts are bound nowhere. Requiring
+  // a genuine binding site (declaration, parameter, import) rather than "the name appears on a
+  // line with a keyword" is what takes this from 0 hits to exactly the one failing card.
+  "GLOB-IN-JSX": (src: string) =>
+    [...src.matchAll(/>[^<>{}]*\{([^{}]{1,40})\}[^<>{}]*</g)]
+      .map((match) => match[1].trim())
+      .filter((expression) => /^[a-zA-Z_$][\w$]*(?:\s*,\s*[a-zA-Z_$][\w$]*)+$/.test(expression))
+      .some((expression) =>
+        expression.split(",").every((part) => {
+          const name = part.trim();
+          return !new RegExp(`(?:const|let|var|function)\\s+${name}\\b|\\b${name}\\s*(?:,\\s*\\w+)?\\s*\\)\\s*=>|\\(\\s*${name}\\b[^)]*\\)\\s*=>|\\{[^}]*\\b${name}\\b[^}]*\\}\\s*(?:=|from)`).test(src);
+        }),
+      ),
   "MODULE-SCOPE-HOOK": (src: string) => /^(?:(?:const|let|var)\s+[\w{}[\],\s:]+=\s*)?use[A-Z]\w*\s*\(/m.test(src),
 } as const;
 
@@ -91,7 +108,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
