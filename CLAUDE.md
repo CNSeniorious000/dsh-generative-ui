@@ -1929,3 +1929,27 @@ backend brings a new way to look like a zero.
 (`glm-5.2` also produced a card for `什么是闭包？`. Reading it, the card is a clickable walk
 through a closure's scope — the same "a process, not a rule" case as 尾递归优化, so that is the
 fixture being over-specified rather than a miss.)
+
+### Three gateway models against the table (2026-08-22)
+
+| | prose 4 | UI 17 | canvas 2 |
+| --- | --- | --- | --- |
+| `macaron-v1-venti` | 4/4 | 17/17 | both K |
+| `gpt-5.6-terra` | 4/4 | 17/17 | both K |
+| `claude-sonnet-5` | — | — | — (see below) |
+
+**terra matches venti cell for cell**, including choosing a canvas for both plan fixtures. Two
+models that share nothing but the prompt agree on all 23, which is the strongest evidence so far
+that these rules describe the request rather than a model's habits.
+
+`claude-sonnet-5` needed `tool-web` disabled first — the gateway refuses the web-search tool for
+it with a 400. Its first grid ran before that was understood **and before the crash check was
+widened**, so the whole column was zeros and `C`s from a single upstream failure. Discarded and
+re-run.
+
+That is the same lesson as §"a corpus spanning a rule change is not one population", from the
+tool side: **a grid that spans a fix to the harness is not one population either.** The first
+twelve rows were measured by a checker that could not see the failure the last eleven reported.
+
+With the tool disabled, sonnet answers `帮我算下房贷` with a **canvas** where venti and terra both
+use a fence — and it runs the checker (`bash ×4`, `str_replace_editor ×3`) the way venti does.
