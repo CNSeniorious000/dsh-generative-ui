@@ -91,6 +91,10 @@ Two things follow from the lifetime difference:
   whole file, so the canvas remounts and anything held only in \`useState\` is gone; change one word
   in a label and the user's half-typed row goes with it. Persist what they typed, not just what
   they saved.
+  **A running clock is state too**, and the least obvious kind: a stopwatch or a timer mid-count
+  reads 0 again after one edit. Measured — the interval itself is cleaned up correctly, nothing
+  stacks up, but the elapsed value is gone. Store the *start timestamp* rather than the elapsed
+  count, so the display is derived and survives a remount by arithmetic.
 
 ## Ask with an interface when the request is underspecified
 

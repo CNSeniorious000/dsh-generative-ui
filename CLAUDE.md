@@ -2288,3 +2288,34 @@ Two method notes:
 - `types/*.d.ts` was audited once before for prose accuracy (§"Auditing the `.d.ts` files the
   model actually reads"). This is the structural version of the same finding: **the file the
   model reads is not the file the gate reads.**
+
+### The clock intent, tested without a model call (2026-08-23)
+
+`docs/examples.md:917` names a stopwatch as the untested intersection of "streams" and "has its
+own clock", and predicts it is "where partial-react's state preservation would fail most
+visibly". Two cheap measurements, no model quota spent.
+
+**Streaming is not where it fails.** `replay-stream.ts` over the three fixtures: `metro`
+(a metronome, the clock-owning card already on disk) shows 7 hook changes and
+`afterDefaultPaints=0` — every remount lands before the card can paint anything.
+
+**A remount is, and only in one of the two ways it could.** Drove a real remount in a browser
+by changing the boundary key, exactly as `preserveBoundaryEpoch` does:
+
+| | before remount | after |
+| --- | --- | --- |
+| displayed elapsed | 490ms | **290ms** (a fresh instance) |
+| live intervals | 1 | **1** |
+| tick rate | — | unchanged |
+
+So the reading is lost, and **nothing leaks** — the old interval's cleanup runs, no second timer
+races the first. The lost reading is the documented `preserveState={false}` trade; a stacking
+timer would have been a real bug and it does not happen.
+
+The skill already said persistence is about *your next edit*, not a reload. What it did not say
+is that a running clock counts as the user's state, which is the least obvious case. Added, with
+the fix stated as a shape rather than a rule: **store the start timestamp, derive the display.**
+
+Verified before writing it down, because advice that merely sounds right is how a prompt acquires
+a claim nobody checked: the same remount, with the start persisted, reads 600ms → **800ms** and
+keeps counting, against 490 → 290 for the elapsed-count version.
