@@ -16,6 +16,7 @@ let painted: any[] = [];
 let listed: string[] = [];
 let files: Record<string, string> = {};
 let reads: string[] = [];
+let listings = 0;
 let frames: (() => void)[] = [];
 
 const paint = () => { const due = frames; frames = []; for (const cb of due) cb() };
@@ -26,7 +27,7 @@ let scheduleSweepAgain = () => {};
 const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve(); paint() } };
 
 beforeEach(() => {
-  painted = []; listed = []; files = {}; reads = []; frames = [];
+  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0;
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
   (globalThis as any).cancelAnimationFrame = () => {};
   (globalThis as any).MutationObserver = class { observe() {} disconnect() {} };
@@ -35,7 +36,7 @@ beforeEach(() => {
   (globalThis as any).fetch = (url: string) => {
     const parsed = new URL(url, "http://x");
     const id = parsed.searchParams.get("id");
-    if (id === null) return Promise.resolve(new Response(JSON.stringify(listed)));
+    if (id === null) { listings++; return Promise.resolve(new Response(JSON.stringify(listed))) }
     reads.push(id);
     const body = files[id];
     return Promise.resolve(body === undefined ? new Response("", { status: 404 }) : new Response(body));
@@ -43,20 +44,21 @@ beforeEach(() => {
 });
 
 /** Mount the host with a fixed set of tool calls, and return what the panel was rendered with. */
-const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number } = {}) => {
+const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void } = {}) => {
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
   // module resolves its import binding at evaluation time — so the mock has to be registered
   // before `index.ts` is imported, which is why the import below is dynamic.
   mock.module("react-dom/client", () => ({ createRoot: () => ({ render: (node: any) => painted.push(node), unmount() {} }) }));
-  const suffix = Math.random();
-  const { mountCanvasHost } = await import(`../src/client/canvas/index.ts?${suffix}`);
-  // The same `observe.ts` instance the host subscribed to — a fresh import would be a different
-  // module with its own listener set and would drive nothing.
-  scheduleSweepAgain = (await import(`../src/client/runtime/observe.ts?${suffix}`)).scheduleSweep;
+  const { mountCanvasHost } = await import(`../src/client/canvas/index.ts?${Math.random()}`);
+  // Canonical specifier, NO suffix. `index.ts` imports `../runtime/observe.ts` plainly, so that
+  // is the instance holding its listener; importing `observe.ts?<anything>` yields a separate
+  // module whose `scheduleSweep` drives nothing — which is how the first version of this test
+  // sat green while `paint` never ran a second time.
+  scheduleSweepAgain = (await import("../src/client/runtime/observe.ts")).scheduleSweep;
   const host = mountCanvasHost({ calls: () => calls, cwd: () => over.cwd ?? "/w", sessionId: () => "s1" });
   await settle();
   // Extra sweeps stand in for the stream continuing — the observer fires once per token.
-  for (let i = 1; i < (over.sweeps ?? 1); i++) { scheduleSweepAgain(); await settle() }
+  for (let i = 1; i < (over.sweeps ?? 1); i++) { over.between?.(); scheduleSweepAgain(); await settle() }
   host.dispose();
   // The panel is the first child whose props carry `canvases`.
   const withCanvases = painted.map((n) => n?.props).filter((p) => p && Array.isArray(p.canvases)).at(-1);
@@ -89,5 +91,40 @@ describe("what the panel shows", () => {
     const { canvases } = await sweep([write("dice", "body"), patch("dice")], { sweeps: 5 });
     expect(canvases.map((c) => c.id)).toEqual(["dice"]);
     expect(reads.filter((id) => id === "dice").length).toBe(1);
+  });
+});
+
+describe("when the sweep asks the disk", () => {
+  // The listing backs the launcher and is fetched once per workspace — the sweep runs per
+  // streamed token and a directory read is not free.
+  test("the workspace is listed once, not per sweep", async () => {
+    listed = ["notes"];
+    await sweep([write("dice", "body")], { sweeps: 6 });
+    expect(listings).toBe(1);
+  });
+
+  // A call that ran arbitrary code may have written a canvas without naming it: 29 corpus writes
+  // go through `run_code` and 27 build the path from a variable, so `collect.ts` sees nothing.
+  // The listing already knows; this is what makes it ask again.
+  test("code that mentions the canvases directory triggers a fresh listing", async () => {
+    listed = [];
+    // The call has to ARRIVE, not merely be present: the re-list is keyed on the settled-opaque
+    // count changing. One that was already there when the panel mounted is covered by the first
+    // listing, so a test that includes it from the start sees exactly one listing and proves
+    // nothing — which is what the first version of this test did.
+    const calls: any[] = [write("dice", "body")];
+    await sweep(calls, { sweeps: 2, between: () => calls.push({ argsRaw: JSON.stringify({ code: "p = base / 'canvases' / f'{n}.ui4a.tsx'; p.write_text(src)" }), settled: true }) });
+    expect(listings).toBe(2);
+  });
+
+  // Without the `canvases` clause an ordinary shell session re-lists once per command — measured
+  // on the corpus, one session went from 0 extra listings to 94.
+  test("ordinary shell work does not", async () => {
+    // Arriving mid-stream, for the same reason as the test above: a call that was already there
+    // when the panel mounted never changes the count, so including it from the start passes with
+    // the `canvases` clause deleted. This is the mutation that caught it.
+    const calls: any[] = [write("dice", "body")];
+    await sweep(calls, { sweeps: 3, between: () => calls.push({ argsRaw: JSON.stringify({ command: "ls -la", description: "list" }), settled: true }) });
+    expect(listings).toBe(1);
   });
 });
