@@ -1510,3 +1510,28 @@ id, not cwd" from the other direction. The route cannot be exercised without a r
 so that one waits for quota.
 
 `types/*.d.ts` needs the same suspicion as any other measurement: **assignable is not accurate.**
+
+### Why the streaming chart only collapses once (2026-08-22)
+
+§"Streaming charts, finally measured" recorded 17 states with a single 80ms collapse and left the
+mechanism open. The renderer remounts whenever the **hook signature** changes
+(`preserveBoundaryEpoch += 1` in `partial-react/src/runtime.ts:412`), and a card being written
+gains hooks as it goes — so why only one collapse?
+
+Replayed a real 10.7KB canvas as 53 streamed prefixes through `normalizeGeneratedTsx`:
+
+```
+at   200 / 10723  hooks -1 -> 0  hasReturn=false   2%
+at  1600 / 10723  hooks  0 -> 1  hasReturn=false  15%
+at  2000 / 10723  hooks  1 -> 2  hasReturn=false  19%
+at  2200 / 10723  hooks  2 -> 3  hasReturn=false  21%
+```
+
+**Three remounts, all inside the first 21%, every one of them before a `return` exists.**
+Remounting an empty card is free; for the remaining 79% the signature is constant and the chart
+fills in undisturbed. The single visible collapse is the settled recompile at the end.
+
+So the good behaviour is not luck, but it is **conditional on hooks being declared in the ordinary
+place**. A hook added after the markup, or one behind an `if` that flips, moves a remount into the
+middle of a visible card. Written up in the skill with the measurement, since "put your hooks at
+the top" reads as style advice until you know it costs a redraw.

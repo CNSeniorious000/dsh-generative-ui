@@ -173,6 +173,22 @@ A bare \`OscillatorNode\` sine reads as a test tone. Layer two or three partials
 \`GainNode\` envelope and it reads as an instrument instead. Close the context on unmount, or
 every reload leaves another one behind.
 
+## Declare every hook before the JSX
+
+An inline card is recompiled on every streamed frame and the renderer keeps its state only
+while the **hook signature** is unchanged; add a hook and the tree remounts, so a chart drawn
+so far starts again from nothing.
+
+This is normally invisible, and measuring a real card shows why: across 53 streamed frames the
+hook count changed three times — **all three inside the first 21%, before the \`return\` existed at
+all.** Remounting an empty card costs nothing, and for the remaining 79% the signature held
+steady while the chart filled in.
+
+That free ride depends on writing them in the ordinary order: **all \`useState\` / \`useMemo\` /
+\`useEffect\` at the top of the component, none of them conditional, and none added after the
+markup is on screen.** A hook introduced late — or one behind an \`if\` that flips — lands the
+remount in the middle of a visible card, and the reader watches it blank and rebuild.
+
 ## Anything that keeps running
 
 A game loop, an AutoPlay demo, a metronome, a clock, a progress animation — anything on
