@@ -36,10 +36,12 @@ type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string;
  * **Compiling is not the same as having something to look at.** Mid-stream the default
  * export usually exists while the body is still an empty shell, so hiding the source block
  * at claim time leaves a blank gap that fills in with a pop seconds later — and the source
- * was sitting right there the whole time. Text or an svg (icons and charts carry no text)
- * is the signal; a wrapper div with layout classes is not.
+ * was sitting right there the whole time. Text, an svg, a canvas or an image is the signal;
+ * a wrapper div with layout classes is not. **A game is the case that forces canvas into that
+ * list** — 2048, Life and Snake paint pixels and carry neither text nor svg, so on `svg` alone
+ * they scored as never-painted and sat under their own source forever.
  */
-const hasPainted = (mount: HTMLElement) => (mount.textContent ?? "").trim() !== "" || mount.querySelector("svg") !== null;
+const hasPainted = (mount: HTMLElement) => (mount.textContent ?? "").trim() !== "" || mount.querySelector("svg, canvas, img") !== null;
 
 /** The block's source. `pre` when the grammar was unknown, the highlighted div otherwise. */
 const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";

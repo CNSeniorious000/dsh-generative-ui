@@ -1411,3 +1411,28 @@ check` failed on a clean tree. Changed to `includes`.
 The bug was always there; it took being forced out of the usual working directory to see it.
 **Path predicates written against one location are assertions about the environment**, and this
 one had been true for two days by luck.
+
+### A game never hides its own source (2026-08-22)
+
+`hasPainted` decides when the host code block is hidden: text, or an `svg`. Reading it against
+what the research asked for — 2048, Life, Snake, all of which the user named — the gap is
+immediate: **a `<canvas>` carries neither.** Those cards score as never-painted, so the observer
+never fires and the raw TSX stays on screen under a working game, forever.
+
+Confirmed in a browser rather than argued, because arguing has been wrong three times today:
+
+| mount | before | after |
+| --- | --- | --- |
+| empty shell `<div class="grid gap-2">` | false | **false** |
+| text | true | true |
+| `<svg>` | true | true |
+| `<canvas width=400>` | **false** | true |
+| `<img>` | **false** | true |
+| canvas + a score label | true | true |
+
+Selector widened to `"svg, canvas, img"`. The empty shell still reads false, which is the case
+the function exists for — widening the test must not cost the thing it was protecting.
+
+This one was found by **reading the code against the intended examples** rather than by running
+prompts. Worth doing more of while the quota is out: the corpus says what cards will look like,
+and the runtime can be checked against that without a single model call.
