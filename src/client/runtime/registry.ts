@@ -18,7 +18,8 @@ const urls = new Map<string, string>();
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 
-function buildModuleSource(specifier: string): string {
+/** Exported for `test/registry.test.ts`: it generates code, so a bug here is a blank card with an empty console. */
+export function buildModuleSource(specifier: string): string {
   const namespace = registry[specifier] ?? {};
   const lines = [`const ns = globalThis[${JSON.stringify(REGISTRY_KEY)}][${JSON.stringify(specifier)}];`];
   // One `export const` per name rather than a spread: ESM export names must be statically visible.
