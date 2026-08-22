@@ -3091,3 +3091,22 @@ With it: median 0, p90 0, max 18. And all 29 real opaque writes mention `canvase
 even when the id is unrecoverable, so the clause costs no coverage. Matching on argument text
 rather than the tool name is the same principle as `collect.ts`: a name list stops matching the
 day the host renames the tool, silently.
+
+### A traversal test that could not reach a file (2026-08-23)
+
+The canvas read route had **no test at all** — not the listing the launcher depends on, not the
+`child` branch, and not the escape fence on the one parameter an attacker controls. Written
+now, and the first version of the traversal test was worthless in a way worth recording.
+
+It tried `../../../../etc/passwd`, `/etc/passwd`, `..%2F..%2Fsecret` and asserted the status
+was not 200. **It passed with `canvasChildPath` deleted entirely.** Relative to a `mktemp`
+workspace those paths resolve to nothing, so the naive concatenation 404s and the 404 looks
+exactly like a refusal. The test was measuring the absence of `/etc/passwd` under a temp
+directory, not the presence of a fence.
+
+The fix is that each escape must name a file that **really exists and really is outside** the
+child directory: a `secret.txt` in the workspace root and another canvas's `private.tsx`. The
+assertions are now `status === 400` plus "the body does not contain the secret" — and deleting
+the fence fails it. §4's rule about verifying the real path applies to security tests with
+extra force: **a traversal test that cannot reach anything proves only that nothing was
+there**, and it stays green forever while the fence rots.
