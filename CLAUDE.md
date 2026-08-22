@@ -2493,3 +2493,29 @@ call is not an assertion on the output** — rewritten to compare the blob URL e
 rewritten source actually names, it fails under the mutation and only under it.
 
 End to end on the model's own split: **8 children minted, zero unresolved specifiers in the entry.**
+
+### The last two corpus intents, model side (2026-08-23)
+
+**`给我个秒表，要能记圈` (`docs/examples.md:917`) — 3/3, and the rule written this morning landed.**
+The runtime half was measured earlier: a remount loses the reading and leaks nothing, and the skill
+gained *store the start timestamp, derive the display*. That proved the advice worked; it did not
+prove the model would follow it. All three canvases persist
+`{ baseElapsedMs, runStartTimestamp, laps }` — the accumulated pause total plus the start of the
+current run — so `baseElapsedMs + (now - runStartTimestamp)` survives an edit. Independent
+confirmation of a rule against the behaviour it was written for, not just against a probe.
+
+**`这个卡老是报错，你看看怎么回事` (`docs/examples.md:918`) — 3/3, root cause each time.** Seeded
+with a canvas that really throws: it renders `row.tags.join(", ")` over a `data.json` whose second
+entry has no `tags`. Every run named it exactly — *"`{"name":"beta"}` 没有 `tags` 字段 … 对
+`undefined` 调用 `.join` 直接抛异常，导致整个卡片崩溃"* — and fixed it to `(row.tags ?? [])`. One
+added the distinction that matters for triage: *"这条数据本身就是缺字段的情况，不是偶发 bug"*.
+
+So the corpus's "highest cost, zero measurement" state is handled well on the model side. The gap
+was entirely on ours, and was the `hasPainted` bug fixed this morning: the reader could not see the
+source under the error message.
+
+**And both runs caught a fabricated token in my own fixture.** I had written
+`--dsw-alias-separator` into the seed card; the palette has `--dsw-alias-border-l*` and no
+`separator`. Both replies flagged it unprompted. The rule about never inventing identifiers is one
+I broke while building a test for someone else's mistakes — **and the model's grasp of the palette
+was good enough to correct me.**
