@@ -2428,10 +2428,39 @@ dropping the request really stops the generation — the client just never offer
 the read loop.
 
 Worth naming the pattern rather than the two instances: **both routes were built to be cancellable
-and neither exposed it.** The server was written by someone thinking about a dropped connection;
+and neither exposed it.** Anywhere the plugin fetches on a card's behalf deserves the
+same look, so: six `fetch` calls in `src/client/`, three of them ours (`canvas/read.ts`) and three
+reachable from a card. `$dsh/fs` is the third and **deliberately keeps no signal.** Reads are
+fast and already bounded by `MAX_BINARY`, where a command and a generation run for tens of
+seconds — that duration is what makes a second call stack on the first. And a write must *not* be
+abortable: cancelling one halfway leaves a truncated file, which is why `src/index.ts:190` passes
+`undefined` where the host would take a signal. Recorded because "two of the three have one" reads
+like an oversight to whoever looks next. The server was written by someone thinking about a dropped connection;
 the client surface was written by someone thinking about one call at a time. Anywhere else the
 plugin fetches on the card's behalf is worth the same check.
 
 `types/check.ts` caught the narrowed variant at line 34 naming `ai.streamText`, the same way it did
 for `exec.bash` — which is the half of that file that does work (see the note there about the half
 that does not).
+
+### The read-only `git(args)` proposal, declined with numbers (2026-08-23)
+
+An adversarial review suggested replacing `$dsh/exec`'s arbitrary `bash` with a narrow, read-only
+`git(args)`. It sat open for a while because it sounds obviously safer. Measured before deciding:
+
+**What the corpus actually asks for.** Commands named in `docs/examples.md`: `git` 24, then `rg` 2,
+`ps` 2, `node` 2, `lsof` 2, and one each of `sample`, `ls`, `gh`, `du` — **11 non-git uses across
+seven binaries**, none incidental. The process-watcher card is `ps` + `lsof` + `sample`, the disk
+card is `du`, the PR-vs-description card is `gh pr diff`. A git-only surface deletes about a third
+of the intents the corpus was written to serve.
+
+**What it would buy.** Nothing, because the fence is elsewhere: `src/index.ts:279` resolves
+`ctx.sandboxPolicy.resolve({ session })` per call and hands it to the executor, so a card may do
+exactly what the composer says the session may do. Measured earlier: under `Read Only`,
+`echo hello` succeeds and `touch ./probe.txt` comes back exit 1 with `Operation not permitted` and
+no file. Narrowing to `git` would re-implement, in a second place, a restriction the session
+policy already applies — the same "second policy to keep in sync" that §3.65 rejected when I first
+proposed hard-coding `ui4a/`.
+
+Declined. The proposal is not wrong about the risk being real; it is wrong about where the risk is
+answered, and it costs a third of the use cases to add nothing.
