@@ -3384,7 +3384,9 @@ across all 1012 sessions with a predicate that reads the **whole fence body** ra
 first 400 characters: **389 `ui4a/tsx` fences and 9 bare ```` ```tsx ```` blocks
 holding a full component**. Two of those nine are not slips at all — the user asked to *read a
 canvas file back*, and quoting a `.ui4a.tsx` in a `tsx` fence is the correct answer there. So
-the real rate is **7 in 396, 1.8%**, the same order as the ~5% §4.5 recorded originally.
+the real rate is **7 in 389, 1.8%**, the same order as the ~5% §4.5 recorded originally.
+(Re-derived after the parser fix with the denominator from `parseUi4aSegments` — 382 correctly
+fenced cards plus the 7 slipped — and it lands on the same 1.8%.)
 
 Two separate windows hid it. The first count only looked at openers in sessions that already
 contained `ui4a/tsx`, so a reply that slipped on *every* fence was invisible. The second, when
