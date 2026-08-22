@@ -5,6 +5,9 @@
 # with mutation sites and zero failures has no test that constrains its branches — which is how
 # `compiler.test.ts` was found to be testing a re-implementation rather than the module.
 #
+# `echo "$out"` cannot be used to scan the report: zsh's echo expands the `\u` and `\t` in test
+# names, which corrupted the lines grep was matching and reported three covered modules as 0.
+#
 # Read the two columns together. `failingTests=0` with `mutationSites=0` is a no-op, not a
 # verdict: `observe.ts` and `register.ts` are almost `if`-free and are mutation-checked by hand.
 # Arrow-expression exports (`sameCode`, `matchSegment`) have no `if` either, so a module can be
@@ -35,11 +38,11 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   current="$src"
   perl -0pi -e 's/\bif \(([^)]*)\)/if (!($1))/g' "$src"
   out=$(bun test 2>&1 || true)
-  fails=$(echo "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
+  fails=$(printf %s\\n "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
   # A module that THROWS on import collapses its whole file into one error, so the count reads
   # like poor coverage when it is the opposite. `segments.ts` reported 1 for this reason; its six
   # conditions each fail 1-14 tests when inverted alone.
-  errors=$(echo "$out" | grep -cE "^ *[0-9]+ error" || true)
+  errors=$(printf %s\\n "$out" | grep -cE "^ *[0-9]+ error" || true)
   restore
   note=""
   if [[ "$errors" != "0" ]]; then note="  (module threw on import — count is a floor, mutate conditions singly)"; fi
