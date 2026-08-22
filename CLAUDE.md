@@ -2328,7 +2328,13 @@ keeps counting, against 490 → 290 for the elapsed-count version.
 measurement and the highest cost". Measured, and there was a real bug in it.
 
 Neither consumer passes `onError` — inline nor canvas — so what the reader gets is partial-react's
-own boundary output: a bare text node, `ERROR: <message>`. `hasPainted` returned true for it,
+own boundary output: a bare text node, `ERROR: <message>`.
+
+(Two different `onError`s live in `GenUISurface`, and confusing them cost me a wrong conclusion
+twice today. The one in `callbacks` is the **renderer's**, always wired, and it is what runs the
+`TRANSIENT`/`TRANSIENT_LOAD` classification and the retry. `onErrorRef` is the optional **prop**,
+consulted only after those return. So "no caller passes `onError`" is true of the prop and says
+nothing about the retry, which is live in production.) `hasPainted` returned true for it,
 because its first line only asked whether there was text. So the host's code block was hidden
 underneath, and the reader was left with one red line and no way to see what the model wrote.
 
