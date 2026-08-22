@@ -3746,7 +3746,7 @@ body-resolution logic only type-checks inline), so it is tested where it lives: 
 takes its inputs as callbacks, and the only globals it needs are the ones `observe.test.ts`
 already stubs plus a `createRoot` that records what it was handed. Assertions are on the
 `Canvas[]` the panel is rendered with — what the reader sees. Canvas `index.ts` went from **0 of
-12** caught to **6**.
+12** caught to **10**, covering body resolution, the re-list rules, and the launcher-opened path.
 
 Three traps, each of which produced a passing test that measured nothing:
 
