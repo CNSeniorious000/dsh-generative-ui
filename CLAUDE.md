@@ -2954,3 +2954,40 @@ does — a control that re-implements its rule proves only that two copies agree
 `JSX-SUBSCRIPT` to `() => false` now fails `bun run check`; before today nothing in this repo
 could tell a working screen from a dead one. These cards are in `.oxlintrc.json`'s ignore
 list: deliberately-illegal JSX is not lintable source.
+
+### What the skill actually changes (2026-08-23)
+
+Across all 1012 sessions: **291 delivered a card after loading the skill, 60 delivered one
+without it, 140 loaded it and built nothing.** §4.5's "the decision precedes the load" holds —
+but the 60 is the interesting cell, and it is much larger than the 2-in-183 recorded earlier
+today. That earlier number was cards-without-skill in one *directory* of eval runs; this is
+the whole corpus, and a session like `94e4a889` builds a git-history browser off six `bash`
+calls having never loaded anything.
+
+The cards differ in exactly one way that survives scrutiny. Mean size (6.2KB vs 4.3KB) and
+compile-failure rate (0.7% vs 1.4%, which is 2 cards against 1) are noise. **Capability use is
+not: 22% vs 5%.**
+
+That could easily be the task talking rather than the skill — a card that reads the workspace
+tends to appear in a session that was already reading the workspace, and such a session is
+likelier to load the skill. Stratifying by whether the session used `bash`/`read`/`glob`/`grep`
+at all:
+
+| | cards | uses `$dsh/*` |
+| --- | --- | --- |
+| workspace session, skill loaded | 59 | **66%** |
+| workspace session, no skill | 17 | **18%** |
+| non-workspace, skill loaded | 233 | 10% |
+| non-workspace, no skill | 56 | 2% |
+
+The gap does not vanish under the control, it **widens** — 66 vs 18 inside the stratum where
+both were plausible. So the resident prompt is what decides *whether* to build, and the skill
+is what decides whether the card can *reach anything*. Two jobs, and the 60 skill-less cards
+are mostly cards that render what the model already knew.
+
+Two counting traps on the way, both familiar: `tool/call.data.arguments` is a JSON **string**,
+so `JSON.stringify(rec)` double-escapes it and a `"name":"…"` regex silently matches nothing
+(431 skill calls read as 0); and the corpus is JSONL, so a card's newlines are the two
+characters `\n` — a `/```ui4a\/tsx\n(import|…)/` predicate found 0 sessions, and the naive fix
+found 999 by matching the prompt's own examples. **Both wrong answers were round numbers at
+the ends of the range**, which is the only reason they were caught.
