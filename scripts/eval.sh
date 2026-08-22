@@ -10,20 +10,21 @@ d=$(mktemp -d)
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
 ( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )
 out="$d/o.txt"
-# QUOTA/rate-limit lines are short, well-formed, and not from the model — they must not read as a zero.
-if grep -qE '^(Error|dsh: (QUOTA|RATE)|.*EPERM|.*Cannot find package)' "$out" || [ ! -s "$out" ]; then
-  echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
-  exit 2
-fi
 # Tool calls live in the session transcript, not the reply — the visualisation rule
 # ("this block, not a tool") is invisible without them.
 # The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
 # path has been through /private, so match on the trailing mktemp name instead of rebuilding it.
 sess=$(ls -td "$HOME/.dsh/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
-calls=""
 # `name` sits inside `data`, well past the first `}` — grep the whole record, take the last name.
-[ -n "$sess" ] && calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
+calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
   | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
   | sort | uniq -c | awk '{print $2"x"$1}' | tr '\n' ' ')
 
+# A blacklist of known failure strings only catches failures already seen — three of today's
+# four were discovered only after their zero had been read as a model judgement. The positive
+# test is stronger: no session transcript means the run never reached a model at all.
+if [ ! -s "$out" ] || [ -z "$sess" ] || grep -qE '^(Error|dsh: (QUOTA|RATE))' "$out"; then
+  echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
+  exit 2
+fi
 echo "fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d"
