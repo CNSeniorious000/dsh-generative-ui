@@ -2519,3 +2519,25 @@ source under the error message.
 `separator`. Both replies flagged it unprompted. The rule about never inventing identifiers is one
 I broke while building a test for someone else's mistakes — **and the model's grasp of the palette
 was good enough to correct me.**
+
+### The last two corpus probes, and a "truth" that was only one reading (2026-08-23)
+
+**`我把日志贴给你 你帮我看看哪几条是错误的` (`:915`) — the untested input shape.** Sixty lines pasted
+into the prompt itself, not seeded as a file, because the blob *is* what is under test. 2/3 cards,
+and the third is a correct answer, not a miss: it reported **10 ERROR lines, all the same refused
+connection to `redis:6379`**, and said so — which matches the earlier finding at forty-eight errors,
+where classifying beat listing because "这 48 条不是 48 个问题". Ten of one kind is that case again.
+
+**`两个人 AA，一共 386，我垫的，小李没喝酒少算 60` (`:919`) — 3/3, and it corrected me.** I computed
+a "true" answer first, on the reading that the 60 comes off Li's share alone: Li 163, me 223. One
+card computes `half - discount` (133/253 — the discount split between both), and two redistribute
+the discount across the undiscounted people (`totalDiscount / notDiscounted.length`), which in a
+two-person split lands exactly on my number.
+
+All three are **internally consistent** — `iOwe = total - liOwes` by construction, and the
+redistribute form conserves the total by definition. So the fixture's premise (the reader can check
+it without trusting the author) held, but **my single "truth" did not**: the sentence is ambiguous
+about who absorbs the discount, and I had promoted one reading to the answer. The test that
+survives is conservation, not equality with my arithmetic. The two cards that redistribute are the
+more general model — they answer for three people too, which the prompt does not mention and a
+group bill always eventually does.
