@@ -5,6 +5,12 @@
  * remounts the tree. Early ones are free; one after the card paints is a visible blank-and-rebuild.
  *
  * Usage: bun scripts/replay-stream.ts <card.tsx>...
+ *
+ * A checker that reports zero on every input is indistinguishable from one that is broken —
+ * this one reported zero for months because it only ever ran on the six cards it was written
+ * against, and reported 35 false positives the first time it saw real ones. So it ends by
+ * running `test/cards-negative/`, where every card is *supposed* to fail, and exits non-zero
+ * if any of them passes.
  */
 import { normalizeGeneratedTsx } from "partial-tsx";
 
@@ -50,5 +56,24 @@ for (const path of paths) {
   console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${late ? "  <-- visible remount" : ""}`);
 }
 
-// Non-zero so `bun run check` fails when a card would blank mid-stream.
+// The positive control: a hook in a helper component below a long default export, so the card
+// is demonstrably painting before the hook count changes. If this stops being reported, the
+// detector has gone blind and every clean run above is meaningless.
+for (const name of cardsIn("test/cards-negative")) {
+  const src = await Bun.file(`test/cards-negative/${name}`).text();
+  const step = Math.max(100, Math.floor(src.length / 60));
+  let prev = -1, painted = false, late = 0;
+  for (let n = step; n <= src.length; n += step) {
+    let out: string;
+    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
+    const h = hooks(out);
+    if (prev !== -1 && h !== prev && painted) late += 1;
+    prev = h;
+    painted ||= defaultPaints(out);
+  }
+  if (late === 0) { console.log(`control ${name}: DETECTOR BLIND — expected a late remount, saw none`); bad += 1 }
+  else console.log(`control ${name}: ok, ${late} late remount(s) detected`);
+}
+
+// Non-zero so `bun run check` fails when a card would blank mid-stream, or when the control does not.
 if (bad > 0) process.exit(1);
