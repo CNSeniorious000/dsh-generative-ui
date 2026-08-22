@@ -89,14 +89,26 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   const preserveStateRef = useRef(preserveState);
   /** Retries spent on the current code. Reset by a successful paint and by every new frame. */
   const retriesRef = useRef(0);
-  // Re-deliver the current code after a dependency failed to fetch. `clear` is what makes it a
-  // real retry: the renderer skips an unchanged compile result, so without it the failed import
-  // is never re-attempted and every retry is a no-op. Held through `useLatest` because the
-  // attach effect runs once and cannot capture a renderer that did not exist yet.
+  /**
+   * Re-deliver the current code after a dependency failed to fetch.
+   *
+   * `clear` is not enough on its own, though it is necessary — the renderer skips an unchanged
+   * compile result. The part that makes this a real retry is **changing the dependency URL**.
+   * Measured 2026-08-23: a second `import()` of a URL that already rejected makes **zero**
+   * network requests, because the module registry caches the rejection for the page's lifetime.
+   * `mergeFallbackImports` maps each bare specifier to a deterministic `https://esm.sh/<pkg>?…`,
+   * so re-rendering imports the exact URL that failed and nothing is re-fetched. Every retry
+   * before this was a no-op that burned 0.4/0.8/1.2s and reported the same failure.
+   */
   const retryRef = useLatest(() => {
     if (renderer === null || code === "") return;
-    renderer.clear({ preserveVisualState: true });
-    renderer.render(code);
+    const attempt = retriesRef.current;
+    void mergeFallbackImports(localImports(), code).then((imports) => {
+      // Only the fetched esm.sh entries need busting; the local blob URLs are already fresh.
+      renderer.setImportMap({ imports: Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url])) });
+      renderer.clear({ preserveVisualState: true });
+      renderer.render(code);
+    });
   });
 
   useEffect(() => {
