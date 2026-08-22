@@ -42,7 +42,7 @@ It lives in `scripts/build.ts` as `PLATFORM_MODULES` (`scripts/smoke.ts`'s `PLAT
 
 ### 2.2 React is 18.3.1, not 19
 
-Measured on the host: `React 18.3.1`. Generated code reaches the host's **same** React instance through `host-bridge` — a second copy makes hooks fail silently.
+Measured on the host: `React 18.3.1` — **re-confirmed 2026-08-23** by fetching the shell's own `/assets/index-*.js` and grepping it: exactly one React version string (`"18.3.1"`), and the React 19-only APIs are all absent from the bundle (`useActionState`, `useOptimistic`, `useEffectEvent`, `use(` → 0 each) while the 18 APIs this plugin leans on are present (`useSyncExternalStore` ×4, `forwardRef`, `renderToString`). Repeat with `./scripts/platform-table.sh`'s fetch step if a dsh upgrade ever makes this look doubtful. Generated code reaches the host's **same** React instance through `host-bridge` — a second copy makes hooks fail silently.
 
 Consequences:
 
@@ -2755,3 +2755,17 @@ answers `200 · application/wasm`, which is the part the note exists to justify.
 (Method note, twice today: `curl` and `head` were not on PATH inside a `for` loop, the same way `rg`
 was not inside `platform-table.sh`. Resolve binaries with `command -v` before looping, or the loop
 reports a tool failure as a measurement.)
+
+### The audit's baseline: one entry that was right in every part (2026-08-23)
+
+§2.2 — the React version — is the cleanest entry in the file, and it is worth naming as the shape
+the others should aim at. Its premise is checkable (`"18.3.1"` is the only React version string in
+the shell bundle) and so is each consequence drawn from it: the four React 19 APIs the entry
+forbids appear **zero** times in the host, and the three React 18 APIs the plugin depends on are
+all present.
+
+That is what separates it from the four entries whose citations rotted. It never names a package,
+an error code, or a number nobody can re-derive — it names **a string you can fetch and count**.
+Nine entries have now been re-verified this way; the two that were wrong (`console.error`
+refcounting, the wasm figure) and the four whose evidence had gone stale all cited identifiers,
+while every entry citing a fetchable or buildable fact survived.
