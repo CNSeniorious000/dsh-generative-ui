@@ -17,7 +17,7 @@ const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/c
 
 export const SKILL_NAME = "generative-ui";
 
-export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} block, a canvas file, and plain prose — and how to lay one out so it reads. Load this before you build any interface.`;
+export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} block, a canvas file, and plain prose — and how to lay one out so it reads. Load it **before you decide**, not after — including when your first instinct is that prose is enough. Most of the questions that should have been an interface do not ask for one.`;
 
 /**
  * The skill body.
@@ -354,6 +354,17 @@ TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
 ${maps}
 
 Either way, the way to see your work actually run is to write the canvas and look at the panel.
+
+**Two mistakes it reports that do not blow up**, both found in real cards written here, and both
+the kind you never notice because the thing still works:
+
+- **A duplicate key in a style object.** \`{ display: "block", …, display: "flex" }\` keeps the
+  last one and silently drops the first. It looked right because \`flex\` was what the button
+  wanted — the dead line survives until someone edits the wrong one.
+- **Writing a ref during render.** \`statusRef.current = status\` in the component body reads as a
+  cheap way to keep a loop's view of state fresh, and React is explicit that it is not one; do it in
+  an effect. A long-running AutoPlay is exactly where this bites, because the loop outlives the
+  render that set it.
 
 It is worth the round trip because it catches the two mistakes that cost the most here, both
 of which otherwise reach the user as a blank card:

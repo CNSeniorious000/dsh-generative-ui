@@ -6,6 +6,8 @@
  *
  * Usage: bun scripts/replay-stream.ts <card.tsx>...
  */
+import { readdirSync } from "node:fs";
+
 import initTsx, { transform } from "@esm.sh/tsx";
 import { normalizeGeneratedTsx } from "partial-tsx";
 
@@ -19,7 +21,9 @@ const defaultPaints = (s: string) => {
   // several of those before any markup exists. Require a JSX tag right after the paren.
   return at !== -1 && /return\s*\(\s*</.test(s.slice(at));
 };
-for (const path of process.argv.slice(2)) {
+const paths = process.argv.length > 2 ? process.argv.slice(2) : readdirSync("test/cards").filter(n => n.endsWith(".tsx")).toSorted().map(n => `test/cards/${n}`);
+let bad = 0;
+for (const path of paths) {
   const src = await Bun.file(path).text();
   const step = Math.max(100, Math.floor(src.length / 60));
   let prev = -1, changes = 0, late = 0, frames = 0, broken = 0;
@@ -37,5 +41,9 @@ for (const path of process.argv.slice(2)) {
     if (prev !== -1 && h !== prev) { changes += 1; if (defaultPaints(out)) late += 1 }
     prev = h;
   }
+  if (late > 0 || broken > 0) bad += 1;
   console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${late ? "  <-- visible remount" : ""}`);
 }
+
+// Non-zero so `bun run check` fails when a card would blank mid-stream.
+if (bad > 0) process.exit(1);
