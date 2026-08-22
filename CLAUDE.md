@@ -3228,3 +3228,34 @@ branch needs a case where **both modes compile and disagree** — otherwise the 
 catch falls back to streaming and produces byte-identical output, which is how my first two
 attempts passed with the condition inverted. An unclosed `.map(` is the separator: `final`
 closes it as `{items.map(i => (null))}`, `streaming` cuts back to `<div></div>`.
+
+### The two capability routes now have tests (2026-08-23)
+
+`serveFs` and `serveExec` were the largest remaining gap — 29 conditions in the node half with
+10 caught. Both take their dependencies as a `ctx` object, so both are testable by passing a
+fake one; no server, no filesystem. Node `index.ts` now scores **28 of 29**.
+
+What the tests pin is not the sandbox — that is `ctx.fs.resolve` and the session policy, the
+host's code, and testing it here would test someone else's work. It is the things this plugin
+decides, each of which is a comment that was never checked:
+
+- **The write runs under the NAMED session's policy.** Mutating it to `sessions.list()[0]`
+  fails two tests. Several sessions share a workspace, so picking the first silently runs a
+  write under a stranger's access mode — the kind of bug that never throws.
+- **A denial is 403 and a miss is 404.** The card has to tell "you may not" from "it broke";
+  collapsing both to 404 makes a read-only session look like a bug.
+- **A non-zero exit is a 200.** `bash()` resolves on failure and the prompt tells the model to
+  check `exitCode` rather than catch. Turning it into a 500 would make every failed grep throw.
+- **Truncation is per stream.** One merged boolean makes a complete stdout look unreliable
+  whenever a noisy stderr overflowed.
+- **A listing forwards three fields.** The host also returns an absolute `target` path and a
+  `version` cache key; forwarding them leaks the filesystem layout into generated code.
+- **A disconnected caller aborts the command.**
+
+That last test failed three times before it passed, and every failure was the harness rather
+than the code. `close` fired before `serveExec` had registered its handler (it awaits the
+request body first); then the stubbed `run` resolved instantly, so the handler finished before
+anything could disconnect; then two microtask turns still were not enough to reach `run`. The
+fix was to stop guessing at timing and **wait on the event itself** — the fake `run` resolves a
+promise when it is entered, and the test aborts after that. Three red runs against correct code
+is the shape of a concurrency test that measures its own scheduling assumptions.
