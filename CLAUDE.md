@@ -3639,3 +3639,24 @@ The other two numbers from that run are both my harness, not the cards:
 So the click harness needs two rules: **one control per card, and diff the HTML**. Recorded
 rather than implemented, because the finding it was built to test — do cards survive
 interaction — is already answered.
+
+### A failed dynamic import is cached as a rejection (2026-08-23)
+
+Setting up the click run, `import("https://esm.sh/react@18")` failed in the page. Retried four
+times in a loop — four identical failures — while `curl` fetched the same URL in 0.6s and the
+page's own `fetch()` of a *different* esm.sh URL returned 200. It looked like per-URL rate
+limiting.
+
+It is not. **The module registry caches a failed import as a rejected promise for the lifetime
+of the page**: re-importing the same specifier returns the same rejection without touching the
+network, so a retry loop can never recover. Reloading the page cleared it and the import
+succeeded immediately.
+
+This directly contradicts how §4's cold-start entry says to respond ("re-measure before writing
+it down") — re-measuring *in the same page* is the one thing that cannot work. The retry has to
+happen in a fresh document, and `GenUISurface`'s `TRANSIENT_LOAD` path is correct precisely
+because it re-renders through a new blob URL rather than re-importing the failed one.
+
+Two consequences worth carrying: a browser-side retry must change the specifier or the document,
+and **a failure that reproduces identically four times in a row is evidence about caching, not
+about the server** — the tell was `curl` succeeding while the page did not.
