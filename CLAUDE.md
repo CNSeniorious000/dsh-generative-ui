@@ -1656,3 +1656,34 @@ card whose second component gains a hook after the default export paints — it 
 about *which* `return`, the second about *whose*. Both times the wrong answer was the alarming
 one, which is the direction that gets written up. A detector needs a known-bad input every time
 it changes, not just when it is written.
+
+### The games and instruments the research promised, built and run (2026-08-22)
+
+Three cards the user named by hand, generated and then actually mounted:
+
+| prompt | shape | lines | mounts |
+| --- | --- | --- | --- |
+| `做个 2048 小游戏，要能自动演示给别人看` | canvas | 766 | 2048 开局, 分数 0 |
+| `想要个能弹的钢琴键盘` | canvas | 453 | C4–C6 with key bindings |
+| `给我个节拍器，能调速度那种` | fence | 280 | BPM, 2/4–7/4, 轻拍定速 |
+
+All three clean under `replay-stream.ts` (0 visible remounts, 0 broken frames), and every rule
+written during the outage was followed without being asked for:
+
+- 2048's AutoPlay is a recursive `setTimeout` whose cleanup sets `cancelled = true` **and**
+  clears the handle, with a separate unmount effect and a `removeEventListener` for its keydown
+- the piano and metronome build the `AudioContext` inside a click and call `resume()` without
+  `await`
+- the metronome schedules with a 25ms lookahead poll, which nothing told it to do
+
+**AutoPlay verified live**: clicking 自动演示 moved the score 0 → 20 in four seconds, the button
+became 暂停演示, and there are 慢/中/快 speeds — a demo you can talk over, which is what it was
+asked for.
+
+Then the leak check, which is the part worth keeping. Patching `setTimeout` and unmounting with
+AutoPlay running counted **16 timers still firing** — an obvious leak, and wrong. A control run
+that unmounted *without* ever starting AutoPlay counted **16 as well**: the number is React's own
+scheduler plus the probe's own waits. Identical either way, so the cleanup works.
+
+**Seventh artefact, first one caught before it was written down** — because the control was run
+first this time rather than after the result looked alarming.
