@@ -10,7 +10,8 @@ d=$(mktemp -d)
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
 ( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )
 out="$d/o.txt"
-if grep -qE '^(Error|.*EPERM|.*Cannot find package)' "$out" || [ ! -s "$out" ]; then
+# QUOTA/rate-limit lines are short, well-formed, and not from the model — they must not read as a zero.
+if grep -qE '^(Error|dsh: (QUOTA|RATE)|.*EPERM|.*Cannot find package)' "$out" || [ ! -s "$out" ]; then
   echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
   exit 2
 fi
