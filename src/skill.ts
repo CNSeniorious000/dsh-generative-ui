@@ -164,8 +164,9 @@ context lazily inside that first click, or build it eagerly and gate every sound
 
 **Drawing sound needs no gesture at all.** \`decodeAudioData\` works on a suspended context, and
 \`OfflineAudioContext\` renders with no interaction whatever. So a card can \`readBytes\` a wav,
-decode it and paint its waveform the moment it opens; only *hearing* it is gated. Note an
-\`AnalyserNode\` at 1024 bins resolves to about 21Hz — good enough for a picture, not for a
+decode it and paint its waveform the moment it opens; only *hearing* it is gated. An
+\`AnalyserNode\` resolves to \`sampleRate / fftSize\`, so the default \`fftSize = 2048\` gives 1024 bins
+at 21.5Hz and halving it gives 512 bins at **43Hz** — fine for a picture, never enough for a
 tuner (use autocorrelation on the time-domain data for pitch).
 
 A bare \`OscillatorNode\` sine reads as a test tone. Layer two or three partials and shape a

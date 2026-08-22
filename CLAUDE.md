@@ -1345,3 +1345,18 @@ a method call.
 
 Skill updated: build the context whenever you like, keep `resume()` off the render path, and the
 first real press repairs it.
+
+### The FFT number was right and read wrong (2026-08-22)
+
+`## Sound` said *"an `AnalyserNode` at 1024 bins resolves to about 21Hz"*. Measured in an
+`OfflineAudioContext`: `fftSize = 2048` → 1024 bins → 21.53Hz; `fftSize = 1024` → 512 bins →
+43.07Hz.
+
+So the figure was correct and the sentence was a trap: **the number a reader sets is `fftSize`,
+and the number the note quoted was `frequencyBinCount`.** Anyone who took `1024` as the knob got
+half the resolution described — exactly the gap between "fine for a picture" and "usable for a
+tuner", which is the distinction the sentence exists to draw. Reworded to give the formula and
+both rows.
+
+Nothing was wrong here, which is the point: an accurate note can still mislead if the quantity it
+names is not the one the reader will type.
