@@ -1555,3 +1555,26 @@ start at line 166. Changed the predicate to "the default export has begun return
 All clean. **Fifth time today a measurement artefact impersonated a finding** — and the first one
 where the tell was that the result was too interesting: a rule written an hour earlier, confirmed
 on the first card tried. That is worth distrusting on its own.
+
+### What `normalizeGeneratedTsx` is actually worth (2026-08-22)
+
+Extended the replay to compile every frame, then checked the check — a detector nobody has tried
+to fool gives free passes, which today has cost five findings.
+
+`transform` is tolerant. It **throws** on unclosed JSX, a JSX subscript, an unterminated string, a
+stray brace; it **shrugs** at `className={"a" ++ }` and at a file cut mid-word. That is the right
+sensitivity for this job, because truncation produces the structural kind.
+
+Measured on a real 6.5KB canvas cut at 100-byte intervals:
+
+| | frames failing to compile |
+| --- | --- |
+| raw prefix | **58 of 65** |
+| after `normalizeGeneratedTsx(…, streaming)` | **0 of 65** |
+
+Nine out of ten streamed frames of a real card are broken code, and the normalizer repairs all of
+them. Previously that layer had only a synthetic benchmark behind it (2000 unclosed fences in
+6.2ms, which measures speed, not repair).
+
+`scripts/replay-stream.ts` now reports `brokenFrames` alongside the remount count, with the
+sensitivity limits written next to the call so nobody reads a zero as "this card is fine".

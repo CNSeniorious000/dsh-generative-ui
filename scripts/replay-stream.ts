@@ -6,7 +6,10 @@
  *
  * Usage: bun scripts/replay-stream.ts <card.tsx>...
  */
+import initTsx, { transform } from "@esm.sh/tsx";
 import { normalizeGeneratedTsx } from "partial-tsx";
+
+await initTsx(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer());
 const hooks = (s: string) => (s.match(/\buse[A-Z]\w*\s*\(/g) ?? []).length;
 // "visible" means the DEFAULT export has begun returning markup — a helper component's
 // `return` earlier in the file says nothing about whether the card paints yet.
@@ -17,14 +20,20 @@ const defaultPaints = (s: string) => {
 for (const path of process.argv.slice(2)) {
   const src = await Bun.file(path).text();
   const step = Math.max(100, Math.floor(src.length / 60));
-  let prev = -1, changes = 0, late = 0, frames = 0;
+  let prev = -1, changes = 0, late = 0, frames = 0, broken = 0;
   for (let n = step; n <= src.length; n += step) {
     let out: string;
     try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
     frames += 1;
+    // A frame that fails to compile is a card that blinks out mid-generation. `transform` is a
+    // tolerant parser — it rejects structural damage (unclosed tags, unterminated strings, stray
+    // braces) and shrugs at odd expressions, which is the right sensitivity here since truncation
+    // produces exactly the structural kind: 58 of 65 raw prefixes of a real card fail, 0 after
+    // normalize.
+    try { transform({ filename: "f.tsx", code: out, target: "es2022", jsxImportSource: "react" }) } catch { broken += 1 }
     const h = hooks(out);
     if (prev !== -1 && h !== prev) { changes += 1; if (defaultPaints(out)) late += 1 }
     prev = h;
   }
-  console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late}${late ? "  <-- visible remount" : ""}`);
+  console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${late ? "  <-- visible remount" : ""}`);
 }
