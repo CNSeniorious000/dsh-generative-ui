@@ -2163,3 +2163,38 @@ Neither changed a number in a way that looked wrong.
 The tell in both cases was the same and is worth keeping: **the model quoted text I could not find.**
 When a transcript cites guidance that does not exist in the source, the model is not confabulating —
 it is reading an older artifact, and the delivery path is what is broken.
+
+### The same fix applied one layer down was net negative (2026-08-23, reverted)
+
+A review pass found the other half of the phrasing bug, and it looked airtight: `prompt.ts` was
+fighting to get `什么是二分查找` treated as a card, while `skill.ts:66` named **`A definition`** in
+its list of things that do not earn a card. Two files contradicting each other at exactly the
+pattern-matching level this day's finding is about — and the transcript shows the model reversing
+itself *after* loading the skill, so this was a live suspect for the same mechanism.
+
+Rewrote it the same way: keep the test, drop the matchable category. *"Apply that as a test on
+what you are about to build, never on how the question was worded. Sketch the component: if its
+whole body is one paragraph and there is nothing to click, write the paragraph."*
+
+Measured on sonnet, 12 runs:
+
+| | before | after |
+| --- | --- | --- |
+| `二分查找的原理是什么` | 6/6 card | 3/3 card |
+| `今天星期几` (must stay prose) | 0 | 0/3 ✓ |
+| `帮我算下房贷` | card | **2/3** |
+| `HTTP 状态码 418` (must stay prose) | **0/4 across four models** | **3/3 card** |
+
+**Reverted.** 418 is one of the two hard negatives, verified at 0/4 across venti/terra/sonnet/glm
+less than an hour earlier — a rewrite that moves it is a rewrite that broke the boundary, whatever
+its argument was.
+
+Why the same edit helps in one layer and hurts in the other is the part worth keeping. The
+resident rule fires on **a request the model has not yet answered**; the skill is read **after it
+has decided to build**, so its job is to talk the model *out* of a card it does not need. Removing
+a named category from a gate whose purpose is to stop things removes stopping power. The two
+layers are not symmetric, and a principle derived on one does not port to the other for free.
+
+Also: the fix that worked and the fix that failed were **indistinguishable in argument quality**.
+Both named a real contradiction, both kept the test and dropped the category, both read better
+afterwards. Only the six-run boundary check separated them.

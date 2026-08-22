@@ -10,10 +10,19 @@ misses every canvas, which is the shape most likely on requests about a whole se
 
 | prompt | why |
 | --- | --- |
-| `什么是闭包？` | an explanation; the model judged it twice |
 | `今天星期几` | one line |
 | `HTTP 状态码 418 是什么意思` | a fact |
-| `什么是尾递归优化` | mostly prose (~5/7); a card here is a stack-frame walk, which is legitimate |
+
+These two are the boundary. Both held at **0/4 across venti / terra / sonnet / glm** after the
+2026-08-23 phrasing rewrite — a widened trigger must not move them.
+
+`什么是闭包？` and `什么是尾递归优化` used to sit here and no longer do. Measured across the same
+four models they now produce a card 3/4 and 4/4, and the cards are step-through stack walks
+(one counted 30 `step`, 30 `stack`, 15 `frame`, plus `onClick`) — a closure's captured scope and
+tail-call elimination are both **a stack changing shape**, which is the case prose is worst at.
+Recorded twice before as the fixture being over-specified rather than the rule leaking; four
+models agreeing independently settles it. Keep them as observations, not as assertions in either
+direction: a card here is right, and so is a good prose answer.
 
 ## Must produce UI
 
