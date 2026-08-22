@@ -3410,3 +3410,26 @@ resident rule already describes ("you decide to build the interface, write the w
 correctly, and then open the fence with the language your fingers know"). The rule is right and
 the residual is 1.8%; nothing here argues for changing the wording, and §4.5's warning about
 naming a failing form applies with full force.
+
+### Why the runtime cannot rescue a slipped fence (2026-08-23)
+
+Tempting, and I built it before deciding against it. There are only **10 bare ```` ```tsx ````
+fences in the whole corpus**, so claiming the ones whose body holds an `export default` is not
+the reckless rule it sounds like: it rescues all 7 slipped cards and correctly ignores the one
+snippet (a single-line `import Counter from …`).
+
+It also claims the **2 replies that quote a `.ui4a.tsx` file back to the user**, and that is
+the reason not to ship it. Those two are not slips — the user asked to read a canvas, and a
+`tsx` fence is the right answer. Rendering them turns "show me this file" into a running
+component, which is a worse failure than the one being fixed and hits a request that is
+*correctly* served today.
+
+I looked for a separator that works on the body alone and there is none, because there is
+nothing to find: **a canvas quoted back IS a card's source.** The two cases differ only in
+intent, and the parser sees text. Session context does separate them cleanly (both quoted cases
+are exactly the sessions that read a `.ui4a.tsx` first, 2/2 against 0/7) — but `segments.ts`
+takes a string, and threading tool-call history into the fence parser to recover 7 cards in 396
+buys a coupling that will outlive the problem.
+
+So: reverted, and the 1.8% stays with the prompt where §4.5 says trigger rules belong. Recorded
+because the attractive version of this fix looks clean until you check what else it catches.
