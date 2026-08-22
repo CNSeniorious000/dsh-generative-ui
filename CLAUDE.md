@@ -1758,3 +1758,26 @@ seen once; the transcript-absence test added since covers the ones that have not
 
 `scripts/run-fixtures.sh` runs the table concurrently — serially it outlives a tool timeout — and
 prints `K` for a canvas so the shape is never scored as a miss.
+
+### Every checker, verified against a known-bad input (2026-08-22)
+
+A checker nobody has tried to fool gives free passes, and this repo had two:
+
+- **`compile-cards.ts` had never failed anything.** It counted `bad` from the day it was written
+  and never called `process.exit`. Worse, it still pointed at `.research/cards`, which vanished
+  with the old working copy — so it had been crashing with `ENOENT` and reporting success. Now
+  defaults to `test/cards`, and exits 1. Verified against both failures it exists to catch.
+- **`replay-stream.ts` printed a warning and exited 0.** Now exits 1, verified with a card that
+  gains a hook after painting.
+
+`smoke.ts`, `build.ts` and `gen-standalone.ts` throw, which is a non-zero exit under bun —
+confirmed by corrupting the plugin id in `lib/client.js` and watching smoke exit 1.
+`render-cards.ts` is a server and should not exit.
+
+`bun run check` is now lint → typecheck → test → **audit → replay → cards** → build → smoke, with
+three real generations kept in `test/cards` as fixed input.
+
+**Two `$?` readings were wrong along the way**, both times because a pipe stood between the
+command and the check: `bun run x | tail -2; echo $?` reports `tail`'s status, so a genuine
+failure read as success. Twice today that briefly made a working gate look broken. When the exit
+code is the measurement, do not pipe.
