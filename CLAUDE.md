@@ -3029,3 +3029,13 @@ which 72 correctly wrote a canvas instead, and among the rest were cards that *h
 written and that my own classifier could not see, for the same reason the runtime could not.
 **When a measurement and the product disagree about whether something exists, suspect they
 share a bug** — here they literally shared the function.
+
+The three fences still open after that fix were the *same* leak in the model's own spelling:
+`</｜｜DSML｜｜parameter>` (full-width U+FF5C, not ASCII pipes), plus a `tool_calls` tag the
+ASCII form never showed. So the native spelling is **three times more common than the one I
+built the guard from**, and a regex written from a single sample was blind to all of it. The
+lesson is narrower than "generalise your regex": I had a corpus of 1012 sessions and matched
+on the one example I had already read. **Grep the corpus for the shape, not for the string you
+saw** — `</` before a fence's end, not `</parameter>`. With both spellings covered, every
+opener in the corpus now closes: **382 cards, 0 left streaming**, 3 failing to compile for
+reasons that are the model's own.
