@@ -1462,3 +1462,30 @@ pause — a demo you cannot stop is one you cannot talk over.
 
 Two runtime bugs now found this way in a row, without a single model call. **The corpus is a
 specification: read it as one and test the runtime against it.**
+
+### `$dsh/ai` yielded one character at a time (2026-08-22)
+
+`streamText` appears 17 times in the examples doc, usually as *"stream it in and render as it
+arrives"*. Reading its implementation against that use: `yield* decoder.decode(...)` **spreads the
+string**, so the consumer gets one character per iteration.
+
+Not a correctness bug — the text is identical — but for a card that re-renders per piece it is a
+`setState` per character. Measured on 560 characters of Chinese arriving in 64-byte chunks:
+
+| | iterations | text intact |
+| --- | --- | --- |
+| `yield*` (was) | 560 | yes |
+| `yield` per chunk | **27** | yes |
+
+Changed to `yield`, with a test through the public `bind().ai.streamText` path (a fake `fetch`
+plus a `ReadableStream`), so it exercises the real code rather than a copy. Three cases:
+one piece per chunk, piece count equals chunk count on a long answer, and the reason `stream:
+true` is there at all — a `好` split across two chunks must not come back as `U+FFFD`.
+
+Mutation-checked both ways: restoring `yield*` fails two, dropping `stream: true` fails two
+including the split-character one.
+
+Third runtime finding in a row from reading the corpus as a specification, and the pattern in all
+three is the same — **the failure is invisible in the small case.** One short English answer
+spreads to a few dozen iterations and nobody notices; the cost only appears at the length and the
+language the examples actually target.

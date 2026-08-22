@@ -184,7 +184,12 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions): AsyncIterab
     if (done) break;
     // `stream: true` so a multi-byte character split across chunks is not mangled — the
     // failure mode is a replacement character mid-word in any non-ASCII answer.
-    yield* decoder.decode(value, { stream: true });
+    //
+    // `yield`, not `yield*`: spreading the string hands the consumer one character at a time,
+    // which for a card that re-renders per piece is a setState per character. Measured on 560
+    // characters of Chinese: 560 iterations spread, 27 by chunk, identical text either way.
+    const text = decoder.decode(value, { stream: true });
+    if (text !== "") yield text;
   }
 }
 
