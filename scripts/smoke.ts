@@ -26,7 +26,7 @@ Object.assign(globalThis, {
 /**
  * Capture every blob module the plugin synthesizes, so their source can be parsed below.
  *
- * These are the `$ui4a/*` shims and the registry's re-export modules — strings built at
+ * These are the `$dsh/*` capability shims and the registry's re-export modules — strings built at
  * runtime and then `import`ed. Nothing type-checks them, and a syntax error in one fails
  * the way an unresolvable import fails: the whole module graph dies and the card renders
  * blank with no console error. That is exactly the class of defect this script exists for.
