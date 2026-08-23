@@ -124,7 +124,7 @@ test("the body assembles whether or not the maps exist", () => {
  * say about it?", the same way `screens-quiet-on-fix.test.ts` forces answering "and what does a
  * card doing this right look like?".
  */
-const RULE_FOR_SCREEN: Record<string, string> = {
+const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "BRAND-PRIMARY-FILL": "as a background",
   "COMMA-IN-STYLE": "Merge styles with a spread, never a comma",
   "DESTRUCTURED-HOOK": "Only `useState` returns a pair",
@@ -133,7 +133,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "HARDCODED-BACKGROUND": "Never write literal colors",
   "JSX-SUBSCRIPT": "Subscript it into a capitalised local first",
   "MISSING-REACT-IMPORT": "Import every name you write",
-  "MODULE-SCOPE-HOOK": "Declare every hook",
+  "MODULE-SCOPE-HOOK": ["Declare every hook", "a hook called outside a component"],
   "NO-FOCUS-RING": "focus-visible",
   "SHADOWED-EXPORT": "Never name it after something you imported",
   "UNGUARDED-LAST-INDEX": "not a guard against empty",
@@ -148,11 +148,39 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "VIEWPORT-UNITS": "100vw",
 };
 
+/**
+ * The other direction, and the one that was missing. Running it by hand found `&&`-into-an-arrow
+ * (a real defect with a rule and no detector, sitting in the corpus) and, more usefully, found
+ * that "The React import line comes first" describes a mechanism that does not exist — ES
+ * imports are hoisted, and the screen written for it found 0 of 378 because there is nothing to
+ * find. A rule nobody can check is a rule nobody can discover is wrong.
+ *
+ * Bullets that shape WHEN to write a card rather than what not to write in one are listed here
+ * as unscreenable; the point is that dropping one in requires saying so.
+ */
+const UNSCREENABLE = [
+  "Four backticks", "The info string is", "Write the React import before you write the data",
+
+  "A question does not have to say", "A conversion is never asked once", "A plan is not prose",
+  "When they tell you they want to change something", "When they hand you an expression",
+  "看看都有啥", "Asking for a few of something", "Visualise this",
+];
+
+test("every code rule in the prompt has a screen enforcing it", () => {
+  // The whole bullet, not just its bold header — a screen's pinned phrase is often in the body
+  // (`JSX-SUBSCRIPT` pins "Subscript it into a capitalised local first", which is the sentence
+  // AFTER the header). Bullets run until the next one starts.
+  const bullets = INLINE_PROMPT.split(/^- \*\*/m).slice(1).map((b) => "- **" + b);
+  const covered = [...Object.values(RULE_FOR_SCREEN).flat(), ...UNSCREENABLE];
+  const unmatched = bullets.filter((b) => !covered.some((phrase) => b.includes(phrase)));
+  expect(unmatched).toEqual([]);
+});
+
 test("every screen has a rule telling the model not to do it", async () => {
   const { SCREENS } = await import("../scripts/screens.ts");
   expect(Object.keys(RULE_FOR_SCREEN).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
   const both = INLINE_PROMPT + skillBody("types.json", "standalone.json");
-  const missing = Object.entries(RULE_FOR_SCREEN).filter(([, phrase]) => !both.includes(phrase));
+  const missing = Object.entries(RULE_FOR_SCREEN).filter(([, p]) => ![p].flat().every((phrase) => both.includes(phrase)));
   expect(missing).toEqual([]);
 });
 

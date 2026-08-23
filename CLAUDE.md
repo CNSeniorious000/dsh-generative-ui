@@ -2927,6 +2927,13 @@ at all and the construct entry would otherwise have been guarding nothing.
 
 ### Auditing rules→screens found a rule that is factually wrong (2026-08-23)
 
+The audit is a test now (`every code rule in the prompt has a screen enforcing it`), so the next
+rule added cannot skip it. Two things it forced: a screen may pin more than one phrase (the same
+defect gets argued in more than one bullet — `MODULE-SCOPE-HOOK` is spelled out both where hooks
+are introduced and where `useMemo` is), and the match runs against the WHOLE bullet, not its bold
+header, because a screen's phrase is usually the sentence after the header. Verified by rewording
+one rule: 3 tests fail, and restoring it passes.
+
 The suite checks every screen has a rule. Nothing checked the reverse, and running it by hand
 left two of the 13 code rules unscreened.
 
