@@ -7124,3 +7124,10 @@ the content it should announce.
 Checked all three: none. The only real gap in 133 new-construct uses is the bare `localStorage`
 write, which is now a rule.
 
+`bun run hollow <dir>` keeps this checkable — four predicates asking whether a created behaviour
+does its job, not whether it is present. It found its own bug immediately: two reference cards
+"failed" the `:focus-visible` check because they *discuss* it in a comment. Comments stripped, and
+that is the second time in one day a checker read prose about a construct as the construct —
+`TRANSITION-WITHOUT-TRANSFORM` did it to its own negative control. **A file that documents a
+pattern will contain the pattern.**
+

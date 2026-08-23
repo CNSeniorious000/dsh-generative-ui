@@ -67,6 +67,7 @@
     "paint": "bun scripts/paint-cards.ts",
     "cross-tab": "bun scripts/cross-tab.ts",
     "inject": "bun scripts/inject.ts",
+    "hollow": "bun scripts/hollow.ts",
     "test:shuffled": "zsh scripts/test-shuffled.sh"
   },
   "dependencies": {
