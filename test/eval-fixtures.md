@@ -136,6 +136,27 @@ a project on disk the model correctly declines to invent one.
 | `展示这个项目的依赖树` | `test/seed` |
 | `把当前目录的 git log 画成时间线` | `test/seed` |
 
+## Async cards, added 2026-08-23
+
+`UNANNOUNCED-ASYNC-RESULT` is the only screen a fresh card has failed, and these are the prompts
+that exercise it — a card has to FETCH before it can fail to announce. The file browser is the
+A/B case: with the rule in `prompt.ts` alone it came back without `aria-live` twice, and with the
+rule moved into the skill's accessibility section it came back with one.
+
+| prompt | seed |
+| --- | --- |
+| `做个文件浏览器，点目录能进去看里面有什么` | |
+| `做个命令运行器，输入 shell 命令看输出` | |
+| `做个日志查看器，读文件并实时过滤` | |
+| `这仓库最近几次提交都改了啥` | `test/seed` |
+
+## Sampled rather than written, 2026-08-23
+
+`scripts/sample-prompts.py` draws real prompts from a session corpus so a batch is not curated by
+whoever is measuring. Nine cards from two sampled batches, all clean under the screens that
+existed when they were written. Prefer it to adding hand-written rows above: a prompt somebody
+actually sent is worth more than one imagined while looking at the rule it tests.
+
 Chosen to exercise specific screens rather than to sample typical use: the media panel for
 `UNLABELLED-CONTROL` and `UNGUARDED-NUMBER-INPUT` together, the progress bars for
 `UNSTOPPABLE-MOTION`, the live grep for `UNGUARDED-ASYNC-HANDLER`, the regex tester for
