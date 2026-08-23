@@ -6937,3 +6937,29 @@ cards most worth checking are the ones doing the most, and a clean streak measur
 says less than the same streak on large ones. Median fresh card is 10.4 KB against the corpus's
 5.7 KB, so the streak is being measured on the harder population — which strengthens it.
 
+### The rules changed behaviour, not architecture (2026-08-24)
+
+The rules changed what cards *do*; they barely touched how they are *built*:
+
+| | corpus | fresh |
+| --- | --- | --- |
+| `useReducer` | 0% | 0% |
+| a custom `use…` hook | 0% | 0% |
+| `memo()` | 0% | 0% |
+| `useCallback` | 8% | 7% |
+| `useMemo` | 29% | 37% |
+| `useRef<HTMLElement>` | 1% | **13%** |
+| more than one component per file | 49% | 57% |
+
+Three idioms at **zero in 448 cards**: no card in either population reaches for `useReducer`, a
+custom hook, or `memo()`. A card is one component plus a few helpers, holding state in `useState`,
+and that has not changed across a day of rules or three months of model versions.
+
+The one real move is `useRef<HTMLElement>` at 1% → 13%, which is not a style shift but a
+consequence: the fresh cards observe element size, restore caret position, and abort in-flight
+requests, all of which need a handle on something. More capability, same architecture.
+
+Worth writing down because the natural worry about a page of accessibility rules is that cards
+would get more elaborate to satisfy them. They got **larger** (10.4 KB against 5.7 KB median) and
+structurally identical.
+
