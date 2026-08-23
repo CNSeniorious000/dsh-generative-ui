@@ -94,6 +94,26 @@ describe("sub-page reads", () => {
     }
   });
 
+  /**
+   * The other half of the fence: `from` is a query parameter too.
+   *
+   * The test above varies the escape and always sends an honest `from`, which is the obvious
+   * half. `from` decides WHERE the specifier is resolved relative to, so a `from` naming another
+   * canvas is a second way to ask for the same file — and it reaches the same route from the
+   * same page.
+   */
+  test("a hostile `from` cannot reach another canvas either", async () => {
+    writeFileSync(join(cwd, "secret.txt"), "SECRET");
+    mkdirSync(join(cwd, CANVAS_DIR, "other"), { recursive: true });
+    writeFileSync(join(cwd, CANVAS_DIR, "other", "private.tsx"), "OTHER CANVAS");
+    for (const from of [`${CANVAS_DIR}/other/board.tsx`, `/etc/${CANVAS_DIR}/tarot/x.tsx`, "..", "", `${CANVAS_DIR}/tarot`]) {
+      const { status, body } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./private")}&from=${encodeURIComponent(from)}`);
+      expect(body).not.toContain("OTHER CANVAS");
+      expect(body).not.toContain("SECRET");
+      expect([400, 404]).toContain(status);
+    }
+  });
+
   test("a specifier naming no file is a 404, not a 200 with an empty body", async () => {
     const { status } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./missing")}&from=${encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`)}`);
     expect(status).toBe(404);
