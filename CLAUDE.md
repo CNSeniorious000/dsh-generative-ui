@@ -3181,6 +3181,13 @@ All 22 catch their defect now, so the 57-card streak is a result rather than a b
 exemption is named and tested for staleness: `piano.ui4a.tsx` fills keys with `#ffffff`, which is
 white by definition rather than by theme.
 
+**The same class showed up again immediately.** The first fresh card to trip a screen in 58 was
+styling a `::-webkit-slider-thumb` white — a thumb is white the way a piano key is, by physical
+convention, and a themed one looks broken. Excluded in the screen rather than exempted per card,
+which costs nothing (the three corpus hits are all ordinary surfaces) and generalises: a
+pseudo-element that draws a physical control is not a page surface. The piano stays a named
+exemption because a `<div>` styled as a key has no such marker to test for.
+
 Run against the 378-card corpus as well — a different population, three months older — and all 22
 catch there too. That matters because a screen written from the corpus could easily only work on
 corpus-shaped code; these work on both.

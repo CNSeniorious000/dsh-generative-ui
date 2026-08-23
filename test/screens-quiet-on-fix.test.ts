@@ -255,3 +255,12 @@ test("NO-FOCUS-RING: no styling at all is not the defect", () => {
   expect(SCREENS["NO-FOCUS-RING"](`<button onClick={f}>x</button>`)).toBe(false);
   expect(SCREENS["NO-FOCUS-RING"](`<button style={{ outline: "none" }} onClick={f}>x</button>`)).toBe(true);
 });
+
+/**
+ * A slider thumb is white by physical convention, like a piano key — theming it looks broken.
+ * The first fresh card to trip `HARDCODED-BACKGROUND` in 58 was styling one.
+ */
+test("HARDCODED-BACKGROUND: a slider thumb is not a page surface", () => {
+  expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.r::-webkit-slider-thumb { height: 18px; background: #fff; }`}</style>")).toBe(false);
+  expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.panel { background: #fff; }`}</style>")).toBe(true);
+});
