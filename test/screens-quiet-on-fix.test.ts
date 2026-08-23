@@ -29,6 +29,11 @@ const PAIRS: Record<string, [string, string]> = {
   "HARDCODED-BACKGROUND": [`const s = { background: "#fff" }`, `const s = { background: "var(--dsw-alias-bg-base)" }`],
   "BRAND-PRIMARY-FILL": [`<div style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }} />`, `<div style={{ color: "var(--dsw-alias-brand-primary)" }} />`],
   "UNREACHABLE-CONTROL": ["<div onClick={f} />", "<div role='button' tabIndex={0} onClick={f} onKeyDown={g} />"],
+  "UNGUARDED-NUMBER-INPUT": [
+    `<input type="number" onChange={(e) => setN(Number(e.target.value))} />`,
+    // Keep the raw string in state and coerce where it is USED, so an empty field stays empty.
+    `<input type="number" onChange={(e) => setN(e.target.value === "" ? "" : Number(e.target.value))} />`,
+  ],
   "UNGUARDED-ASYNC-HANDLER": [
     `const run = async (t: string) => { for await (const c of streamText({ prompt: t })) setOut(c) }`,
     // The `runId` idiom the corpus already uses: bump a ref, and a stale run returns.

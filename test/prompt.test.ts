@@ -138,6 +138,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "UNGUARDED-LAST-INDEX": "not a guard against empty",
   "UNREACHABLE-CONTROL": "breaks keyboard use",
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
+  "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
   "VIEWPORT-UNITS": "100vw",
 };
 

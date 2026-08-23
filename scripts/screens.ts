@@ -106,6 +106,23 @@ export const SCREENS = {
       return !guarded.test(body);
     });
   },
+  // `Number(e.target.value)` straight into state from a `type="number"` field. Clearing it
+  // yields `""`, and `Number("")` is **0** — so the reader cannot backspace to retype: the field
+  // snaps to 0 the moment it empties. Typing a lone `-` gives `NaN`, which renders as blank and
+  // takes every derived value with it.
+  //
+  // A `type="range"` slider cannot produce either (43 of the corpus's 74 occurrences are
+  // sliders, and screening those would report a fifth of the corpus for an impossible input).
+  // 16 of the 26 real cases already guard, which is what makes this a rule people can follow.
+  "UNGUARDED-NUMBER-INPUT": (src: string) =>
+    [...src.matchAll(/Number\((?:e|event)\.target\.value\)/g)].some((match) => {
+      const before = src.slice(Math.max(0, match.index - 500), match.index);
+      const tag = before.lastIndexOf("<input");
+      if (tag === -1 || !/type="number"/.test(before.slice(tag))) return false;
+      const handler = before.lastIndexOf("onChange");
+      const window = src.slice(handler === -1 ? match.index - 120 : match.index - (before.length - handler), match.index + 160);
+      return !/isNaN|Number\.isFinite|=== ""|\|\| 0|\?\?|parseFloat|value === ""/.test(window);
+    }),
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
