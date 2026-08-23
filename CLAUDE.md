@@ -6897,3 +6897,22 @@ answered. But the ones quoted as evidence for a claim, and the ones that move as
 need to be one command away or they rot within hours. Four of the day's numbers went stale in
 under a day; the audited corpus rates never did.
 
+### The one fresh card with real defects (2026-08-24)
+
+`gen24-log.tsx` — the log viewer from the `aria-live` A/B — fires two screens, and reading it
+confirms both:
+
+- **`UNREACHABLE-CONTROL`**: `<div className="lv-row" onClick={() => onCopy(line)} title="点击复制">`.
+  Click-to-copy on a virtualised row, with a tooltip and no keyboard path at all.
+- **`UNGUARDED-ASYNC-HANDLER`**: three async handlers, two carrying an `AbortSignal` properly, and
+  a third — a mount-time `find` populating the file picker — with none. Its `setFileCandidates`
+  can land after unmount.
+
+Worth writing down because it is the counterexample to a day of clean fresh cards. The card is
+long (the largest generated today), does several things at once, and gets the guard right twice
+and wrong once. **Rules land per-construct, not per-card**: the same file threads a signal through
+two handlers and forgets on the third.
+
+It is also the card that needed `react-window`, so the paint check skips it — a card that is both
+screen-flagged and renderer-invisible, which is the combination with the least evidence behind it.
+
