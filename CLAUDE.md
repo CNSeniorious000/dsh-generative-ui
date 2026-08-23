@@ -4363,3 +4363,22 @@ planting an effect whose cleanup throws: `disposing probe failed: boom in teardo
 
 **A lifecycle test that only runs setup is half a test**, and it is the half that fails in
 development rather than in production.
+
+### Teardown, swept (2026-08-23)
+
+Having found `smoke.ts` never running a disposer, the same question went to the test files:
+which of them *call* a teardown and assert nothing about it. Two did.
+
+- **`inline-fence.test.ts`** called `stop()` nine times and asserted on zero. What disposal must
+  do is give every claimed block back — the blocks belong to the host's React tree, so a claim
+  left behind is a source block permanently `display: none` with an unmounted card over it. The
+  reader loses the code and gets nothing in its place, and only a reload fixes it. Two mutations
+  now fail: dropping the release loop, and releasing with `restore: false`.
+- **`canvas-sweep.test.ts`** called `host.dispose()` in its shared helper for hygiene. The host
+  owns a React root, a column appended to `document.body`, a stylesheet and a listener; dropping
+  either half of `disposers.push(() => root.unmount(), column.remove)` now fails. The symptom it
+  guards is a **second panel beside the first** after an HMR round, which produces no error.
+
+`stream.test.ts` also calls `release()` without asserting, and that one is correct — it is
+between-test hygiene, and `bindings.test.ts` owns the assertion about what releasing a host does.
+**The distinction worth making is whether the teardown is the subject or the cleanup.**
