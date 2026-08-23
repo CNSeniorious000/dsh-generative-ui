@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-// UNLABELLED-SLIDER. The `<span>` beside it renders "n = 3" for the eye, and a screen reader
+// UNLABELLED-CONTROL. The `<span>` beside it renders "n = 3" for the eye, and a screen reader
 // reads the two as unrelated: "n equals 3" then "slider, 3". Unlike a text field there is no
 // placeholder and nothing inside the control to fall back on. 46 of 378 corpus cards.
 export default function Sides() {

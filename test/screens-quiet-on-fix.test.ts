@@ -33,7 +33,7 @@ const PAIRS: Record<string, [string, string]> = {
     "@keyframes slide { from { transform: translateX(40px) } }",
     "@keyframes slide { from { transform: translateX(40px) } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none } }",
   ],
-  "UNLABELLED-SLIDER": [
+  "UNLABELLED-CONTROL": [
     `<input type="range" min={0} max={100} value={v} onChange={f} />`,
     `<input type="range" aria-label="音量" min={0} max={100} value={v} onChange={f} />`,
   ],

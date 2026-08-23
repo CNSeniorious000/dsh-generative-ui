@@ -133,14 +133,14 @@ export const SCREENS = {
       const window = src.slice(handler === -1 ? match.index - 120 : match.index - (before.length - handler), match.index + 160);
       return !/isNaN|Number\.isFinite|=== ""|\|\| 0|\?\?|parseFloat|value === ""/.test(window);
     }),
-  // A `type="range"` with no label of any kind. A screen reader announces "slider, 40" — the
+  // A `type="range"` or a `<select>` with no label of any kind. A screen reader announces "slider, 40" — the
   // number rendered beside it is a separate element and is not connected to the control.
   //
   // Ranges only: a text field usually has a placeholder to fall back on, and a `<label>` wrapping
   // the input labels it as well as `aria-label` does. Tag ends are found by brace depth, because
   // `onChange={e => …}` puts a `>` inside the tag and a `[^>]*` regex stops there — which is how
   // the first count of this came out at 241 instead of 61.
-  "UNLABELLED-SLIDER": (src: string) => {
+  "UNLABELLED-CONTROL": (src: string) => {
     const tagAt = (start: number) => {
       let depth = 0;
       for (let i = start; i < src.length; i += 1) {
@@ -150,9 +150,14 @@ export const SCREENS = {
       }
       return "";
     };
-    return [...src.matchAll(/<input\b/g)].some((match) => {
+    // `<select>` has the same problem for the same reason — its options are its value, not its
+    // name, so an unlabelled one announces "combo box, 每天". Six more corpus cards, and the
+    // same fix, which is why it lives here rather than in a screen of its own.
+    return [...src.matchAll(/<input\b|<select\b/g)].some((match) => {
       const tag = tagAt(match.index);
-      if (!/type="range"/.test(tag) || /aria-label|aria-labelledby|\bid=/.test(tag)) return false;
+      const named = /aria-label|aria-labelledby|\bid=/.test(tag);
+      if (named) return false;
+      if (match[0] === "<input" && !/type="range"/.test(tag)) return false;
       return !/<label/.test(src.slice(Math.max(0, match.index - 250), match.index));
     });
   },

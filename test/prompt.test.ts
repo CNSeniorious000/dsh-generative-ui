@@ -140,7 +140,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "UNREACHABLE-CONTROL": "breaks keyboard use",
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
-  "UNLABELLED-SLIDER": "A slider is the same problem",
+  "UNLABELLED-CONTROL": "A slider is the same problem",
   "UNSTOPPABLE-MOTION": "@media (prefers-reduced-motion: reduce)",
   "VIEWPORT-UNITS": "100vw",
 };

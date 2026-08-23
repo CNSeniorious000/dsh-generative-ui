@@ -5300,12 +5300,14 @@ and a number cannot be checked at all.
 
 ### The slider says its number and not what it controls (2026-08-23)
 
-`UNLABELLED-SLIDER` — **46 of 378**, immediately the second-highest screen. A `type="range"`
+`UNLABELLED-CONTROL` — **52 of 378**, immediately the second-highest screen. A `type="range"`
 with no `aria-label`, no `id`, and no wrapping `<label>` announces "slider, 3" and nothing else.
 The `<span>` rendering `n = 3` beside it is a separate element; the two are related only on
-screen.
+screen. `<select>` has the identical problem — its options are its value, not its name, so an
+unlabelled one announces "combo box, 每天" — which is why it was folded in here (6 more cards,
+same fix) rather than given a screen of its own, and why the name is CONTROL and not SLIDER.
 
-Sliders specifically, not inputs generally. A text field usually has a placeholder to fall back
+Controls with no text of their own, not inputs generally. A text field usually has a placeholder to fall back
 on, and 106 of the corpus's unlabelled inputs sit inside a `<label>` that labels them properly —
 screening all of them reports 148 cards for a much smaller real problem. A range control has
 neither fallback, which is what makes the rate trustworthy.
@@ -5378,7 +5380,7 @@ mistakes in one session is the signal to spend the ten minutes making it mechani
 ### Four screens, and the loop closing on each (2026-08-23)
 
 The corpus-mining pass added four: `UNGUARDED-ASYNC-HANDLER` (23), `UNGUARDED-NUMBER-INPUT` (10),
-`UNLABELLED-SLIDER` (46) and `UNSTOPPABLE-MOTION` (37). Each got a negative control, a
+`UNLABELLED-CONTROL` (46) and `UNSTOPPABLE-MOTION` (37). Each got a negative control, a
 quiet-on-the-fix pair, a construct entry, and a rule shown as code.
 
 Each was then checked the only way that means anything — by asking for a card that would trip it:

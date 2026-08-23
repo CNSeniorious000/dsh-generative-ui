@@ -26,7 +26,7 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "UNGUARDED-ASYNC-HANDLER": /streamText|bash\(/,
   "UNGUARDED-LAST-INDEX": /\[0\]|match\(/,
   "UNGUARDED-NUMBER-INPUT": /type="number"/,
-  "UNLABELLED-SLIDER": /type="range"/,
+  "UNLABELLED-CONTROL": /type="range"/,
   "UNSTOPPABLE-MOTION": /@keyframes|transition:/,
   "UNREACHABLE-CONTROL": /<button|onClick/,
   "VIEWPORT-UNITS": /width|height/,
