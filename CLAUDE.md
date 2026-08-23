@@ -7131,3 +7131,26 @@ that is the second time in one day a checker read prose about a construct as the
 `TRANSITION-WITHOUT-TRANSFORM` did it to its own negative control. **A file that documents a
 pattern will contain the pattern.**
 
+### A knob by any name (2026-08-24)
+
+A pomodoro asked to persist came back with its `localStorage` write wrapped and the comment
+`/* ignore quota / private-mode errors */` — naming both failures the rule named — and storing a
+timestamp rather than an elapsed count, which is a different rule in the same section. **Four
+rules written today, four landing on their first test**: `aria-live`, the clickable row, the
+`<select>` label, and now the guarded write.
+
+The same card tripped `HARDCODED-BACKGROUND` on a **toggle switch knob**, third instance of a
+class that has now appeared three times: a piano key, a range thumb, a switch knob. All white by
+physical convention rather than by theme, and a themed one looks broken.
+
+The pseudo-element exemption added this morning could not cover a knob — there is no
+`::-webkit-switch-knob`. Exempted the words `knob`, `thumb`, `handle` instead, and the split
+justifies it exactly:
+
+    every corpus hit is an ordinary surface  (5 of 5)
+    every fresh hit is a knob                (3 of 3)
+
+Corpus verdict unchanged at 3; fresh drops to 0. The general form: **when a screen's residue in
+one population is entirely a different thing from its residue in another, the screen is measuring
+two things and only one of them is the defect.**
+
