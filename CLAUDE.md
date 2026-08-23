@@ -4888,6 +4888,16 @@ components is still the worse trade.
 **A hook is more testable than it looks.** Three of the four above were reported as needing a
 browser and needed a nine-line probe component.
 
+A further pass lifted two more decisions out of effect bodies — `importSignature` (what the
+import-map probe is cached against) and `errorAction` (the three-way `ignore` / `retry` / `report`
+routing the renderer's `onError` performs). The count stayed at 14, because the extraction
+replaced two conditions with one, and **that is the honest reading**: the audit counts conditions,
+not behaviour. `GenUISurface` went from 3 covered to 7, and the decisions that matter — which
+error is transient, which retries, what the reader is told — are all constrained now.
+
+The 10 that remain there are `x === null` guards and ref comparisons inside effect bodies. Little
+is learned by reaching them, which is a different statement from *they are hard to reach*.
+
 **A checker that reports success has to be checked against what it is looking at.** It ran, it
 printed a reassuring line, and the answer was right about the two thirds it could see.
 
