@@ -4232,3 +4232,39 @@ that function.
 
 **Deduplicating a regex is not the same as exporting it.** A `g` flag makes it a stateful object,
 and every caller sharing it shares the state.
+
+### `@genui/cli` over all 378 corpus cards (2026-08-23)
+
+Roughly three hours of `npx` invocations, and the honest summary is that **136 of 378 cards
+report something and almost none of it matters**:
+
+| | count | what it is |
+| --- | --- | --- |
+| clean | 242 | |
+| `implicitly has an 'any' type` | 97 | untyped lambda parameters; the card runs |
+| `Cannot find module '$ui4a/chat'` | 22 | the pre-rename prefix, a known build-lag artefact |
+| everything else | 18 | see below |
+
+Of the last 18, most were already screened here (`SHADOWED-EXPORT`, `GLOB-IN-JSX`,
+`DUPLICATE-STYLE-KEY`, `MISSING-REACT-IMPORT`, the three compile failures). Type errors that are
+correct TypeScript complaints and correct JavaScript — `[[1,0,1]]` annotated `boolean[][]`, a
+call passing 3 of 4 parameters where the 4th is optional in practice — were confirmed to compile
+and stream cleanly by replaying them.
+
+**One genuine new bug**, and one worth the whole sweep on its own:
+
+    <div style={labelStyle, { marginTop: 14 }}>
+
+That is a comma operator. `labelStyle` is evaluated, discarded, and only the object after the
+comma is applied, so the element silently loses every style the named object carried. The CLI
+reports it as "Left side of comma operator is unused and has no side effects" — a message about
+the mechanism, saying nothing about the fix. Now `COMMA-IN-STYLE` (1 of 378), with a control, a
+prompt rule, and a clean-card guard.
+
+Two things about the screen are worth keeping. It strips comments first: the near-miss card
+*documents* the bad form in prose, and the first version reported the documentation. And its
+`(?!\{)` matters — without it, `style={{ ...labelStyle, marginTop: 4 }}`, the correct spelling,
+matches too.
+
+**Verdict on the tool: worth running once over a corpus, not worth running per card.** The
+signal-to-noise is one real find in 378, and `implicitly any` will bury it unless you filter.
