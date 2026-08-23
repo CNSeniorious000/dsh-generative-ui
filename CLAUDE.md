@@ -4158,3 +4158,20 @@ fine — the two that were tested when the table was written.
 
 **A comment admitting a check is weak is a bug report with no assignee.** This one sat for as
 long as the file existed, and the fix was three lines.
+
+### Two hand-maintained copies of the shell's module table (2026-08-23)
+
+`build.ts` externalized a list of platform modules; `smoke.ts` answered `require()` for a
+separately written copy of the same list. They were identical, by luck rather than by anything
+enforcing it, and drift is silent in both directions: a module externalized but not answered is
+a blank app, and one answered but not externalized is **a second React instance** — the
+singleton failure this repo already has a section about.
+
+Now one `scripts/platform.ts`, imported by both. Verified by deleting an entry: `build` bundles
+it and `smoke` rejects it in the same run, so the two can no longer disagree.
+
+That is the fourth instance today of the same shape — `compiler.test.ts` testing a
+re-implementation, `types/check.ts` transcribing its own `.d.ts`, `EMPTY_RESULT` listing members
+`bindings.ts` had outgrown, and now this. **Whenever a fact is written down twice, one copy is
+already wrong or about to be**; the sweep for it is `grep -rn 'transcrib\|by hand\|hand-written\|
+re-implement'`, and every hit either explains why the duplication is deliberate or is a bug.
