@@ -34,6 +34,19 @@ restore() {
 trap restore EXIT INT TERM
 [[ -z "$(git status --porcelain)" ]] || { echo "working tree must be clean: this script rewrites source files"; exit 2 }
 
+# Name the lines the mutator refused to touch. "4 in prose, declined" is indistinguishable from
+# "the fence tracker desynced and skipped 4 real branches", and only the line tells you which.
+name_declined() {
+  for n in $lines; do
+    cp "$src" "/tmp/ma-decl-${src:t}"
+    bun scripts/invert-ifs.mjs "$src" "$n" 2> /dev/null
+    cmp -s "$src" "/tmp/ma-decl-${src:t}" &&
+      printf '    declined %s:%s  %s\n' "${src:t}" "$n" "$(sed -n "${n}p" "$src" | sed 's/^ *//' | cut -c1-64)"
+    cp "/tmp/ma-decl-${src:t}" "$src"
+    rm -f "/tmp/ma-decl-${src:t}"
+  done
+}
+
 uncovered=0
 # Every source under src/, at any depth, .ts and .tsx alike. The old form listed two directories
 # at one depth each and silently skipped five files — GenUISurface.tsx among them, which holds
@@ -75,8 +88,12 @@ for src in ${(f)"$(fd -e ts -e tsx . src)"}; do
     echo "${src:t}: ${uncovered_here} conditions, NONE constrained by a test"
   elif (( covered == 0 )); then
     echo "${src:t}: no branches (${declined} \`if (\` in prose, declined)"
+    name_declined
   elif (( declined > 0 )); then
+    # Name them. "4 in prose, declined" is indistinguishable from "the fence tracker desynced and
+    # skipped 4 real branches", and only the line itself tells you which.
     echo "${src:t}: ${covered} conditions covered (${declined} in prose, declined)"
+    name_declined
   else
     echo "${src:t}: ${covered} conditions covered"
   fi
