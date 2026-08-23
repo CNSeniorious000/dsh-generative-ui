@@ -61,7 +61,7 @@
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts",
-    "audit": "python3 scripts/audit-record.py CLAUDE.md && bun scripts/corpus-rates.ts 2>/dev/null | python3 scripts/audit-rates.py",
+    "audit": "bun scripts/fresh-rates.ts 2>/dev/null | head -1 > /tmp/fresh-total.txt; python3 scripts/audit-record.py CLAUDE.md && bun scripts/corpus-rates.ts 2>/dev/null | python3 scripts/audit-rates.py",
     "replay": "bun scripts/replay-stream.ts",
     "cards": "bun scripts/compile-cards.ts",
     "paint": "bun scripts/paint-cards.ts",

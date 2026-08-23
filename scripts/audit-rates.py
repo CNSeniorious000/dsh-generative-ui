@@ -45,10 +45,20 @@ for name, (count, total) in sorted(actual.items()):
 # ("Sixty-seven cards is not a rate", "in 60 of the 67 written"). Revised by hand six times on
 # 2026-08-24 and briefly wrong twice. `fresh-rates.ts` knows the real number; this checks the ones
 # written down against it.
+# `bun run audit` writes this first; it is a file rather than a second stdin because the corpus
+# rates already own stdin. Absent on a machine with no generated cards, and skipped there.
+#
+# Only the DENOMINATOR is checked. "43 of 67" passes with the right total and a wrong count,
+# because nothing here knows what 43 was counting — it came from an ad-hoc script that no longer
+# exists. That is the honest boundary: a total moves every time a batch lands and is worth
+# automating, while a one-off count has to be re-derived by whoever doubts it. Caught a real stale
+# figure on its first run ("43 of 60" after the set reached 67).
+import os
 fresh_total = None
-for line in io.open("/tmp/fresh-total.txt", encoding="utf-8") if __import__("os").path.exists("/tmp/fresh-total.txt") else []:
-    m = re.match(r"(\d+) of (\d+) clean", line)
-    if m: fresh_total = int(m.group(2))
+if os.path.exists("/tmp/fresh-total.txt"):
+    for line in io.open("/tmp/fresh-total.txt", encoding="utf-8"):
+        m = re.match(r"(\d+) of (\d+) clean", line)
+        if m: fresh_total = int(m.group(2))
 if fresh_total is not None:
     for m in re.finditer(r"^.*?(\d+) of (\d+) (?:written|fresh cards|generated).*$", text, re.M):
         if int(m.group(2)) != fresh_total:
