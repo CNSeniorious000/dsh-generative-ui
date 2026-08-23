@@ -29,3 +29,24 @@ test("a triple-backtick run inside the body does not close a longer fence", () =
 // The model's own tool-call spelling, three times in the corpus against one for the ASCII form.
 // Those bars are U+FF5C. A regex written from the single ASCII sample could not see any of them.
 test("the DSML tool-call spelling is dropped too", () => { const [b]=p("````ui4a/tsx\nexport default () => <div />\n</｜｜DSML｜｜parameter>\n</｜｜DSML｜｜invoke>\n</｜｜DSML｜｜tool_calls>"); expect(b.code).toBe("export default () => <div />"); });
+
+/**
+ * A fence opened inside a wider fence is a wrapper, not a card.
+ *
+ * This project's own prompt shows the block wrapped in five backticks so the four-backtick
+ * fence inside it survives the example — and once in 389 corpus openers the model copied the
+ * wrapper into its reply. Taking the outer fence gives a body that is the inner fence **as
+ * text**, which compiles cleanly (measured, both modes) and renders nothing: no error anywhere,
+ * the reader just gets a blank card.
+ */
+test("a fence wrapped in a wider fence yields the inner card", () => {
+  const wrapped = "before\n\n`````ui4a/tsx\n````ui4a/tsx\nexport default () => <div>hi</div>\n````\n`````\n\nafter";
+  expect(p(wrapped)).toEqual([{ code: "export default () => <div>hi</div>\n", complete: true }]);
+});
+
+// ...and a fence that merely CONTAINS a backtick run in its body is untouched: a card printing
+// a markdown example is ordinary, and skipping to an inner opener there would lose it.
+test("backticks inside a card's body do not make it a wrapper", () => {
+  const code = 'export default () => <pre>{"```js\\nlet a = 1\\n```"}</pre>\n';
+  expect(p(`\`\`\`\`ui4a/tsx\n${code}\`\`\`\`\n`)).toEqual([{ code, complete: true }]);
+});
