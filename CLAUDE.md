@@ -3124,8 +3124,10 @@ pair says most:
 | `CatNames` | 10/13 | unguarded async + unstoppable motion | 2 cards, both guarded |
 
 `History` needed a seed to measure at all — replayed in an empty directory the model correctly
-says there is no repo, which is not a card and not a failure. `test/seeds/git/` builds three
-commits first, and the card that comes back carries the async guard, the focus ring, AND the
+says there is no repo, which is not a card and not a failure. **`test/seed/` already did this**,
+with a `setup.sh` building three commits over a real `src/` tree; I wrote a second one before
+checking and deleted it. `test/eval-fixtures.md` says so in its first section, which is where I
+should have looked. The card that comes back carries the async guard, the focus ring, AND the
 empty-array guard, none of which the prompt mentions.
 
 `GlobTester` is the cleanest single line in the comparison: **five for five strip the focus ring
