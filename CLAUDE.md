@@ -5558,3 +5558,18 @@ Two lessons, and the second is the one that nearly cost an hour:
 - **When a checker and reality disagree, suspect the checker.** I spent that hour bisecting the
   card — counting braces, counting parens, hunting an extraction bug in my own `awk` — on the
   assumption that a `FAIL` meant a broken card. The card was never broken.
+
+Auditing the rest for the same divergence found `paint-cards.ts` failing it the **opposite** way:
+it compiled the raw source with no normalization at all, so it tested a path production never
+takes — missing both damage normalize repairs and damage normalize causes. Aligning it dropped
+the skipped count from 120 to 102: eighteen corpus cards are only importable *because* normalize
+repairs them, and the render check had never seen any of them.
+
+Both now call one `compileSettled` in `tsx-node.ts`, and `test/mirrors-production.test.ts`
+fails if any script calls `compileCard` on a whole card without it — with `replay-stream.ts`
+exempted and the reason written down (it renders streaming frames on purpose, which *is* what
+production does mid-stream).
+
+**Verification has to take the same path as the thing it verifies, fallbacks included.** Twice in
+one file's history the checker and the runtime differed, once in each direction, and neither
+showed up as a wrong answer — one as a false alarm, one as a silent gap.
