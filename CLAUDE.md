@@ -7213,3 +7213,24 @@ Small, and it is the shape that matters: a rule that makes cards keep data makes
 mean something. Second-order effects of a landed rule are a category worth checking every time,
 and the way to find them is to look for what became *possible*, not what became wrong.
 
+### Three words, five rules (2026-08-24)
+
+The hardest test of a rule set is a prompt that names nothing. `做个待办清单` — three words, no
+construct, no capability, no hint — against a corpus where 13 of 14 todo/ledger cards did not
+persist at all.
+
+    screens          clean under all 24
+    persists         yes
+    guards the write yes
+    empty state      yes
+    focus ring       yes
+    reduced motion   yes
+
+Five of five, and the write-guard rule was two hours old. Nothing in the prompt asked for any of
+it; the card is what "a todo list" now means.
+
+This is the result the whole day's method was aimed at. Every earlier test either named the
+construct (`两个下拉选时区`) or forced the shape (`每行点击可以复制`), which measures whether a rule
+is *applied when relevant*. This measures whether it has become part of what the model builds by
+default — and for the five rules a todo list happens to touch, it has.
+
