@@ -4431,3 +4431,36 @@ contains a backtick run (printing a markdown example) must not be descended into
 
 **The failure came from documentation being followed too literally.** Worth remembering when
 writing an example: whatever scaffolding it needs to be shown, someone will copy.
+
+### Which skill rules actually land, measured (2026-08-23)
+
+Every rule in the skill is a claim that the model will follow it. Counting how often each one
+appears in 378 real cards turns that into a number, and the numbers are not close together:
+
+| rule | cards it applies to | cards that follow it |
+| --- | --- | --- |
+| take colours from the design tokens | all | 101 use `bg-base` alone |
+| parse the stream with `partial-json` | 24 streaming | **22** |
+| check `exitCode`, do not catch | 19 running commands | **18** |
+| clean up a loop in the effect's cleanup | 32 with a loop | **31** |
+| remove the listeners you add | 3 | **3** |
+| size against the container, not the viewport | 94 with a query | **87** use `@container` |
+| honour `prefers-reduced-motion` | 131 animating | **7** |
+| abort the previous `streamText` | 24 streaming | **1** |
+| abort the previous `bash` when polling | 11 polling | **0** |
+
+The bottom three are the interesting ones, and they share a shape. **Every rule that lands is
+one the skill shows as code or names as a field you can see** (`exitCode`, `partial-json`,
+`cancelAnimationFrame`, `@container`). **Every rule that does not land is a paragraph
+describing a shape** — "pass an AbortController's signal and abort the previous one" sits three
+lines above "check `exitCode`", in the same section, and they land 0/11 and 18/19.
+
+It is not about importance or wording: the abort paragraphs are emphatic and specific. It is
+that a paragraph has to be *converted* into code by the reader, and the conversion is where it
+gets dropped. All three now carry a code block; `prefers-reduced-motion` got its own bullet with
+the one-line `@media` rule that covers everything, instead of being the last clause of a bullet
+about animation continuity.
+
+**The method generalises: for any prompt rule, count the cards it applies to and the cards that
+follow it.** A rule at 0/11 is not a rule, and until you count you cannot tell it apart from one
+at 18/19 sitting next to it.
