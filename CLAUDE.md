@@ -3112,6 +3112,22 @@ all sliders and number fields:
 Prompt-matched pairs are what the corpus is actually good for. An aggregate 47%-vs-0% invites the
 objection that the fresh cards are different cards; this does not.
 
+Three repeated card types fire a screen in **every** corpus instance, which is where a matched
+pair says most:
+
+| card type | corpus | what fires | fresh |
+| --- | --- | --- | --- |
+| `GlobTester` | 5/5 | `NO-FOCUS-RING` in all five | 3 cards, 0 screens, `:focus-visible` in 3/3 |
+| `RegexTester` | 5/5 | `NO-FOCUS-RING` 4, `BRAND-PRIMARY-FILL` 1 | 9 cards, 0 screens, `:focus-visible` in 9/9 |
+| `History` | 5/5 | unguarded async 4, no ring 3, unreachable 2 | — |
+| `Mortgage` | 13/15 | unlabelled 9, no ring 6, number field 3 | 6 cards, 0 screens |
+| `CatNames` | 10/13 | unguarded async + unstoppable motion | 2 cards, both guarded |
+
+`GlobTester` is the cleanest single line in the comparison: **five for five strip the focus ring
+and none replace it; three for three of the fresh ones define `:focus-visible`.** A card type
+where the old behaviour was unanimous is the one where a rule landing is hardest to attribute to
+luck.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
