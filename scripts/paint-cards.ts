@@ -25,6 +25,7 @@ import { compileCard, cardsIn, initTsxFromDisk } from "./tsx-node.ts";
 await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
+let skipped = 0;
 
 for (const name of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${name}`, "utf8");
@@ -33,7 +34,14 @@ for (const name of cardsIn(dir)) {
     // `$dsh/*` does not resolve outside dsh, and a card that uses a capability is exactly the
     // kind worth rendering — skipping them would leave the check blind to half the corpus.
     // `types/standalone/*.js` already stands in for every member with the right shape.
-    const wired = src.replaceAll(/(["'])\$dsh\/(ai|fs|exec|chat)\1/g, (_whole, quote: string, group: string) => `${quote}${resolve(import.meta.dir, `../types/standalone/${group}.js`)}${quote}`);
+    const wired = src
+      .replaceAll(/(["'])\$dsh\/(ai|fs|exec|chat)\1/g, (_whole, quote: string, group: string) => `${quote}${resolve(import.meta.dir, `../types/standalone/${group}.js`)}${quote}`)
+      // `lucide-react` is icons and nothing else, so a Proxy returning an empty <svg> for any
+      // name renders it faithfully enough for this check — and keeps a reference card from being
+      // silently skipped in `bun run check`, which is the failure this whole script exists for.
+      .replaceAll(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/g, (_whole, names: string) =>
+        names.split(",").map((n) => n.trim().split(/\s+as\s+/).pop()!.trim()).filter(Boolean)
+          .map((n) => `const ${n} = () => null;`).join(" "));
     const { code } = compileCard(name, wired);
     // A blob URL is not importable here; a data URL is, and the card's own imports resolve
     // against this process's node_modules — which is why `$dsh/*` and esm.sh-only packages are
@@ -51,8 +59,12 @@ for (const name of cardsIn(dir)) {
     if (/Cannot find (module|package)|Failed to resolve/.test(message)) status = `skipped — ${message.slice(0, 46)}`;
     else { status = `THREW ${message.slice(0, 64)}`; bad++ }
   }
+  if (status.startsWith("skipped")) skipped += 1;
   if (!status.startsWith("paints") && !status.startsWith("skipped")) console.log(`${name.padEnd(26)} ${status}`);
 }
 
-console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something` : `paint: ${bad} card(s) render nothing`);
+// Say how many were skipped. A check that silently passes over a third of its input reads
+// exactly like one that examined everything and found nothing wrong.
+const note = skipped === 0 ? "" : ` (${skipped} skipped — imports this process cannot resolve)`;
+console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
 if (bad > 0) process.exit(1);
