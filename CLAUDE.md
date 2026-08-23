@@ -4059,3 +4059,25 @@ Three things to carry:
   `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
 - **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
   coupling only shows up when the accident is removed.
+
+### The whole corpus, replayed as streams (2026-08-23)
+
+`replay-stream.ts` had only ever run on the six cards in `test/cards`. Run over all 378:
+
+- **Zero late remounts.** `afterDefaultPaints=0` on every card — the "declare every hook before
+  the JSX" rule holds across the corpus, and the rule earns its place in the skill on evidence
+  rather than on the one card it was written from.
+- **Four cards with broken frames.** Three are the compile failures already found
+  (`0c24e4dad59d`, `2f7a87253134`, `5745802818e1`), which fail at *every* frame. The fourth,
+  `c5f586e3ac6d`, fails **exactly one frame of 60** — the cut lands mid-way through a chained
+  ternary, where normalization closes the object literal but not the `? :` chain.
+
+That last one is worth knowing about because it looks alarming and is not. Verified by reading
+`partial-react/src/runtime.ts:305`: a failed compile calls `onError` and **returns without
+touching the slot**, so the previously rendered component stays on screen. Both settled modes
+compile the card fine, and neither mode rescues that frame — but nothing needs to. 64 of 378
+cards use a multi-line ternary chain and only this one produced a bad frame, so it is a narrow
+`partial-tsx` gap costing one frame of one card, not a defect to design around.
+
+**`brokenFrames=1` and `brokenFrames=60` are different findings**, and the script prints the
+count rather than a boolean precisely so they can be told apart.
