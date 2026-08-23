@@ -98,9 +98,11 @@ See `scripts/build.ts`. All four let the plugin **build fine and blow up at runt
 
 **The upstream compiler no longer needs patching around** — `partial-react@0.0.6`
 (2026-08-22, from macaron-genui-demo#1718) dropped the `import.meta.resolve` and `typeof Bun` its
-`compiler.ts` used to carry. Three things came out together on release day: the build plugin that
-swapped in a shim, `src/client/runtime/compiler-shim.ts` itself, and `scripts/typecheck.mjs`,
+`compiler.ts` used to carry. Three things were **deleted** together on release day: the build plugin
+that swapped in a shim, `src/client/runtime/compiler-shim.ts` itself, and `scripts/typecheck.mjs`,
 whose only job was filtering upstream's two type errors — `typecheck` is now plain `tsc --noEmit`.
+None of the three exists any more; they are named here so the next reader recognises them in an
+old diff.
 
 Verified rather than assumed: `bun run check` green with no `[upstream, ignored]` line, bare
 `tsc` exits 0, `import.meta` / `Bun.` / `import.meta.resolve` all read **0** in `lib/client.js`,
