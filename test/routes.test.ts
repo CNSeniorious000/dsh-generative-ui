@@ -114,6 +114,27 @@ describe("sub-page reads", () => {
     }
   });
 
+  /**
+   * `id` names which canvas, and no test ever varied it — every call above sends `tarot`.
+   *
+   * It reaches `canvasChildDir(id)` and then a file read, so a traversal here is the same
+   * exposure as one in `child`. `%2e%2e` is included because `isCanvasId` ACCEPTS it: the
+   * character class rejects a literal dot, not its encoding. It is safe only because
+   * `searchParams.get` has already decoded once and nothing decodes again — which is a property
+   * of the route worth holding rather than assuming.
+   */
+  test("a traversing `id` reaches nothing", async () => {
+    writeFileSync(join(cwd, "secret.txt"), "SECRET");
+    mkdirSync(join(cwd, CANVAS_DIR, "other"), { recursive: true });
+    writeFileSync(join(cwd, CANVAS_DIR, "other", "private.tsx"), "OTHER CANVAS");
+    for (const id of ["../other", "..", "tarot/../other", ".", "%2e%2e", "%252e%252e"]) {
+      const { status, body } = await call(`cwd=${encodeURIComponent(cwd)}&id=${encodeURIComponent(id)}&child=${encodeURIComponent("./private")}`);
+      expect(body).not.toContain("OTHER CANVAS");
+      expect(body).not.toContain("SECRET");
+      expect([400, 404]).toContain(status);
+    }
+  });
+
   test("a specifier naming no file is a 404, not a 200 with an empty body", async () => {
     const { status } = await call(`cwd=${encodeURIComponent(cwd)}&id=tarot&child=${encodeURIComponent("./missing")}&from=${encodeURIComponent(`${CANVAS_DIR}/tarot/board.tsx`)}`);
     expect(status).toBe(404);
