@@ -4092,6 +4092,18 @@ very leak the section above is about. Neither was failing anything yet.
 
 **A discipline that has to be remembered is a discipline that will be forgotten.** The four fixes
 above were each a habit applied by hand; the check is what makes the next file follow them.
+
+One more line was quietly saying the wrong thing. `smoke.ts` printed *4 of 6 effects returned a
+disposer*, which reads as two effects having nothing to undo. They are in fact the two that could
+not **run** there — both reach for a DOM, which smoke deliberately does not provide — and they
+are exactly the two that register into the process-wide listener set the flake above was about.
+The number was counting non-participation as a clean result. Now:
+
+    4 of 4 runnable effects returned a disposer, all torn down cleanly
+    2 not run here, no DOM: canvas column, inline fences — their teardown is covered by test/
+
+**A denominator that silently excludes the hard cases is worse than no number.** Both readings
+are "passing"; only one of them tells you what was checked.
 - **Restore every global you stub**, even when nothing currently breaks. `stream.test.ts` and
   `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
 - **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
