@@ -9,6 +9,7 @@
  * The wasm arrives over `WASM_PATH`, an HTTP route, so the test serves it — the same contract the
  * browser half uses, rather than the disk loader the scripts use.
  */
+import { restoreGlobals } from "./globals.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { WASM_PATH } from "../src/contract-assets.ts";
 import { createBrowserTsxCompiler, disposeCompiler } from "../src/client/runtime/compiler.ts";
@@ -26,7 +27,9 @@ beforeAll(() => {
   (globalThis as any).fetch = (input: any, init?: any) =>
     realFetch(typeof input === "string" && input.startsWith("/") ? new URL(input, server.url.origin).href : input, init);
 });
-afterAll(() => { disposeCompiler(); server.stop(true) });
+// `restoreGlobals` puts back the real fetch — this file replaces it for the whole file, so
+// the restore belongs at the same scope as the install.
+afterAll(() => { disposeCompiler(); server.stop(true); restoreGlobals() });
 
 const compile = (code: string, options?: Parameters<ReturnType<typeof createBrowserTsxCompiler>["compile"]>[1]) => createBrowserTsxCompiler().compile(code, options);
 

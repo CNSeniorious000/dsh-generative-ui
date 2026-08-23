@@ -9,13 +9,18 @@
  * Stubbed rather than run against a DOM library: the function touches `querySelector`,
  * `MutationObserver` and the timer pair, so the fakes are the exact surface it depends on.
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 let frame: unknown = null;
 let fire: () => void = () => {};
 let observing = 0, disconnected = 0, cleared = 0;
 let timeoutFn: (() => void) | null = null;
 let warnings: string[] = [];
+
+// Restore what this file stubs: bun shares one global per RUN, so a `document` with no
+// `querySelectorAll` left installed breaks whichever file sweeps next.
+afterEach(restoreGlobals);
 
 beforeEach(() => {
   frame = null; observing = 0; disconnected = 0; cleared = 0; timeoutFn = null; warnings = [];
