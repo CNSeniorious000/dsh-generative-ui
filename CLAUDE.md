@@ -5321,3 +5321,19 @@ session has been wrong in a way that made the problem look worse than it is; thi
 over many sessions, and its BPM slider had no label. A new screen paying for itself against the
 repo's own examples on the first run is the strongest evidence that the rate is real and not an
 artefact of how the corpus was made.
+
+Each screen now has to survive **three** questions, one test apiece:
+
+| question | file | what it catches |
+| --- | --- | --- |
+| does it fire on the defect? | `test/cards-negative/` + `compile-cards.ts` | a screen that went blind |
+| does it stay quiet on the fix? | `screens-quiet-on-fix.test.ts` | a screen that flags the remedy |
+| does any real card exercise it? | `screens-exercised.test.ts` | a screen quiet because **nothing it looks at exists** |
+
+The third was added because two screens were in exactly that state: no reference card contained
+`type="range"` or called `bash`, so both were silently untested against whole working code while
+appearing perfectly clean. Each test asserts its map's keys equal the screen list, so a new screen
+cannot skip any of the three.
+
+**"No failures" has at least two causes and they look identical**: nothing is wrong, or nothing
+was examined. Every check worth keeping needs something that distinguishes them.
