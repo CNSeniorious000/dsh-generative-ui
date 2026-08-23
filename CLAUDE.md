@@ -2932,11 +2932,22 @@ at all and the construct entry would otherwise have been guarding nothing.
     80 skipped: recharts ×51, $ui4a ×21, micromatch ×3
 
 Two different things. `$ui4a ×21` is the dead prefix from before the rename — those cards cannot
-be made to run and should not be. **`recharts ×51` is a single decision**: installing it as a
-devDependency would take the corpus from 292 checked to 343. It is 7.5 MB unpacked with 11
-transitive deps, which is a trade for the user to make, not me — and the skip is honest and
-counted meanwhile, so nothing is blocked on it. Stubbing it is not an option in either direction:
-a stubbed chart renders as nothing, so the check would PASS a card showing a blank chart.
+be made to run and should not be. The rest split by cost, and asking the registry rather than
+guessing is what made the split obvious:
+
+| | cards | unpacked |
+| --- | --- | --- |
+| `recharts` | 51 | 7.5 MB, 11 deps |
+| the glob family + `motion` | 11 | 1.4 MB, 5 deps |
+
+The second row was not a decision at all — installed, and the count went **292 → 303 checked with
+zero new failures**. The first still is: 7.5 MB for 51 cards is a trade for the user to make, and
+the skip is honest and counted meanwhile, so nothing is blocked on it.
+
+Stubbing is not an option in either direction: a stubbed chart renders as nothing, so the check
+would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed and `recharts` is
+not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
+renders as nothing is the exact failure being looked for.
 
 ### The multi-file canvas nothing tested (2026-08-23)
 
