@@ -3076,6 +3076,13 @@ The second row was not a decision at all — installed, and the count went **292
 zero new failures**. The first still is: 7.5 MB for 51 cards is a trade for the user to make, and
 the skip is honest and counted meanwhile, so nothing is blocked on it.
 
+Sharpened on 2026-08-24: **32 of those 51 recharts cards are clean under all 24 screens.** That is
+the precise value of installing it — not "51 more cards checked" but 51 cards of which 32 currently
+have nothing said about them at all. A card the screens call clean and the renderer never sees is
+the only kind that can be broken with nobody noticing, and the cross-tab's third row (`silent +
+paints nothing`) cannot see them either. It has been 0 all day, across 303 checked cards; whether
+it is 0 across 354 is unknown.
+
 Stubbing is not an option in either direction: a stubbed chart renders as nothing, so the check
 would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed and `recharts` is
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
