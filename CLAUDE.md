@@ -7161,3 +7161,29 @@ Corpus verdict unchanged at 3; fresh drops to 0. The general form: **when a scre
 one population is entirely a different thing from its residue in another, the screen is measuring
 two things and only one of them is the defect.**
 
+### The defect no screen can see (2026-08-24)
+
+`做个记账本` is a **verbatim corpus prompt**, so a bare re-run makes a matched pair on the hardest
+kind of rule — one about something the card should do, not something it should avoid.
+
+The corpus side first. Fourteen todo/ledger cards, and **13 of them do not persist at all**: a
+todo list that forgets every entry on reload, a ledger that loses the month when you edit one
+label. Only one uses `localStorage`.
+
+Generalised past those fourteen — any card that collects user-entered rows and offers a way to add
+one:
+
+| | persists |
+| --- | --- |
+| corpus | 13 of 28 (46%) |
+| fresh | 9 of 11 (82%) → **9 of 9** on inspection |
+
+The two apparent misses are a cron explainer and a generic answer card whose internal arrays my
+heuristic matched; neither holds anything a user would expect to keep.
+
+What makes this the sharpest result of the day: **no screen can see this defect.** It is an
+absence — the card renders, paints, passes 24 screens, and loses your data. Text analysis cannot
+distinguish "did not need to persist" from "should have and did not" without knowing what the card
+is for. The only evidence available is the before/after on the same prompt, which is exactly what
+the corpus is for.
+
