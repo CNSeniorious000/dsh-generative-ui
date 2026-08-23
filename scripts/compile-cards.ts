@@ -59,13 +59,20 @@ const SCREENS = {
     return new RegExp(`set${name[0].toUpperCase()}${name.slice(1)}\\b`).test(src) && /\$dsh\/(exec|fs|ai)/.test(src);
   },
   // A light surface colour written as a literal: `background: "#fff"`. The card has assumed a
-  // white page, so it renders white-on-white in dark mode. Exactly 2 of 378 corpus cards match,
-  // and they are the two genuine dark-mode failures found by rendering — every other hardcoded
-  // colour in the corpus is a chart series or an accent, not a surface. A first version also
-  // required the card to use no design token, on the theory that a literal white *beside* a
-  // `var(--dsw-alias-…)` is a deliberate accent; no card in the corpus is in that state, so the
-  // clause only added an untested branch.
-  "HARDCODED-BACKGROUND": (src: string) => /background(?:Color)?:\s*"#(?:fff|ffffff|fafafa|f8fafc)\b/i.test(src),
+  // white page, so it renders white-on-white in dark mode. Three of 378 corpus cards match, and
+  // they are the dark-mode failures found by rendering — every other hardcoded colour in the
+  // corpus is a chart series or an accent, not a surface.
+  //
+  // The value is matched, not the line. A first version anchored on `background: "#` and missed
+  // a third card whose surface is behind a multi-line ternary (`active ? "#dcfce7" : "#fff"`),
+  // which is how a model actually writes a selected state.
+  // The no-token half is load-bearing after all: 35 corpus cards paint a `#fff` surface *and*
+  // use design tokens elsewhere, which is a deliberate light accent on a themed card. An earlier
+  // version dropped this clause after measuring that it changed nothing — that measurement was
+  // taken against the narrower regex, which never saw those 35.
+  "HARDCODED-BACKGROUND": (src: string) =>
+    !/dsw-alias|dsw-token/.test(src) &&
+    [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
@@ -116,7 +123,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
