@@ -5374,3 +5374,26 @@ others. Verified by breaking a screen deliberately and watching the push refuse.
 
 **Anything you have done twice while intending not to is not a discipline problem.** Two identical
 mistakes in one session is the signal to spend the ten minutes making it mechanically impossible.
+
+### Four screens, and the loop closing on each (2026-08-23)
+
+The corpus-mining pass added four: `UNGUARDED-ASYNC-HANDLER` (23), `UNGUARDED-NUMBER-INPUT` (10),
+`UNLABELLED-SLIDER` (46) and `UNSTOPPABLE-MOTION` (37). Each got a negative control, a
+quiet-on-the-fix pair, a construct entry, and a rule shown as code.
+
+Each was then checked the only way that means anything — by asking for a card that would trip it:
+
+- *live search over `bash`* → `const id = ++runId.current` **and** an `AbortController` **and** an
+  unmount cleanup, more than the rule spells out.
+- *media panel, two sliders and a seek field* → both sliders labelled, focus rings replaced, and
+  the number field keeping its raw string in state, which is the better fix than the ternary
+  shown. It labelled the number field too, which nothing asked for.
+- *"add some animation so they look like they're growing"* → `matchMedia` guarding the rAF loop
+  **and** an `@media (prefers-reduced-motion)` block disabling the decorative animations, on a
+  card explicitly asked to animate.
+
+The rate to compare against: **7 of the 131 animating corpus cards honoured the setting at all.**
+
+`prefers-reduced-motion` also became the third prefix-unsafe screen, which is the useful
+generalisation from all this: **the fix is written after the thing it fixes**, so the streaming
+prefix always shows the defect alone. Expect the fourth.
