@@ -7139,6 +7139,13 @@ timestamp rather than an elapsed count, which is a different rule in the same se
 rules written today, four landing on their first test**: `aria-live`, the clickable row, the
 `<select>` label, and now the guarded write.
 
+Four for four invites the obvious objection — that the test prompts telegraph the answer. They do
+not. Each names the CONSTRUCT and says nothing about the fix: `点目录能进去看里面有什么` forces a
+fetch and never mentions announcing; `每行点击可以复制` forces a clickable row and not how to make
+it reachable; `两个下拉选时区` names the `<select>` and not the label; `要能持久化` asks for
+persistence and not for a `try`. **The fourth was drawn by `sample-prompts.py` from the corpus,
+so it was not written by anyone who knew what was being tested.**
+
 The same card tripped `HARDCODED-BACKGROUND` on a **toggle switch knob**, third instance of a
 class that has now appeared three times: a piano key, a range thumb, a switch knob. All white by
 physical convention rather than by theme, and a themed one looks broken.
