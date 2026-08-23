@@ -4486,3 +4486,18 @@ for the reader to convert:
 
     background: "var(--dsw-alias-state-business-primary)", color: "#fff"   // a filled button
     color: "var(--dsw-alias-brand-primary)"                                // emphasis, no fill
+
+### A phrase that appears twice cannot detect one of them going (2026-08-23)
+
+The prompt test pins each measured rule by a distinctive phrase from its code block. The first
+version pinned the `streamText` abort on `running.current?.abort()` — which appears **twice** in
+that block, once in the regenerate path and once in the unmount effect. Deleting either leaves
+the other, so the assertion passed on a block that had lost half its point.
+
+Found the same way as everything else today: mutate the thing, check the guard notices. It did
+not, so the phrase moved to `const ctrl = (running.current = new AbortController())`, which
+appears once. All four rule assertions were then re-checked by weakening each block in turn —
+all four now fail.
+
+**An assertion on a substring is an assertion about how many times it occurs**, and `toContain`
+never tells you. Count the occurrences when you choose the phrase.
