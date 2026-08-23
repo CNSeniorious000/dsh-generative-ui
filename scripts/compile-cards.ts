@@ -20,8 +20,11 @@ import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
 const SCREENS = {
   // `export default function Pie` next to `import { Pie } from "recharts"`: the card renders
   // itself, and dies with no useful error.
+  // Both spellings of the default export. 377 of 378 corpus cards write `export default
+  // function X`, and the screen only knew that one — the 378th writes `const X = () => …;
+  // export default X`, which shadows exactly the same way and was invisible.
   "SHADOWED-EXPORT": (src: string) => {
-    const def = /export default function (\w+)/.exec(src)?.[1];
+    const def = (/export default function (\w+)/.exec(src) ?? /export default ([A-Z]\w*)\s*;?\s*$/m.exec(src))?.[1];
     const imported = [...src.matchAll(/import\s*\{([^}]+)\}\s*from/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim()));
     return def !== undefined && imported.includes(def);
   },
@@ -142,7 +145,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "fixed-overlay.tsx": "VIEWPORT-UNITS", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "fixed-overlay.tsx": "VIEWPORT-UNITS", "shadowed-const.tsx": "SHADOWED-EXPORT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
