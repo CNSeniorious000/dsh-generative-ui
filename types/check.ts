@@ -3,30 +3,29 @@
  *
  * They are hand-written on purpose — a card should see the capability surface, not how it
  * reaches the host — but a surface nobody checks drifts, and the model would find out by
- * getting a false error from `genui check`. This file is type-only: `bun run typecheck`
- * fails if a signature moves without its declaration moving too.
+ * getting a false error from `genui check`. This file is type-only: `bun run typecheck` fails
+ * if a signature moves without its declaration moving too.
+ *
+ * The declarations are IMPORTED, not transcribed. An earlier version restated them by hand and
+ * said so: "editing a `.d.ts` alone changes nothing — replacing `bash(command: string)` with
+ * `bash(command: number)` leaves `tsc` silent." That was true, and it made this file a check on
+ * a copy rather than on the thing — the same shape as `compiler.test.ts` testing a
+ * re-implementation of its own module. `types/` is on the tsconfig `include`, so the ambient
+ * `declare module` blocks resolve here directly.
  */
+import type * as Ai from "$dsh/ai";
+import type * as Chat from "$dsh/chat";
+import type * as Exec from "$dsh/exec";
+import type * as Fs from "$dsh/fs";
 import type { bind } from "../src/client/runtime/bindings.ts";
 
 type Bound = ReturnType<typeof bind>;
 
-/**
- * What the `.d.ts` files declare, TRANSCRIBED BY HAND. The `.d.ts` themselves are not read
- * here — TypeScript cannot import an ambient `declare module` as a value type — so this
- * transcription is the thing being checked, and editing a `.d.ts` alone changes nothing.
- * Verified: replacing `bash(command: string)` with `bash(command: number)` in exec.d.ts
- * leaves `tsc` silent. Keep it in step with the `.d.ts` by hand, not with `bind`.
- */
 type Declared = {
-  chat: { sendMessage: (text: string) => void };
-  ai: { streamText: (options: { prompt: string; system?: string; signal?: AbortSignal } | string) => AsyncIterable<string> };
-  fs: {
-    readFile: (path: string) => Promise<string>;
-    readdir: (path: string) => Promise<{ name: string; type?: "file" | "directory"; size?: number }[]>;
-    readBytes: (path: string) => Promise<Uint8Array<ArrayBuffer>>;
-    writeFile: (path: string, content: string) => Promise<void>;
-  };
-  exec: { bash: (command: string, options?: { signal?: AbortSignal }) => Promise<{ stdout: string; stderr: string; exitCode: number | null; truncated: { stdout: boolean; stderr: boolean }; timedOut: boolean }> };
+  chat: { sendMessage: typeof Chat.sendMessage };
+  ai: { streamText: typeof Ai.streamText };
+  fs: { readFile: typeof Fs.readFile; readdir: typeof Fs.readdir; readBytes: typeof Fs.readBytes; writeFile: typeof Fs.writeFile };
+  exec: { bash: typeof Exec.bash };
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one
