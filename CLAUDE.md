@@ -5172,7 +5172,17 @@ It was found by running `scripts/eval.sh` — by *using* the thing rather than t
 the whole lesson: the test suite verifies what the code says about itself, and one real
 invocation checked something none of it could.
 
-With it loading, four fresh cards over four prompts: **all four compile, no screen fires on any
-of them, and all four use `:focus-visible`** — against a corpus where 73 of 378 strip the ring
-and put nothing back. Four cards is not a rate and is not offered as one; it is the first
-evidence that the rules do anything at all, which until this fix was strictly zero.
+With it loading, nine fresh cards over nine prompts, screened the same way as the corpus:
+
+| | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
+| --- | --- | --- | --- | --- |
+| corpus, before the rules | 378 | 28% | 19% | **0%** |
+| fresh, after | 9 | 0% | 0% | **78%** |
+
+Nine cards is not a rate, and 0% of 9 is what a coin does too. The column that carries weight is
+the last one: `:focus-visible` appears **zero times in 378 corpus cards** — not rarely, never —
+and in seven of the first nine written since. A behaviour that did not exist in the prior
+distribution appearing immediately is not something a small sample can manufacture.
+
+That is the first evidence the rules do anything, and until the loader was fixed the honest
+figure for all of them was zero.
