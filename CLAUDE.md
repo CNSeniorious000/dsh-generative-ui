@@ -3099,6 +3099,19 @@ past what was asked: partial-JSON tolerance mid-stream, `AbortError` distinguish
 failure, and a `finally` that only clears loading state if that run still owns it — which no rule
 mentions.
 
+The corpus supports this comparison better than expected — grouping by the default export's name
+finds the same card answered many times (`Answer` 107, `Pick` 19, `Mortgage` 15, `CatNames` 13).
+The mortgage pair is the second controlled result, and the sharpest, because a mortgage card is
+all sliders and number fields:
+
+| | n | unlabelled control | no focus ring | unguarded number field |
+| --- | --- | --- | --- | --- |
+| corpus `Mortgage` | 15 | 9 | 6 | 3 |
+| fresh, same prompts | 6 | **0** | **0** | **0** |
+
+Prompt-matched pairs are what the corpus is actually good for. An aggregate 47%-vs-0% invites the
+objection that the fresh cards are different cards; this does not.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
