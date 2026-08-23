@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { deliver, deliveryFor, importSignature } from "../src/client/runtime/GenUISurface.tsx";
+import { deliver, deliveryFor, importSignature, probeOutcome } from "../src/client/runtime/GenUISurface.tsx";
 
 /**
  * The frame-delivery decision. `pushCode` APPENDS while a session event carries the whole
@@ -111,4 +111,26 @@ test("a card with no imports has an empty signature", () => {
 
 test("both quote styles are seen", () => {
   expect(importSignature(`import a from 'recharts';`)).toBe("recharts");
+});
+
+/**
+ * What an import probe does when it settles. All three branches were unconstrained inside the
+ * effect, and each wrong answer is a distinct visible bug: a stale probe reverts the import map
+ * and the newer frame's packages vanish; a missing redeliver leaves a settled card blank for
+ * good; an extra one truncates a stream to whatever prefix was current when the probe fired.
+ */
+test("a probe overtaken by a later frame is dropped", () => {
+  expect(probeOutcome("recharts", "recharts,motion", false, "code")).toBe("stale");
+});
+
+test("a settled surface must be re-rendered — nothing else will apply the map", () => {
+  expect(probeOutcome("recharts", "recharts", false, "code")).toBe("redeliver");
+});
+
+test("while streaming the next frame applies it; re-rendering here truncates the stream", () => {
+  expect(probeOutcome("recharts", "recharts", true, "code")).toBe("store");
+});
+
+test("an empty buffer is never re-rendered — that would clear the surface", () => {
+  expect(probeOutcome("recharts", "recharts", false, "")).toBe("store");
 });

@@ -187,6 +187,24 @@ const RETRY_BACKOFF_MS = 400;
  * streaming frame is not a failed attempt), `retry` must increment BEFORE scheduling (the delay
  * is a function of the count), and `report` must not increment at all.
  */
+/**
+ * What to do when an import probe settles. Three outcomes and every one is a bug if wrong:
+ *
+ * - **stale** — a later frame's probe won the race. Applying this one reverts the map to an
+ *   older import set, and the newer frame's packages go missing.
+ * - **redeliver** — a settled surface has no next frame. `setImportMap` only stores; it
+ *   schedules nothing, so without a re-render the card stays blank for good.
+ * - **store** — while streaming, the very next frame applies the map. Re-delivering here instead
+ *   would replace the buffer with whatever prefix was current when the probe fired, truncating
+ *   the stream mid-flight.
+ *
+ * The `delivered !== ""` part is not defensive: re-rendering an empty buffer clears the surface.
+ */
+export const probeOutcome = (signature: string, current: string, streaming: boolean, delivered: string): "stale" | "redeliver" | "store" => {
+  if (signature !== current) return "stale";
+  return !streaming && delivered !== "" ? "redeliver" : "store";
+};
+
 export const dispatchError = (
   action: "ignore" | "retry" | "report",
   effects: { attempts: () => number; setAttempts: (n: number) => void; schedule: (ms: number) => void; report: () => void },
@@ -308,14 +326,10 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       importedRef.current = signature;
       // A later frame's probe can settle first; without this the map reverts to an older import set.
       void mergeFallbackImports(localImports(), code).then((imports) => {
-        if (signature !== importedRef.current) return;
+        const settle = probeOutcome(signature, importedRef.current, streamingRef.current, deliveredRef.current);
+        if (settle === "stale") return;
         renderer.setImportMap({ imports });
-        // `setImportMap` only stores — it schedules nothing, so whoever delivers next is what
-        // makes the new map take effect. While streaming that is the very next frame, and
-        // re-delivering here instead would replace the buffer with whatever prefix was current
-        // when the probe was fired — truncating the stream mid-flight. Only a settled surface
-        // has no next frame, and that is the one that would otherwise stay blank for good.
-        if (!streamingRef.current && deliveredRef.current !== "") renderer.render(deliveredRef.current);
+        if (settle === "redeliver") renderer.render(deliveredRef.current);
       });
     }
     retriesRef.current = 0;
