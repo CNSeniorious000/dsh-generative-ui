@@ -7081,3 +7081,24 @@ So the procedure terminates: of the five largest screens, two had a rule missing
 incomplete in a way that only shows up as a stubborn residue in one screen** — and the way to find
 out is to look at where the residue sits, not to reread the rule.
 
+### A rule that works creates new surface area (2026-08-24)
+
+The skill has a section pushing persistence — a canvas outlives its reply, your own next edit
+remounts it, store the start timestamp not the elapsed count. It worked, dramatically:
+
+    localStorage: 1 corpus card → 20 fresh cards
+
+A twentyfold increase, and the clearest case of a rule creating behaviour rather than correcting
+it. Which also created surface area nothing had looked at: **10 of the 29 fresh writes are bare.**
+`setItem` throws on a full quota or with storage disabled, and from inside an effect that reaches
+the error boundary — losing the whole card over a saved preference.
+
+The reads are fine unguarded (a read failing is engine-specific and historically rare), so the
+rule is one `try` around the write and none around the read. Added to the same section that asked
+for the persistence in the first place.
+
+Worth noting as a category: **a rule that changes what cards do creates defects that did not exist
+before it.** Nothing here would have found this by mining the corpus, because the corpus has one
+`localStorage` card. The population a rule creates has to be measured separately from the
+population it was derived from.
+
