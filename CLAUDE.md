@@ -5608,6 +5608,12 @@ because the phrase I anchored the insert on sat in the wrong place and the edit 
 anyway. `test/record-structure.test.ts` now checks dated sections are in order and titles are
 unique — the failure mode reading is worst at catching in a 5,600-line file.)*
 
+*(It also checks that every `scripts/…`, `test/…` or `src/…` path this file names actually
+exists. Three were dangling: one already flagged in-line as fictional, and two naming files
+deleted on a release day — described as having "come out together", which a reader could take
+either way. A path in prose is a promise that something is there, and a wrong one costs whoever
+believes it. Passages about another repository, or that say the file is gone, opt out.)*
+
 ### All 378, actually rendered (2026-08-23)
 
 Having built the driver, the corpus went through it too — every card compiled in-page, mounted
