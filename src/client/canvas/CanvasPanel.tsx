@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { compiler, GenUISurface } from "../runtime/GenUISurface.tsx";
 import { canvasPath } from "../../contract.ts";
 import { readCanvasChild } from "./read.ts";
-import { inlineSubPages } from "./subpages.ts";
+import { importsSibling, inlineSubPages } from "./subpages.ts";
 import { useDismissable } from "./useDismissable.ts";
 
 export type Canvas = { id: string; code: string; streaming: boolean };
@@ -45,7 +45,7 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
 
   useEffect(() => {
     if (cwd === undefined || id === undefined || code === undefined || streaming) return;
-    if (!RELATIVE_IMPORT.test(code)) return;
+    if (!importsSibling(code)) return;
     const key = `${id}:${code.length}`;
     let live = true;
     const urls: string[] = [];
@@ -67,8 +67,6 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
 }
 
 /** Cheap gate: only a canvas that actually writes a relative import pays for the pass. */
-const RELATIVE_IMPORT = /(\bfrom\s*|\bimport\s*\(\s*)["']\.[^"']*["']/;
-
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
 

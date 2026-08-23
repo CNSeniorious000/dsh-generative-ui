@@ -7,7 +7,7 @@
  * each side awaits the other's URL. It hung in exactly this test.
  */
 import { describe, expect, test } from "bun:test";
-import { inlineSubPages } from "../src/client/canvas/subpages.ts";
+import { importsSibling, inlineSubPages } from "../src/client/canvas/subpages.ts";
 
 const ENTRY = ".dsh/ui4a/canvases/c.ui4a.tsx";
 
@@ -150,4 +150,20 @@ test("a specifier that is also a string literal is left alone", async () => {
   );
   expect(out).toContain('const label = "./board"');
   expect(out).not.toContain('from "./board"');
+});
+
+/**
+ * The panel asks this before paying for a resolve pass, and it must answer the same way twice.
+ *
+ * `SPECIFIER` is global, so a bare `.test` advances `lastIndex` and the second call on the same
+ * string returns false — a card would resolve its sub-pages on one render and silently drop
+ * them on the next. `CanvasPanel` used to keep its own non-global copy of the regex, which
+ * avoided this and introduced a worse problem: two patterns to widen instead of one.
+ */
+test("importsSibling is not stateful", () => {
+  const code = 'import { A } from "./a";';
+  expect(importsSibling(code)).toBe(true);
+  expect(importsSibling(code)).toBe(true);
+  expect(importsSibling('import { useState } from "react";')).toBe(false);
+  expect(importsSibling('const label = "./a";')).toBe(false);
 });

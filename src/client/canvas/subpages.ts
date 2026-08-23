@@ -12,8 +12,24 @@
  * has no base to resolve against. Children may import their siblings, which works for the same
  * reason once they too have been rewritten.
  */
-/** Matches the specifier of a static import or re-export; the capture is the specifier itself. */
+/**
+ * Matches the specifier of a static import or re-export; the second capture is the specifier.
+ *
+ * Not exported: it is global, so `.test` advances `lastIndex` and the SECOND call on the same
+ * string returns false. Callers get `importsSibling` instead, which owns the reset.
+ */
 const SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*)["'](\.[^"']*)["']/g;
+
+/**
+ * Whether the card imports a sibling at all — the cheap question `CanvasPanel` asks before
+ * paying for a resolve pass. It had its own copy of the regex, identical but for the `g` flag;
+ * a widening applied to one and not the other means the panel never calls `inlineSubPages` and
+ * the card silently renders without its sub-pages.
+ */
+export const importsSibling = (code: string) => {
+  SPECIFIER.lastIndex = 0;
+  return SPECIFIER.test(code);
+};
 
 /**
  * @param read fetches one child by its specifier, returning its source and the real filename
