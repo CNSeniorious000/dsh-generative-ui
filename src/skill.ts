@@ -102,6 +102,12 @@ Two things follow from the lifetime difference:
   stacks up, but the elapsed value is gone. Store the *start timestamp* rather than the elapsed
   count, so the display is derived and survives a remount by arithmetic.
 
+  **And \`localStorage\` can throw.** A quota that is full, or storage disabled entirely, and
+  \`setItem\` raises — from inside an effect, where it reaches the error boundary and takes the
+  whole card down over a saved preference. Persistence went from 1 corpus card to 20 fresh ones
+  once this section asked for it, and **10 of those 29 writes are bare**. One \`try\` around the
+  write, and none around the read: failing to save a preference is not worth losing the card.
+
 ## Ask with an interface when the request is underspecified
 
 "Build me a tool", "show me the data" — several plausible readings, no default. Guessing wastes a build; asking in prose makes the user type the answer back.
