@@ -5551,16 +5551,16 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 47% | 19% | **0%** |
-| fresh, after | 39 | 0% | 0% | **85%** |
+| fresh, after | 47 | 0% | 0% | **87%** |
 
-Thirty-nine cards is not a rate, and 0% of 39 is still a small sample. Two caveats before the number
+Forty-seven cards is not a rate, and 0% of 47 is still a small sample. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
-by checks derived from it; and 47% is against all 21 screens, eight of which did not exist when
+by checks derived from it; and 47% is against all 22 screens, nine of which did not exist when
 the earlier draft of this table said 28%. The corpus figure has only ever moved by screens being
 ADDED — no card changed — which is the honest reading of why it climbed from 28% to 47%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 33 of the 39 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 41 of the 47 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 
