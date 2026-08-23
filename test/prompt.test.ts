@@ -56,10 +56,10 @@ test("the prompt is whole", () => {
  * the code block back to prose fails rather than quietly undoing the measurement.
  */
 const SKILL_RULES = [
-  ["abort the previous streamText", "running.current?.abort()"],
+  ["abort the previous streamText", "const ctrl = (running.current = new AbortController())"],
   ["abort the previous bash when polling", "ctrl.abort(); clearInterval(timer)"],
   ["honour prefers-reduced-motion", "prefers-reduced-motion: reduce"],
-  ["keyboard-reachable controls", "aria-label"],
+  ["keyboard-reachable controls", "<button aria-label=\"复制\" onClick={copy}>"],
 ] as const;
 
 for (const [name, phrase] of SKILL_RULES) {
