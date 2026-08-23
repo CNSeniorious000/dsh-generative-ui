@@ -5226,6 +5226,11 @@ Final for the day: **34 of 34 clean under all 18 screens**, and all 31 whose imp
 can resolve actually paint. The three skipped import `recharts`, which is deliberately not
 stubbed.
 
+`bun scripts/fresh-rates.ts` re-derives those two numbers, because they went 17 → 30 → 34 in a
+day and two of the hand-edits were briefly wrong — the same rot `corpus-rates.ts` exists to
+prevent, reintroduced for the other card set within hours of writing that down. The prompts that
+produced them are in `test/eval-fixtures.md`.
+
 That is the first evidence the rules do anything, and until the loader was fixed the honest
 figure for all of them was zero.
 
