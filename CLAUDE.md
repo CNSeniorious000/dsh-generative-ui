@@ -1438,6 +1438,9 @@ The bug was always there; it took being forced out of the usual working director
 **Path predicates written against one location are assertions about the environment**, and this
 one had been true for two days by luck.
 
+*(The file is gone — `typecheck` is plain `tsc --noEmit` since upstream stopped emitting those
+two errors. Kept because the lesson is about path predicates, not about that script.)*
+
 ### A game never hides its own source (2026-08-22)
 
 `hasPainted` decides when the host code block is hidden: text, or an `svg`. Reading it against
