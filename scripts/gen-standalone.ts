@@ -39,6 +39,11 @@ const EMPTY_RESULT: Record<string, string> = {
   // arrived. Anything unlisted silently returns undefined, so a new member starts out broken.
   bash: '{ stdout: "", stderr: "", exitCode: 0, truncated: { stdout: false, stderr: false }, timedOut: false }',
 };
+// Which stubs are `async`. Hand-written on purpose and NOT derived: the real members are arrow
+// functions returning promises, so `constructor.name === "AsyncFunction"` sees only one of the
+// five — a derived version silently made four stubs synchronous, which an `await` shrugs at and
+// a `for await` does not. The `unlisted` gate below is what keeps this list honest instead.
+// `streamText` returns an async ITERABLE rather than a promise, so it is correctly absent.
 const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash"]);
 
 const groups = bind() as Record<string, Record<string, unknown>>;
@@ -50,6 +55,11 @@ const imports: Record<string, string> = {};
 // binding alone, so the choice has to be stated here rather than defaulted.
 const VOID_MEMBERS = new Set(["sendMessage", "writeFile"]);
 const unlisted = Object.values(groups).flatMap((members) => Object.keys(members)).filter((name) => EMPTY_RESULT[name] === undefined && !VOID_MEMBERS.has(name));
+const notAsync = Object.values(groups).flatMap((members) => Object.keys(members)).filter((name) => !ASYNC.has(name) && !VOID_MEMBERS.has(name) && name !== "streamText");
+if (notAsync.length > 0) {
+  console.error(`gen-standalone: ${notAsync.join(", ")} is neither async nor void — add to ASYNC, or to VOID_MEMBERS if it returns nothing`);
+  process.exit(1);
+}
 if (unlisted.length > 0) {
   console.error(`gen-standalone: no stub result for ${unlisted.join(", ")} — add to EMPTY_RESULT, or to VOID_MEMBERS if it really returns nothing`);
   process.exit(1);
