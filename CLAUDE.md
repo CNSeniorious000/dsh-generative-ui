@@ -5545,6 +5545,11 @@ corpus card throwing `ts is not defined`, and this time every glob is a string l
 added today argues for building something; nothing in a day of that work would have noticed the
 prose side eroding, and it is the side with no checker at all.
 
+*(Housekeeping, from the same day: this section spent an hour **inside** the one before it,
+because the phrase I anchored the insert on sat in the wrong place and the edit succeeded
+anyway. `test/record-structure.test.ts` now checks dated sections are in order and titles are
+unique — the failure mode reading is worst at catching in a 5,600-line file.)*
+
 ### All 378, actually rendered (2026-08-23)
 
 Having built the driver, the corpus went through it too — every card compiled in-page, mounted
