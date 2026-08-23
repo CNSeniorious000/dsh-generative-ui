@@ -7032,3 +7032,12 @@ The general shape, and the third instance of it today: **a check that maps N thi
 confirms one of them.** The rules→screens audit had the same bug in the other direction this
 morning (one bullet covering two screens), and the fix was the same — allow a list.
 
+Then found the same bug a fourth time, in `screens-quiet-on-fix.test.ts`: `PAIRS` maps one screen
+to one `[defect, fix]`, so the icon-button half of `UNREACHABLE-CONTROL`, the `<select>` half of
+`UNLABELLED-CONTROL`, and the `<button>` half of `BRAND-PRIMARY-FILL` had **no quiet-on-fix case
+at all**. Six tests added, all passing — the screens were right, nothing was checking.
+
+Four instances in one day of the same shape, in four different files. The lesson is not about
+lists: it is that **a one-to-one map is a claim that the thing has one part**, and nothing in the
+type says otherwise when it grows a second.
+

@@ -299,3 +299,23 @@ for (const [name, source] of SURFACED) {
     expect(SCREENS["SWALLOWED-CAPABILITY-FAILURE"](source)).toBe(false);
   });
 }
+
+/**
+ * The second construct of each two-construct screen. `PAIRS` above maps one screen to one
+ * [defect, fix], so a screen covering two shapes gets half its behaviour pinned — the same bug
+ * that let `<select>` sit screened-but-unruled for a day, in a different file.
+ */
+const SECOND_CONSTRUCT: [string, string, string][] = [
+  ["UNREACHABLE-CONTROL", `<button onClick={copy}><Copy size={14} /></button>`, `<button aria-label="复制" onClick={copy}><Copy size={14} /></button>`],
+  ["UNLABELLED-CONTROL", `<select value={n} onChange={f}><option>每天</option></select>`, `<select aria-label="频率" value={n} onChange={f}><option>每天</option></select>`],
+  ["BRAND-PRIMARY-FILL", `<button style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }}>x</button>`, `<button style={{ background: "var(--dsw-alias-state-business-primary)", color: "#fff" }}>x</button>`],
+];
+
+for (const [screen, defect, fix] of SECOND_CONSTRUCT) {
+  test(`${screen}: fires on its second construct`, () => {
+    expect(SCREENS[screen](defect)).toBe(true);
+  });
+  test(`${screen}: quiet on that construct fixed`, () => {
+    expect(SCREENS[screen](fix)).toBe(false);
+  });
+}
