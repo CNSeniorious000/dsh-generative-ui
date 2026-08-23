@@ -2925,6 +2925,31 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### "0 of 378" means two different things (2026-08-23)
+
+Counting which screen is the SOLE detector on a card — the ones carrying defects nothing else
+would catch — turned up a 21st screen missing from the list entirely. `JSX-SUBSCRIPT` fires on
+nothing.
+
+That is the same reading that condemned the React-import rule earlier today, and here it is the
+opposite verdict. The distinction is whether the screen CAN fire:
+
+- **React-import-first**: written for a mechanism that does not exist (imports are hoisted). No
+  input could ever trip it. Dropped.
+- **`JSX-SUBSCRIPT`**: trips on both spellings of `<Icons[kind] />` and stays quiet on the fix,
+  on `Record<Step["channel"], string>`, and on `useState<Foo[]>`. It works; the corpus simply
+  does not contain the defect. Its one historical hit was the type-argument false positive, and
+  retightening it to zero was the fix.
+
+So a zero is only evidence about the rule once you have shown the screen answers correctly on a
+constructed case. `test/cards-negative/` is what supplies that, which is why every screen needs a
+control even — especially — when the corpus is silent.
+
+The sole-detector table is the other half. `NO-FOCUS-RING` is the only screen firing on 50 cards
+and `UNLABELLED-CONTROL` on 28; six screens are sole detector on nothing, meaning every card they
+catch is already caught. That is not an argument for deleting them — a screen exists to name a
+cause, and a card flagged by five screens with the wrong one dropped gets diagnosed wrong.
+
 ### The screens strictly contain the paint check (2026-08-23)
 
 Cross-tabulating all 378 corpus cards, now that 303 of them actually render:
