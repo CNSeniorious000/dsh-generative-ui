@@ -156,7 +156,12 @@ export const SCREENS = {
   // `:focus-visible` rule or a `boxShadow` driven by focus state, so both count.
   "NO-FOCUS-RING": (src: string) => {
     const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
-    return /outline:\s*["']none["']/.test(code) && !/:focus-visible|outlineOffset|outline-offset|boxShadow[^,;}]*focus|focus[^,;}]*boxShadow/i.test(code);
+    // A replacement need not be an outline: a `focused` flag driving borderColor is the same
+    // affordance, and `beaa3fbf962b` in the corpus does exactly that — the one false positive
+    // in 76. Anything that reads a focus state and paints a border or shadow from it counts.
+    const replaced = /:focus-visible|outlineOffset|outline-offset|boxShadow[^,;}]*focus|focus[^,;}]*boxShadow/i.test(code)
+      || /\bfocus(?:ed)?\b[\s\S]{0,80}?\b(?:border|borderColor|boxShadow|outline)\b|\b(?:border|borderColor|boxShadow|outline)\b[^\n]{0,80}?\bfocus(?:ed)?\b/i.test(code);
+    return /outline:\s*["']none["']/.test(code) && !replaced;
   },
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and

@@ -4617,7 +4617,7 @@ a card moves a cursor nobody can see. The pattern is always the same shape: a bo
 (`border: "none", background: "transparent", outline: "none"`), where the browser's default ring
 does look wrong — so it goes, and nothing replaces it.
 
-`NO-FOCUS-RING` now screens for it at **76 of 378**, five times louder than any other screen
+`NO-FOCUS-RING` now screens for it at **73 of 378**, five times louder than any other screen
 here, and spot-checking the hits found real inputs every time. The skill carries the fix in both
 forms (a `:focus-visible` rule for a `<style>` block, a focus-driven `boxShadow` for inline),
 with the note that `:focus-visible` is what makes the ring keyboard-only — which is the reason
@@ -4638,7 +4638,7 @@ an order of magnitude:
 
 | screen | rate | every other screen |
 | --- | --- | --- |
-| `NO-FOCUS-RING` | 76 of 378 | |
+| `NO-FOCUS-RING` | 73 of 378 | |
 | `UNREACHABLE-CONTROL` | 18 of 378 | 0–3 of 378 |
 | `BRAND-PRIMARY-FILL` | 11 of 378 | |
 
@@ -4669,7 +4669,7 @@ line between these and the focus ring is that **`outline: "none"` with no replac
 in every context, and 9px is only wrong in some.**
 
 A screen firing on a fifth of the corpus is normally a sign the screen is wrong, so this one was
-audited element by element before being believed. Of the 76 hits, **57 sit inline on an
+audited element by element before being believed. Of the hits, **57 sit inline on an
 `<input>`**, one on a `<textarea>`, and the remaining 18 in a hoisted
 `const input: React.CSSProperties` that is then applied as `style={input}` to a real `<input>` —
 which is why a first pass, looking only at the nearest enclosing tag, could not classify them.
@@ -4679,6 +4679,25 @@ off a fifth of its controls and puts nothing back.
 **When a check fires far more than its neighbours, the cheap read is that it is broken.** Here
 the audit had to reach through a level of indirection to show it was not, and the indirection is
 the same reason the models keep doing it — the `outline: "none"` is nowhere near the `<input>`.
+
+That audit asked whether the hits were real. Asking the opposite question — whether the screen
+would stay quiet on a card doing it *right* — found the other kind of error, and the corpus had
+three: `9d5a008515d2` and `e38228c4050f` replace the ring with `:focus { border-color }`, and
+`beaa3fbf962b` with a `focused` boolean driving the border. All correct, all reported, because
+the predicate recognised only `:focus-visible` and a focus-paired `boxShadow`. **The ring does
+not have to be an outline.** Widened to accept anything painting a border or shadow from a focus
+state; 76 became 73, and all three cleared cards were checked individually rather than trusted
+because the count moved in the direction I wanted.
+
+The guard for it needed **its own file**. Adding the case to `near-misses.ui4a.tsx` looked like
+it worked and proved nothing: that card already carries a `:focus-visible` block for a different
+rule, so it stays quiet under the narrow predicate too. Reverting the screen is what exposed it —
+the card did not light up. `test/cards/focus-border.ui4a.tsx` exists so the focus-driven border
+is the *only* reason the screen is quiet, and reverting the widening does flag it.
+
+**A guard card only has teeth if the property it guards is the sole reason the screen stays
+quiet.** Verify one by breaking the code it guards and watching it fail — a guard that passes
+before and after the change is decoration.
 
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
