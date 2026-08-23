@@ -157,16 +157,14 @@ test("every screen has a rule telling the model not to do it", async () => {
  * takes the whole section down. Nothing here caught it: every other test reads the exported
  * string, while `dsh` is the only thing that PARSES it. Found by running `scripts/eval.sh`.
  *
- * Measured, by probing the loader with each form in turn: **inline code spans are exempt** —
- * `` `style={{}}` `` loads fine — and everything else is fatal, indented code blocks included.
- * That is the whole rule, and it is why this check strips inline code before looking.
+ * `{{` is fatal ANYWHERE in the text — inline code spans included, indented code blocks
+ * included. Verified against `dsh` itself by putting one back in each position and watching
+ * `scripts/loads.sh` fail; the loader is a plain string scan and markdown means nothing to it.
  *
- * Write `style={ { … } }` in a code block: same JSX, same meaning to a reader, no `{{`.
+ * Write `style={ { … } }` in prompt text: same JSX, same meaning to a reader, no `{{`.
  */
-const outsideInlineCode = (text: string) => text.replaceAll(/`[^`\n]*`/g, "");
-
 for (const [name, text] of [["the inline prompt", () => INLINE_PROMPT], ["the skill body", () => skillBody("types.json", "standalone.json")]] as const) {
-  test(`${name} carries no {{ outside an inline code span`, () => {
-    expect([...outsideInlineCode(text()).matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
+  test(`${name} carries no {{ for the loader to read as a variable`, () => {
+    expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
   });
 }
