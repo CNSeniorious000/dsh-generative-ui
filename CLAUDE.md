@@ -4333,6 +4333,15 @@ before concluding anything from a rate.
 
 The argument keys themselves confirm `collect.ts`'s design. Across every canvas-path tool call:
 `file_path` 208, `path` 2 — both in `PATH_KEYS` — and the rest are `command` (81) and `code`
-(75), which are `bash` and `run_code` *mentioning* a canvas path rather than writing one. The
-parser correctly collects none of those. Matching on argument shape rather than tool name is
-what makes that fall out for free.
+(75), which are `bash` and `run_code`. The parser collects neither, and only one of those is
+right: `bash` genuinely only *mentions* the path (it is running `genui check` on it), but
+**`run_code`'s 75 calls carry a real canvas write inside the `code` string.** Split the same
+way, they are 66 pre-contract to 0 and 9 post-contract to 9 — so the `.dsh/` change took on both
+write paths.
+
+Those nested writes are exactly what `toolCallsOf` walks sub-calls for, and the reason they look
+uncollected here is that **the persisted session log has no sub-call field at all** — the nesting
+exists only in the live transcript the runtime reads. Worth knowing before concluding from a
+disk-read corpus that a nested write is unhandled; the same file cannot answer that question.
+
+Matching on argument shape rather than tool name is what makes `bash` fall out for free.
