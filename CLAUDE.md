@@ -5500,3 +5500,19 @@ Two details made it work rather than skip half the corpus:
 **The expensive verification is worth building even if you run it once — it tells you what the
 cheap one has to catch.** The browser run is what proved this covers the ground; without it the
 `react-dom/server` version would be a guess about what a first render is worth.
+
+It then did the thing it was built to expose. The first version printed `paint: ok — every card
+renders something` while **silently skipping 120 of 378** for unresolvable imports (51 recharts,
+31 lucide-react, 22 partial-json, and four smaller) — and one of the skipped cards was
+`test/cards/metro.ui4a.tsx`, a reference card, inside `bun run check`. A gate reporting success
+about a card it never opened is precisely the failure this script exists to catch, reproduced in
+the script within an hour of writing it.
+
+Now the count is printed, and `lucide-react` — icons and nothing else — is rewritten to
+`const Play = () => null`, which renders `metro` faithfully (4300 bytes of markup, the real BPM
+UI) at no dependency cost. Zero skipped in `check`. The corpus still skips 120, which is stated
+rather than hidden; installing seven UI packages as devDependencies of a plugin to fix that is a
+worse trade than knowing the number.
+
+**Write the count of what you skipped next to the result.** Every gate in this repo that has ever
+lied did it by omission, never by a wrong answer.
