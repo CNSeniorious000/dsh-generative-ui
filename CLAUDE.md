@@ -4081,3 +4081,18 @@ cards use a multi-line ternary chain and only this one produced a bad frame, so 
 
 **`brokenFrames=1` and `brokenFrames=60` are different findings**, and the script prints the
 count rather than a boolean precisely so they can be told apart.
+
+### The screen rates, derivable rather than transcribed (2026-08-23)
+
+`bun scripts/corpus-rates.ts` prints every screen's hit count over the extracted corpus, with the
+cards named. That is deliberately **not** copied into this file: `audit-record.py` exists because
+a number transcribed into prose (`什么是二分查找` as both 2/3 and 1/3) outlives the measurement it
+came from, and a widened screen silently invalidates every sentence quoting its old rate — which
+is exactly what today's widenings would have done to four of them.
+
+As of this session every screen reports 0–3 of 378, and `JSX-SUBSCRIPT` reports 0. A screen at
+zero is not idle: it has controls in `test/cards-negative/` proving it still fires, which is the
+only thing that distinguishes "nothing to find" from "stopped looking".
+
+`scripts/screens.ts` now holds the predicates on their own, so a rate can be computed without
+running the whole compile sweep as a side effect.
