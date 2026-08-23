@@ -4740,8 +4740,13 @@ reports a number should not pretend to have one.**
 own hand-written list of them — a third copy alongside `bindings.ts` and the generated
 `types/standalone/*.js`. It was missing `readBytes` entirely and gave `bash` no `truncated` or
 `timedOut`, so a card reading `r.truncated.stdout` **threw during a render sweep and was
-reported broken for the harness's reason rather than its own.** One corpus card is in that
-state, which means the 97.4% paint rate was measured with a known-wrong denominator by one.
+reported broken for the harness's reason rather than its own.**
+
+Checked before claiming it changed anything: **no corpus card actually reads those fields off a
+`bash` result** — the one card that mentions `truncated` only declares the type and fills one in
+its own error path — so the 97.4% paint rate stands. The gap was latent, not realised. Worth
+saying plainly rather than leaving the stronger claim standing, because "this would have broken
+a card" and "this broke a card" are different findings and only one of them is true here.
 
 The route now concatenates the generated stubs. They are checked in, so a fresh clone still
 serves them with no build step, and the shapes come from the same place the exported page gets
