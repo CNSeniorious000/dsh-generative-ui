@@ -3196,7 +3196,9 @@ Measured directly, on medians across both sets:
 | event handlers | 2 | **4** |
 
 Nearly twice the size and twice the interactivity. Whatever the rules did, they did not do it by
-making cards smaller.
+making cards smaller. And the size costs nothing that matters: median compile is
+2.0ms for a corpus card and 2.4ms for a fresh one — sublinear in the byte count, and far below
+anything a reader could notice on a card that renders inline.
 
 Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
 prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
