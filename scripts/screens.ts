@@ -253,7 +253,20 @@ export const SCREENS = {
     const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
     // A `<div onClick>` is only unreachable if nothing makes it focusable. No corpus card gets
     // this right (0 of 19), but a screen that cannot be satisfied would flag the fix too.
-    if ([...code.matchAll(/<div\b[^>]*\bonClick=[\s\S]*?>/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(m[0]))) return true;
+    // Tag ends found by brace depth, not `[^>]*`: `onClick={() => …}` puts a `>` INSIDE the tag,
+    // so a regex stops there and never sees the `role`/`tabIndex`/`onKeyDown` that follow. A
+    // freshly generated card doing everything right was reported for exactly this — the same bug
+    // `UNLABELLED-CONTROL` was fixed for, left behind here.
+    const tagAt = (start: number) => {
+      let depth = 0;
+      for (let i = start; i < code.length; i += 1) {
+        if (code[i] === "{") depth += 1;
+        else if (code[i] === "}") depth -= 1;
+        else if (code[i] === ">" && depth === 0) return code.slice(start, i + 1);
+      }
+      return "";
+    };
+    if ([...code.matchAll(/<div\b(?=[^<]*\bonClick=)/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(tagAt(m.index)))) return true;
     // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
     // which announces fine, and matching those took the report from 17 to 41 of 378.
     return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]
