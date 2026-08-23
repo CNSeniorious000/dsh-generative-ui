@@ -75,4 +75,11 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   fi
 done
 echo
-echo $([[ "$uncovered" == "0" ]] && echo "every condition is constrained by a test" || echo "$uncovered unconstrained")
+if [[ "$uncovered" == "0" ]]; then
+  echo "every condition is constrained by a test"
+else
+  # Not part of `bun run check` — this takes an hour — but a report nothing can fail against is
+  # a report that gets skimmed. Exit non-zero so a CI job or a `&&` chain can hold the line.
+  echo "$uncovered unconstrained"
+  exit 1
+fi
