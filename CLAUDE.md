@@ -3275,9 +3275,9 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | signals per card | 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
-| fresh (76) | 3 | 4 | 18 | **39** | 12 |
+| fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 51 of 76 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 52 of 77 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -5973,13 +5973,13 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 47% | 19% | **0%** |
-| fresh, after | 76 | 21% | 0% | **86%** |
+| fresh, after | 77 | 21% | 0% | **86%** |
 
 The 24% is entirely `UNANNOUNCED-ASYNC-RESULT`, added after most of those cards were written: 15
-of 76 fetch something and announce nothing, and **every one predates the rule** — all six async
+of 77 fetch something and announce nothing, and **every one predates the rule** — all six async
 cards generated after it pass, including one written after `SWALLOWED-CAPABILITY-FAILURE` landed
 that satisfies both new rules on its first try. Under the screens that existed when each was
-generated, all 76 are clean. **Both numbers are true and the second one is the honest one** — a
+generated, all 77 are clean. **Both numbers are true and the second one is the honest one** — a
 clean streak means clean under the screens you had, and adding a screen is what turns that into a
 measurement. Fifty-seven cards is not a rate either. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
@@ -5988,7 +5988,7 @@ the earlier draft of this table said 28%. The corpus figure has only ever moved 
 ADDED — no card changed — which is the honest reading of why it climbed from 28% to 47%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 65 of the 76 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 66 of the 77 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    51 of 76 carry three or more accessibility signals (0→3 1→4 2→18 3→39 4→12)
+    52 of 77 carry three or more accessibility signals (0→3 1→4 2→18 3→39 4→13)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7109,11 +7109,11 @@ created — not just that it appears, but that it *works*.
 
 | behaviour | corpus → fresh | correct? |
 | --- | --- | --- |
-| `:focus-visible` | 0/378 → 65/76 | **65 of 65** rules select something the card renders |
-| `localStorage` | 1/378 → 21/76 | 20 of 30 writes guarded — the one gap, now ruled |
-| `AbortController` | 1/378 → 14/76 | **14 of 14** both abort and pass the signal |
-| `aria-live` | 1/378 → 12/76 | all on a persistent container, in the first paint |
-| `prefers-reduced-motion` | 7/378 → 63/76 | every animating card honours it |
+| `:focus-visible` | 0/378 → 66/77 | **65 of 65** rules select something the card renders |
+| `localStorage` | 1/378 → 22/77 | 20 of 30 writes guarded — the one gap, now ruled |
+| `AbortController` | 1/378 → 14/77 | **14 of 14** both abort and pass the signal |
+| `aria-live` | 1/378 → 12/77 | all on a persistent container, in the first paint |
+| `prefers-reduced-motion` | 7/378 → 64/77 | every animating card honours it |
 
 Three of these are 50–100× more common than in the corpus, so they are effectively new constructs
 in this population, and the failure mode to fear is **cargo-culting** — an attribute that appears
