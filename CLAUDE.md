@@ -5138,14 +5138,21 @@ reached a model, because `dsh` refused to load the section:
     dsh: UNKNOWN: malformed prompt variable reference "{{}}" in section "dsh-generative-ui:inline"
 
 The loader reads `{{…}}` as a variable reference and rejects the whole section when the contents
-are not a name. React's own `style={{ … }}` is exactly that token. Six had accumulated across
-`prompt.ts` and `skill.ts` — the oldest days old — each one added by a rule written to *show* a
-style object, which is to say the failure was caused by the rules being specific.
+are not a name. React's own `style={{ … }}` is exactly that token, and two had been added the
+same day in **indented code blocks** — by the rules written to *show* a style object, which is to
+say the failure was caused by the rules being specific.
+
+Probing the loader with each form pins the boundary, and it is worth knowing exactly: an
+occurrence inside an **inline code span** loads fine, and everything else is fatal — indented code
+blocks included. Four older occurrences sat in inline spans and had never been a problem. The
+first fix rewrote all six on the assumption that `{{` was fatal everywhere; the test written
+alongside it encoded that assumption and would have rejected the safe form forever. Measuring
+which forms actually fail is what turned a superstition into a rule.
 
 Nothing in 305 tests caught it. Every test reads the exported string; `dsh` is the only thing
 that **parses** it, and the parse has a syntax nobody had written down. Now
-`test/prompt.test.ts` asserts neither text contains `{{`, and the rules write `style={ { … } }`
-— same JSX, same meaning to a reader, no collision.
+`test/prompt.test.ts` strips inline code spans and asserts no `{{` in what remains, and the rules
+write `style={ { … } }` in code blocks — same JSX, same meaning to a reader, no collision.
 
 **A prompt has a consumer, and the consumer has a grammar.** A string that exists, is complete,
 is well-formed markdown, and is pinned by a dozen assertions can still be rejected in full by the

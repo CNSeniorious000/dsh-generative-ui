@@ -149,19 +149,24 @@ test("every screen has a rule telling the model not to do it", async () => {
 
 /**
  * dsh loads these through a template that reads `{{…}}` as a variable reference and REJECTS the
- * whole section when one does not parse as a name. React's own `style={{ … }}` is exactly that
- * token, so every rule written to show a style object made the plugin fail to load outright:
+ * whole section when the contents are not a name — the plugin does not degrade, it fails to load:
  *
  *     dsh: UNKNOWN: malformed prompt variable reference "{{}}" in section "dsh-generative-ui:inline"
  *
- * Six of them had accumulated, the oldest days before it was noticed — and nothing here caught
- * it, because every other test reads the exported string while `dsh` is the only thing that
- * PARSES it. Found by running `scripts/eval.sh`, which is to say by using the thing.
+ * React's own `style={{ … }}` is exactly that token, so a rule written to SHOW a style object
+ * takes the whole section down. Nothing here caught it: every other test reads the exported
+ * string, while `dsh` is the only thing that PARSES it. Found by running `scripts/eval.sh`.
  *
- * Write `style={ { … } }` in prompt text: same JSX, same meaning to a reader, no `{{`.
+ * Measured, by probing the loader with each form in turn: **inline code spans are exempt** —
+ * `` `style={{}}` `` loads fine — and everything else is fatal, indented code blocks included.
+ * That is the whole rule, and it is why this check strips inline code before looking.
+ *
+ * Write `style={ { … } }` in a code block: same JSX, same meaning to a reader, no `{{`.
  */
+const outsideInlineCode = (text: string) => text.replaceAll(/`[^`\n]*`/g, "");
+
 for (const [name, text] of [["the inline prompt", () => INLINE_PROMPT], ["the skill body", () => skillBody("types.json", "standalone.json")]] as const) {
-  test(`${name} carries no {{ for the loader to read as a variable`, () => {
-    expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
+  test(`${name} carries no {{ outside an inline code span`, () => {
+    expect([...outsideInlineCode(text()).matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
   });
 }
