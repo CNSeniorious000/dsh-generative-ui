@@ -3247,7 +3247,18 @@ card using none is **51%**. Identical. `role=` is if anything slightly worse.
 isolation, from whatever the card happened to need, with no transfer to the others — which is
 exactly why one rule landing at 92% (`aria-label`) said nothing about whether the next one would
 land at all. It also means the fresh cards' across-the-board improvement is not the same
-phenomenon: those move together.
+phenomenon. Counting how many of four independent signals (`:focus-visible`, `aria-label`,
+`prefers-reduced-motion`, `role=`) each card carries:
+
+| signals per card | 0 | 1 | 2 | 3 | 4 |
+| --- | --- | --- | --- | --- | --- |
+| corpus (378) | **337** | 35 | 6 | 0 | 0 |
+| fresh (60) | 2 | 2 | 13 | **34** | 9 |
+
+**Not one corpus card in 378 carries three of them. 43 of 60 fresh cards do.** The corpus's mode
+is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
+it is that accessibility became something a card does as a matter of course rather than something
+one card in ten stumbled into.
 
 The one structural difference: this rule went into `prompt.ts` alone, while every accessibility
 rule that landed (`aria-label` on icon buttons, 13% → 92%) lives in the skill's accessibility
