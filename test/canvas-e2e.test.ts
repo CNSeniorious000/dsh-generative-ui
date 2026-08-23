@@ -67,3 +67,23 @@ test("a child's sibling import needs the resolved path, not the basename", () =>
   // What a bare filename does — and it fails silently, as null, exactly like a missing file.
   expect(canvasChildPath(ID, "./ui", "Overview.tsx")).toBeNull();
 });
+
+/**
+ * A canvas is one card spread over files, and a screen asks a question about a CARD.
+ *
+ * `Tasks.tsx` writes `outline: "none"` and defines no replacement, so `NO-FOCUS-RING` fires on
+ * it alone — correctly, for the file. The entry defines `button:focus-visible` once for every
+ * sub-page, so the canvas is fine and the finding is noise. Screening a sub-page in isolation
+ * asks the question of the wrong unit.
+ *
+ * `cardsIn` is non-recursive, so no gate does this today. This test is what makes that a
+ * decision rather than an accident: a checker taught to walk canvases must concatenate first.
+ */
+test("a screen answers for the whole canvas, not one of its files", async () => {
+  const { SCREENS } = await import("../scripts/screens.ts");
+  const child = readFileSync(`${ROOT}/${ID}/Tasks.tsx`, "utf8");
+  expect(SCREENS["NO-FOCUS-RING"](child)).toBe(true);
+
+  const whole = [readFileSync(`${ROOT}/${ID}.ui4a.tsx`, "utf8"), child].join("\n");
+  expect(SCREENS["NO-FOCUS-RING"](whole)).toBe(false);
+});

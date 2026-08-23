@@ -2927,6 +2927,14 @@ at all and the construct entry would otherwise have been guarding nothing.
 
 ### The multi-file canvas nothing tested (2026-08-23)
 
+Running the six fixture files through the screens produced the first hit on fresh output in 44
+cards — `NO-FOCUS-RING` on `Tasks.tsx`. It is noise, and of a kind not seen before: **the entry
+defines `button:focus-visible` once for every sub-page**, so the canvas is fine and only the file
+looks wrong. A screen asks a question about a CARD, and a canvas is one card spread over files.
+
+No gate does this today (`cardsIn` is non-recursive), which is why it had never surfaced. Pinned
+as a test so it stays a decision: a checker taught to walk canvases must concatenate first.
+
 Generated one to check the `lastIndex` fix on something real — six files, an entry importing
 five sub-pages, four of those importing `./ui` and `./data` from each other. Two harness mistakes
 before it worked, and both are worth keeping:
