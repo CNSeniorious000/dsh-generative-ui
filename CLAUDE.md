@@ -4526,3 +4526,25 @@ Two gaps the skill had never mentioned at all, both found by counting rather tha
 Both are one word to fix and invisible to the author, since a mouse works either way. Now a rule
 with the line in it, following the finding above that a rule shown as code lands and a rule
 described in prose does not.
+
+### Two accessibility screens, and a false-positive rate that had to be halved (2026-08-23)
+
+`UNREACHABLE-CONTROL` covers the two gaps the rule audit found: `onClick` on a `<div>` (17 of
+378) and an icon-only `<button>` with no `aria-label` (31 occurrences). Both work with a mouse,
+which is exactly why neither author noticed.
+
+The first version reported **41 of 378** — 11%, which would have made it the loudest screen here
+and the first one worth ignoring. The cause was the button arm matching `{expr}` as a body, and
+most of those are `{playing ? "暂停" : "播放"}`: a text expression that announces perfectly well.
+Restricting the arm to an icon *element* took it to 18, and spot-checking three of those found
+grid cells and calendar days that genuinely take no focus.
+
+Two things about the near-miss card are worth keeping. Its guard for that arm needed the button
+to have **no attribute containing braces** — `onClick={() => setRows([])}` makes `[^>]*>` and
+`\{[^{}]*\}` unable to match together, so the card looked clean under the widened screen for the
+wrong reason. And a `<div>` whose *child* has the `onClick` is not a clickable div, which is why
+the div arm anchors on `<div\b[^>]*\bonClick=`.
+
+**A screen's first number is a hypothesis.** 41 of 378 was not "this corpus has a big
+accessibility problem", it was "this regex matches something else too" — and the way to tell is
+to open three of the hits.
