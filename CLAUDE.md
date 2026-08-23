@@ -2925,6 +2925,25 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### The multi-file canvas nothing tested (2026-08-23)
+
+Generated one to check the `lastIndex` fix on something real — six files, an entry importing
+five sub-pages, four of those importing `./ui` and `./data` from each other. Two harness mistakes
+before it worked, and both are worth keeping:
+
+1. **`./project-dashboard/Overview`, not `./Overview`.** Beside the entry file the contract
+   requires the id prefix; without it the specifier would resolve into another canvas's
+   directory. The model wrote it correctly and my reader did not.
+2. **`from` must be the path the server resolved, not the basename.** `src/index.ts` returns
+   `path + suffix` in `x-ui4a-filename` for exactly this reason. With a bare `Overview.tsx`,
+   every child-to-child sibling import comes back `null` — indistinguishable from a missing file.
+
+Production was right both times; the harness was wrong. But the gap was real: **nothing exercised
+a multi-file canvas end to end**, which is how a bug dropping every sibling import shipped — the
+unit tests each passed one hand-written specifier, and the shape that broke needed two calls on
+the same string in production's order. `test/canvas-e2e.test.ts` now runs the real fixture through
+the real contract and the real compiler; reverting the regex fix fails it deterministically.
+
 ### A shuffled-order flake that was a production bug (2026-08-23)
 
 Three of 20 shuffled orders failed on `inlineSubPages`, reporting zero rewritten imports. The
