@@ -8,6 +8,10 @@ const out = readFileSync(file, "utf8").split("\n").map((line, index) => {
   if (only !== undefined && index + 1 !== Number(only)) return line;
   const at = line.indexOf("if (");
   if (at === -1) return line;
+  // `skill.ts` documents the `AbortError` check inside its prompt template, and prose is not a
+  // branch. A statement's `if` opens the line; one with anything but whitespace before it is
+  // either inside a string or part of an `else if` chain the mutator cannot see the end of.
+  if (line.slice(0, at).trim() !== "" && !/(?:^|[{};)]\s*)$/.test(line.slice(0, at))) return line;
   let depth = 0;
   for (let i = at + 3; i < line.length; i += 1) {
     if (line[i] === "(") depth += 1;
