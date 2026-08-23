@@ -166,9 +166,15 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
   cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
   turn it on for vestibular disorders and migraine, and a looping demo is exactly what it is for.
-  It is one rule at the end of the \`<style>\` block you already have, and it covers everything:
+  With a \`<style>\` block it is one rule at the end of it, covering everything:
 
       @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }
+
+  **59 of those 131 cards style entirely inline**, where a media query has nowhere to live — so
+  read the preference instead and let the value fall out of it:
+
+      const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      style={{ transition: still ? "none" : "transform 90ms ease" }}
 
   Where the motion IS the explanation — a packet crossing a diagram, a sort swapping two bars —
   shorten it rather than removing it (\`animation-duration: .01s\`), so the card still steps.

@@ -61,7 +61,8 @@ test("the prompt is whole", () => {
 const SKILL_RULES = [
   ["abort the previous streamText", "const ctrl = (running.current = new AbortController())"],
   ["abort the previous bash when polling", "ctrl.abort(); clearInterval(timer)"],
-  ["honour prefers-reduced-motion", "prefers-reduced-motion: reduce"],
+  ["honour prefers-reduced-motion (media query)", "@media (prefers-reduced-motion: reduce)"],
+  ["honour prefers-reduced-motion (inline)", 'matchMedia("(prefers-reduced-motion: reduce)")'],
   ["keyboard-reachable controls", "<button aria-label=\"复制\" onClick={copy}>"],
 ] as const;
 

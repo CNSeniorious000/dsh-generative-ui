@@ -44,6 +44,10 @@ export default function Metronome() {
   const [beatsPerBar, setBeatsPerBar] = useState(4)
   const [currentBeat, setCurrentBeat] = useState(0)
   const [running, setRunning] = useState(false)
+  // A metronome is the case `prefers-reduced-motion` exists for: something that pulses forever.
+  // There is no `<style>` block here to hang a media query on, so the preference is read once
+  // and the transitions fall out of it — the beat still lands, it just stops moving.
+  const [still] = useState(() => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true)
   const [draft, setDraft] = useState<string | null>(null)
 
   const ctxRef = useRef<AudioContext | null>(null)
@@ -160,8 +164,8 @@ export default function Metronome() {
                 borderRadius: "50%",
                 background: active ? "var(--dsw-alias-state-business-primary)" : "transparent",
                 border: `1.5px solid ${accent || active ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-border-l2)"}`,
-                transform: active ? "scale(1.25)" : "scale(1)",
-                transition: "transform 90ms ease, background 90ms ease",
+                transform: active && !still ? "scale(1.25)" : "scale(1)",
+                transition: still ? "none" : "transform 90ms ease, background 90ms ease",
               }}
             />
           )
@@ -269,7 +273,7 @@ export default function Metronome() {
           alignItems: "center",
           justifyContent: "center",
           boxShadow: running ? "0 0 0 8px color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent)" : "none",
-          transition: "box-shadow 150ms ease",
+          transition: still ? "none" : "box-shadow 150ms ease",
         }}
       >
         {running ? <Pause size={26} /> : <Play size={26} style={{ marginLeft: 3 }} />}
