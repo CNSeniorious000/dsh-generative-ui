@@ -5186,3 +5186,11 @@ distribution appearing immediately is not something a small sample can manufactu
 
 That is the first evidence the rules do anything, and until the loader was fixed the honest
 figure for all of them was zero.
+
+The other high-rate screen moved the same way and more cleanly. `UNREACHABLE-CONTROL` fires on
+19 corpus occurrences of `<div onClick>` with no keyboard affordance; the nine fresh cards
+contain **none at all** — 22 `<button>` elements between them instead. Worth noting because the
+rule offers `tabIndex`/`onKeyDown` as the remedy and the model took the better one: a control
+that was never a div needs no affordance bolted on. **A rule that names the fix can still be
+followed by removing the problem**, which is the outcome to hope for and not the one you measure
+for, since the screen for the bad construct cannot see it.
