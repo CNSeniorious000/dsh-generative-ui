@@ -43,6 +43,15 @@ Object.assign(globalThis, {
     get length() { return store.size },
   },
   matchMedia: (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} }),
+  // Only `createElement`, and only enough of the result to survive being poked. A contrast
+  // checker parses CSS colours through a canvas `fillStyle` round-trip — legal in a browser, and
+  // called during render, so `react-dom/server` hit `document is not defined` and this script
+  // reported a working card as broken. That is the exact failure it exists to avoid making.
+  //
+  // Deliberately NOT a DOM: anything that needs a real one should be reported, not faked into
+  // passing. `getContext` returning null is what a browser does for an unsupported type, so a
+  // card that handles that path correctly still paints and one that assumes success still fails.
+  document: { createElement: () => ({ getContext: () => null, style: {}, setAttribute: () => {} }) },
 });
 
 await initTsxFromDisk();

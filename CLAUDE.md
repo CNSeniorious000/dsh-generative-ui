@@ -2925,6 +2925,24 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### The first fresh card that was clean and did not paint (2026-08-23)
+
+Four cards generated specifically to bait the newest screens — a regex log filter, a glob
+cheatsheet, a `&&`-condition panel, a contrast checker — all came back clean, and one did not
+paint: `document is not defined`.
+
+It was **the check's fault, not the card's.** The contrast checker parses CSS colours through a
+canvas `fillStyle` round-trip, which is legal, and calls it during render, which `react-dom/server`
+has no `document` for. Same shape as `localStorage` and `matchMedia`, stubbed here earlier for
+exactly this reason: reporting a working card as broken is the failure this script exists to avoid
+making. The stub is `createElement` only, returning `getContext: () => null` — what a browser does
+for an unsupported type, so a card handling that path still paints and one assuming success still
+fails. **Corpus verdict is unchanged at 6**, which is the check that it recovers a working card
+rather than hiding a broken one.
+
+Worth stating because the instinct on a clean-but-blank card is to go add a screen. 44 of 44 fresh
+cards paint now, and the screens still predict every corpus loss.
+
 ### Auditing rules→screens found a rule that is factually wrong (2026-08-23)
 
 The audit is a test now (`every code rule in the prompt has a screen enforcing it`), so the next
