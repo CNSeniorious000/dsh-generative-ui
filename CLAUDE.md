@@ -4618,3 +4618,25 @@ the inline form, since that card has no `<style>` block.
 A smaller finding from the same sweep: **15 of the 19 small-caps kickers apply
 `textTransform: "uppercase"` to Chinese text**, where it does nothing at all. The idiom was
 copied without the mechanism that makes it an idiom.
+
+### Accessibility was the prompt's blind spot, and the numbers say so (2026-08-23)
+
+Three of the fourteen screens here are accessibility screens, and they are the three loudest by
+an order of magnitude:
+
+| screen | rate | every other screen |
+| --- | --- | --- |
+| `NO-FOCUS-RING` | 76 of 378 | |
+| `UNREACHABLE-CONTROL` | 18 of 378 | 0–3 of 378 |
+| `BRAND-PRIMARY-FILL` | 11 of 378 | |
+
+Before today the two prompts contained **zero** mentions of `aria`, `focus-visible`, `keyboard`,
+or `screen reader` — the only accessibility line in either was the trailing clause of a bullet
+about animation continuity. Every rule now covering these came out of counting, not reading, and
+each is stated as code because the rule-adherence measurement showed prose does not land.
+
+What is *not* worth a screen, checked and rejected: 27 cards use `fontSize <= 10` and 20 use an
+opacity at or below 0.4, but the hits are index labels on visualisation elements where tiny type
+is conventional — a screen there would report a fifth of the corpus for a judgement call. The
+line between these and the focus ring is that **`outline: "none"` with no replacement is wrong
+in every context, and 9px is only wrong in some.**
