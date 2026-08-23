@@ -78,11 +78,13 @@ if (typeof exports.apply !== "function") throw new Error("client bundle exports 
 const DOM_ABSENCE = /is not (defined|a function)|Cannot read propert|WebAssembly|fetch\(\) URL|doesn't parse/;
 const registered_effects: string[] = [];
 const dom_gaps: string[] = [];
+const disposers: { name: string; dispose: () => unknown }[] = [];
 const effect = (run: () => unknown, label?: string) => {
   const name = label ?? "(unlabelled)";
   registered_effects.push(name);
   try {
-    run();
+    const dispose = run();
+    if (typeof dispose === "function") disposers.push({ name, dispose: dispose as () => unknown });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (!DOM_ABSENCE.test(message)) throw new Error(`effect ${name} failed: ${message}`, { cause: error });
@@ -114,6 +116,25 @@ const elapsed = performance.now() - started;
 if (elapsed > 1000) throw new Error(`apply() blocked for ${Math.round(elapsed)}ms — registration must not do work`);
 
 if (registered_effects.length === 0) throw new Error("apply() registered no effects");
+
+/**
+ * Run every disposer the effects returned.
+ *
+ * Registration was checked and teardown was not, so a cleanup that throws — a disposer reaching
+ * for a DOM node it never got to create, an unpaired `revokeObjectURL` — shipped silently. The
+ * shell calls these on every HMR round and on unload, and a throw there aborts the rest of the
+ * teardown: the next effect's cleanup never runs, so the leak this file exists to catch happens
+ * anyway. Reverse order, the way a scope unwinds.
+ */
+for (const { name, dispose } of disposers.toReversed()) {
+  try {
+    dispose();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!DOM_ABSENCE.test(message)) throw new Error(`disposing ${name} failed: ${message}`, { cause: error });
+    dom_gaps.push(`${name} (dispose)`);
+  }
+}
 
 /**
  * Build the blob modules the plugin synthesizes.
