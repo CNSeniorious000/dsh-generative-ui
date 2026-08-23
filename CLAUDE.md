@@ -6628,6 +6628,16 @@ transcript how the turn ended rather than grepping stdout, so a transient upstre
 reported as a crash instead of a quietly-refuted rule — exactly what that check exists for, three
 versions after the ones that grepped for error strings.
 
+**All four "misses" in the 18-case run were the fixture, not a rule.** Two were prompts whose
+subject is absent (`这个目录里都有啥` in an empty directory), and two used a demonstrative pronoun
+with no antecedent — `比较一下这三个方案的成本` and `这个配色我想调一下`, which got the correct
+reply ("there is no such thing here") and scored as failures. A standalone case has no earlier
+turn, so the thing being asked about has to be named in the prompt itself. Rewritten as
+`比较一下 t2.micro、t3.small、t3.medium 三种机型的月成本` and `按钮的圆角我想调一下`.
+
+That makes **19 cards, 0 real prose refusals, 1 transient crash** — and the failure mode worth
+carrying is that a trigger suite mostly measures whether its prompts can be answered at all.
+
 `aria-live` after the move to the skill: **4 of 4**, and not all the same shape — three read files
 or run commands, one streams from the model. Each puts the region on a persistent container, and
 the two that can be rendered headlessly have it in their **first paint**, which is the property
