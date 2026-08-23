@@ -5434,7 +5434,7 @@ immediately.
 measures the harness. Worth stating because the reflex on seeing an empty result is to go looking
 at the prompt.
 
-### The screens said clean; two of them painted nothing (2026-08-23)
+### The screens said clean; the render said otherwise (2026-08-23)
 
 All 17 freshly generated cards passed all 18 screens. Rendered for real through
 `scripts/render-cards.ts` — compile in-page, import as a blob module, `createRoot().render()`,
@@ -5501,6 +5501,29 @@ slider, an unguarded number field all render perfectly and are still defects. **
 controls by whether the defect is fatal is itself information** — it says which screens are
 catching a broken card and which are catching a bad one.
 
+**Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
+edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
+example shows `Fragment` missing while `useState` is already imported — which teaches the
+opposite of what these cards needed. The prompt now leads with the import line itself.
+
+The screen was widened to cover hooks too, and then **narrowed again the same day**: a card with
+no react import at all is repaired downstream, so firing on it overstated the problem. It now
+fires only where the repair cannot reach — a component name beside an existing import. The
+boundary and the three cases are pinned in `test/normalize-complete.test.ts`.
+
+Three things worth carrying:
+
+- **A screen suite that is all green is evidence about the screens, not about the cards.** Every
+  one of these 18 was written from a defect someone had already found. A defect nobody has found
+  passes all of them by construction.
+- **Rendering is the only check that cannot be fooled this way** — but only if it renders the way
+  production does. This run did not: it compiled raw source while production normalizes first,
+  and so reported two cards as blank that a reader would have seen render. It still found a real
+  gap in the screens; it just overstated what the gap costs.
+- **Changing a prompt is a change to a program whose output you have not run.** This regression
+  was introduced by an edit made carefully, tested, and recorded — and would have shipped as an
+  improvement.
+
 ### The judgement boundary survived the day's prompt edits (2026-08-23)
 
 Today added six rules and rewrote two. The thing most at risk from that is not any single rule but
@@ -5521,25 +5544,6 @@ corpus card throwing `ts is not defined`, and this time every glob is a string l
 **A prompt change needs the boundary re-measured, not just the new rule tested.** Every rule
 added today argues for building something; nothing in a day of that work would have noticed the
 prose side eroding, and it is the side with no checker at all.
-
-**Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
-edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
-example shows `Fragment` missing while `useState` is already imported — which teaches the
-opposite of what these cards needed. The prompt now leads with the import line itself, and the
-screen covers the seven hooks as well as the five components.
-
-Three things worth carrying:
-
-- **A screen suite that is all green is evidence about the screens, not about the cards.** Every
-  one of these 18 was written from a defect someone had already found. A defect nobody has found
-  passes all of them by construction.
-- **Rendering is the only check that cannot be fooled this way** — but only if it renders the way
-  production does. This run did not: it compiled raw source while production normalizes first,
-  and so reported two cards as blank that a reader would have seen render. It still found a real
-  gap in the screens; it just overstated what the gap costs.
-- **Changing a prompt is a change to a program whose output you have not run.** This regression
-  was introduced by an edit made carefully, tested, and recorded — and would have shipped as an
-  improvement.
 
 ### All 378, actually rendered (2026-08-23)
 
