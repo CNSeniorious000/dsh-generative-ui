@@ -3154,6 +3154,28 @@ it came back with the `<span>`-is-not-a-label warning added the same afternoon, 
 edited now is in the next turn's context. That closes the loop the whole day rests on: measure the
 corpus → write a rule → the model receives it → generate → measure again.
 
+### What was actually wrong with the corpus (2026-08-23)
+
+Sorting the 178 dirty cards by which KIND of screen fires:
+
+| | cards |
+| --- | --- |
+| accessibility only (focus ring, labels, keyboard, motion) | **117** |
+| everything else only | 25 |
+| both | 36 |
+
+**Two-thirds fail on accessibility and nothing else.** The rest is a long tail — one card each
+for a duplicate style key, a comma in a style object, an unguarded last index. Cards were rarely
+broken; they were routinely unusable without a mouse.
+
+Two capability rules turn out never to have been broken at all: every one of the 39 corpus cards
+touching `$dsh/fs` or `$dsh/exec` handles failure (11/11 fresh), and 31 of 31 `sendMessage` cards
+also record the choice. The model has always got the plumbing right. What it missed was that a
+card is used by people who are not holding a mouse.
+
+That is also why the `:focus-visible` figure is the one worth quoting: **0 of 378 before, 51 of 58
+after.** It is not one rule among twenty-two — it is the headline of the whole corpus.
+
 ### A rule nobody has ever broken (2026-08-23)
 
 The skill says a card acted on should do **both** halves — `sendMessage` the result AND record it
