@@ -3205,6 +3205,21 @@ Injection is the general answer to "is this checker still alive?", and cheaper t
 fresh cards are already on disk, and a one-line mutation per screen says whether the streak is a
 result or an artefact.
 
+### The trigger rules, measured for the first time (2026-08-23)
+
+Twelve cases across the nine rules, one real model turn each: **11 cards, 1 prose.** All nine
+rules land — a conversion, a calculation, a plan, an expression handed over, a request to browse,
+a request for a few of something, and an explicit ask to visualise all produce an interface rather
+than a paragraph.
+
+The single miss is `98 华氏度是多少摄氏度`, re-run four times afterwards and a card every time. See
+below on why one run per case is a smoke test and not a measurement.
+
+Notable in passing: the two prompts that read least like card requests — 给我五个猫名 and
+周末晚饭吃什么好 — both produced one, and the cat-names card came back with `$dsh/ai` and a
+regenerate button, which is precisely what its rule asks for ("a block that regenerates on demand
+answers the question they will ask next").
+
 ### A trigger rule has a rate, not a verdict (2026-08-23)
 
 The first trigger-suite run reported a miss on `98 华氏度是多少摄氏度` — a prompt quoted **verbatim
