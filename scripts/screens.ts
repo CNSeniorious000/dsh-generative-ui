@@ -385,6 +385,11 @@ export const SCREENS = {
     // so a regex stops there and never sees the `role`/`tabIndex`/`onKeyDown` that follow. A
     // freshly generated card doing everything right was reported for exactly this — the same bug
     // `UNLABELLED-CONTROL` was fixed for, left behind here.
+    // ANY of the five clears it, not all of them — deliberately. `tabIndex` alone gives focus with
+    // no Enter/Space, and `role="button"` alone announces without focus; both leave the row
+    // half-reachable and both pass here. **0 cards in 378 + 70 do that**: a card either equips a
+    // clickable div properly or not at all, so requiring the full set would guard a shape nobody
+    // writes while adding a way for the screen to be wrong.
     if ([...code.matchAll(/<div\b(?=[^<]*\bonClick=)/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(tagAt(code, m.index)))) return true;
     // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
     // which announces fine, and matching those took the report from 17 to 41 of 378.
