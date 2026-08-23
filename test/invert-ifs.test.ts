@@ -34,3 +34,25 @@ test("an if inside a string is left alone", async () => {
   const prose = 'one rejection is not a failure — `if (error.name === "AbortError") return;` before';
   expect(await invert(prose)).toBe(prose);
 });
+
+/**
+ * A fenced code block inside a template literal is an example, not a branch.
+ *
+ * `skill.ts` teaches cards to abort a stale request, and its `if (error.name === "AbortError")`
+ * is a rule being shown — mutating it changes nothing any test could see, so the audit reported
+ * three "uncovered conditions" that are documentation. Indentation cannot tell them apart: the
+ * examples are indented exactly like real statements.
+ */
+const invertFile = async (source: string) => {
+  const file = `/tmp/invert-ifs-${Math.random().toString(36).slice(2)}.ts`;
+  await Bun.write(file, source);
+  await Bun.$`bun ${import.meta.dir}/../scripts/invert-ifs.mjs ${file}`.quiet();
+  return await Bun.file(file).text();
+};
+
+test("an if inside a fenced example is left alone", async () => {
+  const source = ["export const doc = `", "```tsx", '  if (error.name === "AbortError") return;', "```", "`;", '  if (host === null) throw new Error("real");'].join("\n");
+  const out = await invertFile(source);
+  expect(out).toContain('  if (error.name === "AbortError") return;');
+  expect(out).toContain('  if (!(host === null)) throw new Error("real");');
+});
