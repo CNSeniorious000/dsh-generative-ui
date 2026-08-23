@@ -4699,6 +4699,18 @@ is the *only* reason the screen is quiet, and reverting the widening does flag i
 quiet.** Verify one by breaking the code it guards and watching it fail — a guard that passes
 before and after the change is decoration.
 
+Having found one screen answering that question wrongly, the obvious move was to ask it of all
+fourteen. `test/screens-quiet-on-fix.test.ts` pairs each screen with a card doing the same thing
+right, and a test asserts the pair list and the screen list are **equal** — so a new screen
+cannot be added without answering it. All fourteen pass.
+
+Worth noting how the first pass of that audit read: five screens came back "blind on the bug",
+which looked like a real finding and was not. Every one was my probe being wrong about what the
+screen targets — `DESTRUCTURED-HOOK` is about destructuring a hook that is *not* `useState`, not
+about `const { useState } = React`; `SHADOWED-EXPORT` is about colliding with an **import**, not
+a local redeclaration. Reading the predicate and its negative control fixed the probes, not the
+screens. **A sweeping audit that reports failures everywhere is usually measuring itself.**
+
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
 `GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
