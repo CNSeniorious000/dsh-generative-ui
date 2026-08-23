@@ -31,16 +31,18 @@ const CARDS = ["test/cards/2048.ui4a.tsx", "test/cards/metro.ui4a.tsx", "test/ca
  * - `UNANNOUNCED-ASYNC-RESULT` fires on the fetch and clears on the `aria-live` container the
  *   results land in — which is in the JSX, written after every hook and handler.
  *
- * All five are the same shape, which is worth stating: the fix is written AFTER the thing it
+ * - `SWALLOWED-CAPABILITY-FAILURE` fires on the `try`/`catch` and clears on the `setError` inside
+ *   it — written a line or two later, and the JSX that renders it later still.
+ *
+ * All six are the same shape, which is worth stating: the fix is written AFTER the thing it
  * fixes, so any cut between them shows the defect alone. That is a property of how CSS and
- * JavaScript are written, not a flaw in these predicates. The fourth and fifth were both
- * predicted here before they existed, and both arrived on 2026-08-23 — a sixth is expected
- * rather than investigated.
+ * JavaScript are written, not a flaw in these predicates. The fourth, fifth and sixth were all
+ * predicted here before they existed — a seventh is expected rather than investigated.
  *
  * The rest have no such ordering. This is the property that would let the screens run WHILE the
  * model types, so knowing which two cannot is the useful part.
  */
-const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTOPPABLE-MOTION", "TRANSITION-WITHOUT-TRANSFORM", "UNANNOUNCED-ASYNC-RESULT"]);
+const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTOPPABLE-MOTION", "TRANSITION-WITHOUT-TRANSFORM", "UNANNOUNCED-ASYNC-RESULT", "SWALLOWED-CAPABILITY-FAILURE"]);
 
 /**
  * The four reference cards cannot exercise every screen — none of them has a `type="number"`

@@ -83,6 +83,27 @@ export const SCREENS = {
     // region in their FIRST server render, which is the property that makes it work.
     return !/aria-live|role="(?:status|alert|log)"/.test(code);
   },
+  // A capability call whose failure the reader never learns about. `} catch {}` around a
+  // `streamText` or a `bash`, then `setLoading(false)` — the spinner stops, the card is empty,
+  // and nothing says why. 15 of 378, **14 of them `$dsh/ai` cards**, where a failed request is
+  // the likeliest outcome worth explaining.
+  //
+  // Three things count as surfacing it, and all three were found by a version of this screen
+  // firing on a card that was right: state named for the failure however spelled (`setErrMsg`,
+  // `setStatus("error")`), a rethrow to the surface's error boundary (a strategy no corpus card
+  // uses and three fresh ones do), and **rendering `stderr`** — for a command runner that is the
+  // best possible form, not a missing message.
+  //
+  // Scoped to a `catch` that WRAPS the capability call: a card catching `JSON.parse` mid-stream
+  // or a `localStorage` write is handling something explicitly non-fatal, and flagging those made
+  // the first version fire on every fresh card that was correct.
+  "SWALLOWED-CAPABILITY-FAILURE": (src: string) => {
+    const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+    if (!/try\s*\{[^]{0,600}?(?:await\s+)?(?:bash|readFile|readdir|readBytes|writeFile|streamText)\s*\([^]{0,600}?\}\s*catch/.test(code)) return false;
+    const surfaced = /set(?:Err|Error|ErrMsg|Failure|Status)\w*\(|错误|失败|出错|无法|error\s*(?:&&|\?)|status === "error"|\.stderr\b/i.test(code);
+    const rethrown = /catch[^{]*\{[^}]{0,240}\bthrow\b/s.test(code);
+    return !surfaced && !rethrown;
+  },
   "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
   // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
   // expression and the parse fails on the comma. The card that did it was *showing* the pattern

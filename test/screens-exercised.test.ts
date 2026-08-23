@@ -28,6 +28,7 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "AND-INTO-ARROW": /&&/,
   "TRANSITION-WITHOUT-TRANSFORM": /transition/,
   "UNANNOUNCED-ASYNC-RESULT": /\$dsh\/(?:ai|fs|exec)/,
+  "SWALLOWED-CAPABILITY-FAILURE": /catch/,
   "UNQUOTED-CSS-UNIT": /fontSize|font-size/,
   "REGEX-IN-JSX-TEXT": /\\d|\\w/,
   "UNGUARDED-NUMBER-INPUT": /type="number"/,

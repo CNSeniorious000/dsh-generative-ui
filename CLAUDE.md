@@ -6683,3 +6683,30 @@ the bad insert because the file was already staged, so the helper appended a **s
 same section. `no section title appears twice` caught that one. A gate that only catches ordering
 would have let a duplicate through, and vice versa — the two checks are not redundant.
 
+### The failure the reader never learns about (2026-08-24)
+
+The 19 silent corpus cards are not spread evenly: **14 of them call `$dsh/ai`**. An AI request
+failing is the likeliest outcome worth explaining, and the shape is always the same —
+
+    } catch {}
+    setLoading(false)
+
+The spinner stops, the card is empty, and nothing distinguishes "it failed" from "it found
+nothing". 44% of corpus AI cards surface a failure; the three fresh ones all do.
+
+`SWALLOWED-CAPABILITY-FAILURE`, 15 of 378, 0 of 66 fresh, 24 screens. Three earlier versions each
+fired on a card that was RIGHT, and each false positive named a form that counts as surfacing:
+
+- state named for the failure, however spelled — `setErrMsg`, `setStatus("error")`, `错误`;
+- **rendering `stderr`**, which for a command runner is better than a generic message;
+- a **rethrow to the surface's error boundary** — a strategy no corpus card uses and three fresh
+  ones do.
+
+And the scope that made it usable: the `catch` must WRAP the capability call. A card catching a
+half-arrived `JSON.parse` mid-stream, or a `localStorage` write that is explicitly non-fatal, is
+handling something it should handle — flagging those made the first version fire on every fresh
+card that was correct.
+
+Sixth member of the prefix-unsafe set, which the file predicted before any of the last three
+existed: the error handling is written after the call it guards.
+

@@ -17,6 +17,7 @@ const PAIRS: Record<string, [string, string]> = {
   "JSX-SUBSCRIPT": [`<Icons[kind] size={12} />`, `{(() => { const I = Icons[kind]; return <I size={12} /> })()}`],
   "GLOB-IN-JSX": ["<code>src/**/*.{ts,tsx}</code>", `<code>{"src/**/*.{ts,tsx}"}</code>`],
   "UNQUOTED-CSS-UNIT": ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+  "SWALLOWED-CAPABILITY-FAILURE": [`try { const r = await bash("ls"); setRows(r.stdout) } catch {}`, `try { const r = await bash("ls"); setRows(r.stdout) } catch (e) { setError(String(e)) }`],
   "UNANNOUNCED-ASYNC-RESULT": [`import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);`, `import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);\n<div aria-live="polite">{rows}</div>`],
   "TRANSITION-WITHOUT-TRANSFORM": [`<div style={{ transition: "transform .12s ease" }} />`, `<div style={{ transition: "transform .12s ease", transform: "scale(1.02)" }} />`],
 
@@ -280,3 +281,21 @@ test("no screen matches an English word a card would write in prose", () => {
   const prose = ["loading", "pending", "submit", "search", "cancel", "confirm", "delete", "save", "empty", "failed"];
   expect(prose.filter((word) => new RegExp(String.raw`/[^/\n]*\b${word}\b[^/\n]*/[gimsuy]*`).test(source))).toEqual([]);
 });
+
+/**
+ * The three shapes that count as surfacing a capability failure. Each was found by a version of
+ * `SWALLOWED-CAPABILITY-FAILURE` firing on a card that was doing the right thing.
+ */
+const SURFACED: [string, string][] = [
+  ["state named for the failure, however spelled", `try { const r = await bash("ls"); setRows(r.stdout) } catch (e) { setErrMsg(String(e)) }`],
+  ["a status flag rather than a message", `try { const r = await bash("ls"); setRows(r.stdout) } catch { setStatus("error") }`],
+  ["rethrown to the surface's error boundary", `try { const r = await bash("ls"); setRows(r.stdout) } catch (e) { if ((e as Error).name === "AbortError") return; throw e }`],
+  ["stderr rendered — the best form for a command runner", `try { const r = await bash(cmd); setOut(r) } catch {}\n<pre>{out.stderr}</pre>`],
+  ["a catch around something explicitly non-fatal", `try { localStorage.setItem(k, v) } catch {}\ntry { const r = await bash("ls"); setRows(r.stdout) } catch (e) { setError(String(e)) }`],
+];
+
+for (const [name, source] of SURFACED) {
+  test(`SWALLOWED-CAPABILITY-FAILURE: ${name}`, () => {
+    expect(SCREENS["SWALLOWED-CAPABILITY-FAILURE"](source)).toBe(false);
+  });
+}

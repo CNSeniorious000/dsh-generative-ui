@@ -204,6 +204,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   On the container, not the spinner — the element has to be in the DOM BEFORE the content changes
   for the change to be announced at all.
 
+  **And when it fails, say so where the results would have been.** \`} catch {}\` around a
+  \`streamText\` or a \`bash\`, then \`setLoading(false)\`: the spinner stops, the card is empty, and
+  nothing tells the reader whether it failed or simply found nothing. **15 of 378 corpus cards do
+  this, 14 of them calling the model** — where a request failing is the likeliest thing worth
+  explaining. Rendering \`stderr\` counts; so does letting it throw to the surface's error
+  boundary. An empty \`catch\` around the call itself does not.
+
   A \`<label>\` BESIDE the control names nothing. \`<label>音量</label><input type="range" …/>\` is
   the shape two corpus cards took, and it is worse than no label: it reads as done. A label only
   associates when it wraps the control or carries \`htmlFor\` matching its \`id\`:

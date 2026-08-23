@@ -47,6 +47,12 @@ const INJECTIONS: Record<string, ((source: string) => string) | undefined> = {
   // Indexing an array built from a literal cannot be empty and is correctly ignored.
   // The card has to FETCH before it can fail to announce, so the injection adds the fetch and
   // strips any existing announcement.
+  // Needs a try/catch WRAPPING a capability call, with nothing surfacing the failure — and the
+  // card's own error handling stripped, or its `setError` elsewhere clears the screen.
+  "SWALLOWED-CAPABILITY-FAILURE": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/set(?:Err|Error|ErrMsg|Failure|Status)\w*\(/g, "setValue(").replaceAll(/\.stderr\b/g, ".stdout")}`.replace(
+    /\n(export default)/,
+    '\nconst sync = async () => { try { const r = await bash("ls"); setRows(r.stdout) } catch {} };\n$1',
+  ),
   "UNANNOUNCED-ASYNC-RESULT": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/aria-live=["'][^"']*["']|role=["'](?:status|alert|log)["']/g, "")}`.replace(
     /\n(export default)/,
     '\nconst reload = async () => { const r = await bash("ls"); setEntries(r.stdout.split("\\n")) };\n$1',
