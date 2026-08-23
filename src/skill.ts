@@ -223,6 +223,11 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   associates when it wraps the control or carries \`htmlFor\` matching its \`id\`:
 
       <label>音量 <input type="range" value={v} onChange={…} /></label>   // wrapping, so it names it
+
+  **A \`<select>\` has the same problem for the same reason** — its options are its value, not its
+  name, so an unlabelled one announces "combo box, 每天" and the reader never learns what it
+  selects. Six corpus cards, and the same two fixes. The screen catches these; nothing said so
+  until now, which is why they are still here after the slider rule landed.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
   cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
