@@ -62,7 +62,7 @@ function findClose(body: string, fence: string): number {
  * legitimate can follow — which is true of a closed fence too: the model leaks the tags and then
  * still writes the closing fence, and stripping only the unterminated case loses that card outright.
  */
-const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:|｜｜DSML｜｜)?(?:parameter|invoke|tool_calls)>\s*)+$/;
+export const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:|｜｜DSML｜｜)?(?:parameter|invoke|tool_calls)>\s*)+$/;
 
 /**
  * The prompt asks for four backticks — generated TSX contains triple-backtick strings often

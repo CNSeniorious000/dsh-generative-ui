@@ -21,6 +21,7 @@ import { resolve } from "node:path";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { cardsIn, compileSettled, initTsxFromDisk } from "./tsx-node.ts";
+import { TOOL_CALL_MARKUP } from "../src/client/runtime/segments.ts";
 
 // The `$dsh/*` stubs warn on every call, by design — outside dsh there is no harness to reach.
 // Here that is expected, and 22 cards' worth of prompts on stderr buries the actual report.
@@ -52,16 +53,18 @@ let corrupt = 0;
 
 for (const name of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${name}`, "utf8");
-  // A leaked control token means the EXTRACTION was truncated mid-generation, not that the card
-  // is wrong — reporting it as a defect sends the next reader looking for a bug in code the model
-  // never finished writing. One of the 378 corpus cards is in this state.
-  if (/｜｜DSML｜｜|<\/parameter>|<\/invoke>/.test(src)) { console.log(`${name.padEnd(26)} CORRUPT EXTRACTION — a control token leaked into the source`); corrupt += 1; continue }
+  // Leaked tool-call markup: strip it exactly the way the runtime does, then paint. The one
+  // corpus card in this state (`6d82723c61a7.tsx`) renders fine once the tags are gone, so
+  // reporting it as corrupt sent the next reader looking for a bug that was in the extraction.
+  // Anything the runtime's own strip does NOT remove is still corrupt — the tags are mid-body.
+  const stripped = src.replace(TOOL_CALL_MARKUP, "");
+  if (/｜｜DSML｜｜|<\/parameter>|<\/invoke>/.test(stripped)) { console.log(`${name.padEnd(26)} CORRUPT EXTRACTION — a control token leaked into the middle of the source`); corrupt += 1; continue }
   let status: string;
   try {
     // `$dsh/*` does not resolve outside dsh, and a card that uses a capability is exactly the
     // kind worth rendering — skipping them would leave the check blind to half the corpus.
     // `types/standalone/*.js` already stands in for every member with the right shape.
-    const wired = src
+    const wired = stripped
       .replaceAll(/(["'])\$dsh\/(ai|fs|exec|chat)\1/g, (_whole, quote: string, group: string) => `${quote}${resolve(import.meta.dir, `../types/standalone/${group}.js`)}${quote}`)
       // `lucide-react` is icons and nothing else, so a Proxy returning an empty <svg> for any
       // name renders it faithfully enough for this check — and keeps a reference card from being
