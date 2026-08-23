@@ -4733,3 +4733,21 @@ So: which other scripts print a verdict nothing can fail against? Comparing "pri
 
 The distinction: **a script that computes a verdict must be able to fail on it; a script that
 reports a number should not pretend to have one.**
+
+### A third copy of the stubs, in the harness that measures whether cards paint (2026-08-23)
+
+`render-cards.ts` serves `$dsh/*` shims so a corpus card can mount in a browser, and it kept its
+own hand-written list of them — a third copy alongside `bindings.ts` and the generated
+`types/standalone/*.js`. It was missing `readBytes` entirely and gave `bash` no `truncated` or
+`timedOut`, so a card reading `r.truncated.stdout` **threw during a render sweep and was
+reported broken for the harness's reason rather than its own.** One corpus card is in that
+state, which means the 97.4% paint rate was measured with a known-wrong denominator by one.
+
+The route now concatenates the generated stubs. They are checked in, so a fresh clone still
+serves them with no build step, and the shapes come from the same place the exported page gets
+them.
+
+That is the **fifth** duplicated-fact instance today, and the pattern in where they hide is
+worth naming: every one was in a *measurement* tool rather than in the product — the mutation
+mutator, the platform list, the stub table, the specifier regex, and now this. Test and harness
+code gets copied because it feels like scaffolding, and then it decides what the numbers say.
