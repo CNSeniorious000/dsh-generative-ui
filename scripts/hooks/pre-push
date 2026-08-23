@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuse to push when `bun run check` fails.
+#
+# Written after pushing a red commit for the second time in one session: the failure count was
+# on screen, in a `grep -c` I had just run, and I read past it. Judgement is not the control.
+if ! bun run check > /tmp/prepush.log 2>&1; then
+  echo "pre-push: 'bun run check' FAILED — not pushing. Tail:"
+  grep -iE '\(fail\)|error' /tmp/prepush.log | head -5
+  echo "(full output in /tmp/prepush.log; --no-verify to override deliberately)"
+  exit 1
+fi
