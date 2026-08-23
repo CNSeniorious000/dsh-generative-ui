@@ -5527,3 +5527,34 @@ code concealing nothing. That is worth knowing on its own, and it was only knowa
 skip was counted. **A silent skip that never fires and a silent skip that fires constantly look
 identical from the outside**, which is the whole argument for counting even where you are
 confident.
+
+### The checker was stricter than production (2026-08-23)
+
+A freshly generated card — a 243-line regex tester — came back `FAIL Expression expected at
+243:1` from `compile-cards.ts`. It compiles perfectly on its own. `normalizeGeneratedTsx`, whose
+whole job is making a **half-written** card parseable, appended
+
+    ]</span></div></div>);})}</div></div>)}</div>)}
+
+to a complete one and broke it. Zero of the 374 corpus cards that compile raw hit this, so it is
+rare and construct-specific — something about a `<style>` block whose CSS braces the tracker
+reads as JSX braces, though the minimal cases all behave.
+
+**A reader would never have seen it.** `compiler.ts` already tries `final` and falls back to
+`streaming` on failure, precisely because *the final compile must never be more fragile than a
+streaming frame* — and the streaming cut-back recovers this card. The bug was in the checker,
+which had no fallback and so reported a working card as broken.
+
+Now `compile-cards.ts` performs the same two steps, and `test/normalize-complete.test.ts` holds
+the fixture. That test pins **current** behaviour, not desired: a permanently-red test breaks
+`check` and teaches everyone to read past failures, which costs more than the bug does. When
+upstream fixes it, the test fails and says so.
+
+Two lessons, and the second is the one that nearly cost an hour:
+
+- **A checker that is stricter than production produces false alarms about real cards**, and a
+  false alarm about a real card is how a checker stops being read. Verification should mirror the
+  path being verified, fallbacks included.
+- **When a checker and reality disagree, suspect the checker.** I spent that hour bisecting the
+  card — counting braces, counting parens, hunting an extraction bug in my own `awk` — on the
+  assumption that a `FAIL` meant a broken card. The card was never broken.
