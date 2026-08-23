@@ -115,3 +115,19 @@ test("a partial frame takes the streaming path", async () => {
   expect((await compile(frame, { partial: true })).source).not.toContain("items.map");
   expect((await compile(frame)).source).toContain("items.map");
 });
+
+/**
+ * `import.meta.resolve("…")` is rewritten against the import map before the compiler runs.
+ *
+ * This is the one line in the module that no test reached: deleting the rewrite entirely — passing
+ * `source` straight through — left all 163 tests green. It is a runtime asset lookup, not a module
+ * edge, so nothing downstream fails loudly when it silently keeps the bare specifier and the card
+ * asks the browser for a URL named `some-asset`.
+ */
+test("import.meta.resolve is rewritten against the import map", async () => {
+  const source = 'export const url = import.meta.resolve("some-asset")\nexport default function A() { return <div>{url}</div> }';
+  const mapped = await compile(source, { importMap: { imports: { "some-asset": "https://esm.sh/some-asset" } } });
+  expect(mapped.code).toContain("https://esm.sh/some-asset");
+  // No map, no rewrite: the specifier survives as written rather than being resolved to nothing.
+  expect((await compile(source)).code).toContain("some-asset");
+});
