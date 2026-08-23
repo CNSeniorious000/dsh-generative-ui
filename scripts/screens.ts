@@ -12,6 +12,24 @@
  */
 export const REPLAY_CONTROLS = ["late-hook.tsx"] as const;
 
+/**
+ * The JSX tag starting at `start`, ending at the `>` that closes it.
+ *
+ * Depth-counted, not `[^>]*`: a handler like `onChange={(e) => …}` puts a `>` INSIDE the tag, so
+ * a regex stops there and never sees the attributes after it. Three screens had that bug, each
+ * one reporting a card that had written `aria-label` or `role` in the position the regex could
+ * not reach — and a screen that flags the model for following the rule is worse than none.
+ */
+export const tagAt = (source: string, start: number): string => {
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    if (source[i] === "{") depth += 1;
+    else if (source[i] === "}") depth -= 1;
+    else if (source[i] === ">" && depth === 0) return source.slice(start, i + 1);
+  }
+  return "";
+};
+
 export const SCREENS = {
   // `export default function Pie` next to `import { Pie } from "recharts"`: the card renders
   // itself, and dies with no useful error.
@@ -152,20 +170,11 @@ export const SCREENS = {
   // `onChange={e => …}` puts a `>` inside the tag and a `[^>]*` regex stops there — which is how
   // the first count of this came out at 241 instead of 61.
   "UNLABELLED-CONTROL": (src: string) => {
-    const tagAt = (start: number) => {
-      let depth = 0;
-      for (let i = start; i < src.length; i += 1) {
-        if (src[i] === "{") depth += 1;
-        else if (src[i] === "}") depth -= 1;
-        else if (src[i] === ">" && depth === 0) return src.slice(start, i + 1);
-      }
-      return "";
-    };
     // `<select>` has the same problem for the same reason — its options are its value, not its
     // name, so an unlabelled one announces "combo box, 每天". Six more corpus cards, and the
     // same fix, which is why it lives here rather than in a screen of its own.
     return [...src.matchAll(/<input\b|<select\b/g)].some((match) => {
-      const tag = tagAt(match.index);
+      const tag = tagAt(src, match.index);
       const named = /aria-label|aria-labelledby|\bid=/.test(tag);
       if (named) return false;
       if (match[0] === "<input" && !/type="range"/.test(tag)) return false;
@@ -257,16 +266,7 @@ export const SCREENS = {
     // so a regex stops there and never sees the `role`/`tabIndex`/`onKeyDown` that follow. A
     // freshly generated card doing everything right was reported for exactly this — the same bug
     // `UNLABELLED-CONTROL` was fixed for, left behind here.
-    const tagAt = (start: number) => {
-      let depth = 0;
-      for (let i = start; i < code.length; i += 1) {
-        if (code[i] === "{") depth += 1;
-        else if (code[i] === "}") depth -= 1;
-        else if (code[i] === ">" && depth === 0) return code.slice(start, i + 1);
-      }
-      return "";
-    };
-    if ([...code.matchAll(/<div\b(?=[^<]*\bonClick=)/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(tagAt(m.index)))) return true;
+    if ([...code.matchAll(/<div\b(?=[^<]*\bonClick=)/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(tagAt(code, m.index)))) return true;
     // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
     // which announces fine, and matching those took the report from 17 to 41 of 378.
     return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]
