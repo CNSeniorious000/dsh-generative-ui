@@ -4716,3 +4716,20 @@ Both halves now hold the list of services a profile can actually provide and fai
 outside it. Verified by injecting a bogus name into each: the client half reports "apply()
 injects nonexistent-service, which no profile provides — that callback would never run", and the
 node half fails three tests on a one-letter typo.
+
+### Sweeping for checkers that only print (2026-08-23)
+
+`compile-cards.ts` had counted `bad` for its whole life and never exited on it — recorded, fixed.
+So: which other scripts print a verdict nothing can fail against? Comparing "prints something" to
+"can exit non-zero" across `scripts/`:
+
+- **`mutation-audit.sh`** ended with `"$uncovered unconstrained"` and exited 0. It now exits 1.
+  It is not part of `bun run check` (it takes about an hour), but a report nothing can fail
+  against is a report that gets skimmed — and now a CI job or a `&&` chain can hold the line.
+  Verified both directions: 0 on a clean tree, 1 with a deliberately uncovered condition planted.
+- **`corpus-rates.ts`, `render-cards.ts`, `eval.sh`, `corpus-size.sh`** print by design — they
+  are measurement tools with no pass/fail, and a threshold would be invented rather than
+  measured. Left alone deliberately.
+
+The distinction: **a script that computes a verdict must be able to fail on it; a script that
+reports a number should not pretend to have one.**
