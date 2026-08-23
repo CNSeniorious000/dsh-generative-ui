@@ -74,6 +74,16 @@ export const TRANSIENT = /No default export found|Unexpected (end of|eof)/i;
 /** Exported for `test/transient.test.ts`. */
 export const TRANSIENT_LOAD = /failed to fetch|failed to load|networkerror|load failed/i;
 const MAX_RETRIES = 3;
+
+/**
+ * Whether a reported error is worth another attempt.
+ *
+ * Extracted because it is the whole of the decision and none of the React: three conditions,
+ * each of which sends the reader somewhere different when it is wrong. Exported for
+ * `test/retry.test.ts`.
+ */
+export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) =>
+  phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
 const RETRY_BACKOFF_MS = 400;
 
@@ -137,7 +147,12 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
           if (streamingRef.current && TRANSIENT.test(error.message)) return;
           // Only retry a settled surface. While streaming, the next frame re-delivers on its own,
           // and a retry there would replace the growing buffer with a stale prefix.
-          if (!streamingRef.current && TRANSIENT_LOAD.test(error.message) && retriesRef.current < MAX_RETRIES) {
+          // Compile phase only. A failed dependency import is reported there — `importCompiledComponent`
+          // runs inside the compile `catch` (partial-react/src/runtime.ts:338) — and busting the
+          // import URLs is the fix for exactly that. The same message reaching us from the RENDER
+          // phase is the card's own `fetch` throwing inside its body, where re-importing changes
+          // nothing: it costs three retries and 2.4s of blank surface before the reader is told.
+          if (shouldRetry(error.message, phase, streamingRef.current, retriesRef.current)) {
             retriesRef.current += 1;
             setTimeout(() => retryRef.current(), RETRY_BACKOFF_MS * retriesRef.current);
             return;
