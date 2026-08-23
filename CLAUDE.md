@@ -4268,3 +4268,20 @@ matches too.
 
 **Verdict on the tool: worth running once over a corpus, not worth running per card.** The
 signal-to-noise is one real find in 378, and `implicitly any` will bury it unless you filter.
+
+### What actually catches a stray backtick (2026-08-23)
+
+`prompt.ts` and `skill.ts` are each one long template literal, and an unescaped backtick inside
+one has bitten three times today. The layers, measured rather than assumed:
+
+- **Most cases break the parse**, and `oxlint` — the first stage of `check` — reports them with
+  the right line. Two of the three were caught this way, in seconds.
+- **A backtick that closes and reopens the literal cleanly changes nothing**, because the two
+  halves concatenate to the same string. Harmless.
+- **A backtick that closes the literal and re-opens it later silently drops everything
+  between.** `lint` passes. `typecheck` passes. Only `test/prompt.test.ts` fails — it asserts
+  each section heading and each rule is present, so a truncation loses one of them.
+
+That third case is the reason the prompt test is worth its length: it is the only thing standing
+between "the model silently stopped being told about dark mode" and a release. Verified by
+injecting all three.
