@@ -22,3 +22,19 @@ test("the default sits inside the drag bounds", () => {
   expect(DEFAULT_WIDTH).toBeGreaterThanOrEqual(MIN_WIDTH_FOR_TEST);
   expect(DEFAULT_WIDTH).toBeLessThanOrEqual(MAX_WIDTH_FOR_TEST);
 });
+
+/**
+ * Every class the panel renders is styled, and every class styled is rendered.
+ *
+ * The stylesheet and the components are separate files with no compiler between them, so a
+ * renamed class is an unstyled panel that still mounts — no error, just a column of unformatted
+ * markup over the conversation. The reverse direction is cheaper to fix and worth knowing too:
+ * a rule nobody matches is a rule that will be edited under the impression it does something.
+ */
+test("the stylesheet and the components agree on every class name", async () => {
+  const markup = (await Promise.all(["CanvasPanel.tsx", "CanvasLauncher.tsx"].map((name) => Bun.file(`src/client/canvas/${name}`).text()))).join("\n");
+  const styled = new Set([...css.matchAll(/\.(dgu-[a-z-]+)/g)].map((m) => m[1]!));
+  const used = new Set([...markup.matchAll(/className="([^"]+)"/g)].flatMap((m) => m[1]!.split(/\s+/)).filter((name) => name.startsWith("dgu-")));
+  expect([...used].filter((name) => !styled.has(name))).toEqual([]);
+  expect([...styled].filter((name) => !used.has(name))).toEqual([]);
+});
