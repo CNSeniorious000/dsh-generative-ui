@@ -5281,3 +5281,19 @@ the check. Verified by adding a bogus name to the list and watching it fail.
 
 **An exemption list is a place where checks go to die.** Every entry needs a test proving it is
 still needed, or removing it is the only way anyone finds out.
+
+Auditing the repo's other two exemptions on that principle found both weak in the same way — they
+were **assertions rather than derivations**:
+
+- `compile-cards.ts` exempted `late-hook.tsx` from its ORPHANED check with a comment saying
+  `replay-stream.ts` owns it. True, and written as a string literal in the exempting file, so
+  deleting the owner's loop would have left the card exempt and run by nothing. The list now
+  lives in `screens.ts` and both import it; emptying it orphans the card immediately, verified.
+- `mutation-audit.sh` printed *4 in prose, declined* — a count that reads identically whether the
+  mutator correctly skipped four prompt examples or its fence tracker desynced and skipped four
+  real branches. It now names each declined line, and all five across both files are visibly
+  prompt text.
+
+**An exemption should be a consequence of something, not a claim about it.** Where that is not
+possible, print the exempted items rather than their count — a name can be checked at a glance
+and a number cannot be checked at all.
