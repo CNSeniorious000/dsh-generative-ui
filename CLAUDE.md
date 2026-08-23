@@ -4104,6 +4104,16 @@ The number was counting non-participation as a clean result. Now:
 
 **A denominator that silently excludes the hard cases is worse than no number.** Both readings
 are "passing"; only one of them tells you what was checked.
+
+`scripts/test-shuffled.sh` now runs N seeded orders and prints the seed to reproduce any that
+fail; it used to run **one** unseeded shuffle, which is why it had been passing throughout.
+
+One caveat worth writing down, because it cost time: trying to confirm each fix by removing it
+did **not** reproduce the failures. That is not evidence the fixes were unnecessary — the seed
+maps to an order over the *current* file list, and the work added two files, so the old seeds no
+longer name the orders that used to fail. **An ablation is only valid while the search space is
+unchanged**; adding a file silently invalidates every seed you recorded. Re-derive the failing
+seeds after any change to the file set, or the ablation measures nothing.
 - **Restore every global you stub**, even when nothing currently breaks. `stream.test.ts` and
   `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
 - **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
