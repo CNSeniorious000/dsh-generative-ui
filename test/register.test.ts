@@ -9,11 +9,18 @@
  * It can be installed once and only before the first module resolution, so all three rules here
  * are one-shot and unrecoverable if wrong.
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 let head: any;
 let existingMap: unknown = null;
 let warnings: string[] = [];
+
+
+// Restore after EACH test: the stub below is narrower than other files' (a `document` with
+// no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
+// next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
+afterEach(restoreGlobals);
 
 beforeEach(() => {
   existingMap = null; warnings = [];

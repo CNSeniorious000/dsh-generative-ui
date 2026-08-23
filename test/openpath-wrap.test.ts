@@ -1,5 +1,6 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { apply } from "../src/client/index.ts";
+import { releaseBindings } from "../src/client/runtime/bindings.ts";
 import { canvasPath } from "../src/contract.ts";
 
 /**
@@ -10,12 +11,24 @@ import { canvasPath } from "../src/contract.ts";
  * Wrapping someone else's method is the riskiest thing the plugin does to its host — losing the
  * bet on its shape throws during registration and takes the whole plugin down.
  */
+// `apply()` registers a $dsh host, and this file hands it PROXY stubs. Left bound, the next
+// file to call `bind()` gets a proxy instead of "no host bound" — which surfaces as
+// `Symbol.toPrimitive returned an object` in a file that did nothing wrong.
+afterEach(releaseBindings);
+
 const applyWithWorkspaces = (workspaces: Record<string, unknown>) => {
   const disposers: (() => void)[] = [];
   const stub = (): unknown => new Proxy(() => stub(), { get: () => stub(), apply: () => stub() });
   const base: Record<string, unknown> = {
     workspaces,
-    effect: (run: () => unknown) => { try { const d = run(); if (typeof d === "function") disposers.push(d as () => void) } catch { /* only this effect is the subject */ } },
+    effect: (run: () => unknown, label?: string) => {
+      // The canvas-column effect mounts a host and sets the `showCanvas` this wrap consults.
+      // Whether it SUCCEEDS depends on the global `document` another test file installed, so
+      // running it here makes these tests pass or fail on test order. Only the wrap is the
+      // subject; skipping the mount pins `showCanvas` at null, which is the headless case.
+      if (label?.includes("canvas column")) return;
+      try { const d = run(); if (typeof d === "function") disposers.push(d as () => void) } catch { /* only this effect is the subject */ }
+    },
     inject: (_want: readonly string[], callback: (scoped: unknown) => void) => callback(scoped),
   };
   const scoped: unknown = new Proxy(base, { get: (t, k) => (k in t ? t[k as string] : stub()) });

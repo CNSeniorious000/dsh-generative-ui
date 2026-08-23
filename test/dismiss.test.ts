@@ -7,10 +7,17 @@
  * the button closes here and immediately reopens in the button's own handler, and the menu
  * never opens.
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { dismissOnOutsidePointer } from "../src/client/canvas/useDismissable.ts";
 
 let listeners: ((event: any) => void)[] = [];
+
+
+// Restore after EACH test: the stub below is narrower than other files' (a `document` with
+// no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
+// next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
+afterEach(restoreGlobals);
 
 beforeEach(() => {
   listeners = [];

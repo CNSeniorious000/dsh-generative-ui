@@ -1,3 +1,4 @@
+import { restoreGlobals } from "./globals.ts";
 import { afterAll, expect, test } from "bun:test";
 import { bind, registerUi4aHost } from "../src/client/runtime/bindings";
 
@@ -6,8 +7,7 @@ const stream = (parts: Uint8Array[]) =>
 
 // One global `fetch` is shared by every test FILE, so a stub left installed breaks whichever
 // file bun happens to run next — see the note in `read.test.ts`.
-const realFetch = globalThis.fetch;
-afterAll(() => { globalThis.fetch = realFetch });
+afterAll(restoreGlobals);
 
 const collect = async (parts: Uint8Array[]) => {
   globalThis.fetch = (async () => new Response(stream(parts), { status: 200 })) as typeof fetch;

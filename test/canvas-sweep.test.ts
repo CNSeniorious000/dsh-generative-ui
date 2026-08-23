@@ -10,7 +10,8 @@
  * That last part is what makes this worth doing — the assertions are on the `Canvas[]` the panel
  * is rendered with, which is exactly what the reader sees.
  */
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
 let painted: any[] = [];
 let listed: string[] = [];
@@ -30,10 +31,14 @@ let scheduleSweepAgain = () => {};
 /** Let queued microtasks (the fetch mocks) settle, then run whatever frames they scheduled. */
 const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve(); paint() } };
 
-// The globals below are shared with every other test FILE; leaving them installed breaks
-// whichever one bun runs next — see the note in `read.test.ts`.
-const real = { fetch: globalThis.fetch, document: (globalThis as any).document, requestAnimationFrame: globalThis.requestAnimationFrame, MutationObserver: (globalThis as any).MutationObserver };
-afterAll(() => { Object.assign(globalThis, real) });
+// Shared with every other test FILE; leaving a stub installed breaks whichever runs next.
+// Captured in `./globals.ts` rather than here — a capture in a file's own module body can
+// already be holding another file's stub, and restoring THAT installs it. See the note there.
+
+// Restore after EACH test: the stub below is narrower than other files' (a `document` with
+// no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
+// next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
+afterEach(restoreGlobals);
 
 beforeEach(() => {
   painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = []; unmounts = 0; columnRemoved = 0;

@@ -49,11 +49,18 @@ describe("canvas listing", () => {
   // The claim the OPAQUE_WRITE fix rests on: a canvas that appears on disk mid-session, named
   // by nothing in any tool call, is visible to a second listing. Without this the fix is an
   // assumption — re-listing is only worth anything if the listing sees what arrived after it.
+  // Its own directory: this test adds a file permanently, and the shared `cwd` is asserted
+  // exhaustively by the listing test above. Sharing it passes in file order and fails under
+  // `--randomize` about one run in three — the suite was passing on alphabetical luck.
   test("a canvas that appears after the first listing shows up in the next one", async () => {
-    const before = JSON.parse((await call(`cwd=${encodeURIComponent(cwd)}`)).body) as string[];
-    expect(before).not.toContain("late-arrival");
-    writeFileSync(join(cwd, CANVAS_DIR, "late-arrival.ui4a.tsx"), "export default () => <div />");
-    expect(JSON.parse((await call(`cwd=${encodeURIComponent(cwd)}`)).body)).toContain("late-arrival");
+    const fresh = mkdtempSync(join(tmpdir(), "ui4a-late-"));
+    mkdirSync(join(fresh, CANVAS_DIR), { recursive: true });
+    // `live` must name it: an unregistered cwd is rejected, which is the guard working.
+    const list = async () => JSON.parse((await call(`cwd=${encodeURIComponent(fresh)}`, new Set([fresh]))).body) as string[];
+    expect(await list()).not.toContain("late-arrival");
+    writeFileSync(join(fresh, CANVAS_DIR, "late-arrival.ui4a.tsx"), "export default () => <div />");
+    expect(await list()).toContain("late-arrival");
+    rmSync(fresh, { recursive: true, force: true });
   });
 
   test("a missing canvases directory lists empty rather than failing", async () => {

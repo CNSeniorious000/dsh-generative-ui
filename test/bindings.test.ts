@@ -7,16 +7,25 @@
  * `!response.ok` denials, and the `bindingImports` cache. A card calling `readFile` with no host
  * would have returned a URL query containing `undefined` rather than saying so.
  */
-import { afterEach, expect, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { beforeEach, afterEach, expect, test } from "bun:test";
 import { EXEC_PATH, FS_PATH } from "../src/contract-assets.ts";
 import { bind, bindingImports, registerUi4aHost, releaseBindings } from "../src/client/runtime/bindings.ts";
 
-const realFetch = globalThis.fetch;
 let release: (() => void) | undefined;
+// Before, not only after. The module-level host is shared with every other test FILE — bun
+// keeps one module registry per RUN — so the "no host bound" test below asserts a state this
+// file must ESTABLISH rather than assume. In file order nothing has bound one yet; under
+// `--randomize` another file may have registered one and not released it.
+//
+// `releaseBindings()` does NOT do this: it revokes cached blob URLs and leaves `host` alone.
+// Registering a throwaway host and immediately calling its disposer is the only way to reach
+// the module's `host = null` from outside.
+beforeEach(() => { releaseBindings(); registerUi4aHost({} as never)() });
 afterEach(() => {
   release?.();
   release = undefined;
-  globalThis.fetch = realFetch;
+  restoreGlobals();
   releaseBindings();
 });
 

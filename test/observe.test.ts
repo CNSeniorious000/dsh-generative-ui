@@ -9,11 +9,17 @@
  * enough because the module's own logic — coalesce, start once, tear down at zero — never
  * touches anything else about them.
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 let pending: (() => void)[] = [];
 let observing = 0, disconnected = 0, cancelled = 0;
 let mutate: () => void = () => {};
+
+// Restore after EACH test: the stub below is narrower than other files' (a `document` with
+// no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
+// next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
+afterEach(restoreGlobals);
 
 beforeEach(() => {
   pending = []; observing = 0; disconnected = 0; cancelled = 0;

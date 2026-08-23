@@ -10,7 +10,8 @@
  * builds the panel's frame — the module only touches a handful of members, and a fake keeps the
  * assertions on what was rendered rather than on markup.
  */
-import { beforeEach, expect, mock, test } from "bun:test";
+import { restoreGlobals } from "./globals.ts";
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 let painted: { code: string; streaming: boolean }[] = [];
 let unmounts = 0;
@@ -35,6 +36,12 @@ const makeBlock = (text: string) => {
   return block;
 };
 
+
+// Restore after EACH test: the stub below is narrower than other files' (a `document` with
+// no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
+// next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
+afterEach(restoreGlobals);
+
 beforeEach(() => {
   painted = []; unmounts = 0; frames = []; blocks = []; observers = [];
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
@@ -51,11 +58,19 @@ beforeEach(() => {
   };
 });
 
+// Every started sweep is stopped after the test, whether or not it reached its own `stop()`.
+// A failing assertion used to leave the module-level listener in `observe.ts` registered, so
+// the NEXT test's `paint()` ran a sweep against a torn-down document — one real failure then
+// cascaded into a dozen that had nothing wrong with them.
+let started: (() => void)[] = [];
+afterEach(() => { for (const stop of started.splice(0)) try { stop() } catch { /* already stopped */ } });
+
 const start = async (segments: () => any[]) => {
   mock.module("react-dom/client", () => ({ createRoot: (node: any) => ({ render: (el: any) => { painted.push(el.props); node.textContent = el.props.code }, unmount() { unmounts += 1 } }) }));
   const { claimInlineFences } = await import(`../src/client/runtime/inline-fence.ts?${Math.random()}`);
   const { scheduleSweep } = await import("../src/client/runtime/observe.ts");
   const stop = claimInlineFences({ segments, render: (props: any) => ({ props }) });
+  started.push(stop);
   paint();
   return { stop, again: () => { scheduleSweep(); paint() } };
 };
