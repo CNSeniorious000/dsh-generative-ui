@@ -22,6 +22,11 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { cardsIn, compileSettled, initTsxFromDisk } from "./tsx-node.ts";
 
+// The `$dsh/*` stubs warn on every call, by design — outside dsh there is no harness to reach.
+// Here that is expected, and 22 cards' worth of prompts on stderr buries the actual report.
+const realWarn = console.warn;
+console.warn = () => {};
+
 await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
@@ -41,7 +46,16 @@ for (const name of cardsIn(dir)) {
       // silently skipped in `bun run check`, which is the failure this whole script exists for.
       .replaceAll(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/g, (_whole, names: string) =>
         names.split(",").map((n) => n.trim().split(/\s+as\s+/).pop()!.trim()).filter(Boolean)
-          .map((n) => `const ${n} = () => null;`).join(" "));
+          .map((n) => `const ${n} = () => null;`).join(" "))
+      // `partial-json` parses a HALF-arrived JSON string; on a complete one it is `JSON.parse`,
+      // and a first synchronous render only ever sees the initial state. 22 corpus cards import
+      // it, and stubbing it faithfully is the difference between checking them and skipping them.
+      //
+      // `recharts` (51 cards) is deliberately NOT stubbed. A stub renders a chart as nothing,
+      // which would make this check PASS a card showing a blank chart — a false negative is worse
+      // than an honest skip, and the skip is counted.
+      .replaceAll(/import\s*\{([^}]*)\}\s*from\s*["']partial-json["']/g, () =>
+        "const parse = (s) => { try { return JSON.parse(s) } catch { return undefined } }; const Allow = new Proxy({}, { get: () => 0 });");
     // Normalize first, `final` then `streaming` — the exact two steps `compiler.ts` performs.
     // Compiling the raw source instead tests a path production never takes, in both directions:
     // it misses damage normalize would have repaired, and it misses damage normalize CAUSES.
@@ -69,5 +83,6 @@ for (const name of cardsIn(dir)) {
 // Say how many were skipped. A check that silently passes over a third of its input reads
 // exactly like one that examined everything and found nothing wrong.
 const note = skipped === 0 ? "" : ` (${skipped} skipped — imports this process cannot resolve)`;
+console.warn = realWarn;
 console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
 if (bad > 0) process.exit(1);
