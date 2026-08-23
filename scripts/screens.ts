@@ -312,14 +312,17 @@ export const SCREENS = {
   // still have to be balanced, because `background: active ? cfg.color : "#fff"` is two of the
   // three real hits.
   //
-  // A slider's `::-webkit-slider-thumb` is exempt: a thumb is white the way a piano key is white,
-  // by physical convention rather than by theme, and a themed one looks broken. The first fresh
-  // card to trip this screen in 58 was styling a thumb. Costs nothing — the three corpus hits are
-  // all ordinary surfaces.
+  // A slider's `::-webkit-slider-thumb` is exempt, and so is anything a card CALLS a knob, thumb,
+  // or handle: those are white the way a piano key is white, by physical convention rather than by
+  // theme, and a themed one looks broken. Both fresh cards to trip this screen were styling one —
+  // a range thumb, then a toggle switch knob, which the pseudo-element list could not cover.
+  //
+  // The split is clean and worth stating: **every corpus hit is an ordinary surface (5 of 5) and
+  // every fresh hit is a knob (3 of 3)**, so the exemption costs nothing and the residue is real.
   "HARDCODED-BACKGROUND": (src: string) =>
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,;{}]|\{[^{}]*\})*)/gi)].some((match) =>
       /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1]) &&
-      !/::(?:-webkit-slider-thumb|-moz-range-thumb|-webkit-slider-runnable-track|-moz-range-track)/.test(src.slice(Math.max(0, match.index - 160), match.index))),
+      !/::(?:-webkit-slider-thumb|-moz-range-thumb|-webkit-slider-runnable-track|-moz-range-track)|\b(?:knob|thumb|handle)\b/i.test(src.slice(Math.max(0, match.index - 160), match.index))),
   // The same key twice in one `style={{…}}`: the last wins and the first is silently dropped.
   // Nothing fails, so it survives until someone edits the dead line — the skill names it as one
   // of the two mistakes worth a checker round trip, and no screen here caught it.

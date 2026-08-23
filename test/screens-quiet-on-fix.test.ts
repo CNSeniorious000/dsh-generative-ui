@@ -267,6 +267,15 @@ test("HARDCODED-BACKGROUND: a slider thumb is not a page surface", () => {
   expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.panel { background: #fff; }`}</style>")).toBe(true);
 });
 
+// A toggle switch's knob is the same thing without a pseudo-element to recognise it by — the
+// second fresh card to trip this screen styled one. Every corpus hit is an ordinary surface and
+// every fresh hit is a knob, so exempting the word costs nothing.
+test("HARDCODED-BACKGROUND: a knob by any name is not a page surface", () => {
+  expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.switch .knob { background: #fff }`}</style>")).toBe(false);
+  expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.handle { background: #fff }`}</style>")).toBe(false);
+  expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.card-body { background: #fff }`}</style>")).toBe(true);
+});
+
 /**
  * No screen may key on English prose. Cards are written in Chinese as often as not — an analysis
  * that grepped `loading|pending` reported 7 of 9 where the answer was 9 of 9, because two cards
