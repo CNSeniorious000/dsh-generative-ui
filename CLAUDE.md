@@ -3226,6 +3226,25 @@ card is used by people who are not holding a mouse.
 That is also why the `:focus-visible` figure is the one worth quoting: **0 of 378 before, 51 of 58
 after.** It is not one rule among twenty-two — it is the headline of the whole corpus.
 
+### A rule that is received, understood, and not applied (2026-08-23)
+
+`UNANNOUNCED-ASYNC-RESULT` got a rule, and the first card generated to test it — a file browser
+that reads directories — **still fails the screen.** The first fresh card to fail one in 58.
+
+Delivery is not the problem. Asked what its rules say about async results arriving, the model
+quoted the new rule back nearly verbatim, including the reasoning. The card itself is careful:
+loading, error, empty, and populated states all handled separately. It simply never marked the
+region live.
+
+So the failure is between *understanding a rule* and *reaching for it while writing JSX* — a place
+none of today's other measurements could see, because every other rule landed.
+
+The one structural difference: this rule went into `prompt.ts` alone, while every accessibility
+rule that landed (`aria-label` on icon buttons, 13% → 92%) lives in the skill's accessibility
+section, grouped with its neighbours and carrying a code line. Moved it there, with the code line
+and the reason `aria-live` must sit on the container rather than the spinner. **Same prompt
+re-running now** — a controlled A/B on rule placement, which nothing here has tested before.
+
 ### Three more areas that turned out not to be defect areas (2026-08-23)
 
 Looking for the next screen by measuring instead of guessing. Three candidates, all dead ends,
