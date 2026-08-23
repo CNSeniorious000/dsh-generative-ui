@@ -2925,6 +2925,30 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### A shuffled-order flake that was a production bug (2026-08-23)
+
+Three of 20 shuffled orders failed on `inlineSubPages`, reporting zero rewritten imports. The
+instinct — and the shape of every earlier flake here — says test isolation. It was not.
+
+`SPECIFIER` is one module-level regex shared by `importsSibling` (a `.test`) and `inlineSubPages`
+(a `matchAll` and a `replace`). It was `/g`, and **`.test` on a global regex leaves `lastIndex`
+past the match it found**, so a `matchAll` on the same string immediately after returns zero:
+
+    SPECIFIER.test(code)          // true,  lastIndex = 23
+    [...code.matchAll(SPECIFIER)] // 0 matches
+
+That is exactly the order `CanvasPanel` calls them in — ask whether there are sibling imports,
+then go resolve them. The panel was told yes and resolved none. **The card rendered without its
+sub-pages, silently, in production**, and the only reason it showed up as a flake is that whether
+the poisoned `lastIndex` outlives the call depends on which test ran first.
+
+Fixed by deriving two regexes from one pattern (`matchAll` requires `/g`; nothing else should
+have it) rather than the previous fix, which was to share one — sharing is what introduced this.
+Reverting now fails 3 tests deterministically, in every order.
+
+**A flake that reproduces in 3 of 20 orders is not thereby an isolation problem.** The question
+that separated them was "what does production call, in what order?" — and it called exactly this.
+
 ### The first fresh card that was clean and did not paint (2026-08-23)
 
 Four cards generated specifically to bait the newest screens — a regex log filter, a glob

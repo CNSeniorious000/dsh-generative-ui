@@ -167,3 +167,26 @@ test("importsSibling is not stateful", () => {
   expect(importsSibling('import { useState } from "react";')).toBe(false);
   expect(importsSibling('const label = "./a";')).toBe(false);
 });
+
+/**
+ * The order `CanvasPanel` actually calls these in. With one shared `/g` regex, `importsSibling`
+ * returning true left `lastIndex` past the match, and the `matchAll` inside `inlineSubPages`
+ * then found nothing — the panel asked "any sibling imports?", was told yes, and resolved zero
+ * of them. The card rendered without its sub-pages, silently, in production.
+ *
+ * It surfaced as a shuffled-order flake (seeds 4, 9, 13 of 20) because whether the poisoned
+ * `lastIndex` outlives the call depends on which test ran first. A flake that reproduces in
+ * only 3 of 20 orders was a real bug the whole time.
+ */
+test("asking whether a card imports siblings does not stop them being found", async () => {
+  const code = 'import {a} from "./t/a"; export default a;';
+  expect(importsSibling(code)).toBe(true);
+  const { urls } = await run({ "./t/a": "export const a=1;" }, code);
+  expect(urls).toHaveLength(1);
+});
+
+test("and it survives being asked twice", () => {
+  const code = 'import {a} from "./t/a";';
+  expect(importsSibling(code)).toBe(true);
+  expect(importsSibling(code)).toBe(true);
+});

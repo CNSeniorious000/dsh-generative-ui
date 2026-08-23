@@ -15,21 +15,26 @@
 /**
  * Matches the specifier of a static import or re-export; the second capture is the specifier.
  *
- * Not exported: it is global, so `.test` advances `lastIndex` and the SECOND call on the same
- * string returns false. Callers get `importsSibling` instead, which owns the reset.
+ * NOT global, and that is load-bearing. It was `/g`, shared by all three call sites, and `.test`
+ * on a global regex leaves `lastIndex` past the match it found — so `importsSibling` returning
+ * TRUE made the very next `matchAll` on the same string return ZERO. That is the order
+ * `CanvasPanel` calls them in: ask whether there are sibling imports, then go resolve them. The
+ * panel found none to resolve and the card rendered without its sub-pages.
+ *
+ * `matchAll` requires `/g`, so it gets its own copy; the shared one stays sticky-free and no
+ * caller has to remember to reset anything.
  */
-const SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*)["'](\.[^"']*)["']/g;
+const SPECIFIER = /(\bfrom\s*|\bimport\s*\(\s*)["'](\.[^"']*)["']/;
+const SPECIFIER_ALL = new RegExp(SPECIFIER, "g");
 
 /**
  * Whether the card imports a sibling at all — the cheap question `CanvasPanel` asks before
  * paying for a resolve pass. It had its own copy of the regex, identical but for the `g` flag;
  * a widening applied to one and not the other means the panel never calls `inlineSubPages` and
- * the card silently renders without its sub-pages.
+ * the card silently renders without its sub-pages. Sharing one pattern fixed that and introduced
+ * the `lastIndex` bug above — hence two derived regexes rather than two literals.
  */
-export const importsSibling = (code: string) => {
-  SPECIFIER.lastIndex = 0;
-  return SPECIFIER.test(code);
-};
+export const importsSibling = (code: string) => SPECIFIER.test(code);
 
 /**
  * @param read fetches one child by its specifier, returning its source and the real filename
@@ -52,7 +57,7 @@ export async function inlineSubPages(
   const sources = new Map<string, { source: string; filename: string; specifiers: Map<string, string> }>();
   const missing = new Set<string>();
 
-  const specifiersIn = (source: string) => new Set([...source.matchAll(SPECIFIER)].map((match) => match[2]));
+  const specifiersIn = (source: string) => new Set([...source.matchAll(SPECIFIER_ALL)].map((match) => match[2]));
 
   // Collected breadth-first, then compiled in one pass. Resolving a child's own imports
   // *during* its fetch deadlocks on a cycle — a imports b imports a, and each awaits the
@@ -83,13 +88,13 @@ export async function inlineSubPages(
   const urlFor = new Map<string, string>();
   for (const filename of sources.keys()) urlFor.set(filename, "");
 
-  // Rewrites through `SPECIFIER`, not `replaceAll`, so only an actual import position moves.
+  // Rewrites through `SPECIFIER_ALL`, not `replaceAll`, so only an actual import position moves.
   // A bare `replaceAll("./board")` also rewrites the string in `const label = "./board"` — the
   // card then renders a blob URL as its label, or passes one where a path was meant. No corpus
   // card does this today; the regex that finds the imports already knows the difference, so
   // there is no reason to throw that away when putting them back.
   const rewrite = (source: string, specifiers: Map<string, string>) =>
-    source.replace(SPECIFIER, (whole, lead: string, specifier: string) => {
+    source.replace(SPECIFIER_ALL, (whole, lead: string, specifier: string) => {
       const url = urlFor.get(specifiers.get(specifier) ?? "");
       return url === undefined || url === "" ? whole : `${lead}${JSON.stringify(url)}`;
     });
