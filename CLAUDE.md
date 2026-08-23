@@ -3078,6 +3078,21 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### A trigger rule has a rate, not a verdict (2026-08-23)
+
+The first trigger-suite run reported a miss on `98 华氏度是多少摄氏度` — a prompt quoted **verbatim
+in its own rule**, answered as prose. That looks like the cleanest possible refutation.
+
+Re-ran it four times: card, card, card, card. Four of five, so the rule works about 80% of the
+time and the single miss measured nothing. The trigger decision is a model judgement made fresh
+each turn; unlike a screen, which is a pure function of the source, it does not have a verdict.
+
+`triggers.sh` takes a repeat count now and prints `card 4/5` rather than pretending. One run per
+case is a smoke test — worth having, since a rule at 0% would still show — but a miss is not
+evidence until it repeats. **The failure mode this avoids is the expensive one**: deleting or
+rewriting a working rule because one sample went the other way, which is exactly what the earlier
+12-seed ablation did to the flake fixes.
+
 ### A script that does something on import cannot be a library (2026-08-23)
 
 Extracting `stubUnresolvable` from `paint-cards.ts` and importing it into the canvas test meant
