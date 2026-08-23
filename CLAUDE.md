@@ -4096,3 +4096,21 @@ only thing that distinguishes "nothing to find" from "stopped looking".
 
 `scripts/screens.ts` now holds the predicates on their own, so a rate can be computed without
 running the whole compile sweep as a side effect.
+
+### The checkers, each tested against the failure it claims (2026-08-23)
+
+Every stage of `bun run check` asserts something about what it catches. Those assertions are
+prose until someone injects the failure, so:
+
+- **`smoke.ts`** names three: a top-level `import.meta`, a bundle that never calls `load()`, and
+  a bare `require()` outside the shell's module table. Injected all three into `lib/client.js` —
+  all three exit 1, and the third reports `require("node:fs") is not in the shell's module
+  table` by name. Note the near-miss: splicing the `require` at a random offset produced a
+  *syntax* error instead, which also exits 1 and proves nothing. **An injected failure has to be
+  the failure you meant**, or the test passes for the wrong reason.
+- **`replay-stream.ts`** and **`compile-cards.ts`** already end by running their controls.
+  `compile-cards.ts` now also fails when a screen has **no** control at all — the state every
+  screen was in before `test/cards-negative/` existed, and the state a new one starts in.
+- **`test:shuffled`** is new: bun shares one global per run, so file order decides whether a
+  leaked `fetch` stub is visible. Verified by removing the restore — caught in 6 of 6 shuffles,
+  so it is a gate and not a flake.
