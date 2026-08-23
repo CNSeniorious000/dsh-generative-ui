@@ -2950,6 +2950,14 @@ and `UNLABELLED-CONTROL` on 28; six screens are sole detector on nothing, meanin
 catch is already caught. That is not an argument for deleting them — a screen exists to name a
 cause, and a card flagged by five screens with the wrong one dropped gets diagnosed wrong.
 
+Which makes `NO-FOCUS-RING` worth auditing on its own: a false positive there mis-diagnoses more
+cards than a wrong answer anywhere else, and it has been retightened once already. Checked the
+whole flagged set rather than a sample — **72 of the 73 do not contain the string "focus"
+anywhere in the file**, and the 73rd's only mention is `onFocus={(e) => e.target.select()}`,
+which selects text rather than indicating focus. Zero false positives in 73. Seven constructed
+cases are pinned alongside, including the two forms that fooled earlier versions (a `focused`
+flag driving `borderColor`, and `:focus` used instead of `:focus-visible`).
+
 ### The screens strictly contain the paint check (2026-08-23)
 
 Cross-tabulating all 378 corpus cards, now that 303 of them actually render:

@@ -104,3 +104,29 @@ test("no screen matches a tag with [^>]*", () => {
     .filter((hit) => !hit.startsWith("<button"));
   expect(offenders).toEqual([]);
 });
+
+/**
+ * `NO-FOCUS-RING` is the sole detector on 50 of 378 corpus cards — more than every other screen
+ * combined — so a false positive in it mis-diagnoses more cards than a wrong answer anywhere
+ * else. It has been retightened once already, for cards replacing the ring with `:focus`
+ * rather than `:focus-visible`.
+ *
+ * Measured on the corpus: 72 of 73 flagged cards do not contain the string "focus" anywhere at
+ * all, and the 73rd's only mention is `onFocus={(e) => e.target.select()}` — selecting text, not
+ * indicating focus. Zero false positives in 73.
+ */
+const FOCUS_RING_CASES: [string, string, boolean][] = [
+  ["a bare outline:none is the defect", `<button style={{ outline: "none" }}>x</button>`, true],
+  [":focus-visible in a style block", "<style>{`button:focus-visible { outline: 2px solid red }`}</style><button style={{ outline: \"none\" }} />", false],
+  ["a focused flag driving borderColor", `const [focused] = useState(false);\n<input style={{ outline: "none", borderColor: focused ? "blue" : "grey" }} />`, false],
+  ["a focused flag driving boxShadow", `const [focused] = useState(false);\n<input style={{ outline: "none", boxShadow: focused ? "0 0 0 2px blue" : "none" }} />`, false],
+  ["outlineOffset counts as a ring", `<button style={{ outline: "none", outlineOffset: 2 }} />`, false],
+  ["no outline:none, nothing to say", `<button style={{ border: "1px solid" }} />`, false],
+  [":focus, not :focus-visible, still a replacement", "<style>{`button:focus { border-color: blue }`}</style><button style={{ outline: \"none\" }} />", false],
+];
+
+for (const [name, source, fires] of FOCUS_RING_CASES) {
+  test(`NO-FOCUS-RING: ${name}`, () => {
+    expect(SCREENS["NO-FOCUS-RING"](source)).toBe(fires);
+  });
+}
