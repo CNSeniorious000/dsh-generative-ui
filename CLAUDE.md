@@ -4756,3 +4756,24 @@ That is the **fifth** duplicated-fact instance today, and the pattern in where t
 worth naming: every one was in a *measurement* tool rather than in the product — the mutation
 mutator, the platform list, the stub table, the specifier regex, and now this. Test and harness
 code gets copied because it feels like scaffolding, and then it decides what the numbers say.
+
+### Every known failure now has both a screen and a rule (2026-08-23)
+
+The browser run found four blank cards and six throws. Checking each against the current
+screens closes the loop:
+
+| card | how it failed | screened as |
+| --- | --- | --- |
+| `401f703946a0` | `const [h, setH] = useMemo(…)` | `DESTRUCTURED-HOOK` |
+| `83d06aa1ce20` | `<Fragment>` never imported | `MISSING-REACT-IMPORT` |
+| `acec9f8e5f4c` | `commits[…length - 1]` on empty | `UNGUARDED-LAST-INDEX` |
+| `2f815f802de5` | a glob in JSX text | `GLOB-IN-JSX` |
+| `6216b82af0b0` | `useMemo` at module scope | `MODULE-SCOPE-HOOK` |
+| three compile failures | regex/px/arrow syntax | `compile-cards.ts` fails them |
+
+And each now has a prompt rule as well — the hook confusion, the missing import, the empty
+guard, the braces in JSX text, and the three syntax traps were all added today.
+
+**That is the shape worth aiming for: a failure observed in a browser, a screen that finds it in
+a corpus, and a rule that stops it being written.** The screen alone tells you the rate; the
+rule alone is unverifiable; together the rate is the measurement of whether the rule works.
