@@ -4539,6 +4539,18 @@ most of those are `{playing ? "暂停" : "播放"}`: a text expression that anno
 Restricting the arm to an icon *element* took it to 18, and spot-checking three of those found
 grid cells and calendar days that genuinely take no focus.
 
+The `<div onClick>` arm was **unconditional**, and auditing it found no false positive in the
+corpus — all 19 such divs have no `tabIndex`, `role`, `onKeyDown` or any other affordance, so
+every hit was real. That is exactly the reading that lets a bad screen survive: a screen nothing
+can satisfy flags the *fix* as loudly as the bug, and a corpus where nobody writes the fix cannot
+tell you. It now requires the affordance to be absent, the rate is unchanged at 18 of 378, and
+`test/cards/near-misses.ui4a.tsx` carries a `role="button" tabIndex={0} onKeyDown` div that must
+stay unflagged — verified by restoring the unconditional form, which flags it.
+
+**A screen with a 0% false-positive rate on the corpus is not thereby correct.** It may only mean
+the corpus never contains the thing that would prove it wrong, which is likeliest precisely when
+the screen is checking for a good practice nobody follows.
+
 Two things about the near-miss card are worth keeping. Its guard for that arm needed the button
 to have **no attribute containing braces** — `onClick={() => setRows([])}` makes `[^>]*>` and
 `\{[^{}]*\}` unable to match together, so the card looked clean under the widened screen for the

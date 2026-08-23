@@ -142,7 +142,9 @@ export const SCREENS = {
   // than anywhere in its attributes, so `<div><button onClick=…>` is not a hit.
   "UNREACHABLE-CONTROL": (src: string) => {
     const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
-    if (/<div\b[^>]*\bonClick=/.test(code)) return true;
+    // A `<div onClick>` is only unreachable if nothing makes it focusable. No corpus card gets
+    // this right (0 of 19), but a screen that cannot be satisfied would flag the fix too.
+    if ([...code.matchAll(/<div\b[^>]*\bonClick=[\s\S]*?>/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(m[0]))) return true;
     // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
     // which announces fine, and matching those took the report from 17 to 41 of 378.
     return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]

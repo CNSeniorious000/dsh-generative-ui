@@ -78,6 +78,10 @@ export default function SuspenseBoard() {
             CHILD is not the div being clickable. */}
         <button type="button">{rows.length === 0 ? "载入" : "清空"}</button>
         <div className="wrap"><button aria-label="复制" onClick={() => setRows([])}><span>⧉</span></button></div>
+        {/* A div that IS keyboard-reachable — role, tabIndex and a key handler. No corpus card
+            does this, so without a card here the screen could have stayed unconditional on
+            `<div onClick>` and nothing would have noticed it flags the fix as well as the bug. */}
+        <div role="button" tabIndex={0} onClick={() => setRows([])} onKeyDown={(e) => e.key === "Enter" && setRows([])}>clear</div>
         <input aria-label="filter" style={{ border: "none", outline: "none", font: "inherit" }} />
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
