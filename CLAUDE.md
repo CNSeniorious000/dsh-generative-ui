@@ -5679,3 +5679,23 @@ which is all a first synchronous render ever sees.
 nothing, so the check would start PASSING cards that show a blank chart — trading an honest skip
 for a false negative. **A stub is only legitimate when it is faithful for the thing being
 measured**; where it is not, the skip is the correct answer and the count is the record of it.
+
+### The streaming path, measured over the whole corpus (2026-08-23)
+
+`replay-stream.ts` had only ever run over the reference cards — it takes file paths while every
+sibling script takes a directory, so pointing it at the corpus failed with `EISDIR` from inside a
+read. Now it accepts both. Over all 378 cards, 60 prefixes each:
+
+- **0 visible remounts.** The `afterDefaultPaints` measure — a hook count changing after the card
+  has already painted, which is React tearing down and rebuilding in front of the reader — fires
+  on nothing. The `late-hook.tsx` control still detects it, so the measure is live.
+- **0 unnormalizable prefixes.** `normalizeGeneratedTsx` repairs every one of 22,000-odd prefixes
+  it is handed.
+- **4 cards with a frame that fails to compile mid-stream.** Three are the cards that never
+  compile at all, so every frame fails; the fourth, `c5f586e3ac6d`, has exactly **one** bad frame
+  at 27%, where the cut lands inside an object literal and the repair produces `{…, }` with a
+  trailing key expected.
+
+One blinked frame in ~22,000, on one card. **A measure that reports zero across a whole corpus is
+worth as much as one that finds something** — provided a control proves it still fires, which is
+what `late-hook.tsx` is for.
