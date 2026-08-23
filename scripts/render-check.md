@@ -27,7 +27,12 @@ const results = await js(String.raw`(async () => {
     document.body.appendChild(host);
     try {
       const src = await (await fetch("/card/" + name)).text();
-      const code = tsx.transform({ code: src, filename: name }).code;
+      // NORMALIZE FIRST — production does, and skipping it reports cards as blank that a reader
+      // would have seen render. Two of 17 were misjudged this way: `normalizeGeneratedTsx`
+      // inserts a missing React import, so the raw source throws `useState is not defined` and
+      // the normalized source is fine. Serve `partial-tsx` alongside the cards, or compare
+      // against `bun scripts/paint-cards.ts`, which does the same two steps.
+      const code = tsx.transform({ code: normalize(src), filename: name }).code;
       const mod = await import(URL.createObjectURL(new Blob([code], { type: "text/javascript" })));
       if (!mod.default) { out.push({ name, status: "no default" }); continue }
       createRoot(host).render(React.createElement(mod.default));
@@ -52,5 +57,8 @@ returns nothing until you catch it.
   until a fresh navigation — add a cache-busting query, do not just re-run the script.
 - **Pick an uncommon port and check it is free.** A collision leaves a *different* page serving
   200s, and the failure looks like every card being broken.
+- **Compiling the raw source is not what production does.** It normalizes `final`, and falls back
+  to `streaming` on failure. A driver that skips this measures a path nobody runs — in both
+  directions, since normalize both repairs damage and occasionally causes it.
 - **`mergeFallbackImports` parses one module.** Over a concatenation of 17 cards it returned 2
   specifiers instead of 9, silently. Accumulate card by card.
