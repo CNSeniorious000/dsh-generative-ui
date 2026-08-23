@@ -3311,6 +3311,26 @@ Not a sampling artefact — 130 corpus cards animate and 123 of them ignore the 
 people turn on for vestibular disorders and migraine. Every animating card in the fresh set
 honours it.
 
+### Catching an error is not showing one (2026-08-24)
+
+39 of 39 corpus cards touching `$dsh/fs` or `exec` handle failure in code — measured earlier and
+recorded as a rule nobody breaks. Handling is not surfacing, so: does the reader ever learn?
+
+| | shows the failure | rethrows to the boundary | genuinely silent |
+| --- | --- | --- | --- |
+| corpus (64) | 45 | 0 | **19 (30%)** |
+| fresh (20) | 15 | 3 | 2 (10%) |
+
+Then read the two fresh "silent" ones: one catches a `localStorage` write that is explicitly
+non-fatal and renders `stderr` directly for the command it runs — better than a generic error
+message — and the other returns `false` from an invalid glob, which is the right answer. **Zero
+fresh cards swallow a failure.** Three more use a strategy no corpus card uses at all: rethrow and
+let the surface's error boundary handle it.
+
+Two measurement lessons, both mine rather than the model's: `setError` is not the only spelling
+(`setErrMsg`, `setStatus("error")`, `错误`, rendering `stderr`), and a `catch` that rethrows is the
+opposite of a swallow. The first pass said 60% and the real number is 100%.
+
 ### Three more areas that turned out not to be defect areas (2026-08-23)
 
 Looking for the next screen by measuring instead of guessing. Three candidates, all dead ends,
