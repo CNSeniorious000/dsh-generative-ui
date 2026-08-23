@@ -164,7 +164,7 @@ export function apply(ctx: ClientContext): void {
 }
 
 /** All assistant prose in one node, concatenated; empty for every other node kind. */
-function textOf(node: ChatNodeView): string {
+export function textOf(node: ChatNodeView): string {
   const blocks = (node.data as AssistantNodeData | undefined)?.blocks;
   if (blocks === undefined) return "";
   let text = "";
@@ -182,7 +182,7 @@ function textOf(node: ChatNodeView): string {
  * cached view would claim `streaming` forever — a canvas that never stops pulsing and an
  * `edit` that never marks it stale.
  */
-function callsKeyOf(node: ChatNodeView): string {
+export function callsKeyOf(node: ChatNodeView): string {
   const parts: string[] = [];
   const walk = (block: CallBlock | undefined): void => {
     if (block === undefined) return;
