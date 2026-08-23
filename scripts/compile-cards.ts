@@ -55,6 +55,15 @@ if (process.argv[2] === undefined) {
       else { console.log(`control ${name}: DETECTOR BLIND — ${screen} no longer fires`); bad++ }
     }
   }
+  // A screen with no control is one nothing would notice going quiet — the state every screen
+  // here was in before `test/cards-negative/` existed, and the state a newly added one starts
+  // in. Cheap to enforce, and it is the difference between "found nothing" and "stopped looking".
+  const controlled = new Set(Object.values(CONTROLS).flat());
+  for (const screen of Object.keys(SCREENS)) {
+    if (controlled.has(screen)) continue;
+    console.log(`screen ${screen}: NO CONTROL — add a card to test/cards-negative/ that it must flag`);
+    bad++;
+  }
 }
 
 // It has counted `bad` since it was written and never acted on it — a checker that only ever
