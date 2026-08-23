@@ -52,8 +52,13 @@ const SCREENS = {
   // index the last element of an array they built from a literal or a counted loop, which cannot
   // be empty, and flagging those is how a screen becomes noise.
   "UNGUARDED-LAST-INDEX": (src: string) => {
-    const found = /(\w+)\[\s*(\w+)\.length\s*-\s*1\s*\]\s*\./.exec(src);
-    if (found === null || found[1] !== found[2]) return false;
+    // `[0]` as well as `[length - 1]`: the same card indexes both ends of the same array, and a
+    // screen that only knows one of them would have gone quiet the moment the author reached for
+    // the first element instead of the last.
+    const last = /(\w+)\[\s*(\w+)\.length\s*-\s*1\s*\]\s*\./.exec(src);
+    const first = /(\w+)\[\s*0\s*\]\s*\./.exec(src);
+    const found = last !== null && last[1] === last[2] ? last : first;
+    if (found === null) return false;
     const name = found[1];
     if (new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src)) return false;
     return new RegExp(`set${name[0].toUpperCase()}${name.slice(1)}\\b`).test(src) && /\$dsh\/(exec|fs|ai)/.test(src);
@@ -128,7 +133,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
