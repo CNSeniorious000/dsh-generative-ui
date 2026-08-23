@@ -7102,3 +7102,25 @@ before it.** Nothing here would have found this by mining the corpus, because th
 `localStorage` card. The population a rule creates has to be measured separately from the
 population it was derived from.
 
+### Do the created behaviours actually work? (2026-08-24)
+
+If a working rule creates surface area, the honest follow-up is to check every behaviour the rules
+created — not just that it appears, but that it *works*.
+
+| behaviour | corpus → fresh | correct? |
+| --- | --- | --- |
+| `:focus-visible` | 0/378 → 64/72 | **64 of 64** rules select something the card renders |
+| `localStorage` | 1/378 → 20/72 | 19 of 29 writes guarded — the one gap, now ruled |
+| `AbortController` | 1/378 → 14/72 | **14 of 14** both abort and pass the signal |
+| `aria-live` | 1/378 → 12/72 | all on a persistent container, in the first paint |
+| `prefers-reduced-motion` | 7/378 → 63/72 | 52 of 52 animating cards honour it |
+
+Three of these are 50–100× more common than in the corpus, so they are effectively new constructs
+in this population, and the failure mode to fear is **cargo-culting** — an attribute that appears
+because a rule asked for it and does nothing. A `:focus-visible` rule whose selector matches no
+element, an `AbortController` created and never aborted, an `aria-live` region rendered alongside
+the content it should announce.
+
+Checked all three: none. The only real gap in 133 new-construct uses is the bare `localStorage`
+write, which is now a rule.
+
