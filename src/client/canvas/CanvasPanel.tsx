@@ -77,6 +77,21 @@ const MAX_WIDTH = 720;
  * DOM: a swapped bound or a flipped subtraction gives a panel that snaps shut or eats the
  * conversation, and the drag itself cannot be exercised without a browser.
  */
+/**
+ * Which canvas the panel shows, and which ids the "other canvases" menu offers.
+ *
+ * Both are pure functions of the props and both decide what the reader is looking at, so they
+ * are here rather than inline: the fallback is what covers a selected canvas disappearing
+ * mid-stream (no cleanup needed — clearing the state as well would be a second render saying
+ * the same thing), and `offerable` minus the tabs is what keeps the menu from listing what is
+ * already on screen.
+ */
+export const activeCanvas = (canvases: readonly Canvas[], activeId: string | null) =>
+  canvases.find((canvas) => canvas.id === activeId) ?? canvases[canvases.length - 1];
+
+export const otherCanvases = (canvases: readonly Canvas[], offerable: readonly string[]) =>
+  offerable.filter((id) => !canvases.some((canvas) => canvas.id === id));
+
 export const widthForPointer = (clientX: number, viewportWidth: number) =>
   Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, viewportWidth - clientX));
 
@@ -114,12 +129,12 @@ export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth
   const [activeId, setActiveId] = useState<string | null>(null);
   const { open: picking, setOpen: setPicking, anchor: picker } = useDismissable();
   // Only what is not already a tab: the tabs cover this session, this covers the rest.
-  const elsewhere = offerable.filter((id) => !canvases.some((canvas) => canvas.id === id));
+  const elsewhere = otherCanvases(canvases, offerable);
 
   // Follow the newest canvas unless the reader has picked one that still exists. A
   // selection that disappears needs no cleanup: the fallback already covers it, and
   // clearing the state as well would only be a second render saying the same thing.
-  const active = canvases.find((canvas) => canvas.id === activeId) ?? canvases[canvases.length - 1];
+  const active = activeCanvas(canvases, activeId);
   const resolved = useSubPages(cwd, active);
 
   return (
