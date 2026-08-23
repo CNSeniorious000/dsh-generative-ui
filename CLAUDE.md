@@ -2949,6 +2949,17 @@ Reverting now fails 3 tests deterministically, in every order.
 **A flake that reproduces in 3 of 20 orders is not thereby an isolation problem.** The question
 that separated them was "what does production call, in what order?" — and it called exactly this.
 
+Confirmed end-to-end on the real path with the real compiler, not just in a unit test — a canvas
+importing `./row.tsx`, run through `importsSibling` then `inlineSubPages`:
+
+| | sub-pages inlined | entry still imports `"./row.tsx"` |
+| --- | --- | --- |
+| before | 0 | yes |
+| after | 1 | no, rewritten to a blob URL |
+
+The "before" row is what shipped: the relative specifier reaches the browser, where nothing
+resolves it, and the canvas renders blank. Verified present in `lib/client.js` after a build.
+
 Swept the rest of the codebase: `SPECIFIER` was the only module-level `/g` regex in it. A test
 now bans the shape (`test/subpages.test.ts`), the same way one bans `[^>]*` against a JSX tag —
 function-local `/g` is fine, since each call builds a fresh object, and `new RegExp(pattern, "g")`
