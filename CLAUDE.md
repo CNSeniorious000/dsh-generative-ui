@@ -4034,3 +4034,28 @@ which proves nothing; only the third actually collided a nested key with an oute
 new screen's very first run flagged **`metro.ui4a.tsx`, this project's own reference card**:
 `display: "block"` followed by `display: "flex"` in one object, confirmed by `@genui/cli`. The
 dead line is now gone.
+
+### The suite was passing on alphabetical luck (2026-08-23)
+
+`compiler.test.ts` never imported `compiler.ts` — recorded here already, and `compile-pipeline.test.ts`
+was written to cover the module for real. What was not noticed is that the misleading name was
+also **load-bearing**: renaming the file to `normalize.test.ts` (which is what it actually tests —
+`partial-tsx`'s two modes, asserted against the compiler) broke eight tests in
+`compile-pipeline.test.ts` with `WebAssembly response has unsupported MIME type 'null'`.
+
+The cause is one file away from anything the message names. `read.test.ts` installs a `fetch`
+stub and never restores it; bun shares **one global across every test file**, so the next file to
+fetch a real URL gets the stub. `compile-pipeline.test.ts` serves its wasm over a real
+`Bun.serve`, so it is that file. It had been broken pairwise all along — `bun test
+test/read.test.ts test/compile-pipeline.test.ts` fails 8 on the pre-rename tree too — and the
+full suite passed only because `compiler.test.ts` sorted first and warmed the compiler before
+`read` could poison it.
+
+Three things to carry:
+
+- **A green suite is not evidence of independence.** Run the files pairwise, or shuffled. Five
+  shuffled runs is what now backs the claim, rather than one alphabetical one.
+- **Restore every global you stub**, even when nothing currently breaks. `stream.test.ts` and
+  `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
+- **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
+  coupling only shows up when the accident is removed.
