@@ -3922,3 +3922,23 @@ rather than four. `JSX-SUBSCRIPT` needs no rule (it is a compile error the model
 
 The general form: **a screen with no corresponding rule is a trap you have decided to keep
 finding rather than stop causing.** Worth checking whenever a screen is added.
+
+### The three cards that never compiled (2026-08-23)
+
+`compile-cards.ts` reports 13 problems on the corpus; ten are warnings and **three are hard
+compile failures**, which matter more and had not been looked at. Each is a distinct syntax
+trap, each occurs exactly once in 378, and **none is rescued by `normalizeGeneratedTsx` in either
+mode** — verified directly. All three reached a reader as a broken card.
+
+- `<code>^\w+@\w+\.\w{2,}$</code>` — the regex quantifier `{2,}` is a JSX expression. This is the
+  same trap as `GLOB-IN-JSX` (`{ts,tsx}`) with a worse ending: the glob *parses* and throws at
+  render, the quantifier does not parse at all. Both come from the prompt telling cards to show
+  the user their pattern, so this is a trap the prompt actively steers into.
+- `fontSize: 11px` inside `style={{…}}` — bare CSS units in a JS object. The card also has a
+  `<style>` block where the same text is legal, which is how it happens.
+- `const inRange = cur.kind !== "done" && cur.lo >= 0 && (i: number) => i >= cur.lo` — an arrow
+  function on the right of `&&`.
+
+No screens added: `compile-cards.ts` already fails these loudly, and a screen for something the
+compiler catches is redundant. Prompt rules added instead — **a compile failure is the one
+category where prevention is the only useful lever**, since there is no card to salvage.
