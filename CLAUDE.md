@@ -3963,3 +3963,24 @@ The recovery also mislanded twice: the grafting script bounded the replaced bloc
 screen's comment*, and `HARDCODED-BACKGROUND` sits inside those bounds, so each "fix" deleted it
 again. `git checkout` of the last good commit, then re-applying only the intended edit, worked
 first try. **When a surgical patch has already gone wrong once, stop patching and re-derive.**
+
+### The `@genui/cli` claims, run rather than recalled (2026-08-23)
+
+The skill tells the model to check its canvases with `@genui/cli` and names two mistakes it
+catches. Nothing had verified either claim, and a stale URL or a wrong flag there is **bad
+advice reaching the model** — the failure mode `mapNotes` already exists to prevent. Ran the
+whole negative-card set through it:
+
+- The `pkg.pr.new` URL is live (133 KB tarball) and both documented claims are exact, down to
+  the wording the skill quotes: "Import declaration conflicts with local declaration".
+- It catches **two more** the skill did not mention — `Cannot find name 'Fragment'` and, for a
+  glob in JSX text, `Cannot find name 'ts'`, which is the very error the card would throw at
+  render.
+- It **misses** `MODULE-SCOPE-HOOK` and `HARDCODED-BACKGROUND`: both report `OK`. Now stated in
+  the skill, because a clean run reading as "this card works" is worse than no check at all.
+- `-i types/importmap.json` does exactly what `mapNotes` says: without it `$dsh/exec` reports
+  `Cannot find module`, with it that message is gone.
+
+The general point: **a prompt that tells the model to run a command is making a claim about the
+world, and it decays like any other.** Cheap to re-run, and the run turned up two facts that
+make the tool more useful than the text describing it.
