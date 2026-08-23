@@ -69,7 +69,11 @@ for src in ${(f)"$(fd -e ts -e tsx . src)"}; do
   done
   restore
   declined=$(( ${#lines} - covered - uncovered_here ))
-  if (( covered == 0 )); then
+  # "no branches" only when there genuinely were none. A file whose every condition came back
+  # UNCOVERED used to print the same line, which reads as "nothing to check" — the opposite.
+  if (( covered == 0 && uncovered_here > 0 )); then
+    echo "${src:t}: ${uncovered_here} conditions, NONE constrained by a test"
+  elif (( covered == 0 )); then
     echo "${src:t}: no branches (${declined} \`if (\` in prose, declined)"
   elif (( declined > 0 )); then
     echo "${src:t}: ${covered} conditions covered (${declined} in prose, declined)"
