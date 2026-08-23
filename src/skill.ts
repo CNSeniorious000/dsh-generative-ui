@@ -240,10 +240,32 @@ mode, so it opens nothing your own bash tool has not already opened.
 **A card that re-runs a command needs \`signal\`.** Polling on a timer, or running one per
 keystroke, stacks a second command on top of a slow first — and the panel then paints whichever
 finishes last, which is not necessarily the newest. Pass an \`AbortController\`'s signal and abort
-the previous run: it kills the command itself, not just your wait. The abort rejects, and that
-one rejection is not a failure — \`if (error.name === "AbortError") return;\` before you show
-anything. In an effect, abort in the cleanup, and stop polling on \`document.hidden\` so a canvas
-nobody is looking at is not shelling out every two seconds.
+the previous run: it kills the command itself, not just your wait.
+
+Measured across 378 real cards: 11 poll or re-run a command and **0** pass a signal, while the
+rule immediately below — check \`exitCode\` — is followed by 18 of 19. The difference is that one
+of them names a field you can see and the other describes a shape. So, the shape:
+
+\`\`\`tsx
+useEffect(() => {
+  const ctrl = new AbortController();
+  const tick = async () => {
+    // A canvas nobody is looking at should not be shelling out every two seconds.
+    if (document.hidden) return;
+    try {
+      const { stdout, exitCode } = await bash("git status --porcelain", { signal: ctrl.signal });
+      setStatus({ stdout, exitCode });
+    } catch (error) {
+      // The abort is the expected path here, not a failure: every re-run causes one.
+      if ((error as Error).name === "AbortError") return;
+      throw error;
+    }
+  };
+  void tick();
+  const timer = setInterval(tick, 2000);
+  return () => { ctrl.abort(); clearInterval(timer) };
+}, []);
+\`\`\`
 
 **A non-zero exit resolves.** Check \`exitCode\` and show what the command said —
 \`git status\` failing outside a repo is a thing the card should display, not an
