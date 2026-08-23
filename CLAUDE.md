@@ -4285,3 +4285,30 @@ one has bitten three times today. The layers, measured rather than assumed:
 That third case is the reason the prompt test is worth its length: it is the only thing standing
 between "the model silently stopped being told about dark mode" and a release. Verified by
 injecting all three.
+
+### The React components had no tests, and three testable things in them (2026-08-23)
+
+462 lines across `CanvasPanel`, `CanvasLauncher` and `GenUISurface` had nothing exercising them,
+on the reasoning that they need a DOM. Most of that is true, and three pieces were not — each
+pure, each deciding something the reader sees, each extracted and mutation-checked:
+
+- **`widthForPointer`** — the resize arithmetic. The panel is anchored right, so its width is
+  `viewportWidth - clientX`; a flipped subtraction gives a panel that grows as you drag it shut,
+  and a swapped clamp gives one that snaps to an unusable size. Both mutations now fail.
+- **`activeCanvas`** — what the panel shows. The interesting case is a *selected* canvas
+  disappearing when the session's calls are re-read: it falls back to the newest rather than
+  blanking, and no test had ever asserted that.
+- **`otherCanvases`** — what the "other canvases" menu offers, which must exclude what is
+  already a tab.
+
+Then two contracts between files that no compiler sees:
+
+- `panel.css`'s `--dgu-panel-width: 420px` and `useResize(420)` were the same number written
+  twice; diverging makes the panel visibly jump on its first frame, since the CSS default paints
+  before React's inline style lands.
+- **Every `dgu-` class the components render is styled, and every one styled is rendered.** A
+  renamed class is an unstyled panel that still mounts — no error, a column of raw markup over
+  the conversation. Verified in both directions by typo'ing a class and by adding an orphan rule.
+
+**"It needs a DOM" is usually true of the rendering and false of the deciding.** The arithmetic,
+the selection, and the filtering all came out without a browser.
