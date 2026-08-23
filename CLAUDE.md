@@ -3984,3 +3984,26 @@ whole negative-card set through it:
 The general point: **a prompt that tells the model to run a command is making a claim about the
 world, and it decays like any other.** Cheap to re-run, and the run turned up two facts that
 make the tool more useful than the text describing it.
+
+### One control per clause, not per screen (2026-08-23)
+
+`test/cards-negative/` had one control per *screen*, which proves the screen fires — not that
+every branch of it does. Deleting each clause and re-running the controls found **seven halves
+that could vanish with every control still green**, and one of them was already dead:
+
+- `MISSING-REACT-IMPORT`'s JSX arm was `<(Fragment)\b` — only Fragment. `<Suspense fallback={…}>`
+  is the way Suspense is actually written, and it matched nothing, so the screen was
+  Fragment-only in practice while reading as though it covered five names.
+- `SHADOWED-EXPORT` knew only `export default function X`. 377 of 378 corpus cards write that
+  form; the 378th writes `const X = …; export default X`, which shadows identically.
+- `MODULE-SCOPE-HOOK` anchored on bare `const`, so `export const ROWS = useMemo(…)` walked past.
+- `VIEWPORT-UNITS`' `100vh` half, `JSX-SUBSCRIPT`'s `attribute=` arm, `HARDCODED-BACKGROUND`'s
+  long-hex list, and three of `DESTRUCTURED-HOOK`'s four hooks — all deletable unnoticed.
+
+Now 20 controls over 9 screens, and **every clause has one that goes blind when it is removed**
+— verified by deleting each in turn, not asserted. The corpus report is unchanged at 13, so none
+of the widening cost a false positive.
+
+The method generalises past this file: **a control that proves the feature fires does not prove
+the feature is whole.** Delete each clause and see which controls notice. The ones that notice
+nothing are the clauses you have been trusting for free.
