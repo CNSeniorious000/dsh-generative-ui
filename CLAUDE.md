@@ -3187,6 +3187,17 @@ not:
 The fresh cards reach for icons **five times more often** and label them seven times more often.
 An icon-only button is the harder thing to get right, not the thing being avoided.
 
+Measured directly, on medians across both sets:
+
+| | corpus | fresh |
+| --- | --- | --- |
+| bytes | 5,669 | **10,440** |
+| hooks | 3 | 4 |
+| event handlers | 2 | **4** |
+
+Nearly twice the size and twice the interactivity. Whatever the rules did, they did not do it by
+making cards smaller.
+
 Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
 prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
 it. That set predicted both of today's additions before either existed.
