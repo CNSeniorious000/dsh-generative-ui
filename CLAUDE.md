@@ -4548,3 +4548,23 @@ the div arm anchors on `<div\b[^>]*\bonClick=`.
 **A screen's first number is a hypothesis.** 41 of 378 was not "this corpus has a big
 accessibility problem", it was "this regex matches something else too" — and the way to tell is
 to open three of the hits.
+
+### The screens, complete in both directions (2026-08-23)
+
+The screen system now enforces its own completeness, so neither half can rot silently:
+
+- **A screen with no control** fails `bun run check` — the state every screen was in before
+  `test/cards-negative/` existed, and the state a new one starts in.
+- **A control card no screen claims** fails too. It looks like coverage in a directory listing
+  and asserts nothing. (`late-hook.tsx` is the one legitimate exception: `replay-stream.ts` owns
+  it.)
+- **13 screens, 24 controls** — every clause of every screen has one that goes blind when the
+  clause is removed, verified by deleting each in turn.
+- **Two positive guard cards**, clean under all 13 screens, each holding the shapes a looser
+  version reports. Verified the same way: loosen a screen, the guard card must flag.
+
+Adding the prompt code blocks broke the mutation audit in a new way, worth knowing: the examples
+in `skill.ts` contain real `if` statements, indented exactly like real code, so the audit
+reported three "unconstrained conditions" that are documentation being taught. The mutator now
+tracks fenced blocks inside template literals and declines them — **indentation cannot separate
+an example from a statement, but the fence can.**
