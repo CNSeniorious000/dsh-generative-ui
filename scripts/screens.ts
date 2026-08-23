@@ -49,7 +49,12 @@ export const SCREENS = {
     // The JSX form for every name, not just `Fragment`. The `\s*[(<]` arm only sees a call or a
     // generic, so `<Suspense fallback={…}>` — the way Suspense is actually written — matched
     // nothing, and the screen was `Fragment`-only in practice.
-    return [...src.matchAll(/<(Fragment|StrictMode|Suspense)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef)\s*[(<]/g)].some((m) => !imported.has(m[1] ?? m[2]));
+    // Hooks too, not only the components. Zero of 378 corpus cards got this wrong and **2 of the
+    // first 17 generated after this session's prompt edits did** — a card opening with a `const`
+    // lookup table and calling `useState` below it throws `useState is not defined`, mounts, and
+    // paints nothing. The old list of five names could not see it.
+    const names = /<(Fragment|StrictMode|Suspense)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef|useState|useEffect|useMemo|useCallback|useRef|useReducer|useLayoutEffect)\s*[(<]/g;
+    return [...src.matchAll(names)].some((m) => !imported.has(m[1] ?? m[2]));
   },
   // `xs[xs.length - 1].field` on an array that came from outside the card. A `!xs` guard passes
   // for `[]`, so an empty result — a repo with no commits, a failed command, an empty directory —

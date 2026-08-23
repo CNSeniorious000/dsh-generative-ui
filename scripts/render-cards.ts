@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 
 import { resolve } from "node:path";
 
+import { mergeFallbackImports } from "partial-react/import-map";
 import { cardsIn } from "./tsx-node.ts";
 
 /** Every $dsh group, whose generated stubs are concatenated into the one shim module. */
@@ -17,6 +18,42 @@ const SHIM_GROUPS = ["chat", "ai", "fs", "exec"];
 
 const dir = process.argv[2] ?? ".research/cards";
 const cards = cardsIn(dir);
+
+/**
+ * The import map, built the way `GenUISurface` builds it: the fixed entries below, plus an
+ * esm.sh fallback for every bare specifier any card actually imports.
+ *
+ * A hand-kept list is wrong the first time a card imports something not on it — measured: one
+ * of 17 freshly generated cards imports `react-syntax-highlighter`, resolved fine in production
+ * by `mergeFallbackImports`, and was reported here as `Failed to resolve module specifier`. A
+ * harness that reports a working card as broken is worse than no harness.
+ */
+const LITERAL: Record<string, string> = {
+  react: "https://esm.sh/react@18",
+  "react-dom/client": "https://esm.sh/react-dom@18/client",
+  "react/jsx-runtime": "https://esm.sh/react@18/jsx-runtime",
+  "lucide-react": "https://esm.sh/lucide-react@0.400.0?external=react",
+  recharts: "https://esm.sh/recharts@2?external=react",
+  "motion/react": "https://esm.sh/motion@11/react?external=react",
+  "partial-json": "https://esm.sh/partial-json@0.1.7",
+  minimatch: "https://esm.sh/minimatch@10",
+  micromatch: "https://esm.sh/micromatch@4",
+  picomatch: "https://esm.sh/picomatch@4",
+  semver: "https://esm.sh/semver@7",
+  "react-markdown": "https://esm.sh/react-markdown@9?external=react",
+  "remark-gfm": "https://esm.sh/remark-gfm@4",
+  "$dsh/ai": "/shim/ai",
+  "$dsh/fs": "/shim/fs",
+  "$dsh/exec": "/shim/exec",
+  "$dsh/chat": "/shim/chat",
+  "$ui4a/chat": "/shim/chat",
+  "$ui4a/state": "/shim/state",
+};
+// One card at a time, accumulating. `mergeFallbackImports` parses ONE module's source — over a
+// concatenation of 17 cards it returned 2 specifiers instead of 9, silently, because the parse
+// stops at the first thing that is not a valid module prefix.
+let imports = LITERAL;
+for (const name of cards) imports = await mergeFallbackImports(imports, readFileSync(`${dir}/${name}`, "utf8"));
 const port = Number(process.argv[3] ?? 47771);
 
 Bun.serve({
@@ -25,7 +62,7 @@ Bun.serve({
     "/": () =>
       new Response(
         `<!doctype html><meta charset=utf8><div id=root></div>
-<script type="importmap">{"imports":{"react":"https://esm.sh/react@18","react-dom/client":"https://esm.sh/react-dom@18/client","react/jsx-runtime":"https://esm.sh/react@18/jsx-runtime","lucide-react":"https://esm.sh/lucide-react@0.400.0?external=react","recharts":"https://esm.sh/recharts@2?external=react","motion/react":"https://esm.sh/motion@11/react?external=react","partial-json":"https://esm.sh/partial-json@0.1.7","minimatch":"https://esm.sh/minimatch@10","micromatch":"https://esm.sh/micromatch@4","picomatch":"https://esm.sh/picomatch@4","semver":"https://esm.sh/semver@7","react-markdown":"https://esm.sh/react-markdown@9?external=react","remark-gfm":"https://esm.sh/remark-gfm@4","$dsh/ai":"/shim/ai","$dsh/fs":"/shim/fs","$dsh/exec":"/shim/exec","$dsh/chat":"/shim/chat","$ui4a/chat":"/shim/chat","$ui4a/state":"/shim/state"}}</script>
+<script type="importmap">${JSON.stringify({ imports })}</script>
 <script type="module">
 window.__cards = ${JSON.stringify(cards)};
 window.__src = {};
