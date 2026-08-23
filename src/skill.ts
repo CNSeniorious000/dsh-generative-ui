@@ -161,7 +161,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
       // in a <style> block
       .card input:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px }
       // or inline, from the state you already have
-      style={{ outline: "none", boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none" }}
+      style={ { outline: "none", boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none" } }
 
   \`:focus-visible\`, not \`:focus\` — it shows the ring for the keyboard and not for the mouse,
   which is the reason the ring was annoying in the first place.
@@ -187,7 +187,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   read the preference instead and let the value fall out of it:
 
       const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      style={{ transition: still ? "none" : "transform 90ms ease" }}
+      style={ { transition: still ? "none" : "transform 90ms ease" } }
 
   Where the motion IS the explanation — a packet crossing a diagram, a sort swapping two bars —
   shorten it rather than removing it (\`animation-duration: .01s\`), so the card still steps.

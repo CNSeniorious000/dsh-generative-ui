@@ -30,7 +30,9 @@ const RULES = [
   // Shown as code, not described. The adherence count found rules stated in prose landing at
   // 0-7% while the same rule as two lines landed — so the code block IS the rule here, and a
   // future edit trimming it back to the sentence undoes the measurement rather than tidying.
-  ["a duplicate style key, as code", 'style={{ padding: 4, gap: 6, padding: "8px 12px" }}'],
+  // `{ {` not `{{`: the dsh prompt loader reads `{{…}}` as a variable reference and rejects
+  // the section. Same JSX, same rendering, no collision — see the loader test at the bottom.
+  ["a duplicate style key, as code", 'style={ { padding: 4, gap: 6, padding: "8px 12px" } }'],
   ["destructuring useRef, as code", "// both undefined; dies on first use"],
   ["a component out of an object, as code", "const Icon = Icons[kind]; return <Icon />"],
 ] as const;
@@ -144,3 +146,22 @@ test("every screen has a rule telling the model not to do it", async () => {
   const missing = Object.entries(RULE_FOR_SCREEN).filter(([, phrase]) => !both.includes(phrase));
   expect(missing).toEqual([]);
 });
+
+/**
+ * dsh loads these through a template that reads `{{…}}` as a variable reference and REJECTS the
+ * whole section when one does not parse as a name. React's own `style={{ … }}` is exactly that
+ * token, so every rule written to show a style object made the plugin fail to load outright:
+ *
+ *     dsh: UNKNOWN: malformed prompt variable reference "{{}}" in section "dsh-generative-ui:inline"
+ *
+ * Six of them had accumulated, the oldest days before it was noticed — and nothing here caught
+ * it, because every other test reads the exported string while `dsh` is the only thing that
+ * PARSES it. Found by running `scripts/eval.sh`, which is to say by using the thing.
+ *
+ * Write `style={ { … } }` in prompt text: same JSX, same meaning to a reader, no `{{`.
+ */
+for (const [name, text] of [["the inline prompt", () => INLINE_PROMPT], ["the skill body", () => skillBody("types.json", "standalone.json")]] as const) {
+  test(`${name} carries no {{ for the loader to read as a variable`, () => {
+    expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
+  });
+}
