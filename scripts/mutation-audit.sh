@@ -36,7 +36,7 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   [[ "$sites" == "0" ]] && { echo "$(basename $src): mutationSites=0 (operator does not apply)"; continue }
   cp "$src" "/tmp/ma-$(basename $src)"
   current="$src"
-  perl -0pi -e 's/\bif \(([^)]*)\)/if (!($1))/g' "$src"
+  bun scripts/invert-ifs.mjs "$src"
   out=$(bun test 2>&1 || true)
   fails=$(printf %s\\n "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
   # A module that THROWS on import collapses its whole file into one error, so the count reads
