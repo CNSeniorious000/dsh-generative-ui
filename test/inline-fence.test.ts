@@ -175,3 +175,36 @@ test("a detached block is released without being restored", async () => {
   expect(block.attrs["data-ui4a-claimed"]).toBe("");
   stop();
 });
+
+/**
+ * Disposal gives every claimed block back.
+ *
+ * `stop()` is called nine times above and asserted on zero of them. What it must do is undo the
+ * hiding: the blocks belong to the host's React tree, so a claim left behind is a source block
+ * permanently `display: none` with an unmounted card sitting over it — the reader loses the code
+ * and gets nothing in its place, and only a reload fixes it.
+ */
+test("disposing restores every block it claimed", async () => {
+  const first = makeBlock("export default () => <div>one</div>");
+  const second = makeBlock("export default () => <div>two</div>");
+  const { stop } = await start(() => [segment("export default () => <div>one</div>"), segment("export default () => <div>two</div>")]);
+  for (const observer of observers) observer.fire();
+  paint();
+  expect([first, second].map((block) => block.style.display)).toEqual(["none", "none"]);
+  stop();
+  expect([first, second].map((block) => block.style.display)).toEqual(["", ""]);
+  expect([first, second].map((block) => block.attrs["data-ui4a-claimed"])).toEqual([undefined, undefined]);
+  expect(unmounts).toBe(2);
+});
+
+// A block React already removed must not be touched on the way out: its style and attributes
+// belong to a node that is no longer in the document.
+test("disposing does not touch a block that is already gone", async () => {
+  const block = makeBlock("export default () => <div />");
+  const { stop } = await start(() => [segment("export default () => <div />")]);
+  block.isConnected = false;
+  block.style.display = "none";
+  stop();
+  expect(block.style.display).toBe("none");
+  expect(unmounts).toBe(1);
+});
