@@ -106,3 +106,35 @@ test("the body assembles whether or not the maps exist", () => {
     expect(body).not.toMatch(/undefined\.json|-i undefined|\/undefined/);
   }
 });
+
+/**
+ * Every screen names a defect the model actually produced. A screen with no corresponding rule
+ * is a defect we detect and never asked the model to stop making — the checker and the prompt
+ * drifting apart. Pinned as a map so adding a screen forces answering "and what does the prompt
+ * say about it?", the same way `screens-quiet-on-fix.test.ts` forces answering "and what does a
+ * card doing this right look like?".
+ */
+const RULE_FOR_SCREEN: Record<string, string> = {
+  "BRAND-PRIMARY-FILL": "as a background",
+  "COMMA-IN-STYLE": "Merge styles with a spread, never a comma",
+  "DESTRUCTURED-HOOK": "Only `useState` returns a pair",
+  "DUPLICATE-STYLE-KEY": "written twice keeps only the last one",
+  "GLOB-IN-JSX": "brace in JSX text is an expression",
+  "HARDCODED-BACKGROUND": "Never write literal colors",
+  "JSX-SUBSCRIPT": "Subscript it into a capitalised local first",
+  "MISSING-REACT-IMPORT": "Import every name you write",
+  "MODULE-SCOPE-HOOK": "Declare every hook",
+  "NO-FOCUS-RING": "focus-visible",
+  "SHADOWED-EXPORT": "Never name it after something you imported",
+  "UNGUARDED-LAST-INDEX": "not a guard against empty",
+  "UNREACHABLE-CONTROL": "breaks keyboard use",
+  "VIEWPORT-UNITS": "100vw",
+};
+
+test("every screen has a rule telling the model not to do it", async () => {
+  const { SCREENS } = await import("../scripts/screens.ts");
+  expect(Object.keys(RULE_FOR_SCREEN).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
+  const both = INLINE_PROMPT + skillBody("types.json", "standalone.json");
+  const missing = Object.entries(RULE_FOR_SCREEN).filter(([, phrase]) => !both.includes(phrase));
+  expect(missing).toEqual([]);
+});

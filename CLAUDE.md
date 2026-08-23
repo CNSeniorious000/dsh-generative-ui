@@ -4711,6 +4711,22 @@ about `const { useState } = React`; `SHADOWED-EXPORT` is about colliding with an
 a local redeclaration. Reading the predicate and its negative control fixed the probes, not the
 screens. **A sweeping audit that reports failures everywhere is usually measuring itself.**
 
+The same pairing question applies in the other direction — **every screen should have a rule
+telling the model not to do it**, or we are detecting a defect we never asked anyone to stop
+making. `test/prompt.test.ts` now pins a screen → rule-phrase map and asserts its keys equal the
+screen list, so adding a screen forces answering it.
+
+Three screens had **no rule at all**: `DESTRUCTURED-HOOK`, `DUPLICATE-STYLE-KEY` and
+`JSX-SUBSCRIPT`. All three were found by the checker, given negative controls, measured against
+the corpus, written up here — and never turned into a sentence the model reads. Now written.
+
+That gap survived a first audit that said all fourteen were covered, because that audit matched
+each screen against a **loose regex** (`/useRef|destructur/`) and `useRef` appears in an unrelated
+abort-controller example. Re-running it with the exact rule phrase, the way the existing
+assertions are pinned, disagreed immediately. **A presence check is only as strong as the
+specificity of what it looks for**; a keyword that could plausibly appear for another reason
+finds coverage that is not there.
+
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
 `GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
