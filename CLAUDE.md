@@ -4345,3 +4345,21 @@ exists only in the live transcript the runtime reads. Worth knowing before concl
 disk-read corpus that a nested write is unhandled; the same file cannot answer that question.
 
 Matching on argument shape rather than tool name is what makes `bash` fall out for free.
+
+### `smoke.ts` registered the effects and never tore them down (2026-08-23)
+
+The smoke test loads the built bundle, runs `apply()`, and asserts which effects registered.
+Every one of those effects returns a **disposer**, and none of them had ever been called — so a
+cleanup that throws shipped silently.
+
+That matters more than it sounds. The shell runs these on every HMR round and on unload, and a
+throw aborts the rest of the teardown: the *next* effect's cleanup never runs, so the blob-URL
+and wasm leaks this file exists to catch happen anyway, one round at a time. The disposer that
+pairs `disposeCompiler()` with `dropSharedCompiler()` — 16 MB per HMR round — is one of them.
+
+Now they run, in reverse order, with the same DOM-absence tolerance the registration path has,
+and the report says **"4 of 6 effects returned a disposer, all torn down cleanly"**. Verified by
+planting an effect whose cleanup throws: `disposing probe failed: boom in teardown`, named.
+
+**A lifecycle test that only runs setup is half a test**, and it is the half that fails in
+development rather than in production.
