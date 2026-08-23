@@ -4823,3 +4823,10 @@ through disk reads — **passed without the cache**, because those reads were al
 test run* rather than failing, since the module under test imports it. What works is asserting
 the algorithmic property directly: the key must be an order of magnitude cheaper than the walk,
 and must change when an argument grows or a call settles.
+
+The rest of the per-frame path was measured too, rather than assumed: the `OPAQUE_WRITE` scan
+over the same 34 calls is **0.055 ms** (the regex bails early because `"code"` rarely appears),
+`matchSegment` over ten segments is **0.009 ms**, and parsing a 138 kb transcript for fences is
+**0.095 ms**. The collector was the only hot spot, and now nothing on that path exceeds a
+tenth of a millisecond. **Bounding the things you are not going to change is part of the
+measurement** — otherwise "we optimised the slow one" is a hope.
