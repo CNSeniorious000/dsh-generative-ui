@@ -133,6 +133,21 @@ export const SCREENS = {
   "BRAND-PRIMARY-FILL": (src: string) =>
     [...src.matchAll(/background(?:Color)?:\s*[^,;}]*brand-primary[^,;}]*/g)].some((match) =>
       /color:\s*["']?(#fff\b|#ffffff\b|white\b|var\(--dsw-alias-bg-)/i.test(src.slice(match.index + match[0].length, match.index + match[0].length + 120))),
+  // A control the keyboard cannot reach. Two shapes, both invisible to whoever wrote the card
+  // because a mouse works either way: `onClick` on a `<div>` (no focus, no Enter, no Space), and
+  // a button whose only content is an icon with no `aria-label` (a screen reader says "button").
+  // 17 and 31 of 378 respectively — the two most common defects here after `BRAND-PRIMARY-FILL`.
+  //
+  // Comments stripped first, and the `<div>` arm requires the onClick to be on the DIV rather
+  // than anywhere in its attributes, so `<div><button onClick=…>` is not a hit.
+  "UNREACHABLE-CONTROL": (src: string) => {
+    const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+    if (/<div\b[^>]*\bonClick=/.test(code)) return true;
+    // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
+    // which announces fine, and matching those took the report from 17 to 41 of 378.
+    return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]
+      .some((match) => !match[0].includes("aria-label"));
+  },
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
