@@ -5210,9 +5210,9 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 46% | 19% | **0%** |
-| fresh, after | 30 | 0% | 0% | **87%** |
+| fresh, after | 34 | 0% | 0% | **82%** |
 
-Thirty cards is not a rate, and 0% of 30 is still a small sample. Two caveats before the number
+Thirty-four cards is not a rate, and 0% of 34 is still a small sample. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
 by checks derived from it; and 46% is against all 18 screens, five of which did not exist when
 the earlier draft of this table said 28%.
@@ -5221,6 +5221,10 @@ The column that carries weight is the last one, and it needs neither caveat: `:f
 appears **zero times in 378 corpus cards** — not rarely, never — and in 26 of the 30 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
+
+Final for the day: **34 of 34 clean under all 18 screens**, and all 31 whose imports this process
+can resolve actually paint. The three skipped import `recharts`, which is deliberately not
+stubbed.
 
 That is the first evidence the rules do anything, and until the loader was fixed the honest
 figure for all of them was zero.
