@@ -193,6 +193,17 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
       <input type="range" aria-label="音量" min={0} max={100} value={v} onChange={…} />
 
+  **And when the content arrives on its own, say so where it lands.** A card that fetches shows a
+  spinner becoming a list; someone using a screen reader gets nothing — focus has not moved, and
+  the new content is silent below it. **0 of 64 corpus cards that fetch anything announce their
+  results**, the one defect a fresh batch still gets wrong too. One attribute on the container
+  the results land in:
+
+      <div aria-live="polite">{loading ? <Spinner /> : <List items={rows} />}</div>
+
+  On the container, not the spinner — the element has to be in the DOM BEFORE the content changes
+  for the change to be announced at all.
+
   A \`<label>\` BESIDE the control names nothing. \`<label>音量</label><input type="range" …/>\` is
   the shape two corpus cards took, and it is worse than no label: it reads as done. A label only
   associates when it wraps the control or carries \`htmlFor\` matching its \`id\`:
