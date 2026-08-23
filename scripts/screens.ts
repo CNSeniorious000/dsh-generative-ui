@@ -156,6 +156,23 @@ export const SCREENS = {
       return !/<label/.test(src.slice(Math.max(0, match.index - 250), match.index));
     });
   },
+  // Movement with no `prefers-reduced-motion` escape. The setting is not about taste: for people
+  // with vestibular disorders a sliding or scaling element causes nausea, and the OS switch is
+  // the only way they can say so.
+  //
+  // Movement, not every transition. 60 corpus cards transition only colour or opacity, which the
+  // setting is not asking about — screening those reports a third of the corpus for a fade. What
+  // is left is 47 cards transitioning `transform`/`all` and 16 with `@keyframes`, and **7 of 131
+  // animating cards honour it at all**, the worst adherence rate measured here.
+  "UNSTOPPABLE-MOTION": (src: string) =>
+    !/prefers-reduced-motion/.test(src) &&
+    // `transition: all` is NOT enough on its own: 9 corpus cards write it on a button whose only
+    // animated properties are colour and border, and `all` there means nothing moves. Requires a
+    // transform to exist somewhere — either named in the transition, or present as a property the
+    // `all` would pick up.
+    (/@keyframes/.test(src)
+      || /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src)
+      || (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),

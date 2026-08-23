@@ -141,6 +141,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
   "UNLABELLED-SLIDER": "A slider is the same problem",
+  "UNSTOPPABLE-MOTION": "@media (prefers-reduced-motion: reduce)",
   "VIEWPORT-UNITS": "100vw",
 };
 

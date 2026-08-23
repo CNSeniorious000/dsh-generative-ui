@@ -29,6 +29,10 @@ const PAIRS: Record<string, [string, string]> = {
   "HARDCODED-BACKGROUND": [`const s = { background: "#fff" }`, `const s = { background: "var(--dsw-alias-bg-base)" }`],
   "BRAND-PRIMARY-FILL": [`<div style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }} />`, `<div style={{ color: "var(--dsw-alias-brand-primary)" }} />`],
   "UNREACHABLE-CONTROL": ["<div onClick={f} />", "<div role='button' tabIndex={0} onClick={f} onKeyDown={g} />"],
+  "UNSTOPPABLE-MOTION": [
+    "@keyframes slide { from { transform: translateX(40px) } }",
+    "@keyframes slide { from { transform: translateX(40px) } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none } }",
+  ],
   "UNLABELLED-SLIDER": [
     `<input type="range" min={0} max={100} value={v} onChange={f} />`,
     `<input type="range" aria-label="音量" min={0} max={100} value={v} onChange={f} />`,
