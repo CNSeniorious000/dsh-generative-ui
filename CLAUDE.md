@@ -3078,6 +3078,19 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### A script that does something on import cannot be a library (2026-08-23)
+
+Extracting `stubUnresolvable` from `paint-cards.ts` and importing it into the canvas test meant
+**every test run silently painted every reference card** — that script does its work at module
+level, so importing it for one function ran the whole check. Visible only as a stray `paint: ok`
+line in the test output, which reads like a passing gate rather than a mistake.
+
+It is `scripts/stub-unresolvable.ts` now, and a test keeps it there. An `import.meta.main` guard
+would work equally well; a separate module says it in the file layout instead of in a condition.
+
+Worth noticing how it hid: the side effect PASSED. A stray success is not something anyone looks
+at twice, and the suite got faster once it was gone.
+
 ### Prompts I did not choose (2026-08-23)
 
 Every fresh-card batch until now used prompts I wrote, which measures the rules against the cases

@@ -10,11 +10,11 @@
  * That second form is the one a bare filename in `from` silently rejects.
  */
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { canvasChildPath } from "../src/contract.ts";
 import { importsSibling, inlineSubPages } from "../src/client/canvas/subpages.ts";
 import { compileCard, initTsxFromDisk } from "../scripts/tsx-node.ts";
-import { stubUnresolvable } from "../scripts/paint-cards.ts";
+import { stubUnresolvable } from "../scripts/stub-unresolvable.ts";
 import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 
@@ -130,5 +130,25 @@ test("the resolved canvas renders", async () => {
     expect(html.replace(/<[^>]*>/g, "").trim().length).toBeGreaterThan(0);
   } finally {
     URL.createObjectURL = real;
+  }
+});
+
+/**
+ * `scripts/paint-cards.ts` paints every reference card at module level, so importing it for one
+ * helper ran the whole check as a side effect — silently, inside the test suite. The helper lives
+ * in `stub-unresolvable.ts` now; this keeps it there.
+ *
+ * The general hazard: a script that DOES something on import cannot also be a library. Guarding
+ * with `import.meta.main` would work too, but a separate module says it in the file layout.
+ */
+test("importing the stub helper does not run a paint check", async () => {
+  const source = readFileSync(`${import.meta.dir}/../scripts/stub-unresolvable.ts`, "utf8");
+  expect(source).not.toContain("renderToString");
+  expect(source).not.toContain("process.exit");
+  // And nothing in test/ reaches for the script that does. Assembled rather than written out,
+  // so this file does not match its own check.
+  const forbidden = `from "../scripts/${"paint"}-cards.ts"`;
+  for (const name of readdirSync(import.meta.dir).filter((n) => n.endsWith(".test.ts"))) {
+    expect(readFileSync(`${import.meta.dir}/${name}`, "utf8")).not.toContain(forbidden);
   }
 });
