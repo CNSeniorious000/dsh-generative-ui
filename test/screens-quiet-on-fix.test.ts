@@ -265,3 +265,18 @@ test("HARDCODED-BACKGROUND: a slider thumb is not a page surface", () => {
   expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.r::-webkit-slider-thumb { height: 18px; background: #fff; }`}</style>")).toBe(false);
   expect(SCREENS["HARDCODED-BACKGROUND"]("<style>{`.panel { background: #fff; }`}</style>")).toBe(true);
 });
+
+/**
+ * No screen may key on English prose. Cards are written in Chinese as often as not — an analysis
+ * that grepped `loading|pending` reported 7 of 9 where the answer was 9 of 9, because two cards
+ * said `正在统计项目文件…`. That was an ad-hoc script rather than a screen, and this keeps it that
+ * way: every screen matches a code construct (an attribute, a property, a call), which is
+ * language-independent by construction.
+ *
+ * The list is words a checker might reach for that a card would only ever write in prose.
+ */
+test("no screen matches an English word a card would write in prose", () => {
+  const source = readFileSync(`${import.meta.dir}/../scripts/screens.ts`, "utf8").replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  const prose = ["loading", "pending", "submit", "search", "cancel", "confirm", "delete", "save", "empty", "failed"];
+  expect(prose.filter((word) => new RegExp(String.raw`/[^/\n]*\b${word}\b[^/\n]*/[gimsuy]*`).test(source))).toEqual([]);
+});
