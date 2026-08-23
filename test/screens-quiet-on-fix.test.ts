@@ -60,3 +60,26 @@ for (const [name, [dirty, clean]] of Object.entries(PAIRS)) {
     expect(SCREENS[name](clean)).toBe(false);
   });
 }
+
+/**
+ * The `>` inside a JSX handler is what a `[^>]*` regex mistakes for the end of the tag, so an
+ * attribute written after `onClick={() => …}` is invisible to it. Three screens have had this
+ * bug; a freshly generated card that did everything right — `role`, `tabIndex`, `aria-expanded`
+ * and a full `onKeyDown` — was reported broken by the last of them.
+ *
+ * These are the shapes that distinguish a working tag parser from a regex, kept as a set because
+ * the next screen to match a tag will need the same three.
+ */
+const AFTER_AN_ARROW: [string, string, boolean][] = [
+  ["UNREACHABLE-CONTROL", `<div onClick={() => go(id)} role="button" tabIndex={0} onKeyDown={k}>x</div>`, false],
+  ["UNREACHABLE-CONTROL", `<div onClick={() => go(id)}>x</div>`, true],
+  ["UNLABELLED-CONTROL", `<input type="range" onChange={(e) => setV(+e.target.value)} aria-label="音量" />`, false],
+  ["UNLABELLED-CONTROL", `<input type="range" onChange={(e) => setV(+e.target.value)} />`, true],
+  ["UNGUARDED-NUMBER-INPUT", `<input type="number" onChange={(e) => setN(e.target.value === "" ? "" : Number(e.target.value))} />`, false],
+];
+
+for (const [screen, source, shouldFire] of AFTER_AN_ARROW) {
+  test(`${screen} reads the whole tag past an arrow handler${shouldFire ? " (and still fires)" : ""}`, () => {
+    expect(SCREENS[screen](source)).toBe(shouldFire);
+  });
+}
