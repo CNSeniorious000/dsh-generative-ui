@@ -20,12 +20,12 @@ d=${0:a:h}
 filter=${1:-}
 repeat=${2:-1}
 hits=0; misses=0; failed=0
-while IFS='|' read -r rule prompt; do
+while IFS='|' read -r rule prompt seed; do
   [[ -z "$rule" || "$rule" == \#* ]] && continue
   [[ -n "$filter" && "$rule$prompt" != *"$filter"* ]] && continue
   cards=0; runs=0
   for _ in {1..$repeat}; do
-    out=$(zsh "$d/eval.sh" "$prompt" 2>&1) || { failed=$((failed+1)); continue }
+    out=$(zsh "$d/eval.sh" "$prompt" ${seed:+"$d/../$seed"} 2>&1) || { failed=$((failed+1)); continue }
     # A canvas counts: the rules ask for an interface, not for a fence specifically.
     fence=$(print -r -- "$out" | grep -o 'fence=[0-9]*' | cut -d= -f2)
     canvas=$(print -r -- "$out" | grep -o 'canvas=[0-9]*' | cut -d= -f2)

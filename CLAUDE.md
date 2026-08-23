@@ -3430,6 +3430,25 @@ Injection is the general answer to "is this checker still alive?", and cheaper t
 fresh cards are already on disk, and a one-line mutation per screen says whether the streak is a
 result or an artefact.
 
+### The trigger suite, second pass (2026-08-24)
+
+Six more cases, and two lessons that had nothing to do with the rules:
+
+**A prompt whose subject is absent measures the fixture.** `这个目录里都有啥` in an empty temp
+directory got the correct answer — "basically empty, one 0-byte file" — and scored as a rule
+failure. Browsing a set of one is not browsing. `trigger-cases.txt` takes a third field now, a
+seed directory, and both browse cases pass against `test/seed`. This is the third time today the
+same mistake appeared in a different place: `NEEDS_WORKSPACE` in the sampler, the `History` pair,
+and now here.
+
+**A crash is not a refutation, and the harness already knew that.** One case reported `CRASH`
+with an empty prompt; re-run by hand it produced a card immediately. `eval.sh` asks the session
+transcript how the turn ended rather than grepping stdout, so a transient upstream error is
+reported as a crash instead of a quietly-refuted rule — exactly what that check exists for, three
+versions after the ones that grepped for error strings.
+
+`aria-live` after the move to the skill: **3 of 3**, on three different async prompts.
+
 ### The trigger rules, measured for the first time (2026-08-23)
 
 Twelve cases across the nine rules, one real model turn each: **11 cards, 1 prose.** All nine
