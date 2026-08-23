@@ -35,7 +35,10 @@ trap restore EXIT INT TERM
 [[ -z "$(git status --porcelain)" ]] || { echo "working tree must be clean: this script rewrites source files"; exit 2 }
 
 uncovered=0
-for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
+# Every source under src/, at any depth, .ts and .tsx alike. The old form listed two directories
+# at one depth each and silently skipped five files — GenUISurface.tsx among them, which holds
+# the two error decisions this suite exists to constrain.
+for src in ${(f)"$(fd -e ts -e tsx . src)"}; do
   [[ "$src" == *panel-css* ]] && continue
   lines=($(grep -n 'if (' "$src" | cut -d: -f1))
   (( ${#lines} == 0 )) && { echo "${src:t}: no conditions (operator does not apply)"; continue }
