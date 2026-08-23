@@ -5482,3 +5482,21 @@ failures is a card that compiles, mounts, and shows the reader a blank rectangle
 Batching matters if this is repeated: `Runtime.evaluate` times out well before 378 cards, so
 prime the wasm and modules once into `window`, then render 30 at a time accumulating into
 `window.__results`.
+
+Then the whole thing got cheap enough to keep. `scripts/paint-cards.ts` compiles each card and
+renders it with **`react-dom/server`** — no browser, no server, ~2s for the reference cards, and
+it runs in `bun run check`. Against the corpus it finds **7 of the browser's 9 and nothing
+else**: no card that paints in a browser fails here. The two it cannot see both need more than a
+first synchronous render (React #321 wants a real root; an unguarded `[0]` wants the effect to
+have run).
+
+Two details made it work rather than skip half the corpus:
+
+- `$dsh/*` does not resolve in this process, and a card using a capability is exactly the kind
+  worth rendering. Rewritten to `types/standalone/*.js`, which already stands in for every member
+  with the right shape — the same stubs the browser harness serves.
+- A card is imported from a **`data:` URL**; `blob:` is not importable outside a browser.
+
+**The expensive verification is worth building even if you run it once — it tells you what the
+cheap one has to catch.** The browser run is what proved this covers the ground; without it the
+`react-dom/server` version would be a guess about what a first render is worth.
