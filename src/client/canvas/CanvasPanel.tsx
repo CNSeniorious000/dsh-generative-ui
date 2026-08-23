@@ -35,7 +35,7 @@ export type CanvasPanelProps = {
  * rewrite lands the original source is rendered, which fails exactly as it does today rather
  * than blanking a canvas that was working.
  */
-function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
+export function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
   const [resolved, setResolved] = useState<{ key: string; code: string } | null>(null);
   // Destructured so the effect depends on scalars: the store rebuilds `canvas` on every sweep,
   // and depending on the object would re-run the whole resolve for an unchanged canvas.
