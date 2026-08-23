@@ -6834,3 +6834,31 @@ a React card is most often accused of getting wrong, is not a defect area in eit
 and two of the six rows only looked like defects because the measurement did not understand the
 idiom.
 
+### Read one card before believing a measurement (2026-08-24)
+
+Four times today a measurement said something was wrong and reading one card said otherwise:
+
+| the claim | the reality | what the regex missed |
+| --- | --- | --- |
+| 60% surface errors | 100% | `setErrMsg`, `setStatus("error")`, rendering `stderr`, rethrow |
+| 7 of 9 show loading | 9 of 9 | `正在统计项目文件…` — the check was English-only |
+| async guards **regressed** 44%→14% | improved 41%→62% | `disabled={loading}`, and abort-previous |
+| rAF leaked in 3 cards | 0 leaked | a single-shot rAF has nothing to cancel |
+
+Every one was a false alarm, and every one would have been written into the record as a finding.
+The third is the dangerous one: a regression argues for reverting a rule.
+
+The common shape is not carelessness with regexes — it is that **a measurement encodes one
+spelling of a correct answer and the model knows several.** `setError` is the spelling I thought
+of; `setStatus("error")` is better. A manual `removeEventListener` is what I looked for;
+`{ once: true }` is more precise. Rendering `stderr` beats a generic error message.
+
+Working rule: **any surprising result gets one card read by hand before it is written down.** A
+result that confirms what you expect can wait; a result that would change a rule cannot. Cheap
+enough that there is no excuse — it is one `grep -A3` — and it caught four out of four today.
+
+This is also why the checked-in screens survive and my ad-hoc scripts did not: a screen goes
+through `screens-quiet-on-fix.test.ts`, which forces writing down what a card doing it RIGHT looks
+like. Every false positive above would have been caught by that discipline; none of these
+throwaway measurements had it.
+
