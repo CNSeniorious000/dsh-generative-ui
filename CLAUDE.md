@@ -4699,3 +4699,20 @@ nesting the skill registration under the web server.
 
 **A test that passes on its first run has proved nothing yet** — these did, and the mutations
 are what turned them into evidence.
+
+### A dependency no profile provides is a callback that never runs (2026-08-23)
+
+Testing the registration surfaced a failure mode neither half guarded: cordis **silently skips**
+a callback whose declared dependency is missing. A typo — `agentDefaultModal` for
+`agentDefaultModel` — costs the whole `$dsh/ai` route, with no error anywhere and no way to tell
+it from a profile that legitimately lacks the service.
+
+The fake contexts both answer everything, so they cannot see it: the smoke test happily
+*reported* an injection list containing `nonexistent-service` and passed. **A check that prints
+what it found is not a check** — the same class as `compile-cards.ts` counting `bad` and never
+exiting on it.
+
+Both halves now hold the list of services a profile can actually provide and fail on anything
+outside it. Verified by injecting a bogus name into each: the client half reports "apply()
+injects nonexistent-service, which no profile provides — that callback would never run", and the
+node half fails three tests on a one-letter typo.
