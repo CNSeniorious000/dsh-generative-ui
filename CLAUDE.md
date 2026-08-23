@@ -4212,3 +4212,23 @@ Zero corpus cards write a relative path as a string literal, so this was never o
 kind of bug that stays until someone reads the function asking what else the pattern matches.
 **Whenever a parser's output is applied with string replacement, the replacement has forgotten
 what the parser knew.**
+
+### A duplicated regex, and the trap in sharing it (2026-08-23)
+
+`CanvasPanel` kept `RELATIVE_IMPORT` — character-for-character `subpages.ts`'s `SPECIFIER` minus
+the `g` flag — to answer "does this card import a sibling?" before paying for a resolve pass.
+Two copies of the same pattern, and the drift is silent in the expensive direction: widen
+`SPECIFIER` alone and the panel stops calling `inlineSubPages`, so the card renders **without its
+sub-pages** and nothing errors.
+
+Sharing the constant directly would have been worse. `SPECIFIER` is global, so `.test` advances
+`lastIndex` and **the second call on the same string returns false** — the card would resolve on
+one render and drop its sub-pages on the next, which is harder to notice than the bug being
+fixed. Measured before writing the fix, not after.
+
+So the export is `importsSibling(code)`, a predicate that owns the reset, with a test asserting
+two calls agree. The whole tree has exactly one module-level global regex, and it is now behind
+that function.
+
+**Deduplicating a regex is not the same as exporting it.** A `g` flag makes it a stateful object,
+and every caller sharing it shares the state.
