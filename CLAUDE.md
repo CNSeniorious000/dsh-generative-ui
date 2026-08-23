@@ -5573,3 +5573,12 @@ production does mid-stream).
 **Verification has to take the same path as the thing it verifies, fallbacks included.** Twice in
 one file's history the checker and the runtime differed, once in each direction, and neither
 showed up as a wrong answer — one as a false alarm, one as a silent gap.
+
+The skipped count then came down from 102 to 80 by stubbing `partial-json` — 22 cards, and the
+stub is *faithful*: it parses a half-arrived JSON string, so on a complete one it is `JSON.parse`,
+which is all a first synchronous render ever sees.
+
+`recharts` is 51 more cards and is deliberately **not** stubbed. A stubbed chart renders as
+nothing, so the check would start PASSING cards that show a blank chart — trading an honest skip
+for a false negative. **A stub is only legitimate when it is faithful for the thing being
+measured**; where it is not, the skip is the correct answer and the count is the record of it.
