@@ -3078,6 +3078,23 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### Prompts I did not choose (2026-08-23)
+
+Every fresh-card batch until now used prompts I wrote, which measures the rules against the cases
+I thought of. `scripts/sample-prompts.py` draws them from the session corpus instead — 742 real
+user prompts, 215 unique after filtering — and prints the seed so a surprising result replays.
+
+The first unbiased batch: **4 cards, all clean, all painting**, plus one prose answer that was
+correct (a prompt asking about "这仓库" replayed in an empty temp directory — there is no repo, and
+saying so is the right response). That one exposed a flaw in the sampling, not the rules: a prompt
+whose subject is absent cannot measure a card-triggering rule, so `NEEDS_WORKSPACE` filters them.
+
+Also built `scripts/triggers.sh` for the nine trigger rules, the only ones with nothing behind
+them — a screen asks whether a card is wrong; these ask whether there should have been a card at
+all, answerable only by running the prompt. The cases come from the rules' own examples, and the
+two spot-checked so far both produce cards: the glob expression, and 给我五个猫名, which is the
+text of its rule.
+
 ### A transition that animates nothing (2026-08-23)
 
 Asking of `UNSTOPPABLE-MOTION` the same question that reshaped the slider rule — *what did the
@@ -5551,16 +5568,16 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 47% | 19% | **0%** |
-| fresh, after | 47 | 0% | 0% | **87%** |
+| fresh, after | 52 | 0% | 0% | **87%** |
 
-Forty-seven cards is not a rate, and 0% of 47 is still a small sample. Two caveats before the number
+Fifty-two cards is not a rate, and 0% of 52 is still a small sample. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
 by checks derived from it; and 47% is against all 22 screens, nine of which did not exist when
 the earlier draft of this table said 28%. The corpus figure has only ever moved by screens being
 ADDED — no card changed — which is the honest reading of why it climbed from 28% to 47%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 41 of the 47 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 45 of the 52 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 

@@ -1,0 +1,17 @@
+# Prompts each trigger rule in src/prompt.ts claims should produce a card, taken from the rules'
+# own examples and from the corpus. `scripts/triggers.sh` runs them and reports the hit rate.
+#
+# These are the only rules with no screen behind them: a screen asks "is this card wrong?", and
+# these ask "should there have been a card at all?" — answerable only by generating one.
+A conversion is never asked once|换算一下 5 英里是多少公里
+A conversion is never asked once|98 华氏度是多少摄氏度
+A question does not have to say build|帮我算一下 30 年期 100 万贷款利率 4.2% 的月供
+A question does not have to say build|帮我算房贷：300万，30年，利率3.5%
+A plan is not prose|我想学吉他，从哪开始
+A plan is not prose|想开始跑步怎么循序渐进
+When they hand you an expression|这个 glob 会匹配到啥 src/**/*.{ts,tsx}
+When they hand you an expression|0 3 * * 1-5 这个 cron 是什么意思
+Asking for a few of something|给我五个猫名
+Asking for a few of something|周末晚饭吃什么好
+看看都有啥 is a request to browse|这个目录里都有啥
+Visualise this is this block|用 inline 卡片画个柱状图，数据随便编五条
