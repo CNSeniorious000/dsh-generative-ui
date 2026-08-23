@@ -168,4 +168,16 @@ if (blobs.length === 0) throw new Error("no blob modules were synthesized — se
 const gaps = dom_gaps.length === 0 ? "" : `, ${dom_gaps.length} needing a DOM`;
 console.log(`smoke: ok — id ${id}, requires [${[...new Set(asked)].join(", ")}]`);
 console.log(`       ${disposers.length} of ${registered_effects.length} effects returned a disposer, all torn down cleanly`);
+/**
+ * The services the client half may depend on.
+ *
+ * The fake context answers everything, so a dependency that does not exist in any profile looks
+ * exactly like one that does — and cordis would simply never run that callback, silently costing
+ * whatever it registered. The list is short and changes rarely; a genuinely new dependency is a
+ * one-line edit here and a deliberate one.
+ */
+const CLIENT_SERVICES = new Set(["conversation", "workspaces"]);
+const unknown = [...new Set(injected)].filter((name) => !CLIENT_SERVICES.has(name));
+if (unknown.length > 0) throw new Error(`apply() injects ${unknown.join(", ")}, which no profile provides — that callback would never run. Add it to CLIENT_SERVICES if it is real.`);
+
 console.log(`       apply() registered ${registered_effects.length} effects${gaps} under injections [${[...new Set(injected)].join(", ")}]`);
