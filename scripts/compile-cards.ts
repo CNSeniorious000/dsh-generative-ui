@@ -58,6 +58,14 @@ const SCREENS = {
     if (new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src)) return false;
     return new RegExp(`set${name[0].toUpperCase()}${name.slice(1)}\\b`).test(src) && /\$dsh\/(exec|fs|ai)/.test(src);
   },
+  // A light surface colour written as a literal: `background: "#fff"`. The card has assumed a
+  // white page, so it renders white-on-white in dark mode. Exactly 2 of 378 corpus cards match,
+  // and they are the two genuine dark-mode failures found by rendering — every other hardcoded
+  // colour in the corpus is a chart series or an accent, not a surface. A first version also
+  // required the card to use no design token, on the theory that a literal white *beside* a
+  // `var(--dsw-alias-…)` is a deliberate accent; no card in the corpus is in that state, so the
+  // clause only added an untested branch.
+  "HARDCODED-BACKGROUND": (src: string) => /background(?:Color)?:\s*"#(?:fff|ffffff|fafafa|f8fafc)\b/i.test(src),
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
@@ -108,7 +116,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
