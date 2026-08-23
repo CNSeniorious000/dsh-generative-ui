@@ -389,13 +389,23 @@ the kind you never notice because the thing still works:
   an effect. A long-running AutoPlay is exactly where this bites, because the loop outlives the
   render that set it.
 
-It is worth the round trip because it catches the two mistakes that cost the most here, both
-of which otherwise reach the user as a blank card:
+It is worth the round trip because it catches the mistakes that cost the most here — the ones
+that otherwise reach the user as a blank card with nothing in the console. Each of these was
+run through it and the message is quoted as it actually comes back:
 
 - \`<META[key].icon />\` — JSX allows the member form \`<a.b />\` but not a subscript.
-- \`import { Pie } from "recharts"\` beside \`export default function Pie()\` — reported as
-  "Import declaration conflicts with local declaration". Nothing fails at build time; at
-  runtime the component recurses into itself until React throws #185.
+  "JSX element type '<the object>' does not have any construct or call signatures".
+- \`import { Pie } from "recharts"\` beside \`export default function Pie()\` — "Import
+  declaration conflicts with local declaration". Nothing fails at build time; at runtime the
+  component recurses into itself until React throws #185.
+- \`<Fragment>\` used without importing it — "Cannot find name 'Fragment'". A \`ReferenceError\`
+  at render, so the card mounts and shows nothing.
+- A glob or a regex quantifier written as JSX text — \`<code>src/*.{ts,tsx}</code>\` reports
+  "Cannot find name 'ts'", which is precisely what it will throw when the reader opens it.
+
+What it does **not** catch is worth knowing too, so you do not read a clean run as a working
+card: a hook called at module scope, and a hardcoded \`#fff\` background, both pass. Those are
+yours to get right.
 
 Skip it for a small inline block you can read in one screen. Run it on anything long, and on
 anything you are about to leave in the workspace as a canvas.
