@@ -9,7 +9,7 @@
  * which is exactly backwards.
  */
 import { normalizeGeneratedTsx } from "partial-tsx";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
 
@@ -59,6 +59,15 @@ if (process.argv[2] === undefined) {
   // here was in before `test/cards-negative/` existed, and the state a newly added one starts
   // in. Cheap to enforce, and it is the difference between "found nothing" and "stopped looking".
   const controlled = new Set(Object.values(CONTROLS).flat());
+  // The other direction: a card in `test/cards-negative/` that no checker claims is a control
+  // nothing runs — it looks like coverage in the directory listing and asserts nothing. The one
+  // legitimate exception is `replay-stream.ts`'s, which owns its own control.
+  const claimed = new Set([...Object.keys(CONTROLS), "late-hook.tsx"]);
+  for (const name of readdirSync("test/cards-negative")) {
+    if (claimed.has(name)) continue;
+    console.log(`card ${name}: ORPHANED — no screen claims it, so nothing runs it`);
+    bad++;
+  }
   for (const screen of Object.keys(SCREENS)) {
     if (controlled.has(screen)) continue;
     console.log(`screen ${screen}: NO CONTROL — add a card to test/cards-negative/ that it must flag`);
