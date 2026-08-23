@@ -5267,3 +5267,17 @@ separates the real ones from the rest**. `type="number"` is in the source, three
 the match; "does this list reorder" is not. A screen is viable exactly when the discriminator is
 present in the text, and the 16 cards already doing it right prove the fix is one people reach
 for unprompted.
+
+It also turned out to be the **second** prefix-unsafe screen, for the same structural reason as
+`NO-FOCUS-RING`: the guard follows the defect in the text, so a prefix cut between them shows the
+defect alone. `01bf50a29bde` gets cut mid-`Number(e.target.value) ||` at 70%.
+
+That was found by running the prefix property over the corpus, which `test/screens-prefix.test.ts`
+had never done — it checks four reference cards, and **none of them contains a `type="number"`
+field**, so the new screen would have sat on the exception list unexamined. The test now runs the
+corpus when it is extracted, and a second test requires every named exception to be *reproducible*
+— a screen listed as prefix-unsafe that nothing can demonstrate is a screen quietly excused from
+the check. Verified by adding a bogus name to the list and watching it fail.
+
+**An exemption list is a place where checks go to die.** Every entry needs a test proving it is
+still needed, or removing it is the only way anyone finds out.
