@@ -152,7 +152,16 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
-- **Every visual change is continuous.** No jump cuts: enter from where the element is, let exits finish, and honour \`prefers-reduced-motion\`.
+- **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
+- **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
+  cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
+  turn it on for vestibular disorders and migraine, and a looping demo is exactly what it is for.
+  It is one rule at the end of the \`<style>\` block you already have, and it covers everything:
+
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }
+
+  Where the motion IS the explanation — a packet crossing a diagram, a sort swapping two bars —
+  shorten it rather than removing it (\`animation-duration: .01s\`), so the card still steps.
 
 ## Sound
 
