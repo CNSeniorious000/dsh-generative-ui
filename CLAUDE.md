@@ -4165,9 +4165,14 @@ a number transcribed into prose (`什么是二分查找` as both 2/3 and 1/3) ou
 came from, and a widened screen silently invalidates every sentence quoting its old rate — which
 is exactly what today's widenings would have done to four of them.
 
-As of this session every screen reports 0–3 of 378, and `JSX-SUBSCRIPT` reports 0. A screen at
-zero is not idle: it has controls in `test/cards-negative/` proving it still fires, which is the
-only thing that distinguishes "nothing to find" from "stopped looking".
+A screen at zero is not idle: it has controls in `test/cards-negative/` proving it still fires,
+which is the only thing that distinguishes "nothing to find" from "stopped looking".
+`JSX-SUBSCRIPT` is the one currently there.
+
+The policy earns itself. A sentence here once read *every screen reports 0–3 of 378*, which was
+true when written and false within the day — three screens now report 11, 18 and 73. Prose cannot
+be re-derived, so it rots in place while the command beside it stays right. **Only the numbers
+that carry an argument belong in the text**; the rest belong in a script, cited by name.
 
 `scripts/screens.ts` now holds the predicates on their own, so a rate can be computed without
 running the whole compile sweep as a side effect.
