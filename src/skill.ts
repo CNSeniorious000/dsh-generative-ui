@@ -415,6 +415,12 @@ yours to get right.
 Skip it for a small inline block you can read in one screen. Run it on anything long, and on
 anything you are about to leave in the workspace as a canvas.
 
+**Read the report, do not obey it.** Run over 378 real cards it reported something on 136 of
+them, and 97 of those were \`implicitly has an 'any' type\` on a lambda parameter — a card that
+runs perfectly. Annotating every parameter to quiet it costs lines and buys nothing. The lines
+worth acting on name a *mechanism* that is wrong (a conflicting declaration, a duplicate key, a
+name that does not exist, a comma operator), not a type that could be narrower.
+
 ## Imports
 
 Bare specifiers resolve from npm at render time — there is no install step, so never tell the user to install anything and never hold back an import because it "isn't available". Importing it *is* installing it.
