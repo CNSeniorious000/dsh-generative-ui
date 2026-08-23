@@ -6713,3 +6713,28 @@ card that was correct.
 Sixth member of the prefix-unsafe set, which the file predicted before any of the last three
 existed: the error handling is written after the call it guards.
 
+### Where the corpus actually fails, ranked (2026-08-24)
+
+The corpus's defects, ranked, after a day of adding screens:
+
+| screen | of 378 | added |
+| --- | --- | --- |
+| `NO-FOCUS-RING` | 73 | before today |
+| **`UNANNOUNCED-ASYNC-RESULT`** | **63** | today |
+| `UNLABELLED-CONTROL` | 54 | before today |
+| `UNSTOPPABLE-MOTION` | 37 | before today |
+| `UNGUARDED-ASYNC-HANDLER` | 23 | before today |
+| `UNREACHABLE-CONTROL` | 18 | before today |
+| **`SWALLOWED-CAPABILITY-FAILURE`** | **15** | today |
+| everything else (17 screens) | 1–11 each | mixed |
+
+The two added today went in at second and seventh. Both were found the same way — not by looking
+for defects, but by asking what an **unmeasured** property looks like in both populations, and
+noticing the one where corpus and fresh cards were equally bad.
+
+That is the method worth keeping. Twenty-two screens found nothing new by 2026-08-24 morning
+because they were all derived from defects already known; the two that landed came from measuring
+six accessibility attributes nobody had screened, and from asking whether "handles failure" (39 of
+39, a rule nobody breaks) meant the reader ever learns. **A screen set converges on what it
+already knows; the way out is to measure something it does not check.**
+
