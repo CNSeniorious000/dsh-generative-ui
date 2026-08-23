@@ -189,6 +189,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   number beside it on screen is a separate element and is not connected to it:
 
       <input type="range" aria-label="音量" min={0} max={100} value={v} onChange={…} />
+
+  A \`<label>\` BESIDE the control names nothing. \`<label>音量</label><input type="range" …/>\` is
+  the shape two corpus cards took, and it is worse than no label: it reads as done. A label only
+  associates when it wraps the control or carries \`htmlFor\` matching its \`id\`:
+
+      <label>音量 <input type="range" value={v} onChange={…} /></label>   // wrapping, so it names it
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
   cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
