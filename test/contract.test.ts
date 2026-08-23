@@ -38,3 +38,28 @@ test("a path outside the canvases directory owns no canvas", () => {
   expect(owningCanvasIdOf("/w/.dsh/ui4a/notes/deck.tsx")).toBeNull();
   expect(owningCanvasIdOf("/etc/passwd")).toBeNull();
 });
+
+/**
+ * The `from` parameter is attacker-controlled too.
+ *
+ * The traversal tests above vary the *specifier*, which is the obvious half. `from` reaches the
+ * same function from the same route, and it is used to locate the child directory by splitting
+ * on it — so a `from` naming another canvas, an absolute path outside the workspace, or a
+ * Windows path is worth stating rather than assuming. Every case either resolves inside this
+ * canvas's own directory or returns null; none escapes.
+ */
+test("no `from` can move the resolution out of the canvas directory", () => {
+  const root = canvasChildDir(id);
+  const cases = [
+    `${CANVAS_DIR}/other/board.tsx`,      // another canvas's child
+    `/etc/${root}/x.tsx`,                 // absolute, outside the workspace
+    `C:\\w\\${root.replaceAll("/", "\\")}\\board.tsx`,  // a Windows path
+    `/w/${root}/nested/${root}/board.tsx`, // the root appearing twice
+    root,                                 // naming the directory rather than a file in it
+    "",
+  ];
+  for (const from of cases) {
+    const resolved = canvasChildPath(id, "./types", from);
+    expect(resolved === null || resolved.startsWith(`${root}/`)).toBe(true);
+  }
+});
