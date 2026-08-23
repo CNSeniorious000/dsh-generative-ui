@@ -57,13 +57,14 @@
     "test": "bun test",
     "loads": "zsh scripts/loads.sh",
     "smoke": "bun scripts/smoke.ts",
-    "check": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run build && bun run smoke && bun run loads",
+    "check": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run paint && bun run build && bun run smoke && bun run loads",
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts",
     "audit": "python3 scripts/audit-record.py CLAUDE.md && bun scripts/corpus-rates.ts 2>/dev/null | python3 scripts/audit-rates.py",
     "replay": "bun scripts/replay-stream.ts",
     "cards": "bun scripts/compile-cards.ts",
+    "paint": "bun scripts/paint-cards.ts",
     "test:shuffled": "zsh scripts/test-shuffled.sh"
   },
   "dependencies": {
