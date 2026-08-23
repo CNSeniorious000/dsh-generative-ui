@@ -3881,3 +3881,23 @@ comparing the file before running anything.
 Current state: **every condition constrained**, 195 tests, and the audit run leaves the tree
 clean. The scores that used to be printed (`mutationSites=12 failingTests=11`) were never
 meaningful — a high failure count is one loud condition, not eleven covered ones.
+
+### Screening the dark-mode failures (2026-08-23)
+
+The two cards rendering white-on-white in dark mode were recorded but never screened, so nothing
+would have caught a third. `HARDCODED-BACKGROUND` now does, and getting it to the right number
+took two corrections that each looked like a finished screen:
+
+- **Anchoring on `background: "#`** found 2 of 3. The third writes its surface behind a
+  multi-line ternary — `active ? "#dcfce7" : "#fff"` — which is how a model actually writes a
+  selected state, so the screen matches the *value* of any `background`/`backgroundColor` key.
+  `test/cards-negative/ternary-background.tsx` is a control in that shape.
+- **Dropping the "card uses no design token" clause** after measuring that it changed nothing.
+  It changed nothing *against the narrower regex*; against the widened one it takes the report
+  from 38 to 3, because 35 corpus cards paint a `#fff` accent on a properly themed surface. **A
+  measurement of a clause is only valid against the code it currently guards.**
+
+Backgrounds only, and that is a decision rather than an oversight. Six of 378 cards ignore the
+token rule outright, but three of them fail it with light *text* (`color: "#fff"` on a coloured
+button), which reads correctly on both themes. Widening to "any extreme luminance" reports all
+six and is wrong about half of them — it is the **surface** that has to come from the theme.
