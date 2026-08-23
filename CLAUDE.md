@@ -5458,3 +5458,27 @@ Three things worth carrying:
 - **Changing a prompt is a change to a program whose output you have not run.** This regression
   was introduced by an edit made carefully, tested, and recorded — and would have shipped as an
   improvement.
+
+### All 378, actually rendered (2026-08-23)
+
+Having built the driver, the corpus went through it too — every card compiled in-page, mounted
+under an error boundary, and read back. **369 of 378 painted (97.6%).** The nine that did not:
+
+| | |
+| --- | --- |
+| 3 never compiled | the three already known: a regex in JSX, `px` in a style object, `&&` into an arrow |
+| 1 `ts is not defined` | `GLOB-IN-JSX` — the glob's braces read as an expression |
+| 1 `useMemo is not iterable` | `DESTRUCTURED-HOOK` |
+| 1 React #321 | `MODULE-SCOPE-HOOK` — a hook outside a component |
+| 1 `Fragment is not defined` | `MISSING-REACT-IMPORT` |
+| 1 reading `'date'` of undefined | `UNGUARDED-LAST-INDEX` |
+| 1 `Expression expected` | a leaked `</｜｜DSML｜｜parameter>` token — a corrupt extraction, not a defect |
+
+**Eight of the nine map exactly onto an existing screen, and the ninth is not a card problem.**
+That is the useful result: the screens were derived from reading code, and rendering — an
+entirely independent method — finds the same set and nothing else. Each of the six runtime
+failures is a card that compiles, mounts, and shows the reader a blank rectangle.
+
+Batching matters if this is repeated: `Runtime.evaluate` times out well before 378 cards, so
+prime the wasm and modules once into `window`, then render 30 at a time accumulating into
+`window.__results`.
