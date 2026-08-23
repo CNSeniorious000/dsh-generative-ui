@@ -3176,6 +3176,17 @@ The sixth is a finding. **0 of 64 corpus cards that fetch anything announce the 
 nothing — focus has not moved and the content appears silently below it. The only defect measured
 today that BOTH populations get wrong, and the reason is simply that no rule ever mentioned it.
 
+The same table answers a harder objection — that clean cards might just be plainer cards. They are
+not:
+
+| | corpus | fresh |
+| --- | --- | --- |
+| uses lucide icons | 31/378 (8%) | 25/58 (**43%**) |
+| ...of those, any `aria-label` | 4/31 (13%) | 23/25 (**92%**) |
+
+The fresh cards reach for icons **five times more often** and label them seven times more often.
+An icon-only button is the harder thing to get right, not the thing being avoided.
+
 Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
 prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
 it. That set predicted both of today's additions before either existed.
