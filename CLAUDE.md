@@ -5578,6 +5578,17 @@ corpus card throwing `ts is not defined`, and this time every glob is a string l
 added today argues for building something; nothing in a day of that work would have noticed the
 prose side eroding, and it is the side with no checker at all.
 
+A later spot-check produced a **useful near-miss**: `把这几个环境变量整理成一张表` — *organise
+these env vars into a table* — came back as a markdown table, no card, and looked at first like
+the `.env` fixture regressing. It is not the fixture. That one reads
+`帮我把 .env 弄明白，有几个值我要改` — *there are values I need to CHANGE* — which is a request to
+edit, and it still produces UI, verified. The other prompt asks for a table and gets a table.
+
+**Read the fixture's phrasing before calling a nearby prompt a regression.** The difference
+between the two is one clause about intent, and it is exactly the distinction the trigger rules
+are supposed to make. (The prose reply also noticed the seed's `.env` is committed to git with a
+live-looking key in it, which nothing asked for and is the right thing to say.)
+
 *(Housekeeping, from the same day: this section spent an hour **inside** the one before it,
 because the phrase I anchored the insert on sat in the wrong place and the edit succeeded
 anyway. `test/record-structure.test.ts` now checks dated sections are in order and titles are
