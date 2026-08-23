@@ -17,6 +17,8 @@ const PAIRS: Record<string, [string, string]> = {
   "JSX-SUBSCRIPT": [`<Icons[kind] size={12} />`, `{(() => { const I = Icons[kind]; return <I size={12} /> })()}`],
   "GLOB-IN-JSX": ["<code>src/**/*.{ts,tsx}</code>", `<code>{"src/**/*.{ts,tsx}"}</code>`],
   "UNQUOTED-CSS-UNIT": ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+  "TRANSITION-WITHOUT-TRANSFORM": [`<div style={{ transition: "transform .12s ease" }} />`, `<div style={{ transition: "transform .12s ease", transform: "scale(1.02)" }} />`],
+
   "AND-INTO-ARROW": ["const f = a > 0 && (i: number) => i * 2;", "const f = (i: number) => a > 0 && i * 2;"],
   "REGEX-IN-JSX-TEXT": ["  ^\\w+@\\w+\\.\\w{2,}$", `  const ok = /^\\w+@\\w+\\.\\w{2,}$/.test(v);`],
   "COMMA-IN-STYLE": ["<div style={base, { color: 'red' }} />", "<div style={{ ...base, color: 'red' }} />"],
@@ -234,3 +236,12 @@ for (const [screen, spelling, source] of UNUSED_BUT_REAL) {
     expect(SCREENS[screen](source)).toBe(false);
   });
 }
+
+/**
+ * A transform applied IMPERATIVELY is still a transform. One corpus card sets it from
+ * `onMouseDown`, and it is real motion — the first version of `TRANSITION-WITHOUT-TRANSFORM`
+ * flagged it because the property never appears in a style object.
+ */
+test("TRANSITION-WITHOUT-TRANSFORM: an imperative transform counts", () => {
+  expect(SCREENS["TRANSITION-WITHOUT-TRANSFORM"](`<button style={{ transition: "transform .12s ease" }} onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}>x</button>`)).toBe(false);
+});

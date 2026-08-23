@@ -25,15 +25,18 @@ const CARDS = ["test/cards/2048.ui4a.tsx", "test/cards/metro.ui4a.tsx", "test/ca
  * - `UNSTOPPABLE-MOTION` fires on `@keyframes` and clears on the `@media (prefers-reduced-motion)`
  *   block, which by convention comes last in a `<style>`.
  *
- * All three are the same shape, which is worth stating: the fix is written AFTER the thing it
+ * - `TRANSITION-WITHOUT-TRANSFORM` fires on `transition: "transform …"` and clears when the
+ *   `transform` property itself appears — which in a style object is the very next line.
+ *
+ * All four are the same shape, which is worth stating: the fix is written AFTER the thing it
  * fixes, so any cut between them shows the defect alone. That is a property of how CSS and
- * JavaScript are written, not a flaw in these three predicates, and a fourth screen with the
- * same shape should be expected rather than investigated.
+ * JavaScript are written, not a flaw in these predicates. The fourth was predicted here before
+ * it existed, and arrived on 2026-08-23 — the next one is expected rather than investigated.
  *
  * The rest have no such ordering. This is the property that would let the screens run WHILE the
  * model types, so knowing which two cannot is the useful part.
  */
-const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTOPPABLE-MOTION"]);
+const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTOPPABLE-MOTION", "TRANSITION-WITHOUT-TRANSFORM"]);
 
 /**
  * The four reference cards cannot exercise every screen — none of them has a `type="number"`

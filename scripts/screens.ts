@@ -241,6 +241,22 @@ export const SCREENS = {
     (/@keyframes/.test(src)
       || /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src)
       || (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
+  // `transition: "transform .12s ease"` on an element whose transform is never set. The
+  // transition animates nothing — it reads as polish and costs a repaint budget for a property
+  // that does not change. Four of 378 corpus cards.
+  //
+  // A transform counts however it is applied, including imperatively: one card assigns
+  // `e.currentTarget.style.transform = "scale(0.95)"` from `onMouseDown`, which is real motion
+  // and was the first false positive a naive version of this produced.
+  "TRANSITION-WITHOUT-TRANSFORM": (src: string) => {
+    if (!/transition(?:Property)?:\s*["']?[^;"'`}]*\btransform\b/.test(src)) return false;
+    // Everything except the transition declarations themselves — naming `transform` there is the
+    // promise, not the thing promised. Comments go too: this screen's own negative control talks
+    // ABOUT `style.transform = …` in a comment, which cleared it. A card explaining the fix in
+    // prose is not a card applying it, and that is exactly the shape a control takes.
+    const rest = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").replaceAll(/transition(?:Property)?:\s*["']?[^;"'`}]*/g, "");
+    return !/\btransform\b\s*[:=]/.test(rest);
+  },
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),

@@ -3078,6 +3078,30 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### A transition that animates nothing (2026-08-23)
+
+Asking of `UNSTOPPABLE-MOTION` the same question that reshaped the slider rule — *what did the
+card write instead?* — split its 37 hits into 16 with `@keyframes` and 21 with only a
+`transition:`. Sampling those 21 found every one a true positive, and found something else:
+
+    transition: "transform .12s ease, border-color .12s ease"
+
+on an element whose `transform` is **never set**. Four of 378 cards. The transition animates
+nothing; it reads as polish and is not there. Now `TRANSITION-WITHOUT-TRANSFORM`, 22 screens.
+
+Two false positives while writing it, both instructive:
+
+- One card sets the transform **imperatively**, `e.currentTarget.style.transform = "scale(0.95)"`
+  from `onMouseDown`. That is real motion, and it never appears in a style object.
+- The negative control **described** the imperative form in a comment, and the words cleared the
+  screen. Every other screen strips comments first; this one now does too. A card explaining a
+  fix in prose is not a card applying it — and a control is exactly the shape that does that.
+
+It also joins the prefix-unsafe set, which the file predicted: the fix (`transform:`) is written
+after the promise (`transition:`), so a mid-stream cut shows the defect alone. That list said "a
+fourth screen with the same shape should be expected rather than investigated" before there was
+a fourth.
+
 ### The multi-file canvas nothing tested (2026-08-23)
 
 Running the six fixture files through the screens produced the first hit on fresh output in 44
