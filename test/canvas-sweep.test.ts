@@ -11,6 +11,7 @@
  * is rendered with, which is exactly what the reader sees.
  */
 import { restoreGlobals } from "./globals.ts";
+import { resetTranscriptObservers } from "../src/client/runtime/observe.ts";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
 let painted: any[] = [];
@@ -41,6 +42,9 @@ const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve
 afterEach(restoreGlobals);
 
 beforeEach(() => {
+  // Another file's leaked sweep would run against ITS captured root, which no longer has a
+  // `querySelectorAll` — one stale listener turns every test here red.
+  resetTranscriptObservers();
   painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = []; unmounts = 0; columnRemoved = 0;
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
   (globalThis as any).cancelAnimationFrame = () => {};
@@ -62,6 +66,9 @@ beforeEach(() => {
   };
 });
 
+let mounted: { dispose: () => void }[] = [];
+afterEach(() => { for (const host of mounted.splice(0)) try { host.dispose() } catch { /* already disposed */ } });
+
 /** Mount the host with a fixed set of tool calls, and return what the panel was rendered with. */
 const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void; open?: string; width?: number } = {}) => {
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
@@ -77,6 +84,11 @@ const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; betwee
   // sat green while `paint` never ran a second time.
   scheduleSweepAgain = (await import("../src/client/runtime/observe.ts")).scheduleSweep;
   const host = mountCanvasHost({ calls: () => calls, cwd: () => over.cwd ?? "/w", sessionId: () => "s1" });
+  // Registered for teardown BEFORE anything that can throw. `observe.ts` keeps ONE module-level
+  // listener set for the whole run, so a host left alive by a failing assertion goes on being
+  // swept by every later test — including files whose `document.body` has no `querySelectorAll`,
+  // where it throws and turns one real failure into twenty-five.
+  mounted.push(host);
   await settle();
   if (over.open !== undefined) { host.show(over.open); await settle() }
   // Stand in for the user having dragged the panel wider, so a collapse is observable.

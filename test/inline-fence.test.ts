@@ -11,6 +11,7 @@
  * assertions on what was rendered rather than on markup.
  */
 import { restoreGlobals } from "./globals.ts";
+import { resetTranscriptObservers } from "../src/client/runtime/observe.ts";
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 let painted: { code: string; streaming: boolean }[] = [];
@@ -43,6 +44,9 @@ const makeBlock = (text: string) => {
 afterEach(restoreGlobals);
 
 beforeEach(() => {
+  // Another file's leaked sweep would run against ITS captured root, which no longer has a
+  // `querySelectorAll` — one stale listener turns every test here red.
+  resetTranscriptObservers();
   painted = []; unmounts = 0; frames = []; blocks = []; observers = [];
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
   (globalThis as any).cancelAnimationFrame = () => {};

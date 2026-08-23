@@ -46,3 +46,20 @@ export function observeTranscript(listener: Listener): () => void {
 
 /** Requests a frame outside a mutation — for state that changed without the DOM changing. */
 export const scheduleSweep = schedule;
+
+/**
+ * Drop every listener and tear the observer down.
+ *
+ * The set above is module scope, so it is shared by everything in a process — which is right in
+ * a browser (one transcript, one observer) and is a trap in a test run, where a listener left by
+ * one file goes on being swept by every later one. A sweep captures its root at registration, so
+ * a stale one runs against a document that has since been replaced.
+ *
+ * Nothing in the plugin calls this: the shell disposes each host and that is the real path.
+ */
+export function resetTranscriptObservers(): void {
+  listeners.clear();
+  observer?.disconnect();
+  observer = null;
+  frame = 0;
+}
