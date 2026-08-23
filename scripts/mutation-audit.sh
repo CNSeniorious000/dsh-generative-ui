@@ -42,6 +42,7 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   cp "$src" "/tmp/ma-${src:t}"
   current="$src"
   covered=0
+  uncovered_here=0
   for n in $lines; do
     bun scripts/invert-ifs.mjs "$src" "$n"
     # The mutator declines lines whose `if` is inside a string — `skill.ts` documents the
@@ -58,12 +59,20 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
     if [[ "${fails:-0}" == "0" && "$errors" == "0" ]]; then
       printf '  %s:%s  UNCOVERED  %s\n' "${src:t}" "$n" "$(sed -n "${n}p" "$src" | sed 's/^ *//' | cut -c1-72)"
       uncovered=$((uncovered + 1))
+      uncovered_here=$((uncovered_here + 1))
     else
       covered=$((covered + 1))
     fi
   done
   restore
-  echo "${src:t}: ${covered} conditions covered"
+  declined=$(( ${#lines} - covered - uncovered_here ))
+  if (( covered == 0 )); then
+    echo "${src:t}: no branches (${declined} \`if (\` in prose, declined)"
+  elif (( declined > 0 )); then
+    echo "${src:t}: ${covered} conditions covered (${declined} in prose, declined)"
+  else
+    echo "${src:t}: ${covered} conditions covered"
+  fi
 done
 echo
 echo $([[ "$uncovered" == "0" ]] && echo "every condition is constrained by a test" || echo "$uncovered unconstrained")
