@@ -4136,3 +4136,25 @@ Found by awaiting each stub and printing the shape, which took one script. The l
 prompt-verification one again from a third direction: **the stubs are a claim about how the
 exported page behaves, and a claim nothing exercises decays.** `readFile` and `readdir` were
 fine — the two that were tested when the table was written.
+
+### Two more checks that were checking a copy (2026-08-23)
+
+`compiler.test.ts` testing a re-implementation of its own module turned out not to be a one-off
+— the same shape was in two more places, and one of them **said so in its own doc comment**:
+
+- **`types/check.ts`** compared `bind()` against a hand transcription of the `.d.ts` files, and
+  the comment admitted "editing a `.d.ts` alone changes nothing — replacing `bash(command:
+  string)` with `bash(command: number)` leaves `tsc` silent." That was accepted because
+  TypeScript supposedly cannot import an ambient `declare module` as a value type. It can:
+  `types/` is on the tsconfig `include`, so `import type * as Exec from "$dsh/exec"` resolves
+  right there. The transcription is gone, and both drifts now fail `tsc`.
+- **The `-i` map is weaker than it reads.** `genui check bad.tsx -i types/importmap.json`
+  reports `OK` for `await bash({cmd: "ls"} as never)` and for reading a field that does not
+  exist on the result — and reports `OK` just the same when the map points at **a file that
+  does not exist**. So `-i` silences `Cannot find module` and leaves `$dsh/*` as `any`; the
+  CLI's own help says as much ("Unlisted bare specifiers stay untyped"). The skill now says it
+  too, because a card author reading "resolve facade imports against this map" will reasonably
+  assume the calls are typed.
+
+**A comment admitting a check is weak is a bug report with no assignee.** This one sat for as
+long as the file existed, and the fix was three lines.
