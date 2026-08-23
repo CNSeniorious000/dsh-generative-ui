@@ -3283,6 +3283,12 @@ belongs in the second, next to the other rules about JSX attributes — and one 
 build a card at all* belongs in the first. That is a distinction nothing here had tested, and it
 was worth two generations to find.
 
+Audited the other twelve code rules in `prompt.ts` for the same problem and found none — every
+one holds at 0 in the fresh set. But they are all **rare** defects (1–4 corpus cards each:
+a comma in a style object, a duplicate style key, `&&` into an arrow), where placement cannot be
+told apart from scarcity. `aria-live` was the only high-frequency rule sitting in the prompt
+alone (63 of 378), which is why the effect was visible there and nowhere else.
+
 ### Reduced motion, the largest single delta (2026-08-23)
 
     corpus: 7 of 130 animating cards honour prefers-reduced-motion (5%)
