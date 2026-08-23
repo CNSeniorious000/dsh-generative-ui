@@ -257,9 +257,18 @@ export const SCREENS = {
     const rest = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").replaceAll(/transition(?:Property)?:\s*["']?[^;"'`}]*/g, "");
     return !/\btransform\b\s*[:=]/.test(rest);
   },
+  // The value stops at `;` as well as `,`, which is what ends a CSS declaration — without it the
+  // match ran to the closing brace and swept in the NEXT property, so `background: var(--dsw-…);
+  // color: #fff` read as a hardcoded background. That was 35 spurious hits, and it was masked by
+  // a `!/dsw-alias/` escape that skipped any card using a token ANYWHERE.
+  //
+  // The escape is gone: it excused a whole file for one correct line, and it made the screen
+  // catch 0 of 48 injected defects — a card that uses tokens once could hardcode every background
+  // and never be seen. Stopping at `;` gives the same 3 of 378 with nothing excused. The braces
+  // still have to be balanced, because `background: active ? cfg.color : "#fff"` is two of the
+  // three real hits.
   "HARDCODED-BACKGROUND": (src: string) =>
-    !/dsw-alias|dsw-token/.test(src) &&
-    [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
+    [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,;{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
   // The same key twice in one `style={{…}}`: the last wins and the first is silently dropped.
   // Nothing fails, so it survives until someone edits the dead line — the skill names it as one
   // of the two mistakes worth a checker round trip, and no screen here caught it.

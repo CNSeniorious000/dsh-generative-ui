@@ -3078,6 +3078,38 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### Injection, applied to all 22 screens (2026-08-23)
+
+`bun run inject <dir>` writes one mutation per screen and reports how many real cards it is
+caught in. Sixteen came back at or near 100% immediately. The three failures were all worth
+having:
+
+**`HARDCODED-BACKGROUND`: 0 of 48, and it was a real hole.** The screen was cleared by
+`!/dsw-alias/.test(src)` — a WHOLE-FILE escape, so a card using a token once could hardcode every
+background and never be seen. It existed to suppress 35 spurious hits whose real cause was the
+match running past the declaration into the next property: `background: var(--dsw-…); color:
+#fff` read as a hardcoded background. Stopping the value at `;` gives **the same 3 of 378 with
+nothing excused**, and injection went 0/48 → 47/47. The braces still have to balance, because
+`background: active ? cfg.color : "#fff"` is two of the three real hits.
+
+A reference card carried the same error in prose — `near-misses.ui4a.tsx` asserted "35 of 378
+corpus cards do this and are correct". Re-measured with the fix: **0**. No corpus card uses tokens
+and hardcodes a background. A wrong measurement had been written into a fixture as a fact.
+
+**`BRAND-PRIMARY-FILL`: 0 of 48, and the screen was right.** Two mistakes in my injection, the
+second dangerous: the screen fires on the PAIRING not the fill, and the token is `brand-primary`,
+not `state-business-primary`. Those are different colours — `brand-primary` is a FOREGROUND
+despite its name, so filling with it and writing white on top is a white square with invisible
+text, while `state-business-primary` is the real accent and white on it is correct. "Widening" the
+screen to accept both spellings would have flagged 95 of 378 cards, **84 of them fine**.
+
+**`UNGUARDED-LAST-INDEX`: 0 of 57, injection too weak.** It is scoped to externally-filled arrays,
+so the mutation has to supply a capability import and a state setter, not just the index.
+
+All 22 catch their defect now, so the 57-card streak is a result rather than a blind checker. One
+exemption is named and tested for staleness: `piano.ui4a.tsx` fills keys with `#ffffff`, which is
+white by definition rather than by theme.
+
 ### Is a 57-card clean streak evidence, or an unfalsifiable checker? (2026-08-23)
 
 A streak that long invites the question of whether the screens can still fire on anything a

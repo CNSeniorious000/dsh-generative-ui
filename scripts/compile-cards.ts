@@ -17,10 +17,16 @@ import { REPLAY_CONTROLS, SCREENS } from "./screens.ts";
 
 await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
+const EXEMPT: Record<string, string> = { "piano.ui4a.tsx": "HARDCODED-BACKGROUND" };
+
 let bad = 0;
 for (const f of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${f}`, "utf8");
-  const screened = Object.entries(SCREENS).filter(([, hits]) => hits(src)).map(([name]) => name);
+  // One named exemption, mirroring `test/screens-exercised.test.ts`: a piano's keys are white by
+  // definition rather than by theme, so `HARDCODED-BACKGROUND` is right about the pattern and
+  // wrong about this card. Narrowing the screen to spare it would cost three real corpus hits.
+  const exempt = EXEMPT[f];
+  const screened = Object.entries(SCREENS).filter(([name, hits]) => hits(src) && name !== exempt).map(([name]) => name);
   // the shape a settled card takes: normalize final, then transform
   try {
     // `final`, then `streaming` — the same two-step `compiler.ts` performs, and for the same

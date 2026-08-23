@@ -70,9 +70,13 @@ export default function SuspenseBoard() {
         <Suspense fallback={null}>
           <FragmentList items={rows.map((r) => r.name)} />
         </Suspense>
-        {/* HARDCODED-BACKGROUND: a literal white surface on a card that DOES use tokens is a
-            deliberate accent — 35 of 378 corpus cards do this and are correct. */}
-        <span style={{ background: "#fff", color: "#111", borderRadius: 4, padding: "0 4px" }}>{LABELS.b}</span>
+        {/* HARDCODED-BACKGROUND used to be cleared for any card that mentioned a token anywhere,
+            and this line asserted that "35 of 378 corpus cards do this and are correct". Both
+            were wrong: the 35 were `background: var(--dsw-…); color: #fff`, where the match ran
+            past the declaration and read the NEXT property. Measured with the match stopped at
+            `;`, the real count is 0 — no corpus card uses tokens and hardcodes a background.
+            The token here is the fix, not an accent. */}
+        <span style={{ background: "var(--dsw-alias-bg-layer-1)", color: "#111", borderRadius: 4, padding: "0 4px" }}>{LABELS.b}</span>
         <span style={{ ...labelStyle, marginTop: 4 }}>merged</span>
         {/* BRAND-PRIMARY-FILL: `brand-primary` as a FOREGROUND is exactly what it is for, and
             `state-business-primary` is the colour you fill with. Neither is the mistake. */}

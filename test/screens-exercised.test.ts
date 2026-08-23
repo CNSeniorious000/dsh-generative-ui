@@ -47,10 +47,25 @@ test("some reference card contains the construct each screen looks at", () => {
   expect(Object.entries(CONSTRUCTS).filter(([, re]) => !re.test(everything)).map(([name]) => name)).toEqual([]);
 });
 
+/**
+ * One exemption, named rather than screened around: a piano's keys are white BY DEFINITION, not
+ * by theme, so `HARDCODED-BACKGROUND` fires on `piano.ui4a.tsx` and is right about the pattern
+ * and wrong about the card. Narrowing the screen to spare it would cost the three real corpus
+ * hits, which are ordinary surfaces.
+ *
+ * Listing it here keeps the cost visible. An exemption that grows is a screen that needs redoing.
+ */
+const EXEMPT: Record<string, string> = { "piano.ui4a.tsx": "HARDCODED-BACKGROUND" };
+
 test("and every reference card is clean under all of them", () => {
-  const dirty = cards.filter((name) => {
+  const dirty = cards.flatMap((name) => {
     const src = readFileSync(`${import.meta.dir}/cards/${name}`, "utf8");
-    return Object.values(SCREENS).some((fires) => fires(src));
+    return Object.entries(SCREENS).filter(([screen, fires]) => fires(src) && EXEMPT[name] !== screen).map(([screen]) => `${name}: ${screen}`);
   });
   expect(dirty).toEqual([]);
+});
+
+test("every exemption is still needed", () => {
+  const stale = Object.entries(EXEMPT).filter(([name, screen]) => !SCREENS[screen](readFileSync(`${import.meta.dir}/cards/${name}`, "utf8")));
+  expect(stale).toEqual([]);
 });
