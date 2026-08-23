@@ -108,9 +108,22 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
     const root = createRoot(column.element);
     disposers.push(() => root.unmount(), column.remove);
 
+    // `collectCanvases` walks every argument string by hand, which is what makes it correct on a
+    // half-arrived JSON prefix — and it costs 0.16ms per canvas per sweep. The sweep runs on
+    // every transcript mutation, so a session with 34 canvas calls (the corpus maximum) spent
+    // ~5ms per streamed token re-deriving a result that had not changed. Keyed on the calls'
+    // own bytes: a streamed argument grows, so its length moves on every frame that matters and
+    // on none that do not.
+    let callsKey: string | null = null;
+    let collected = collectCanvases([]);
+
     const paint = () => {
       const allCalls = calls();
-      const collected = collectCanvases(allCalls);
+      const key = `${allCalls.length}:${allCalls.reduce((total, call) => total + call.argsRaw.length + (call.settled ? 1 : 0), 0)}`;
+      if (key !== callsKey) {
+        callsKey = key;
+        collected = collectCanvases(allCalls);
+      }
       const workspace = cwd();
       const session = sessionId();
       const hidden = dismissed.get(session) ?? EMPTY;
