@@ -5406,9 +5406,9 @@ Scored against all 18 screens at the end of the day:
 | | clean under every screen |
 | --- | --- |
 | 378 corpus cards, written before the rules | **203 (54%)** |
-| 15 cards generated after them | **15 (100%)** |
+| 17 cards generated after them | **17 (100%)** |
 
-Fifteen is a small number and the screens were written *from* the corpus, so some of the gap is
+Seventeen is a small number and the screens were written *from* the corpus, so some of the gap is
 that these defects are exactly the ones now being warned about — that is the intent, not a
 confound, but it does mean the honest claim is narrow: **the specific things measured, screened,
 and written down stopped happening.** Not that the cards are better in general, which nothing
@@ -5417,3 +5417,14 @@ here measures.
 The one figure that resists that caveat is `:focus-visible`: **0 occurrences in 378 cards** before,
 and present in 7 of the first 9 after. A behaviour absent from the entire prior distribution
 cannot appear by sampling luck.
+
+One eval produced no card at all and looked like a failure until read: asked to show a dependency
+tree, the model checked the workspace, found it genuinely empty, said so precisely, and offered to
+build the view once given a path. Correct behaviour, and my fault — `scripts/eval.sh` takes a
+**seed directory** as its second argument and `test/seed/` already holds a `package.json`, a `src`
+tree and a `setup.sh` that runs `git init`. Passing it, the same two prompts produced cards
+immediately.
+
+**A prompt that needs a project needs the seed**, and a zero from a harness run without one
+measures the harness. Worth stating because the reflex on seeing an empty result is to go looking
+at the prompt.
