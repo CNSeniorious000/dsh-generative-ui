@@ -3133,6 +3133,22 @@ and none replace it; three for three of the fresh ones define `:focus-visible`.*
 where the old behaviour was unanimous is the one where a rule landing is hardest to attribute to
 luck.
 
+### Parsing is not delivery (2026-08-23)
+
+`loads.sh` proved the prompt sections PARSE — the failure that made a whole day's rules inert
+earlier. It did not prove they reach the model. Every eval run tests that implicitly (a card only
+appears if the rules landed), but nothing said so.
+
+Added: boot dsh and ask for a string only this plugin could supply.
+
+    你收到的卡片规则里，代码块的 info string 应该写什么？只答那个字符串。
+    → `ui4a/tsx`
+
+The first version asked the model to quote any rule back and grepped for one — it quoted a
+different rule each time and the check failed on a working system. **Assert what only the plugin
+could have told it, not which sentence it chooses.** Verified in both directions: pointing the
+grep at an impossible string exits 1.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a

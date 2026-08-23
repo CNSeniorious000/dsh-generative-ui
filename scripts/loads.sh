@@ -15,11 +15,26 @@ if ! command -v dsh > /dev/null; then
   exit 0
 fi
 d=$(mktemp -d)
+d2=$(mktemp -d)
 out=$( (cd "$d" && dsh --profile headless "hi") 2>&1 )
 rm -rf "$d"
+# Parsing is not delivery. Ask the model to quote one of its own rules back: if the section
+# loaded but never reached the request, this comes back empty while everything above still
+# passes. Verified once by hand — the reply was the rule verbatim, punctuation included.
+# Ask for a rule that only this plugin could have supplied. Not "quote any rule" — the model
+# picks a different one each time, and the first version of this check asserted which. The fence
+# language is the one string no general knowledge would produce.
+back=$( (cd "$d2" && dsh --profile headless "你收到的卡片规则里，代码块的 info string 应该写什么？只答那个字符串。" ) 2>&1 )
+rm -rf "$d2"
+if ! print -r -- "$back" | grep -qF 'ui4a/tsx'; then
+  echo "loads: FAILED — the sections parse but the model did not receive them"
+  print -r -- "$back" | head -3
+  exit 1
+fi
+
 if print -r -- "$out" | grep -qiE 'malformed prompt|failed to load|UNKNOWN:'; then
   echo "loads: FAILED — dsh rejected a section"
   print -r -- "$out" | grep -iE 'malformed prompt|failed to load|UNKNOWN:' | head -3
   exit 1
 fi
-echo "loads: ok — dsh booted with the plugin's sections"
+echo "loads: ok — sections parsed, and the model quoted one back"
