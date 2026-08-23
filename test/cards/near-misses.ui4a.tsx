@@ -73,7 +73,7 @@ export default function SuspenseBoard() {
         {/* UNREACHABLE-CONTROL: a button whose body is an EXPRESSION announces its text fine —
             matching those took the report from 17 to 41 of 378. And a div with an onClick on a
             CHILD is not the div being clickable. */}
-        <button onClick={() => setRows([])}>{rows.length === 0 ? "载入" : "清空"}</button>
+        <button type="button">{rows.length === 0 ? "载入" : "清空"}</button>
         <div className="wrap"><button aria-label="复制" onClick={() => setRows([])}><span>⧉</span></button></div>
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
