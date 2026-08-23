@@ -4464,3 +4464,25 @@ about animation continuity.
 **The method generalises: for any prompt rule, count the cards it applies to and the cards that
 follow it.** A rule at 0/11 is not a rule, and until you count you cannot tell it apart from one
 at 18/19 sitting next to it.
+
+### The most-broken rule in the prompt (2026-08-23)
+
+Continuing the rule-adherence count into the colour section found the worst offender by a wide
+margin. **50 of 378 cards fill a background with `--dsw-alias-brand-primary`, and 12 of those
+put a light foreground on top.** The prompt says not to, in bold, with the reason.
+
+It is worth being precise about why those 12 are broken and the other 38 are not. `brand-primary`
+*equals the body text colour in both themes* — near-black on light, near-white on dark. A tile
+filled with it under white text is legible on light and a **white square with invisible writing
+on dark**. Fill it and put a dark foreground on top and you get the inverse, which is odd but
+readable. So the screen looks only at what follows a fill within a hundred characters: over the
+whole file it reports 17 instead of 11, catching cards where the two are unrelated.
+
+`BRAND-PRIMARY-FILL` is now the highest-rate screen here — 11 of 378, against 0–3 for every
+other. The name is the whole trap: a variable called *brand* reads as "the brand colour, fill
+with it", and no amount of restating the rule fixes a name that means the opposite of what it
+does. The prompt now ends with the two lines rather than the explanation, so there is nothing
+for the reader to convert:
+
+    background: "var(--dsw-alias-state-business-primary)", color: "#fff"   // a filled button
+    color: "var(--dsw-alias-brand-primary)"                                // emphasis, no fill
