@@ -3269,11 +3269,12 @@ and the reason `aria-live` must sit on the container rather than the spinner.
 
 **The A/B came back positive.** Same prompt, same card, three runs:
 
-| rule location | `aria-live` |
-| --- | --- |
-| `prompt.ts` alone | absent (file browser) |
-| `prompt.ts` alone | absent (command runner) |
-| skill accessibility section | **present**, and clean under all 23 screens |
+| prompt | rule in `prompt.ts` alone | rule in the skill |
+| --- | --- | --- |
+| file browser | absent | **present** |
+| command runner | absent | **present** |
+
+Both prompts flipped, so it is a replication rather than a single lucky generation.
 
 And written the right way without being told twice — `<div aria-live="polite" style={{ minHeight:
 64 }}>` on a persistent container with reserved height, which is what makes the change
