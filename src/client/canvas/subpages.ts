@@ -67,15 +67,16 @@ export async function inlineSubPages(
   const urlFor = new Map<string, string>();
   for (const filename of sources.keys()) urlFor.set(filename, "");
 
-  const rewrite = (source: string, specifiers: Map<string, string>) => {
-    let out = source;
-    for (const [specifier, filename] of specifiers) {
-      const url = urlFor.get(filename);
-      if (url === undefined || url === "") continue;
-      out = out.replaceAll(`"${specifier}"`, JSON.stringify(url)).replaceAll(`'${specifier}'`, JSON.stringify(url));
-    }
-    return out;
-  };
+  // Rewrites through `SPECIFIER`, not `replaceAll`, so only an actual import position moves.
+  // A bare `replaceAll("./board")` also rewrites the string in `const label = "./board"` — the
+  // card then renders a blob URL as its label, or passes one where a path was meant. No corpus
+  // card does this today; the regex that finds the imports already knows the difference, so
+  // there is no reason to throw that away when putting them back.
+  const rewrite = (source: string, specifiers: Map<string, string>) =>
+    source.replace(SPECIFIER, (whole, lead: string, specifier: string) => {
+      const url = urlFor.get(specifiers.get(specifier) ?? "");
+      return url === undefined || url === "" ? whole : `${lead}${JSON.stringify(url)}`;
+    });
 
   for (let progress = true; progress; ) {
     progress = false;

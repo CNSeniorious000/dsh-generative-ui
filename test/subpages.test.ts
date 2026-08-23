@@ -130,3 +130,24 @@ describe("inlineSubPages", () => {
     expect(code).toContain("./t/a");
   });
 });
+
+/**
+ * Only an import position is rewritten.
+ *
+ * The rewrite used `replaceAll` on the bare specifier, so `const label = "./board"` beside
+ * `import { Board } from "./board"` became a blob URL in the card's own text — the reader sees
+ * `blob:null/8f3a…` where a filename belonged. No corpus card writes that today, which is why
+ * it survived; the regex that finds the imports already distinguishes the two positions.
+ */
+test("a specifier that is also a string literal is left alone", async () => {
+  const code = `import { Board } from "./board";\nconst label = "./board";\nexport default () => <Board name={label} />;`;
+  const out = await inlineSubPages(
+    code,
+    "entry.tsx",
+    async (specifier) => (specifier === "./board" ? { source: "export const Board = () => null;", filename: "board.tsx" } : null),
+    async (_filename, source) => source,
+    [],
+  );
+  expect(out).toContain('const label = "./board"');
+  expect(out).not.toContain('from "./board"');
+});
