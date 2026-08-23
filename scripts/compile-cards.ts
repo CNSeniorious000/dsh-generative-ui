@@ -51,7 +51,10 @@ const SCREENS = {
   "MISSING-REACT-IMPORT": (src: string) => {
     if (/import\s+\*\s+as\s+\w+\s+from\s*["']react["']|import\s+React\s*(?:,|from)/.test(src)) return false;
     const imported = new Set([...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim())));
-    return [...src.matchAll(/<(Fragment)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef)\s*[(<]/g)].some((m) => !imported.has(m[1] ?? m[2]));
+    // The JSX form for every name, not just `Fragment`. The `\s*[(<]` arm only sees a call or a
+    // generic, so `<Suspense fallback={…}>` — the way Suspense is actually written — matched
+    // nothing, and the screen was `Fragment`-only in practice.
+    return [...src.matchAll(/<(Fragment|StrictMode|Suspense)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef)\s*[(<]/g)].some((m) => !imported.has(m[1] ?? m[2]));
   },
   // `xs[xs.length - 1].field` on an array that came from outside the card. A `!xs` guard passes
   // for `[]`, so an empty result — a repo with no commits, a failed command, an empty directory —
@@ -148,7 +151,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "fixed-overlay.tsx": "VIEWPORT-UNITS", "viewport-height.tsx": "VIEWPORT-UNITS", "shadowed-const.tsx": "SHADOWED-EXPORT", "exported-module-hook.tsx": "MODULE-SCOPE-HOOK", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "fixed-overlay.tsx": "VIEWPORT-UNITS", "viewport-height.tsx": "VIEWPORT-UNITS", "shadowed-const.tsx": "SHADOWED-EXPORT", "exported-module-hook.tsx": "MODULE-SCOPE-HOOK", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "missing-suspense.tsx": "MISSING-REACT-IMPORT", "destructured-ref.tsx": "DESTRUCTURED-HOOK", "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
