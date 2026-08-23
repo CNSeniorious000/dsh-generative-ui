@@ -104,6 +104,13 @@ if [[ "$uncovered" == "0" ]]; then
 else
   # Not part of `bun run check` — this takes an hour — but a report nothing can fail against is
   # a report that gets skimmed. Exit non-zero so a CI job or a `&&` chain can hold the line.
-  echo "$uncovered unconstrained"
+  # The number stops falling well before zero, and that is not a stall. Every remaining condition
+  # is a null-guard or a one-line dispatch inside a React effect, reachable only with a DOM; the
+  # decisions they used to hold have been extracted into pure functions (`errorAction`,
+  # `dispatchError`, `probeOutcome`, `deliveryFor`, `needsResolve`) that ARE tested. Extracting
+  # one does not lower this count — it trades an untestable condition for a tested function plus
+  # a dispatch the audit still sees. Read it as "conditions a DOM-less suite cannot reach", and
+  # judge progress by whether the LOGIC moved out, not by the number.
+  echo "$uncovered unconstrained (all in React effect bodies — see the note in this script)"
   exit 1
 fi
