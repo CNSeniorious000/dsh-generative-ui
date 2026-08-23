@@ -2945,6 +2945,12 @@ cards that all render is the evidence those 170 defects are real but invisible.
 It also means the direction of travel matters more than the count: the useful question is never
 "how many fire" but "is there a card that broke and nobody predicted it". Today there is not.
 
+`bun run cross-tab <dir>` runs it, reading the paint check's own report rather than
+re-implementing "renders nothing" so the two cannot disagree. It exits non-zero and names the
+cards when that third row is not zero. Verified by disabling every screen: it lists all six and
+fails. Disabling a SINGLE screen did not — the six broken cards are each caught by more than one,
+which is worth knowing on its own.
+
 ### What the paint check skips, by package (2026-08-23)
 
 "80 skipped" hides whether that is one dependency or eighty. Naming them:
