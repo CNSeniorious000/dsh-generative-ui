@@ -14,6 +14,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { canvasChildPath } from "../src/contract.ts";
 import { importsSibling, inlineSubPages } from "../src/client/canvas/subpages.ts";
 import { compileCard, initTsxFromDisk } from "../scripts/tsx-node.ts";
+import { stubUnresolvable } from "../scripts/paint-cards.ts";
+import { createElement, type ReactNode } from "react";
+import { renderToString } from "react-dom/server";
 
 const ROOT = `${import.meta.dir}/fixtures/canvas`;
 const ID = "project-dashboard";
@@ -86,4 +89,46 @@ test("a screen answers for the whole canvas, not one of its files", async () => 
 
   const whole = [readFileSync(`${ROOT}/${ID}.ui4a.tsx`, "utf8"), child].join("\n");
   expect(SCREENS["NO-FOCUS-RING"](whole)).toBe(false);
+});
+
+/**
+ * And it paints. Compiling proves the imports resolved; only rendering proves the canvas is a
+ * card rather than six files that happen to typecheck.
+ *
+ * Children are inlined as `data:` URLs rather than `blob:` — same bytes, and importable outside
+ * a browser, which `blob:` is not.
+ *
+ * One sub-page imports `recharts`, which `stubUnresolvable` deliberately leaves alone: a stubbed
+ * chart renders as nothing, so stubbing it would make this test PASS a canvas showing a blank
+ * chart. That page is dropped from the render instead — an honest hole rather than a false
+ * negative, the same trade `paint-cards.ts` makes when it reports a skip.
+ */
+test("the resolved canvas renders", async () => {
+  await initTsxFromDisk();
+  const real = URL.createObjectURL;
+  URL.createObjectURL = (blob: Blob) => `data:text/javascript;base64,${Buffer.from(Bun.peek(blob.text()) as string).toString("base64")}`;
+  try {
+    const out = await inlineSubPages(
+      readFileSync(`${ROOT}/${ID}.ui4a.tsx`, "utf8"),
+      ENTRY_PATH,
+      async (specifier, from) => {
+        const path = canvasChildPath(ID, specifier, from);
+        if (path === null) return null;
+        for (const suffix of [".tsx", ".ts", "/index.tsx", "/index.ts", ""]) {
+          if (!existsSync(onDisk(path + suffix))) continue;
+          const source = stubUnresolvable(readFileSync(onDisk(path + suffix), "utf8"));
+          return { source: source.includes(`from "recharts"`) ? "export default () => null;" : source, filename: path + suffix };
+        }
+        return null;
+      },
+      async (filename, source) => compileCard(filename, source).code,
+      [],
+    );
+    const { code } = compileCard("canvas.tsx", stubUnresolvable(out));
+    const mod = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
+    const html = renderToString(createElement(mod.default as () => ReactNode));
+    expect(html.replace(/<[^>]*>/g, "").trim().length).toBeGreaterThan(0);
+  } finally {
+    URL.createObjectURL = real;
+  }
 });

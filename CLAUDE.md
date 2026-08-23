@@ -2935,6 +2935,13 @@ looks wrong. A screen asks a question about a CARD, and a canvas is one card spr
 No gate does this today (`cardsIn` is non-recursive), which is why it had never surfaced. Pinned
 as a test so it stays a decision: a checker taught to walk canvases must concatenate first.
 
+The fixture renders too — 3769 characters of text, so the assertion is on a real dashboard rather
+than an empty shell. Getting there needed `paint-cards.ts`'s stub chain, which was inline in its
+loop; it is `stubUnresolvable` now, one export used by both. `recharts` stays deliberately
+unstubbed there and here: a stubbed chart renders as nothing, so stubbing it would make the check
+PASS a canvas showing a blank chart. That page is dropped from the render instead — an honest
+hole beats a false negative.
+
 Generated one to check the `lastIndex` fix on something real — six files, an entry importing
 five sub-pages, four of those importing `./ui` and `./data` from each other. Two harness mistakes
 before it worked, and both are worth keeping:
