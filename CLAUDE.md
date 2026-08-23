@@ -5377,10 +5377,11 @@ others. Verified by breaking a screen deliberately and watching the push refuse.
 **Anything you have done twice while intending not to is not a discipline problem.** Two identical
 mistakes in one session is the signal to spend the ten minutes making it mechanically impossible.
 
-### Four screens, and the loop closing on each (2026-08-23)
+### Five screens, and the loop closing on each (2026-08-23)
 
-The corpus-mining pass added four: `UNGUARDED-ASYNC-HANDLER` (23), `UNGUARDED-NUMBER-INPUT` (10),
-`UNLABELLED-CONTROL` (46) and `UNSTOPPABLE-MOTION` (37). Each got a negative control, a
+The corpus-mining pass took the screen count from 13 to 18: `UNGUARDED-ASYNC-HANDLER` (23),
+`UNGUARDED-NUMBER-INPUT` (10), `UNLABELLED-CONTROL` (52) and `UNSTOPPABLE-MOTION` (37), plus the
+`<div onClick>` arm of `UNREACHABLE-CONTROL` made conditional. Each got a negative control, a
 quiet-on-the-fix pair, a construct entry, and a rule shown as code.
 
 Each was then checked the only way that means anything — by asking for a card that would trip it:
