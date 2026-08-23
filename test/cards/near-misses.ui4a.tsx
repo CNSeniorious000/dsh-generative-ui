@@ -67,9 +67,14 @@ export default function SuspenseBoard() {
         >
           {LABELS.a} · {LAST}
         </button>
-        <Suspense fallback={null}>
-          <FragmentList items={rows.map((r) => r.name)} />
-        </Suspense>
+        {/* `aria-live` on the container the async results land in — UNANNOUNCED-ASYNC-RESULT.
+            A sighted reader watches the list appear; without this a screen reader is told
+            nothing, and 63 of 378 corpus cards are in that state. */}
+        <div aria-live="polite">
+          <Suspense fallback={null}>
+            <FragmentList items={rows.map((r) => r.name)} />
+          </Suspense>
+        </div>
         {/* HARDCODED-BACKGROUND used to be cleared for any card that mentioned a token anywhere,
             and this line asserted that "35 of 378 corpus cards do this and are correct". Both
             were wrong: the 35 were `background: var(--dsw-…); color: #fff`, where the match ran

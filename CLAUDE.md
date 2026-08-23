@@ -3154,6 +3154,32 @@ it came back with the `<span>`-is-not-a-label warning added the same afternoon, 
 edited now is in the next turn's context. That closes the loop the whole day rests on: measure the
 corpus → write a rule → the model receives it → generate → measure again.
 
+### The control that found the one thing nothing fixed (2026-08-23)
+
+If the rules only improved what the screens watch, that is teaching to the test. So: measure six
+accessibility properties **no screen checks**.
+
+| | corpus | fresh |
+| --- | --- | --- |
+| `role=` | 2% | 14% |
+| `aria-expanded` | 1% | 12% |
+| `<th>` in a table | 3% | 7% |
+| `lang`/`dir` | 0% | 3% |
+| `alt=` on an `<img>` | 0% | 0% (no card uses one) |
+| **`aria-live`** | **0%** | **2%** |
+
+Five of six improved without being watched, which is the control passing — the change is in how
+cards get written, not in what the checker sees.
+
+The sixth is a finding. **0 of 64 corpus cards that fetch anything announce the result, and 0 of
+13 fresh ones.** A sighted reader watches a spinner become a list; a screen reader user is told
+nothing — focus has not moved and the content appears silently below it. The only defect measured
+today that BOTH populations get wrong, and the reason is simply that no rule ever mentioned it.
+
+Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
+prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
+it. That set predicted both of today's additions before either existed.
+
 ### What was actually wrong with the corpus (2026-08-23)
 
 Sorting the 178 dirty cards by which KIND of screen fires:

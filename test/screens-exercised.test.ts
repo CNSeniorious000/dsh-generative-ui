@@ -27,6 +27,7 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "UNGUARDED-LAST-INDEX": /\[0\]|match\(/,
   "AND-INTO-ARROW": /&&/,
   "TRANSITION-WITHOUT-TRANSFORM": /transition/,
+  "UNANNOUNCED-ASYNC-RESULT": /\$dsh\/(?:ai|fs|exec)/,
   "UNQUOTED-CSS-UNIT": /fontSize|font-size/,
   "REGEX-IN-JSX-TEXT": /\\d|\\w/,
   "UNGUARDED-NUMBER-INPUT": /type="number"/,

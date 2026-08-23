@@ -60,6 +60,24 @@ export const SCREENS = {
   // block whose body happens to contain a `.map((g) => …)` matched 8 of 39 clean cards otherwise.
   // A parameter list is identifiers, commas, and optional type annotations; JSX is not.
   "AND-INTO-ARROW": (src: string) => /&&\s*\(\s*\w+(\s*:\s*[\w<>[\]|" ]+)?(\s*,\s*\w+(\s*:\s*[\w<>[\]|" ]+)?)*\s*\)\s*=>/.test(src),
+  // Content that arrives asynchronously and never announces it. A sighted reader watches a
+  // spinner become a list; a screen reader user is told nothing at all — the focus is still where
+  // it was and the new content is somewhere below it, silent.
+  //
+  // **0 of 64 corpus cards and 0 of 13 fresh ones do this**, which is what makes it worth a
+  // screen: the only defect measured today with a perfect record of being missed BOTH before and
+  // after the rules. Everything else improved; this one never had a rule to improve under.
+  //
+  // One `aria-live` on the container the results land in is the whole fix, or `role="status"`,
+  // which implies it. Scoped to cards that actually fetch: a card computing a value synchronously
+  // has nothing to announce, and flagging those would make this noise.
+  "UNANNOUNCED-ASYNC-RESULT": (src: string) => {
+    const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+    if (!/\$dsh\/(?:ai|fs|exec)|streamText|await bash\(|await readFile\(|await readdir\(/.test(code)) return false;
+    // A card that only WRITES has no arriving result to announce.
+    if (!/set[A-Z]\w*\(/.test(code)) return false;
+    return !/aria-live|role="(?:status|alert|log)"/.test(code);
+  },
   "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
   // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
   // expression and the parse fails on the comma. The card that did it was *showing* the pattern

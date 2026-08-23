@@ -17,6 +17,7 @@ const PAIRS: Record<string, [string, string]> = {
   "JSX-SUBSCRIPT": [`<Icons[kind] size={12} />`, `{(() => { const I = Icons[kind]; return <I size={12} /> })()}`],
   "GLOB-IN-JSX": ["<code>src/**/*.{ts,tsx}</code>", `<code>{"src/**/*.{ts,tsx}"}</code>`],
   "UNQUOTED-CSS-UNIT": ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+  "UNANNOUNCED-ASYNC-RESULT": [`import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);`, `import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);\n<div aria-live="polite">{rows}</div>`],
   "TRANSITION-WITHOUT-TRANSFORM": [`<div style={{ transition: "transform .12s ease" }} />`, `<div style={{ transition: "transform .12s ease", transform: "scale(1.02)" }} />`],
 
   "AND-INTO-ARROW": ["const f = a > 0 && (i: number) => i * 2;", "const f = (i: number) => a > 0 && i * 2;"],

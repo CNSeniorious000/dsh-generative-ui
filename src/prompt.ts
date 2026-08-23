@@ -50,6 +50,7 @@ export default function Answer() {
 
     <Icons[kind] />                             // not valid JSX
     const Icon = Icons[kind]; return <Icon />   // capitalised local, then the element
+- **When results arrive on their own, announce it where it lands.** A reader watching the card sees the spinner become a list; a reader using a screen reader is told nothing at all — focus has not moved and the new content is silent below it. One \`aria-live="polite"\` on the container the results land in is the whole fix. Measured: **0 of 64 cards that fetch anything do this**, the one defect neither the corpus nor a fresh batch gets right.
 - **A transition that names \`transform\` needs a \`transform\` to animate.** \`transition: "transform .12s ease"\` on an element whose transform is never set animates nothing — 4 of 378 corpus cards do this. Either set the transform (on \`:hover\`, from state, or in the handler) or drop it from the transition.
 - **\`&&\` does not chain into an arrow function.** \`const f = a > 0 && (i: number) => …\` does not parse — the arrow binds looser than you expect. Put the guard inside the function body.
 - **\`Number("")\` is \`0\`, so a number field that writes straight to state cannot be cleared.** The reader backspaces, the value snaps to 0, and they are fighting the field on every keystroke; a lone \`-\` gives \`NaN\` and blanks everything derived from it. Keep what they typed and coerce where you use it. (A \`type="range"\` slider is exempt — it cannot produce either.)

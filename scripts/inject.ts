@@ -45,6 +45,12 @@ const INJECTIONS: Record<string, ((source: string) => string) | undefined> = {
   // Scoped to EXTERNALLY-filled arrays, so the injection has to supply the whole shape: a
   // capability import, a state setter the array is filled through, and the unguarded index.
   // Indexing an array built from a literal cannot be empty and is correctly ignored.
+  // The card has to FETCH before it can fail to announce, so the injection adds the fetch and
+  // strips any existing announcement.
+  "UNANNOUNCED-ASYNC-RESULT": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/aria-live=["'][^"']*["']|role=["'](?:status|alert|log)["']/g, "")}`.replace(
+    /\n(export default)/,
+    '\nconst reload = async () => { const r = await bash("ls"); setEntries(r.stdout.split("\\n")) };\n$1',
+  ),
   "UNGUARDED-LAST-INDEX": (s) => `import { bash } from "$dsh/exec";\n${s}`.replace(
     /\n(export default)/,
     '\nconst useLog = () => { const [lines, setLines] = useState<string[]>([]); void bash("ls").then((r) => setLines(r.stdout.split("\\n"))); return lines[lines.length - 1].trim() };\n$1',
