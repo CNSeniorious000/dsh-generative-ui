@@ -12,6 +12,7 @@
  * running `test/cards-negative/`, where every card is *supposed* to fail, and exits non-zero
  * if any of them passes.
  */
+import { statSync } from "node:fs";
 import { REPLAY_CONTROLS } from "./screens.ts";
 import { normalizeGeneratedTsx } from "partial-tsx";
 
@@ -27,7 +28,10 @@ const defaultPaints = (s: string) => {
   // several of those before any markup exists. Require a JSX tag right after the paren.
   return at !== -1 && /return\s*\(\s*</.test(s.slice(at));
 };
-const paths = process.argv.length > 2 ? process.argv.slice(2) : cardsIn("test/cards").map(n => `test/cards/${n}`);
+// A directory or a list of files. Its siblings (`compile-cards`, `paint-cards`, `corpus-rates`)
+// all take a directory, and passing one here used to fail with `EISDIR` from deep inside a read.
+const expand = (path: string) => (statSync(path).isDirectory() ? cardsIn(path).map((name) => `${path}/${name}`) : [path]);
+const paths = process.argv.length > 2 ? process.argv.slice(2).flatMap(expand) : expand("test/cards");
 let bad = 0;
 for (const path of paths) {
   const src = await Bun.file(path).text();
