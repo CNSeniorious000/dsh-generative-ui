@@ -5724,3 +5724,24 @@ Against this, the accessibility rules sat at **5% (`prefers-reduced-motion`) to 
 someone else's experience of it is checked by nobody — the author has a mouse and eyes, and the
 card looks right. That is the whole argument for screening the second kind and not bothering with
 the first.
+
+Applying that filter to find the next screen turned up nothing worth adding, and the search is
+worth recording so it is not repeated. Reader-experience properties, scored:
+
+| | |
+| --- | --- |
+| a loading state while awaiting | 60/67 (90%) |
+| a button that says what it does | 276/276 (100%) |
+| an error surfaced rather than only caught | 44/81 (54%) |
+
+The 54% looked like the next screen until the catches were read. **41 empty `catch` blocks across
+36 cards, and 21 are the deliberate `partial-json` idiom** — swallowing a parse error on a
+half-arrived object is the documented pattern, not a defect. Of the nine wrapping a capability
+call, most are *this file might not be there*: a directory that cannot be read is skipped in a
+tree walk, `.env.example` is optional. One is a real miss (a clipboard write that silently fails,
+so the reader clicks 复制 and nothing happens) and one card is not a class.
+
+**The discriminator has to be in the text, and here it is not**: "was this failure expected?" is
+the whole question and nothing distinguishes a deliberate skip from a swallowed error. Same
+conclusion as the `key={i}` case, reached the same way — by reading the matches rather than
+trusting the rate.
