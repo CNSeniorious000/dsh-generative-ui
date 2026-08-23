@@ -6916,3 +6916,24 @@ two handlers and forgets on the third.
 It is also the card that needed `react-window`, so the paint check skips it — a card that is both
 screen-flagged and renderer-invisible, which is the combination with the least evidence behind it.
 
+### Longer cards fire more screens, in both populations (2026-08-24)
+
+"Rules land per-construct, not per-card" is testable — a longer card has more constructs, so it
+should fire more screens:
+
+| | shorter half | longer half | ratio |
+| --- | --- | --- | --- |
+| corpus | 0.64 screens/card | 1.08 | 1.7× |
+| fresh | 0.18 | 0.33 | 1.8× |
+
+**The same ratio in both, at a third of the absolute rate.** So the rules did not change the
+relationship between size and risk — they lowered the per-construct failure rate and left the
+shape alone. Which is what you would expect if a rule is applied while writing each control rather
+than reviewed once per card, and it explains `gen24-log.tsx` exactly: the largest card of the day,
+threading an `AbortSignal` correctly through two handlers and forgetting on a third.
+
+The practical consequence: **a long card is not more carefully written, it is more exposed.** The
+cards most worth checking are the ones doing the most, and a clean streak measured on small cards
+says less than the same streak on large ones. Median fresh card is 10.4 KB against the corpus's
+5.7 KB, so the streak is being measured on the harder population — which strengthens it.
+
