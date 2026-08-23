@@ -49,3 +49,23 @@ describe("TRANSIENT — a frame that is merely incomplete", () => {
     expect(TRANSIENT.test("An arrow function is not allowed here")).toBe(false);
   });
 });
+
+/**
+ * The three cards in the 378-card corpus that genuinely do not compile, with the messages the
+ * compiler really produced — not messages written to match the pattern.
+ *
+ * These must reach the reader. Suppressing one is a card that renders blank forever with an
+ * empty console, which is the failure this project spends the most effort on; and each is a
+ * different shape (a JSX close, a brace, an arrow in an expression position), so a pattern that
+ * accidentally widened to cover "Expected" would fail here.
+ */
+test("no real corpus compile failure is suppressed", () => {
+  for (const message of [
+    "Expected '</', got 'ident' at 0c24e4dad59d.tsx:119:35",
+    "An arrow function is not allowed here at 2f7a87253134.tsx:150:56",
+    "Expected '</', got '}' at 5745802818e1.tsx:43:23",
+  ]) {
+    expect(TRANSIENT.test(message)).toBe(false);
+    expect(TRANSIENT_LOAD.test(message)).toBe(false);
+  }
+});
