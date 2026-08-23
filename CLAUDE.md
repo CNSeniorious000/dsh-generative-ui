@@ -4007,3 +4007,30 @@ of the widening cost a false positive.
 The method generalises past this file: **a control that proves the feature fires does not prove
 the feature is whole.** Delete each clause and see which controls notice. The ones that notice
 nothing are the clauses you have been trusting for free.
+
+### A positive control for over-reporting (2026-08-23)
+
+`test/cards-negative/` proves a screen still fires. Nothing proved a screen still *stays quiet*,
+and that is the failure that costs more: a screen reporting 356 of 378 cards trains you to
+ignore it, and then it is worth nothing when it is right.
+
+`DUPLICATE-STYLE-KEY` is the case. Two guards keep it honest, and dropping either is silent
+against the negative controls:
+
+- **Depth.** Keys are counted at depth 1 only. Without that, a nested object literal inside a
+  value (`repeat(${Object.keys({ padding: 1 }).length}, 1fr)` beside the object's own `padding`)
+  reads as a duplicate: **1 → 3** on the corpus.
+- **Key position.** A key must follow `{` or `,`. Without that, `transition: "background .2s"`
+  counts `background` as a key because it appears in the *value*: **1 → 356**.
+
+So `test/cards/spread-override.ui4a.tsx` is a card built to be **clean**, holding one instance of
+every shape that a looser version reports — spread-then-override, a nested literal that repeats
+an outer key, and a key name inside a string value. Loosen either guard and it goes from `ok` to
+flagged, and `bun run check` fails.
+
+Two things fell out of building it. **A positive control has to be built the same way a negative
+one is** — my first two attempts were clean under both the real screen *and* the loosened one,
+which proves nothing; only the third actually collided a nested key with an outer one. And the
+new screen's very first run flagged **`metro.ui4a.tsx`, this project's own reference card**:
+`display: "block"` followed by `display: "flex"` in one object, confirmed by `@genui/cli`. The
+dead line is now gone.
