@@ -5507,9 +5507,11 @@ Re-ran both sides of `test/eval-fixtures.md`:
 | | result |
 | --- | --- |
 | `今天星期几`, `HTTP 状态码 418 是什么意思` | prose, `fence=0 canvas=0` both |
-| `帮我算下房贷`, `这个 cron 到底几点跑？`, `chmod 755 到底是啥权限` | UI, all three |
+| all six of the "Must produce UI" prompts | UI, 6/6 |
 
-All eight cards generated across those runs compile, pass all 18 screens, and paint.
+All eleven cards generated across those runs compile, pass all 18 screens, and paint. The glob
+one is worth naming: `这个 glob 会匹配到啥 src/**/*.{ts,tsx}` is the request that produced the
+corpus card throwing `ts is not defined`, and this time every glob is a string literal.
 
 **A prompt change needs the boundary re-measured, not just the new rule tested.** Every rule
 added today argues for building something; nothing in a day of that work would have noticed the
