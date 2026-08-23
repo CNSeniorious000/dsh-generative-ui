@@ -50,6 +50,24 @@ test("the prompt is whole", () => {
  * a section lost to a stray backtick or a bad edit means the model silently stops being told
  * something, and the evidence is a worse card weeks later.
  */
+/**
+ * Rules added to the SKILL after measuring how often 378 real cards followed them — each one
+ * replaced a paragraph that was landing at 0-7%, and each is here so a future edit that trims
+ * the code block back to prose fails rather than quietly undoing the measurement.
+ */
+const SKILL_RULES = [
+  ["abort the previous streamText", "running.current?.abort()"],
+  ["abort the previous bash when polling", "ctrl.abort(); clearInterval(timer)"],
+  ["honour prefers-reduced-motion", "prefers-reduced-motion: reduce"],
+  ["keyboard-reachable controls", "aria-label"],
+] as const;
+
+for (const [name, phrase] of SKILL_RULES) {
+  test(`the skill still shows the code for ${name}`, () => {
+    expect(skillBody("types.json", "standalone.json")).toContain(phrase);
+  });
+}
+
 const SECTIONS = [
   "Is this a UI at all",
   "Inline or canvas",
