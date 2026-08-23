@@ -4640,3 +4640,22 @@ opacity at or below 0.4, but the hits are index labels on visualisation elements
 is conventional — a screen there would report a fifth of the corpus for a judgement call. The
 line between these and the focus ring is that **`outline: "none"` with no replacement is wrong
 in every context, and 9px is only wrong in some.**
+
+### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
+
+`GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
+dependency that failed to arrive. It was gated on the error *message* and not on the **phase**.
+
+Both halves of that matter, and checking them meant reading `partial-react`'s runtime rather
+than guessing. A failed dependency import is reported as **compile** —
+`importCompiledComponent` runs inside the compile `catch` (`runtime.ts:338`). And `$dsh/fs`,
+`$dsh/exec` and `$dsh/ai` all reject with the browser's own `Failed to fetch` when a route is
+down, verified by stubbing `fetch` and calling each. So a card whose own body throws that during
+render matched `TRANSIENT_LOAD` and got three re-imports it could not use — **2.4 seconds of
+blank surface before the reader is told anything**, for an error that was ready immediately.
+
+The decision is now `shouldRetry(message, phase, streaming, attempts)`, four lines, out of the
+React and into a test: each of the three conditions fails a test when removed.
+
+**"Does this repair actually address that failure?" is a question a message cannot answer** — the
+phase can, and it was being discarded one parameter away from where the decision was made.
