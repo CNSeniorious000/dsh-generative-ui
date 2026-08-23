@@ -149,7 +149,14 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       const rendered = codeOf(claim.block);
       // The block's own text is what locates its segment, so an unchanged block cannot
       // have changed its match — skip the scan rather than re-run it every frame.
-      if (rendered === claim.rendered && claim.code !== "") continue;
+      //
+      // Only once it has settled, though. `complete` flips on the segment, not in the block, so
+      // a card whose last token closes the fence without changing the rendered text would never
+      // leave the streaming path — and the streaming path cuts back the still-being-typed tail,
+      // so it would keep rendering a card with its last statement missing. The skip is an
+      // optimization for the steady state (most blocks in a long transcript), and a claim that
+      // is still streaming is being re-scanned every frame regardless.
+      if (rendered === claim.rendered && claim.code !== "" && claim.complete) continue;
       claim.rendered = rendered;
       const segment = matchSegment(current, rendered);
       // The snapshot is authoritative while it still describes this block: mid-stream its
