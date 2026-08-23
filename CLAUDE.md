@@ -7061,3 +7061,23 @@ comments and match on one. **The check disagreed with the hand-written list on i
 the check was right** — which is the whole argument for reading the predicate instead of the
 prose.
 
+### Two screens whose rules were already complete (2026-08-24)
+
+Applied the same procedure to the two remaining large screens with no examination yet.
+
+**`UNGUARDED-ASYNC-HANDLER` (23 of 378).** Its violations sit in `const generate =
+useCallback(async () => …)` — a named function wired to a button elsewhere, 15 of 23 — with 8 more
+inside a `useEffect`. The skill's rule uses **exactly** that shape, `const generate = async (topic)
+=>` with a `runId` guard, and names the `useEffect` variant (`let cancelled = false` plus a
+cleanup) in the next sentence. Both forms already covered; fresh cards score 20 of 21.
+
+**`UNSTOPPABLE-MOTION` (37).** 13 of them run an *infinite* animation with no reduced-motion rule —
+the sharpest form. The rule gives a one-line blanket fix (`@media (prefers-reduced-motion: reduce)
+{ * { animation: none !important } }`) and fresh cards are at **52 of 52**, the largest single
+delta measured (5% → 100%). Nothing to add.
+
+So the procedure terminates: of the five largest screens, two had a rule missing the exact case
+(fixed today, both landed on first test), and three were already complete. **A rule can be
+incomplete in a way that only shows up as a stubborn residue in one screen** — and the way to find
+out is to look at where the residue sits, not to reread the rule.
+
