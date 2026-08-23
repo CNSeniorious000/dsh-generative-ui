@@ -3263,8 +3263,34 @@ one card in ten stumbled into.
 The one structural difference: this rule went into `prompt.ts` alone, while every accessibility
 rule that landed (`aria-label` on icon buttons, 13% → 92%) lives in the skill's accessibility
 section, grouped with its neighbours and carrying a code line. Moved it there, with the code line
-and the reason `aria-live` must sit on the container rather than the spinner. **Same prompt
-re-running now** — a controlled A/B on rule placement, which nothing here has tested before.
+and the reason `aria-live` must sit on the container rather than the spinner.
+
+**The A/B came back positive.** Same prompt, same card, three runs:
+
+| rule location | `aria-live` |
+| --- | --- |
+| `prompt.ts` alone | absent (file browser) |
+| `prompt.ts` alone | absent (command runner) |
+| skill accessibility section | **present**, and clean under all 23 screens |
+
+And written the right way without being told twice — `<div aria-live="polite" style={{ minHeight:
+64 }}>` on a persistent container with reserved height, which is what makes the change
+announceable at all.
+
+**Where a rule lives changes whether it is applied.** The prompt is what the model reads before
+deciding what to build; the skill is what it reads while building. A rule about a JSX attribute
+belongs in the second, next to the other rules about JSX attributes — and one about *whether to
+build a card at all* belongs in the first. That is a distinction nothing here had tested, and it
+was worth two generations to find.
+
+### Reduced motion, the largest single delta (2026-08-23)
+
+    corpus: 7 of 130 animating cards honour prefers-reduced-motion (5%)
+    fresh:  52 of 52 (100%)
+
+Not a sampling artefact — 130 corpus cards animate and 123 of them ignore the setting, which
+people turn on for vestibular disorders and migraine. Every animating card in the fresh set
+honours it.
 
 ### Three more areas that turned out not to be defect areas (2026-08-23)
 
