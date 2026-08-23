@@ -4312,3 +4312,27 @@ Then two contracts between files that no compiler sees:
 
 **"It needs a DOM" is usually true of the rendering and false of the deciding.** The arithmetic,
 the selection, and the filtering all came out without a browser.
+
+### The `.dsh/` canvas path took as cleanly as the `$ui4a/` rename (2026-08-23)
+
+Reading the 1012 sessions for the *keys* tool calls actually use — rather than the cards they
+produced — turned up 88 `write` calls naming a canvas path, and **59 of them to a bare
+`ui4a/canvases/`, which the contract does not recognise.** That looks like two thirds of every
+canvas write being dropped.
+
+Split at `7df29f9` (2026-08-21 19:39, "keep canvases under the workspace's `.dsh` directory"):
+
+| | `.dsh/ui4a/canvases` | bare `ui4a/canvases` |
+| --- | --- | --- |
+| before | 1 | 58 |
+| after | 28 | 1 |
+
+Same shape as the `$ui4a/` → `$dsh/` result, found the same way, and the same lesson: **a corpus
+spanning a contract change measures the change, not a defect.** Always split on the commit
+before concluding anything from a rate.
+
+The argument keys themselves confirm `collect.ts`'s design. Across every canvas-path tool call:
+`file_path` 208, `path` 2 — both in `PATH_KEYS` — and the rest are `command` (81) and `code`
+(75), which are `bash` and `run_code` *mentioning* a canvas path rather than writing one. The
+parser correctly collects none of those. Matching on argument shape rather than tool name is
+what makes that fall out for free.
