@@ -18,10 +18,9 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeGeneratedTsx } from "partial-tsx";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
-import { compileCard, cardsIn, initTsxFromDisk } from "./tsx-node.ts";
+import { cardsIn, compileSettled, initTsxFromDisk } from "./tsx-node.ts";
 
 await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
@@ -46,10 +45,7 @@ for (const name of cardsIn(dir)) {
     // Normalize first, `final` then `streaming` — the exact two steps `compiler.ts` performs.
     // Compiling the raw source instead tests a path production never takes, in both directions:
     // it misses damage normalize would have repaired, and it misses damage normalize CAUSES.
-    const { code } = (() => {
-      try { return compileCard(name, normalizeGeneratedTsx(wired, { mode: "final" })) }
-      catch { return compileCard(name, normalizeGeneratedTsx(wired, { mode: "streaming" })) }
-    })();
+    const { code } = compileSettled(name, wired);
     // A blob URL is not importable here; a data URL is, and the card's own imports resolve
     // against this process's node_modules — which is why `$dsh/*` and esm.sh-only packages are
     // reported as skipped rather than broken.
