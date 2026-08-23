@@ -4873,6 +4873,23 @@ change** — and both halves of that already hold: `partial-react` coalesces to 
 single-flights (`runtime.ts:253`), and `GenUISurface` feeds it only the delta and returns early
 when the code is identical (`code === deliveredRef.current`).
 
+Across all 378 corpus cards at five cut points each, the mechanism holds and the size of it is
+worth knowing. Bucketing 1512 samples by how many JSX elements are still unclosed at the cut,
+and dividing out length so only the repair is left:
+
+| unclosed JSX depth at the cut | normalize cost per kb |
+| --- | --- |
+| balanced (≤0) | 0.260 ms/kb |
+| 1–3 open | 0.306 ms/kb |
+| 4–8 open | 0.321 ms/kb |
+| 9+ open | 0.393 ms/kb |
+
+Monotonic, and a 51% penalty at the deepest — so depth-at-the-cut is the predictor, not size.
+**No card blows a frame**: the worst mid-stream normalize in the whole corpus is 7.3 ms (a
+16.3 kb card at 85%), and the median card's worst is 1.75 ms. That is the bound worth holding
+onto — the ratio is alarming and the absolute number is fine, which is only visible because
+both were measured.
+
 **Then check the aggregate before calling it a problem.** Streaming this card as 60 growing
 prefixes costs 305 ms in total — 1.5% of the ~20 s the stream itself takes. The bound is
 per-frame latency (a 5 ms frame cannot also do much else), never throughput. Everything else
