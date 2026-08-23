@@ -5762,3 +5762,26 @@ so the reader clicks 复制 and nothing happens) and one card is not a class.
 the whole question and nothing distinguishes a deliberate skip from a swallowed error. Same
 conclusion as the `key={i}` case, reached the same way — by reading the matches rather than
 trusting the rate.
+
+### The import-map probe fires once per card (2026-08-23)
+
+`GenUISurface` re-probes esm.sh whenever the set of things a card imports changes, and the probe
+is a network round-trip. The obvious worry is that a growing prefix looks like a changing set on
+every frame.
+
+Measured across all 378 corpus cards at 60 prefixes each — probes per streamed card:
+
+| probes | cards |
+| --- | --- |
+| 1 | 310 (82%) |
+| 2 | 63 |
+| 3 | 5 |
+
+Imports arrive in the first frames and never move, so the signature settles almost immediately.
+Extracted as `importSignature` so it could be measured at all; it compares by **value**, meaning
+re-ordering the same imports re-probes, which the numbers say costs nothing worth a set
+comparison's extra code.
+
+**A cache key is worth measuring against real inputs before optimising it.** The intuition that a
+growing prefix invalidates constantly is wrong here for a structural reason — the thing being
+keyed lives at the top of the file, and the file grows downward.
