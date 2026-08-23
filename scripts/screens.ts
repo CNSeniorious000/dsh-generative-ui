@@ -76,6 +76,11 @@ export const SCREENS = {
     if (!/\$dsh\/(?:ai|fs|exec)|streamText|await bash\(|await readFile\(|await readdir\(/.test(code)) return false;
     // A card that only WRITES has no arriving result to announce.
     if (!/set[A-Z]\w*\(/.test(code)) return false;
+    // Presence only, deliberately. A region rendered INSIDE the conditional it announces enters
+    // the DOM with the content and announces nothing — but **0 cards in 378 + 64 do that**, so
+    // detecting it would guard a hypothetical. The skill warns about it in prose, which is where
+    // a rule with no observed violation belongs. Verified the three post-rule cards have the
+    // region in their FIRST server render, which is the property that makes it work.
     return !/aria-live|role="(?:status|alert|log)"/.test(code);
   },
   "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
