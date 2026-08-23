@@ -5224,3 +5224,15 @@ Only slow awaits (`streamText`, `bash`) count in the final screen. **Three wrong
 right one, and every one of them looked plausible enough to write down** — the tell each time was
 reading the actual matches, which is the same lesson as `print the matches, not the count`, learnt
 again on a day it had already been recorded.
+
+The first card generated afterwards that needed the rule took it, and took more of it than was
+asked — a live-search box over `bash`, which is exactly the shape that used to race:
+
+    const id = ++runId.current
+    abortRef.current?.abort()
+    const res = await bash(cmd, { signal: ctrl.signal })
+    if (id !== runId.current) return
+
+The ref guard *and* an `AbortController` for the superseded run *and* an unmount cleanup, none of
+which the rule spells out together. **The rules that land are the ones that show the shape**; the
+model fills in what the shape implies.
