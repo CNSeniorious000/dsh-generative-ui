@@ -6628,5 +6628,9 @@ transcript how the turn ended rather than grepping stdout, so a transient upstre
 reported as a crash instead of a quietly-refuted rule — exactly what that check exists for, three
 versions after the ones that grepped for error strings.
 
-`aria-live` after the move to the skill: **3 of 3**, on three different async prompts.
+`aria-live` after the move to the skill: **4 of 4**, and not all the same shape — three read files
+or run commands, one streams from the model. Each puts the region on a persistent container, and
+the two that can be rendered headlessly have it in their **first paint**, which is the property
+that makes a live region work at all: a region that enters the DOM together with the content
+announces nothing.
 
