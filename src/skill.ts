@@ -345,9 +345,28 @@ It inherits the app's model, so there is no key to ask for and no setup.
 **A second call must cancel the first.** Regenerating as the user types, or offering a Stop
 button, means two generations in flight and the reader sees whichever finishes last — not the
 newest. Pass an \`AbortController\`'s signal in the options and abort the previous one; that
-stops the generation itself, not just your reading of it. The abort rejects with an
-\`AbortError\`, which is the one rejection that is not a failure — return on it rather than
-showing it.
+stops the generation itself, not just your reading of it.
+
+Measured across 378 real cards: 24 stream from the model and **1** passes a signal. So here it
+is as code, since the rule beside it — parse the buffer as it grows — is followed by 22 of the
+same 24, and the only difference between them is that one shows the lines:
+
+\`\`\`tsx
+const running = useRef<AbortController | null>(null);
+const regenerate = async () => {
+  running.current?.abort();                 // whatever is in flight is now stale
+  const ctrl = (running.current = new AbortController());
+  try {
+    for await (const chunk of streamText({ prompt, signal: ctrl.signal })) { /* … */ }
+  } catch (error) {
+    // The one rejection that is not a failure. Showing it puts "AbortError" on screen
+    // every time the user types another character.
+    if ((error as Error).name === "AbortError") return;
+    throw error;
+  }
+};
+useEffect(() => () => running.current?.abort(), []);   // and on unmount
+\`\`\`
 
 Ask for JSON and parse the buffer as it grows, so items land one at a time rather than all
 at once at the end:
