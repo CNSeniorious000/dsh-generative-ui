@@ -164,7 +164,13 @@ export const SCREENS = {
     };
     // A guard is any comparison against a ref or flag a later run would have moved. Written to
     // accept either side of the `!==`: `id !== runId.current` is the spelling the corpus uses.
-    const guarded = /cancelled|aborted|\bsignal\b|\.current\b[\s\S]{0,20}?[!=]==|[!=]==[\s\S]{0,20}?\.current\b|latest|stale/;
+    //
+    // `latest` and `stale` used to be alternations here, matching a BARE identifier — so any
+    // handler that happened to name a variable `latest` cleared itself with no guard at all.
+    // They matched 0 of 378 corpus cards, so they were pure speculation buying a false-negative
+    // hole; removing them leaves every verdict on the corpus, the fresh cards, and the reference
+    // set unchanged. A word is not a guard.
+    const guarded = /cancelled|aborted|\bsignal\b|\.current\b[\s\S]{0,20}?[!=]==|[!=]==[\s\S]{0,20}?\.current\b/;
     return [...src.matchAll(/(?:const \w+ = async|async)\s*\([^)]*\)\s*=>\s*\{/g)].some((match) => {
       const body = bodyAt(match.index + match[0].length - 1);
       if (!/streamText|\bbash\(/.test(body) || !/set[A-Z]\w*\(/.test(body)) return false;

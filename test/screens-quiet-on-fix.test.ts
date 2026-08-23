@@ -168,3 +168,47 @@ test("UNLABELLED-CONTROL: a closed label beside the control names nothing", () =
 test("UNLABELLED-CONTROL: a label WRAPPING the control does name it", () => {
   expect(SCREENS["UNLABELLED-CONTROL"](`<label>年利率\n<input type="range" min={1} max={8} value={v} onChange={f} />\n</label>`)).toBe(false);
 });
+
+/**
+ * The other lookback of the same kind (`UNGUARDED-NUMBER-INPUT`, 500 characters). Audited after
+ * the `<label>` one turned out to be wrong: the failure mode is misattribution — deciding a call
+ * belongs to the wrong control because it is merely the nearest.
+ *
+ * Both interleavings are covered. `lastIndexOf` is correct here specifically because the call
+ * sits inside its own element's handler, so "nearest preceding input" IS the owning one.
+ */
+const NUMBER_CASES: [string, string, boolean][] = [
+  ["the defect", `<input type="number" value={n} onChange={(e) => setN(Number(e.target.value))} />`, true],
+  ["guarded with isNaN", `<input type="number" value={n} onChange={(e) => { const v = Number(e.target.value); if (!isNaN(v)) setN(v) }} />`, false],
+  ["guarded against empty", `<input type="number" value={n} onChange={(e) => setN(e.target.value === "" ? 0 : Number(e.target.value))} />`, false],
+  ["a slider cannot produce either input", `<input type="range" value={n} onChange={(e) => setN(Number(e.target.value))} />`, false],
+  ["a slider between the number field and the call", `<input type="number" value={a} onChange={h1} />\n<input type="range" value={b} onChange={(e) => setB(Number(e.target.value))} />`, false],
+  ["a number field after a slider", `<input type="range" value={b} onChange={h2} />\n<input type="number" value={a} onChange={(e) => setA(Number(e.target.value))} />`, true],
+];
+
+for (const [name, source, fires] of NUMBER_CASES) {
+  test(`UNGUARDED-NUMBER-INPUT: ${name}`, () => {
+    expect(SCREENS["UNGUARDED-NUMBER-INPUT"](source)).toBe(fires);
+  });
+}
+
+/**
+ * `UNGUARDED-ASYNC-HANDLER`. Scoped by brace depth rather than proximity, so it has none of the
+ * misattribution problem — but its guard pattern had a hole: `latest` and `stale` matched a bare
+ * identifier, so naming a variable `latest` cleared the handler. Both matched 0 of 378 corpus
+ * cards and are gone; the last case is what they used to break.
+ */
+const ASYNC_CASES: [string, string, boolean][] = [
+  ["the defect", `const run = async () => { const r = await bash("ls"); setOut(r.stdout) }`, true],
+  ["guarded by a runId ref", `const run = async () => { const id = ++runId.current; const r = await bash("ls"); if (id !== runId.current) return; setOut(r.stdout) }`, false],
+  ["guarded by an abort signal", `const run = async () => { const c = new AbortController(); const r = await bash("ls"); if (c.signal.aborted) return; setOut(r.stdout) }`, false],
+  ["nothing awaited", `const run = async () => { setOut("x") }`, false],
+  ["no setState after the await", `const run = async () => { const r = await bash("ls"); console.log(r) }`, false],
+  ["a variable merely named latest is not a guard", `const run = async () => { const latest = 1; const r = await bash("ls"); setOut(r.stdout + latest) }`, true],
+];
+
+for (const [name, source, fires] of ASYNC_CASES) {
+  test(`UNGUARDED-ASYNC-HANDLER: ${name}`, () => {
+    expect(SCREENS["UNGUARDED-ASYNC-HANDLER"](source)).toBe(fires);
+  });
+}

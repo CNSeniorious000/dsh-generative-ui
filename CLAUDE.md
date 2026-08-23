@@ -2969,6 +2969,23 @@ The lesson is about the evidence, not the regex: every real hit examined was a t
 the check was still wrong. A screen that is right on every card you have can be right by accident,
 and only a case constructed to be hard tells the difference.
 
+Auditing the other three heuristics the same way, since a proximity window is the shape that just
+failed:
+
+- **`UNGUARDED-NUMBER-INPUT`** (a 500-character lookback) is correct on both interleavings — a
+  slider between the number field and the call, and a number field after a slider.
+  `lastIndexOf("<input")` works here specifically because the call sits inside its own element's
+  handler, so "nearest preceding" IS the owner.
+- **`UNGUARDED-ASYNC-HANDLER`** is scoped by brace depth, so misattribution cannot happen — but
+  its guard pattern had a different hole. `latest` and `stale` were alternations matching a BARE
+  identifier, so a handler naming a variable `latest` cleared itself with no guard at all. Both
+  matched **0 of 378** corpus cards: pure speculation, buying a false negative. Removed, and every
+  verdict on the corpus, the fresh cards, and the reference set is unchanged. A word is not a guard.
+- **`NO-FOCUS-RING`**'s 80-character window is the one audited above, 0 false positives in 73.
+
+Twenty-one constructed cases are pinned across the four. The pattern worth carrying: **an
+alternation that has never matched is not harmless** — it cannot help, and it can excuse.
+
 Which makes `NO-FOCUS-RING` worth auditing on its own: a false positive there mis-diagnoses more
 cards than a wrong answer anywhere else, and it has been retightened once already. Checked the
 whole flagged set rather than a sample — **72 of the 73 do not contain the string "focus"
