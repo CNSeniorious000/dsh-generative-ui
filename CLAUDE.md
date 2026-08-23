@@ -5453,6 +5453,18 @@ upstream change away from breaking, and the repair is there for **truncated** in
 missing imports. But the severity was wrong, and the correction matters more than the finding —
 *compiles, mounts, shows nothing* was the claim, and it was not true.
 
+The repair has a precise boundary, and it is the reason the original rule was written the way it
+was: normalize adds a **missing** `import … from "react"` line, and does **not** extend an
+existing one. So
+
+- no react import at all + `useState` → repaired, renders (the two fresh cards)
+- `import { useState }` + `<Fragment>` → **not** repaired, `Fragment is not defined`, blank
+
+`83d06aa1ce20` in the corpus is the second case, and it is one of the six cards that genuinely
+paint nothing. *Import every name you write, `Fragment` included* was aimed at exactly the case
+the repair cannot reach — which is why its example shows `useState` already imported, the detail
+I read as a gap this morning and widened the screen around.
+
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
 example shows `Fragment` missing while `useState` is already imported — which teaches the
