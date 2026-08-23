@@ -4867,9 +4867,26 @@ Closing them found two things worth having beyond the tests:
   was never revoked: one blob leaked per edit. Draining the array instead makes both callers
   idempotent whichever order they run in.
 
-20 remain, all inside React render and effect bodies that need a real DOM. Recorded rather than
-papered over: this repo stubs `document` by hand where it needs it, and a DOM library for four
-components is a worse trade than an honest number.
+20 remained after that pass, and a later one took it to **14** without adding a DOM library —
+`react-dom/server` was already in the tree for `paint-cards.ts`, and it reaches more than expected:
+
+- `useSubPages` — render-path guards, driven by rendering the hook in a probe component. The
+  property worth having: while the sub-page resolve is in flight the **original source** renders,
+  because returning `""` would blank a working canvas on every sweep.
+- `useResize` — drag-to-resize coalescing. `renderToString` gives you the hook's return value, and
+  the listeners it registered are then driven by hand, which is what a drag is. Twenty
+  `pointermove`s schedule **one** frame; releasing cancels a pending one.
+- `compiler()` / `dropSharedCompiler` — a memoized singleton and its pair.
+- `deliver` — the last pure block inside the effect, lifted out. `render` replaces the buffer and
+  `pushCode` appends; swapping them doubles the card on every streamed frame, and it was a
+  one-word difference nothing could reach.
+
+The 14 that are left sit inside `useEffect` bodies, which `renderToString` does not run. That is
+a real boundary rather than a missing test: reaching them needs a DOM, and a DOM library for four
+components is still the worse trade.
+
+**A hook is more testable than it looks.** Three of the four above were reported as needing a
+browser and needed a nine-line probe component.
 
 **A checker that reports success has to be checked against what it is looking at.** It ran, it
 printed a reassuring line, and the answer was right about the two thirds it could see.
