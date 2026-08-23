@@ -5353,3 +5353,24 @@ an `aria-label` on the number field, which nothing asked for.
 
 **A rule tells you what to do; the cause tells you when.** The card generalised past the three
 examples it was given, which a list of three fixes cannot do.
+
+### Judgement is not a control (2026-08-23)
+
+I pushed a red commit. Again — this session already records doing it once and resolving not to.
+The second time the evidence was even plainer: I had just run `bun run check 2>&1 | grep -icE
+'\(fail\)|error'`, it printed **4**, and I committed and pushed in the same command.
+
+The failure itself was small and expected in hindsight: `UNSTOPPABLE-MOTION` is prefix-unsafe,
+because `@keyframes` is written before the `@media (prefers-reduced-motion)` that clears it. That
+is now the **third** screen with that shape, alongside `NO-FOCUS-RING` and
+`UNGUARDED-NUMBER-INPUT`, and it is not a coincidence: **the fix is written after the thing it
+fixes**, in CSS and in JavaScript alike, so any cut between them shows the defect alone. A fourth
+should be expected rather than investigated.
+
+The fix for the push is not resolving harder. `.git/hooks/pre-push` now runs `check` and refuses
+the push on failure, and `scripts/hooks/install.sh` puts it in a checkout — `.git/hooks` is not
+versioned, so a hook living only there protects one clone and nobody learns it is missing from the
+others. Verified by breaking a screen deliberately and watching the push refuse.
+
+**Anything you have done twice while intending not to is not a discipline problem.** Two identical
+mistakes in one session is the signal to spend the ten minutes making it mechanically impossible.
