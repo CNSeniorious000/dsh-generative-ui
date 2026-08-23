@@ -6638,8 +6638,10 @@ turn, so the thing being asked about has to be named in the prompt itself. Rewri
 That makes **19 cards, 0 real prose refusals, 1 transient crash** — and the failure mode worth
 carrying is that a trigger suite mostly measures whether its prompts can be answered at all.
 
-`aria-live` after the move to the skill: **4 of 4**, and not all the same shape — three read files
-or run commands, one streams from the model. Each puts the region on a persistent container, and
+`aria-live` after the move to the skill: **5 of 5**, and not all the same shape — three read files
+or run commands, one streams from the model, one searches as you type. That last is the hardest
+case, since results change on every keystroke, and it came back with `polite` (which queues rather
+than interrupts) on a persistent scroll container, debounced. Nothing in the rule says any of that. Each puts the region on a persistent container, and
 the two that can be rendered headlessly have it in their **first paint**, which is the property
 that makes a live region work at all: a region that enters the DOM together with the content
 announces nothing.
