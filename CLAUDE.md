@@ -4196,3 +4196,19 @@ verified by adding a member to `bindings.ts` and watching it exit 1.
 The rule is narrower than "never write a fact twice": **derive it when the source really
 determines it, and gate it when it does not.** A gate costs three lines and fails loudly; a
 wrong derivation fails silently and looks like good engineering.
+
+### `replaceAll` on a specifier rewrote the card's own text (2026-08-23)
+
+`inlineSubPages` swapped each child's specifier for its blob URL with
+`out.replaceAll('"./board"', url)`. That is every occurrence, not every *import* — so a card
+that also writes `const label = "./board"` renders `blob:null/8f3a…` where a filename belonged,
+or passes one to a component expecting a path.
+
+The module already had `SPECIFIER`, the regex it uses to *find* the imports, which knows exactly
+which positions are import positions. The rewrite threw that away and matched raw text instead.
+Rewriting through the same regex is three lines shorter than what it replaced.
+
+Zero corpus cards write a relative path as a string literal, so this was never observed — the
+kind of bug that stays until someone reads the function asking what else the pattern matches.
+**Whenever a parser's output is applied with string replacement, the replacement has forgotten
+what the parser knew.**
