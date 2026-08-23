@@ -3239,6 +3239,16 @@ region live.
 So the failure is between *understanding a rule* and *reaching for it while writing JSX* — a place
 none of today's other measurements could see, because every other rule landed.
 
+Which raises the question of whether accessibility care is one trait or many. Tested on the
+corpus: a card using `aria-*` anywhere is **51%** clean on the five accessibility screens, and a
+card using none is **51%**. Identical. `role=` is if anything slightly worse.
+
+**There is no such thing as a generally careful corpus card.** Each attribute appeared in
+isolation, from whatever the card happened to need, with no transfer to the others — which is
+exactly why one rule landing at 92% (`aria-label`) said nothing about whether the next one would
+land at all. It also means the fresh cards' across-the-board improvement is not the same
+phenomenon: those move together.
+
 The one structural difference: this rule went into `prompt.ts` alone, while every accessibility
 rule that landed (`aria-label` on icon buttons, 13% → 92%) lives in the skill's accessibility
 section, grouped with its neighbours and carrying a code line. Moved it there, with the code line
