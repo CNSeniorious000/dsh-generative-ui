@@ -5897,16 +5897,20 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 47% | 19% | **0%** |
-| fresh, after | 57 | 0% | 0% | **88%** |
+| fresh, after | 60 | 25% | 0% | **88%** |
 
-Fifty-seven cards is not a rate, and 0% of 57 is still a small sample. Two caveats before the number
+The 25% is entirely `UNANNOUNCED-ASYNC-RESULT`, added after 57 of those cards were written: 15 of
+60 fetch something and announce nothing. Under the 22 screens that existed when they were
+generated, all 60 are clean. **Both numbers are true and the second one is the honest one** — a
+clean streak means clean under the screens you had, and adding a screen is what turns that into a
+measurement. Fifty-seven cards is not a rate either. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
 by checks derived from it; and 47% is against all 22 screens, nine of which did not exist when
 the earlier draft of this table said 28%. The corpus figure has only ever moved by screens being
 ADDED — no card changed — which is the honest reading of why it climbed from 28% to 47%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 50 of the 57 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 53 of the 60 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 
