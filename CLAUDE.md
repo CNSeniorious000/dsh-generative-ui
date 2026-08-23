@@ -4718,7 +4718,19 @@ screen list, so adding a screen forces answering it.
 
 Three screens had **no rule at all**: `DESTRUCTURED-HOOK`, `DUPLICATE-STYLE-KEY` and
 `JSX-SUBSCRIPT`. All three were found by the checker, given negative controls, measured against
-the corpus, written up here — and never turned into a sentence the model reads. Now written.
+the corpus, written up here — and never turned into a sentence the model reads. Now written. As code, not prose — the adherence measurement already established
+that a rule stated as a sentence lands at 0-7% while the same rule as two lines lands, so writing
+the three as paragraphs would have closed the bookkeeping gap without changing any card. Each
+ends with the pair:
+
+    style={{ padding: 4, gap: 6, padding: "8px 12px" }}   // padding: 4 is gone, silently
+    const [start, setStart] = useRef(0)                   // both undefined; dies on first use
+    <Icons[kind] />                                       // not valid JSX
+
+Pinning those in `test/prompt.test.ts` immediately failed on the `useRef` line, because it
+appears in both the prose and the block and the assertions count **occurrences**. That is the
+same guard that caught `running.current?.abort()` earlier: a phrase appearing twice cannot detect
+one of them going. Pinned on the comment instead, which appears once.
 
 That gap survived a first audit that said all fourteen were covered, because that audit matched
 each screen against a **loose regex** (`/useRef|destructur/`) and `useRef` appears in an unrelated
