@@ -3942,3 +3942,24 @@ mode** — verified directly. All three reached a reader as a broken card.
 No screens added: `compile-cards.ts` already fails these loudly, and a screen for something the
 compiler catches is redundant. Prompt rules added instead — **a compile failure is the one
 category where prevention is the only useful lever**, since there is no card to salvage.
+
+### `cp` to /tmp is not an undo, and a failing check is not a warning (2026-08-23)
+
+Testing whether a screen's new half was load-bearing means breaking it, running the checker, and
+putting it back. The put-back was `cp /tmp/cc.ts scripts/compile-cards.ts` — and `/tmp/cc.ts` was
+a snapshot taken **two commits earlier**, so restoring it silently deleted the whole
+`HARDCODED-BACKGROUND` screen written that same session. Then `bun run check` exited 1, and I
+pushed anyway.
+
+Two rules, both already learned here and both re-broken in one minute:
+
+- **Restore from git, not from a snapshot.** `git checkout <sha> -- <file>` names the state you
+  want; a `/tmp` copy names whenever you last remembered to make one. `git stash` or
+  `git checkout -- <file>` covers the temporary-mutation case with no stale-copy risk at all.
+- **The exit code is the answer.** `check=1` scrolled past under a `git push` on the same line.
+  Never chain a push onto a check with `&&` unless the check's status is *read* first.
+
+The recovery also mislanded twice: the grafting script bounded the replaced block by the *next
+screen's comment*, and `HARDCODED-BACKGROUND` sits inside those bounds, so each "fix" deleted it
+again. `git checkout` of the last good commit, then re-applying only the intended edit, worked
+first try. **When a surgical patch has already gone wrong once, stop patching and re-derive.**
