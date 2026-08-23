@@ -3870,6 +3870,14 @@ fence adds no text to the block**, so a card whose last token completes it never
 streaming path. The streaming path cuts back the still-being-typed tail, so such a card renders
 permanently missing its last statement. The skip now also requires `claim.complete`.
 
-Current state: **119 of 119 conditions constrained**, 190 tests. The one remaining report is an
-`if` inside `skill.ts`'s prompt template — prose, not a branch; the mutator now skips `if (` that
-does not open a statement.
+Then a **fourth** flaw, introduced by the fix for the third. Teaching the mutator to skip `if (`
+inside a string anchored the test at `^` — so it also skipped every **indented** statement, which
+is nearly all of them, and the next run reported 118 covered conditions as unconstrained. A
+mutator that declines to mutate and a branch that no test constrains produce the same line in the
+report. `test/invert-ifs.test.ts` now pins all four cases (indented, nested parens, `else if`,
+prose), and the audit distinguishes "the mutator declined this line" from "no test noticed" by
+comparing the file before running anything.
+
+Current state: **every condition constrained**, 195 tests, and the audit run leaves the tree
+clean. The scores that used to be printed (`mutationSites=12 failingTests=11`) were never
+meaningful — a high failure count is one loud condition, not eleven covered ones.
