@@ -6987,3 +6987,24 @@ changed the outcome, after moving `aria-live` into the skill — and both times 
 already correct and already delivered. **A rule that is right in general can still miss the one
 shape where following it feels wrong, and that shape is where the remaining violations live.**
 
+### Where the stripped focus rings actually sit (2026-08-24)
+
+Applied the same question to the largest screen. `NO-FOCUS-RING` fires on 73 corpus cards — where
+exactly does the `outline: "none"` sit?
+
+    36 in a style object   ← no place to write `:focus-visible`
+    37 in a <style> block  ← a `:focus-visible` rule is two lines away
+
+An even split, and the first half is structural: **you cannot write a pseudo-class in a React
+style object**, so a card that strips the outline inline has nowhere to put the ring back without
+either adding a `<style>` block or tracking focus in state. That is a real reason the rule would
+be hard to follow, and exactly the shape that survived the `<div onClick>` rule.
+
+Checked the skill before writing anything: it already gives both forms, the CSS rule and
+`boxShadow: focused ? … : "none"` driven from state. And the fresh cards are **0 in both
+columns** — the rule landed on the hard half too.
+
+So this one needed nothing, which is the point of checking before writing. Two of three
+"survivors" today were real gaps worth naming; the third was already handled, and the way to tell
+was to look at where the violations actually sit rather than assume the rule was incomplete.
+
