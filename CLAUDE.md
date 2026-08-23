@@ -3119,9 +3119,14 @@ pair says most:
 | --- | --- | --- | --- |
 | `GlobTester` | 5/5 | `NO-FOCUS-RING` in all five | 3 cards, 0 screens, `:focus-visible` in 3/3 |
 | `RegexTester` | 5/5 | `NO-FOCUS-RING` 4, `BRAND-PRIMARY-FILL` 1 | 9 cards, 0 screens, `:focus-visible` in 9/9 |
-| `History` | 5/5 | unguarded async 4, no ring 3, unreachable 2 | — |
+| `History` | 5/5 | unguarded async 4, no ring 3, unreachable 2 | 1 card, 0 screens, guarded |
 | `Mortgage` | 13/15 | unlabelled 9, no ring 6, number field 3 | 6 cards, 0 screens |
 | `CatNames` | 10/13 | unguarded async + unstoppable motion | 2 cards, both guarded |
+
+`History` needed a seed to measure at all — replayed in an empty directory the model correctly
+says there is no repo, which is not a card and not a failure. `test/seeds/git/` builds three
+commits first, and the card that comes back carries the async guard, the focus ring, AND the
+empty-array guard, none of which the prompt mentions.
 
 `GlobTester` is the cleanest single line in the comparison: **five for five strip the focus ring
 and none replace it; three for three of the fresh ones define `:focus-visible`.** A card type

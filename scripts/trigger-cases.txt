@@ -15,3 +15,9 @@ Asking for a few of something|给我五个猫名
 Asking for a few of something|周末晚饭吃什么好
 看看都有啥 is a request to browse|这个目录里都有啥
 Visualise this is this block|用 inline 卡片画个柱状图，数据随便编五条
+A conversion is never asked once|5 公斤 3 两是多少磅
+A question does not have to say build|BMI 多少算超重
+A question does not have to say build|比较一下这三个方案的成本
+When they tell you they want to change|这个配色我想调一下
+看看都有啥 is a request to browse|有哪些文件，哪几个最大
+Asking for a few of something|给我起几个产品名
