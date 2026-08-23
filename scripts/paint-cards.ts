@@ -31,9 +31,14 @@ await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
 let skipped = 0;
+let corrupt = 0;
 
 for (const name of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${name}`, "utf8");
+  // A leaked control token means the EXTRACTION was truncated mid-generation, not that the card
+  // is wrong — reporting it as a defect sends the next reader looking for a bug in code the model
+  // never finished writing. One of the 378 corpus cards is in this state.
+  if (/｜｜DSML｜｜|<\/parameter>|<\/invoke>/.test(src)) { console.log(`${name.padEnd(26)} CORRUPT EXTRACTION — a control token leaked into the source`); corrupt += 1; continue }
   let status: string;
   try {
     // `$dsh/*` does not resolve outside dsh, and a card that uses a capability is exactly the
@@ -82,7 +87,8 @@ for (const name of cardsIn(dir)) {
 
 // Say how many were skipped. A check that silently passes over a third of its input reads
 // exactly like one that examined everything and found nothing wrong.
-const note = skipped === 0 ? "" : ` (${skipped} skipped — imports this process cannot resolve)`;
+const parts = [skipped && `${skipped} skipped — imports this process cannot resolve`, corrupt && `${corrupt} corrupt extraction`].filter(Boolean);
+const note = parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 console.warn = realWarn;
 console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
 if (bad > 0) process.exit(1);
