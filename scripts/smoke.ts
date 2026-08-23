@@ -167,7 +167,14 @@ for (const source of blobs) {
 if (blobs.length === 0) throw new Error("no blob modules were synthesized — see the registry trigger above");
 const gaps = dom_gaps.length === 0 ? "" : `, ${dom_gaps.length} needing a DOM`;
 console.log(`smoke: ok — id ${id}, requires [${[...new Set(asked)].join(", ")}]`);
-console.log(`       ${disposers.length} of ${registered_effects.length} effects returned a disposer, all torn down cleanly`);
+// "4 of 6 returned a disposer" reads as two effects having nothing to undo. They are in fact
+// the two that could not RUN here — both reach for a DOM — and they are precisely the two that
+// register into the process-wide listener set in `observe.ts`. Saying which is which keeps the
+// line from claiming coverage it does not have.
+const ran = registered_effects.filter((name) => !dom_gaps.includes(name));
+const stateless = ran.filter((name) => !disposers.some((d) => d.name === name));
+console.log(`       ${disposers.length} of ${ran.length} runnable effects returned a disposer, all torn down cleanly${stateless.length === 0 ? "" : ` (stateless: ${stateless.join(", ")})`}`);
+if (dom_gaps.length > 0) console.log(`       ${dom_gaps.length} not run here, no DOM: ${dom_gaps.join(", ")} — their teardown is covered by test/, not by smoke`);
 /**
  * The services the client half may depend on.
  *
