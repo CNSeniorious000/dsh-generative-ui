@@ -5,8 +5,16 @@
  * just changed, so a cached body is the one response guaranteed to be wrong. `no-store` covers
  * the HTTP cache; the serial covers everything else that might key on a URL.
  */
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { listCanvasIds, readCanvasChild, readCanvasFile } from "../src/client/canvas/read.ts";
+
+const realFetch = globalThis.fetch;
+// Restored, because bun shares one global across every test FILE: leaving a stub installed
+// broke `compile-pipeline.test.ts`, which fetches its wasm over a real server, with
+// "WebAssembly response has unsupported MIME type 'null'" — a failure whose message names
+// neither this file nor fetch. The full suite passed anyway only because another file happened
+// to sort earlier and warm the compiler first; renaming that file exposed it.
+afterAll(() => { globalThis.fetch = realFetch });
 
 let seen: { url: string; init?: RequestInit }[] = [];
 let reply: () => Response = () => new Response("body");

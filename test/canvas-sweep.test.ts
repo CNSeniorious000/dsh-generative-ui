@@ -10,7 +10,7 @@
  * That last part is what makes this worth doing — the assertions are on the `Canvas[]` the panel
  * is rendered with, which is exactly what the reader sees.
  */
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 let painted: any[] = [];
 let listed: string[] = [];
@@ -27,6 +27,11 @@ let scheduleSweepAgain = () => {};
 
 /** Let queued microtasks (the fetch mocks) settle, then run whatever frames they scheduled. */
 const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve(); paint() } };
+
+// The globals below are shared with every other test FILE; leaving them installed breaks
+// whichever one bun runs next — see the note in `read.test.ts`.
+const real = { fetch: globalThis.fetch, document: (globalThis as any).document, requestAnimationFrame: globalThis.requestAnimationFrame, MutationObserver: (globalThis as any).MutationObserver };
+afterAll(() => { Object.assign(globalThis, real) });
 
 beforeEach(() => {
   painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = [];

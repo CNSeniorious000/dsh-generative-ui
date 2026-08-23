@@ -1,3 +1,15 @@
+/**
+ * `partial-tsx`'s two normalization modes, asserted directly against the compiler.
+ *
+ * **This file deliberately does not import `compiler.ts`** — it pins the DEPENDENCY's behaviour,
+ * which is what `compiler.ts` is built on top of. It was once named `compiler.test.ts` and read
+ * as coverage of that module; it was not. Rewriting every `return` in `compiler.ts` to
+ * `undefined` (six real mutations) left this file entirely green, because it re-assembles the
+ * pipeline from `transform` and `normalizeGeneratedTsx` rather than calling it.
+ *
+ * `compile-pipeline.test.ts` is the one that exercises the module. Keep the two apart: if an
+ * assertion here starts needing `createBrowserTsxCompiler`, it belongs in that file.
+ */
 import { expect, test } from "bun:test";
 import initTsx, { transform } from "@esm.sh/tsx";
 import { normalizeGeneratedTsx } from "partial-tsx";
