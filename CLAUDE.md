@@ -4382,3 +4382,27 @@ which of them *call* a teardown and assert nothing about it. Two did.
 `stream.test.ts` also calls `release()` without asserting, and that one is correct — it is
 between-test hygiene, and `bindings.test.ts` owns the assertion about what releasing a host does.
 **The distinction worth making is whether the teardown is the subject or the cleanup.**
+
+### A comment that described a check the code did not do (2026-08-23)
+
+`standaloneImportMap` was:
+
+    try { return fileURLToPath(new URL("../types/standalone/importmap.json", importMetaUrl)); }
+    catch {
+      // Installed in a shape where the package root is not two levels up. The skill drops the
+      // `-i` flag rather than passing a path that does not exist.
+      return undefined;
+    }
+
+The comment states the intent exactly, and the code does not implement it. **`fileURLToPath`
+only rejects a malformed URL** — for `../types/nope.json` it cheerfully returns
+`/private/tmp/types/nope.json`. So in the very install shape the comment names, the skill was
+handed a path to nothing and told the model to pass it to `genui check -i`. The model then gets
+`Cannot find module "$dsh/fs"` on correct code and "fixes" imports that were right — the exact
+failure `mapNotes` was written to prevent, arriving through the function that feeds it.
+
+One shared `resolvedMap` with an `existsSync`, and a test that a missing map is `undefined`
+rather than a path — which is what makes `mapNotes` drop the advice.
+
+**A comment describing a guarantee is a place to check the guarantee exists.** This one was
+written by someone who knew exactly what should happen, which is what made it convincing.
