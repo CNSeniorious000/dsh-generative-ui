@@ -60,7 +60,7 @@
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts",
-    "audit": "python3 scripts/audit-record.py CLAUDE.md",
+    "audit": "python3 scripts/audit-record.py CLAUDE.md && bun scripts/corpus-rates.ts 2>/dev/null | python3 scripts/audit-rates.py",
     "replay": "bun scripts/replay-stream.ts",
     "cards": "bun scripts/compile-cards.ts",
     "test:shuffled": "zsh scripts/test-shuffled.sh"
