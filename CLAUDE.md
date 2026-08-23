@@ -3275,9 +3275,9 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | signals per card | 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
-| fresh (70) | 3 | 2 | 17 | **38** | 10 |
+| fresh (71) | 3 | 2 | 17 | **38** | 11 |
 
-**Not one corpus card in 378 carries three of them. 48 of 70 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 49 of 71 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -5973,13 +5973,13 @@ With it loading, nine fresh cards over nine prompts, screened the same way as th
 | | n | any screen fires | `NO-FOCUS-RING` | uses `:focus-visible` |
 | --- | --- | --- | --- | --- |
 | corpus, before the rules | 378 | 47% | 19% | **0%** |
-| fresh, after | 70 | 23% | 0% | **89%** |
+| fresh, after | 71 | 23% | 0% | **89%** |
 
 The 24% is entirely `UNANNOUNCED-ASYNC-RESULT`, added after most of those cards were written: 15
-of 70 fetch something and announce nothing, and **every one predates the rule** — all six async
+of 71 fetch something and announce nothing, and **every one predates the rule** — all six async
 cards generated after it pass, including one written after `SWALLOWED-CAPABILITY-FAILURE` landed
 that satisfies both new rules on its first try. Under the screens that existed when each was
-generated, all 70 are clean. **Both numbers are true and the second one is the honest one** — a
+generated, all 71 are clean. **Both numbers are true and the second one is the honest one** — a
 clean streak means clean under the screens you had, and adding a screen is what turns that into a
 measurement. Fifty-seven cards is not a rate either. Two caveats before the number
 is quoted anywhere: the screens were written *from* the corpus, so the corpus column is measured
@@ -5988,7 +5988,7 @@ the earlier draft of this table said 28%. The corpus figure has only ever moved 
 ADDED — no card changed — which is the honest reading of why it climbed from 28% to 47%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 62 of the 70 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 63 of the 71 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    48 of 70 carry three or more accessibility signals (0→3 1→2 2→17 3→38 4→10)
+    49 of 71 carry three or more accessibility signals (0→3 1→2 2→17 3→38 4→11)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
