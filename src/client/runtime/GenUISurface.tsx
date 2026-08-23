@@ -117,6 +117,34 @@ export const deliveryFor = (code: string, delivered: string, streaming: boolean)
   return delta === "" ? { do: "nothing" } : { do: "append", delta };
 };
 
+/**
+ * Route a `Delivery` to the renderer. Returns whether anything was delivered, which is what tells
+ * the caller to advance its `delivered` marker.
+ *
+ * Split from the effect so the three calls can be constrained: `render` replaces the buffer,
+ * `pushCode` appends to it, and `clear({ preserveVisualState: true })` starts over WITHOUT
+ * blanking what is on screen. Getting `render` and `pushCode` the wrong way round doubles the
+ * buffer on every streamed frame, and the difference is one word inside an effect.
+ */
+export const deliver = (renderer: RendererCalls, delivery: Delivery): boolean => {
+  if (delivery.do === "nothing") return false;
+  if (delivery.do === "replace") renderer.render(delivery.code);
+  else if (delivery.do === "append") renderer.pushCode(delivery.delta);
+  else {
+    // Keep the painted frame so the surface does not blink while it starts over.
+    renderer.clear({ preserveVisualState: true });
+    renderer.pushCode(delivery.code);
+  }
+  return true;
+};
+
+/** Only what `deliver` touches — the real renderer has far more. */
+export type RendererCalls = {
+  render: (code: string) => void;
+  pushCode: (delta: string) => void;
+  clear: (options: { preserveVisualState: boolean }) => void;
+};
+
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
 const RETRY_BACKOFF_MS = 400;
 
@@ -246,17 +274,9 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       });
     }
     retriesRef.current = 0;
-    const delivery = deliveryFor(code, deliveredRef.current, streaming);
-    if (delivery.do === "nothing") return;
+    if (!deliver(renderer, deliveryFor(code, deliveredRef.current, streaming))) return;
     // `deliveredRef` must follow every delivery, or a later streaming frame diffs against a
     // prefix this render already superseded.
-    if (delivery.do === "replace") renderer.render(delivery.code);
-    else if (delivery.do === "append") renderer.pushCode(delivery.delta);
-    else {
-      // Keep the painted frame so the surface does not blink while it starts over.
-      renderer.clear({ preserveVisualState: true });
-      renderer.pushCode(delivery.code);
-    }
     deliveredRef.current = code;
     // The refs this reads (`importedRef`, `deliveredRef`, `streamingRef`) are how the effect
     // carries state between frames; listing them would re-run it on values it just wrote.
