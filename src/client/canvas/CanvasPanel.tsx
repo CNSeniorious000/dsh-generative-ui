@@ -69,6 +69,17 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
 /** Cheap gate: only a canvas that actually writes a relative import pays for the pass. */
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
+/** Exported for `test/panel-css.test.ts`: the default must be draggable-to. */
+export { MIN_WIDTH as MIN_WIDTH_FOR_TEST, MAX_WIDTH as MAX_WIDTH_FOR_TEST };
+/**
+ * Must equal the `--dgu-panel-width` fallback in `panel.css`.
+ *
+ * The CSS default is what the panel is painted at before React's inline style lands; this is
+ * what the resize state starts from. Different values mean the panel visibly jumps on its first
+ * frame — a `panel-css.test.ts` assertion holds them together, since a stylesheet cannot import
+ * a constant.
+ */
+export const DEFAULT_WIDTH = 420;
 
 /**
  * The panel's width for a pointer at `clientX`, clamped to what is usable.
@@ -124,7 +135,7 @@ function useResize(initial: number) {
 }
 
 export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth }: CanvasPanelProps) {
-  const { width, start } = useResize(420);
+  const { width, start } = useResize(DEFAULT_WIDTH);
   useEffect(() => onWidth(width), [width, onWidth]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const { open: picking, setOpen: setPicking, anchor: picker } = useDismissable();
