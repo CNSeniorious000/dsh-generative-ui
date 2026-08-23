@@ -7,11 +7,16 @@
  *
  * Usage: bun scripts/corpus-rates.ts [dir]   (default: the extracted corpus under /tmp)
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { cardsIn } from "./tsx-node.ts";
 import { SCREENS } from "./screens.ts";
 
+// The extracted corpus, which lives outside the repo — say so when it is not there, rather than
+// failing inside a readdir. Its siblings default to `test/cards`; this one is about the corpus
+// specifically, and defaulting it to the five reference cards would silently report 0 for
+// everything.
 const dir = process.argv[2] ?? "/tmp/corpuscards";
+if (!existsSync(dir)) { console.error(`no corpus at ${dir} — extract it, or pass a directory`); process.exit(0) }
 const cards = cardsIn(dir);
 const counts = new Map<string, string[]>();
 for (const name of cards) {

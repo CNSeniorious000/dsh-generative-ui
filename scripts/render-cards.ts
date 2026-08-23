@@ -16,7 +16,9 @@ import { cardsIn } from "./tsx-node.ts";
 /** Every $dsh group, whose generated stubs are concatenated into the one shim module. */
 const SHIM_GROUPS = ["chat", "ai", "fs", "exec"];
 
-const dir = process.argv[2] ?? ".research/cards";
+// `test/cards`, like its siblings. The old default was `.research/cards`, which has not existed
+// for some time — running with no argument failed inside a readdir rather than saying so.
+const dir = process.argv[2] ?? "test/cards";
 const cards = cardsIn(dir);
 
 /**
