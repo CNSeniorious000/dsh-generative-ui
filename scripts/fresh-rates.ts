@@ -27,5 +27,11 @@ for (const name of cards) {
 }
 
 console.log(`${clean} of ${cards.length} clean under all ${Object.keys(SCREENS).length} screens`);
+// A screen added after a card was written flags it retroactively, and reporting only the current
+// number makes a streak look broken by cards that were clean when generated. `UNANNOUNCED-ASYNC-
+// RESULT` did exactly this: 60 of 60 became 45 of 60 the moment it landed. Both numbers are true;
+// printing only one of them is what misleads.
+const retro = [...flagged].filter(([, names]) => names.length >= cards.length / 5);
+if (retro.length > 0) console.log(`  (${retro.map(([screen, names]) => `${screen} flags ${names.length}, most of them written before it existed`).join("; ")})`);
 console.log(`${ring} of ${cards.length} use :focus-visible (${Math.round((ring / cards.length) * 100)}%)`);
 for (const [screen, names] of [...flagged].sort()) console.log(`  ${screen}: ${names.join(" ")}`);
