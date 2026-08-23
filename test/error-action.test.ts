@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { errorAction } from "../src/client/runtime/GenUISurface.tsx";
+import { dispatchError, errorAction } from "../src/client/runtime/GenUISurface.tsx";
 
 /**
  * The three-way decision the renderer's `onError` makes. Both predicates behind it were already
@@ -44,4 +44,45 @@ test("retries stop after three", () => {
 test("an ordinary compile error is reported at once", () => {
   expect(errorAction("Expected '</', got '}'", "compile", false, 0)).toBe("report");
   expect(errorAction("Expected '</', got '}'", "compile", true, 0)).toBe("report");
+});
+
+/**
+ * The dispatch, not the decision. `errorAction` above says WHICH of the three; these say what
+ * each one does — and the audit could not constrain any of it before, because the only caller
+ * was inside a `GenUIRenderer.create` callback that needs a DOM.
+ */
+const spy = () => {
+  const calls: string[] = [];
+  let attempts = 0;
+  return {
+    calls,
+    read: () => attempts,
+    effects: {
+      attempts: () => attempts,
+      setAttempts: (n: number) => { attempts = n; calls.push(`attempts=${n}`) },
+      schedule: (ms: number) => calls.push(`schedule ${ms}`),
+      report: () => calls.push("report"),
+    },
+  };
+};
+
+test("ignore does nothing at all — a streaming frame is not a failed attempt", () => {
+  const s = spy();
+  dispatchError("ignore", s.effects);
+  expect(s.calls).toEqual([]);
+});
+
+test("retry counts first, then schedules on the new count", () => {
+  const s = spy();
+  dispatchError("retry", s.effects);
+  expect(s.calls).toEqual(["attempts=1", "schedule 400"]);
+  dispatchError("retry", s.effects);
+  expect(s.calls.slice(2)).toEqual(["attempts=2", "schedule 800"]);
+});
+
+test("report tells the caller and leaves the counter alone", () => {
+  const s = spy();
+  dispatchError("report", s.effects);
+  expect(s.calls).toEqual(["report"]);
+  expect(s.read()).toBe(0);
 });

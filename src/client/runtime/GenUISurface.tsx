@@ -178,6 +178,30 @@ export const errorAction = (message: string, phase: string, streaming: boolean, 
 const RETRY_BACKOFF_MS = 400;
 
 /**
+ * What `onError` DOES with the three outcomes, separated from where they come from. The decision
+ * was already a pure function; the dispatch was not, and the mutation audit could not constrain
+ * it — swapping `ignore` for `retry` survived every test, because the only caller lives inside a
+ * `GenUIRenderer.create` callback that needs a DOM to reach.
+ *
+ * Each branch is one line and each is load-bearing: `ignore` must not touch the counter (a
+ * streaming frame is not a failed attempt), `retry` must increment BEFORE scheduling (the delay
+ * is a function of the count), and `report` must not increment at all.
+ */
+export const dispatchError = (
+  action: "ignore" | "retry" | "report",
+  effects: { attempts: () => number; setAttempts: (n: number) => void; schedule: (ms: number) => void; report: () => void },
+) => {
+  if (action === "ignore") return;
+  if (action === "retry") {
+    const next = effects.attempts() + 1;
+    effects.setAttempts(next);
+    effects.schedule(RETRY_BACKOFF_MS * next);
+    return;
+  }
+  effects.report();
+};
+
+/**
  * The same import map with a fresh query on every fetched entry.
  *
  * Only `https://esm.sh/` URLs are touched. Local blob URLs are minted per render and already
@@ -234,14 +258,12 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       preserveStateOnUpdate: preserveStateRef.current,
       callbacks: {
         onError: (error, phase) => {
-          const action = errorAction(error.message, phase, streamingRef.current, retriesRef.current);
-          if (action === "ignore") return;
-          if (action === "retry") {
-            retriesRef.current += 1;
-            setTimeout(() => retryRef.current(), RETRY_BACKOFF_MS * retriesRef.current);
-            return;
-          }
-          onErrorRef.current?.(error, phase);
+          dispatchError(errorAction(error.message, phase, streamingRef.current, retriesRef.current), {
+            attempts: () => retriesRef.current,
+            setAttempts: (n) => { retriesRef.current = n },
+            schedule: (ms) => setTimeout(() => retryRef.current(), ms),
+            report: () => onErrorRef.current?.(error, phase),
+          });
         },
         onRendered: () => {
           retriesRef.current = 0;
