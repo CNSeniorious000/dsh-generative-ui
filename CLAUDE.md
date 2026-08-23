@@ -4053,8 +4053,36 @@ full suite passed only because `compiler.test.ts` sorted first and warmed the co
 
 Three things to carry:
 
-- **A green suite is not evidence of independence.** Run the files pairwise, or shuffled. Five
-  shuffled runs is what now backs the claim, rather than one alphabetical one.
+- **A green suite is not evidence of independence.** Run the files pairwise, or shuffled.
+
+**That claim needed correcting the same day, and the correction is the more useful half.** Five
+shuffled runs is not a measurement — it is a coin flip repeated five times. Re-run at scale, the
+suite failed **half** the seeds, up to 25 tests at once, and had been doing so the whole time the
+record above said it was verified. `--seed=N` makes each order reproducible, which is what turns
+this from guesswork into debugging; without it every run is a different bug.
+
+Four independent causes, none of which the symptom pointed at:
+
+- `routes.test.ts` shared one tmpdir across its tests, and the one that writes a file into it
+  polluted the listing the exhaustive test asserts.
+- `bindings.test.ts` asserted "no host bound" — a state it never established. Its cleanup called
+  `releaseBindings()`, which revokes cached blob URLs and **does not touch the host**. Reaching
+  `host = null` from outside means registering a throwaway and calling its disposer.
+- `openpath-wrap.test.ts` (new, mine) ran the canvas-column effect, whose success depends on
+  whichever `document` another file had installed.
+- The one that produced the 25-test cascades: `observe.ts` keeps **one module-level listener set
+  for the process**, and `claimInlineFences` captures `document.body` as its root at
+  registration. A host left alive by a failing assertion goes on being swept by every later
+  file — against a root that no longer answers `querySelectorAll`. One real failure, twenty-five
+  red tests, none of them in the file that caused it.
+
+Two of those four were fixed by making a test clean up after itself; the cascade needed
+`resetTranscriptObservers()` in `observe.ts`, called from both stubbing files' `beforeEach`.
+Nothing in the plugin calls it — the shell disposes each host, which is the real path — and it is
+exported anyway because the invariant it documents is real.
+
+Now 70 seeds and 8 unseeded runs, all clean. **State the sample size when claiming a flake is
+fixed**; "passes now" against a 50% failure rate is a 50% chance of being wrong.
 - **Restore every global you stub**, even when nothing currently breaks. `stream.test.ts` and
   `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
 - **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
