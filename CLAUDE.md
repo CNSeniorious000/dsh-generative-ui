@@ -3035,9 +3035,12 @@ Cross-tabulating all 378 corpus cards, now that 303 of them actually render:
 | | count | |
 | --- | --- | --- |
 | screens fire, paints nothing | 6 | both agree |
-| screens fire, **paints fine** | 172 | what the renderer cannot see |
+| screens fire, **paints fine** | 195 | what the renderer cannot see |
 | silent, paints nothing | **0** | what the screens cannot see |
-| clean both ways | 200 | |
+| clean both ways | 177 | |
+
+(Re-run at 24 screens; it was 170/202 at 21. The third row has stayed **0** through every
+addition, which is the only column that would signal a hole.)
 
 **Zero.** Nothing in this corpus breaks without a screen naming why first — the screens are a
 strict superset of the renderer on this input. That settles what each check is for: the paint
