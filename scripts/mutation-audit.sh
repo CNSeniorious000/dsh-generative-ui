@@ -44,6 +44,11 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   covered=0
   for n in $lines; do
     bun scripts/invert-ifs.mjs "$src" "$n"
+    # The mutator declines lines whose `if` is inside a string — `skill.ts` documents the
+    # `AbortError` check inside its prompt. An unchanged file means "not a branch", which is a
+    # different answer from "no test noticed", and reporting it as the latter is a standing
+    # false positive that trains you to ignore the report.
+    if cmp -s "$src" "/tmp/ma-${src:t}"; then continue; fi
     out=$(bun test 2>&1 || true)
     fails=$(printf %s\\n "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
     errors=$(printf %s\\n "$out" | grep -cE '^ *[0-9]+ error' || true)
@@ -58,7 +63,7 @@ for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
     fi
   done
   restore
-  echo "${src:t}: ${covered}/${#lines} conditions covered"
+  echo "${src:t}: ${covered} conditions covered"
 done
 echo
 echo $([[ "$uncovered" == "0" ]] && echo "every condition is constrained by a test" || echo "$uncovered unconstrained")
