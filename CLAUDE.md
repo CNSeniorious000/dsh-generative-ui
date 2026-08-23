@@ -2986,6 +2986,18 @@ failed:
 Twenty-one constructed cases are pinned across the four. The pattern worth carrying: **an
 alternation that has never matched is not harmless** — it cannot help, and it can excuse.
 
+Swept every regex in `screens.ts` for the same shape. Eight have alternations that match nothing
+in 378 corpus cards plus 44 fresh ones, and four of those sit in CLEARING position, where a match
+excuses a card: `aria-labelledby`, `onKeyUp`, `onKeyPress`, and a focus `box-shadow`. All four are
+**correct** — each is a real alternate spelling of the fix, and a card written that way genuinely
+does the right thing (checked, one constructed card each, now pinned).
+
+So "never matched" is not the fault. `latest` was wrong because it was a WORD THAT APPEARS NEAR
+the fix rather than a form of it; `aria-labelledby` is unused coverage waiting to be used. The
+question to ask of the next one is not "has this ever fired" but **"does a card written this way
+actually do the right thing?"** The remaining four dead alternations are in detecting position,
+where the cost is only coverage, not a wrong verdict.
+
 Which makes `NO-FOCUS-RING` worth auditing on its own: a false positive there mis-diagnoses more
 cards than a wrong answer anywhere else, and it has been retightened once already. Checked the
 whole flagged set rather than a sample — **72 of the 73 do not contain the string "focus"

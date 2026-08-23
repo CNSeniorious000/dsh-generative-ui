@@ -212,3 +212,25 @@ for (const [name, source, fires] of ASYNC_CASES) {
     expect(SCREENS["UNGUARDED-ASYNC-HANDLER"](source)).toBe(fires);
   });
 }
+
+/**
+ * Alternations that clear a screen but have never matched a corpus card. Auditing these is what
+ * removed `latest`/`stale` from `UNGUARDED-ASYNC-HANDLER` — but "never matched" is not by itself
+ * the fault. The four below are unmatched and CORRECT, because each is a real alternate spelling
+ * of the fix; `latest` was a word that merely appeared near one.
+ *
+ * The test is the question to ask of the next one: does a card written this way actually do the
+ * right thing? If yes, an unused alternation is coverage waiting to be used. If no, it excuses.
+ */
+const UNUSED_BUT_REAL: [string, string, string][] = [
+  ["UNLABELLED-CONTROL", "aria-labelledby", `<span id="lab">音量</span><input type="range" aria-labelledby="lab" value={v} onChange={f} />`],
+  ["UNREACHABLE-CONTROL", "onKeyUp", `<div onClick={go} onKeyUp={go} tabIndex={0}>x</div>`],
+  ["UNREACHABLE-CONTROL", "onKeyPress", `<div onClick={go} onKeyPress={go} tabIndex={0}>x</div>`],
+  ["NO-FOCUS-RING", "a focus box-shadow", "<style>{`button:focus { box-shadow: 0 0 0 2px blue }`}</style><button style={{ outline: \"none\" }} />"],
+];
+
+for (const [screen, spelling, source] of UNUSED_BUT_REAL) {
+  test(`${screen}: ${spelling} is a real fix, not an excuse`, () => {
+    expect(SCREENS[screen](source)).toBe(false);
+  });
+}
