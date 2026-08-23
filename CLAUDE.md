@@ -5699,3 +5699,28 @@ read. Now it accepts both. Over all 378 cards, 60 prefixes each:
 One blinked frame in ~22,000, on one card. **A measure that reports zero across a whole corpus is
 worth as much as one that finds something** — provided a control proves it still fires, which is
 what `late-hook.tsx` is for.
+
+### Which rules already work (2026-08-23)
+
+A day spent on the rules that fail is worth ending with the ones that do not. Scored across the
+378-card corpus, counting only cards a rule applies to:
+
+| rule | adherence |
+| --- | --- |
+| no `@media (min-width)` — size against the container | **378/378** |
+| a settled card exports a default | **378/378** |
+| `--dsw-alias-*` tokens rather than literal colour | 371/377 (98%) |
+| `bash()` result: `exitCode` checked | 18/19 (95%) |
+| `streamText` parsed with `partial-json` | 22/24 (92%) |
+
+Zero media queries in 378 cards is the striking one — the rule is stated once, in prose, with the
+reason, and nothing in the corpus violates it. Only four cards write a fixed 3-digit `px` width
+and every one is a `min-width: 140px` flex floor or a 116px tarot card, none of which breaks a
+narrow panel.
+
+Against this, the accessibility rules sat at **5% (`prefers-reduced-motion`) to 19%
+(`NO-FOCUS-RING`)** before today. The difference is not that one set is stated better. It is that
+**a rule about the card's own structure is checked by the card working**, and a rule about
+someone else's experience of it is checked by nobody — the author has a mouse and eyes, and the
+card looks right. That is the whole argument for screening the second kind and not bothering with
+the first.
