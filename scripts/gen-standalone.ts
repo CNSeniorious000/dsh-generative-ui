@@ -29,13 +29,31 @@ await mkdir(out, { recursive: true });
 const EMPTY_RESULT: Record<string, string> = {
   readFile: '""',
   readdir: "[]",   // DirEntry[]
+  readBytes: "new Uint8Array()",
   writeFile: "undefined",
   streamText: "(async function* () {})()",
+  // The shape the skill tells cards to read: `check exitCode, do not catch it`. Returning
+  // undefined here made every exported page with a command card throw on `.exitCode` — the
+  // exact crash the table exists to prevent, missed because the table was written from the two
+  // members that had been added at the time and never revisited when `bash` and `readBytes`
+  // arrived. Anything unlisted silently returns undefined, so a new member starts out broken.
+  bash: '{ stdout: "", stderr: "", exitCode: 0, truncated: { stdout: false, stderr: false }, timedOut: false }',
 };
-const ASYNC = new Set(["readFile", "readdir", "writeFile"]);
+const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash"]);
 
 const groups = bind() as Record<string, Record<string, unknown>>;
 const imports: Record<string, string> = {};
+
+// A member added to `bindings.ts` and not to `EMPTY_RESULT` gets a stub returning `undefined`,
+// which is correct for a void member and a crash for every other — `bash` shipped that way and
+// made `.exitCode` throw on every exported page. There is no way to tell the two apart from the
+// binding alone, so the choice has to be stated here rather than defaulted.
+const VOID_MEMBERS = new Set(["sendMessage", "writeFile"]);
+const unlisted = Object.values(groups).flatMap((members) => Object.keys(members)).filter((name) => EMPTY_RESULT[name] === undefined && !VOID_MEMBERS.has(name));
+if (unlisted.length > 0) {
+  console.error(`gen-standalone: no stub result for ${unlisted.join(", ")} — add to EMPTY_RESULT, or to VOID_MEMBERS if it really returns nothing`);
+  process.exit(1);
+}
 
 for (const [group, members] of Object.entries(groups)) {
   const specifier = capabilityModule(group);

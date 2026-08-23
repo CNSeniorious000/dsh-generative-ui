@@ -8,8 +8,9 @@ export async function readdir(...args) {
   console.warn("[$dsh/fs] readdir() did nothing: this page is not running inside dsh, so there is no harness to reach.", ...args);
   return [];
 }
-export function readBytes(...args) {
+export async function readBytes(...args) {
   console.warn("[$dsh/fs] readBytes() did nothing: this page is not running inside dsh, so there is no harness to reach.", ...args);
+  return new Uint8Array();
 }
 export async function writeFile(...args) {
   console.warn("[$dsh/fs] writeFile() did nothing: this page is not running inside dsh, so there is no harness to reach.", ...args);
