@@ -70,6 +70,16 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 720;
 
+/**
+ * The panel's width for a pointer at `clientX`, clamped to what is usable.
+ *
+ * Extracted from the drag handler because it is the whole of the arithmetic and none of the
+ * DOM: a swapped bound or a flipped subtraction gives a panel that snaps shut or eats the
+ * conversation, and the drag itself cannot be exercised without a browser.
+ */
+export const widthForPointer = (clientX: number, viewportWidth: number) =>
+  Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, viewportWidth - clientX));
+
 /** Drag-to-resize on the panel's left edge, mirroring the host's own invisible hit strip. */
 function useResize(initial: number) {
   const [width, setWidth] = useState(initial);
@@ -82,7 +92,7 @@ function useResize(initial: number) {
       if (frame.current !== 0) return;
       frame.current = requestAnimationFrame(() => {
         frame.current = 0;
-        setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, window.innerWidth - moveEvent.clientX)));
+        setWidth(widthForPointer(moveEvent.clientX, window.innerWidth));
       });
     };
     const stop = () => {
