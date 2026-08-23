@@ -5252,3 +5252,18 @@ ignore it.
 
 **A defect being real is not sufficient; a screen also has to be able to tell it apart from what
 looks like it.** Recorded here instead, which is what the record is for.
+
+The next candidate passed that bar, and the contrast is instructive because its raw number looked
+just as unpromising. 74 corpus occurrences of `Number(e.target.value)` written straight into
+state — but **43 are `type="range"` sliders**, where the value is always numeric and neither
+failure can occur. Of the 26 attached to a `type="number"` field, **16 already guard**.
+
+That leaves 10 real ones, and they are a genuinely bad experience: `Number("")` is `0`, so the
+reader backspaces to retype and the field snaps to zero on the empty keystroke — they are
+fighting it every time. A lone `-` gives `NaN` and blanks every derived value.
+
+The difference from the `key={i}` case is not the rate, it is that **one telling attribute
+separates the real ones from the rest**. `type="number"` is in the source, three characters from
+the match; "does this list reorder" is not. A screen is viable exactly when the discriminator is
+present in the text, and the 16 cards already doing it right prove the fix is one people reach
+for unprompted.
