@@ -5473,6 +5473,18 @@ repair cannot reach — 1 of 378, `83d06aa1ce20`, one of the six corpus cards th
 nothing. *Import every name you write, `Fragment` included* was always aimed there, which is why
 its example shows `useState` already imported: the detail I read as a gap this morning.
 
+**The whole chain, because the shape recurs:** a render harness that skipped normalization found
+two blank cards → recorded as "compiles, mounts, shows nothing" → a screen widened around them →
+found later that production repairs both, so the finding was overstated → the boundary
+mis-measured with a probe written in a form no card uses → a negative control that fired on the
+screen while the card it described rendered fine → measured properly, screen narrowed, control
+rewritten to a case that demonstrably paints blank.
+
+Every step was checked, and four of the six were wrong. What caught each one was the same thing:
+**running the artifact instead of reasoning about it** — `paint-cards.ts` on the control card is
+what showed it did not break, one command, after two rounds of confident prose. The tests now pin
+all three boundary cases, so the next person gets the answer instead of the search.
+
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
 example shows `Fragment` missing while `useState` is already imported — which teaches the
