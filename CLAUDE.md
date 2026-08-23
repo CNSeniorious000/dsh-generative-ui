@@ -6783,3 +6783,21 @@ The check that caught it was reading a card that the measurement called wrong, w
 move that fixed the error-handling number an hour earlier (60% → 100%). **Any surprising result
 gets one card read by hand before it gets written down.**
 
+### Two more candidates, both correctly rejected (2026-08-24)
+
+The other two unchanged properties, checked the same way and both correctly rejected:
+
+**`key={index}`** — 29% corpus, 33% fresh. Already investigated and rejected once (95 of 378 looks
+compelling; narrowed to lists that actually reorder it is 2). The fresh instances are the same
+shape: `gen19-3` keys highlighted substrings of a search match by position, where the index names
+the same segment forever.
+
+**A number field with no `min`/`max`** — 61% bounded corpus, 50% fresh. The unbounded ones are
+height and weight inputs. A hard maximum on a person's weight is presumptuous, not careful, and
+`UNGUARDED-NUMBER-INPUT` already covers the failure that does bite (`Number("")` → 0).
+
+So of eight unscreened properties, five improved without a rule, two are non-defects, and the
+eighth was a measurement error. **The vein that produced two screens this morning is worked out**
+— which is itself the useful signal: the next screen will have to come from a population these
+measurements do not cover, not from another pass over the same 378 cards.
+
