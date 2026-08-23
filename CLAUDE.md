@@ -5129,3 +5129,33 @@ per-frame latency (a 5 ms frame cannot also do much else), never throughput. Eve
 on the path together is under a tenth of a millisecond, so nothing here is worth optimising.
 **Measure the thing you are not planning to touch first** — it is what tells you whether the
 optimisation you were about to do matters.
+
+### The plugin had not been loading at all (2026-08-23)
+
+Every rule added this session was written, tested, screened, and recorded — and none of it had
+reached a model, because `dsh` refused to load the section:
+
+    dsh: UNKNOWN: malformed prompt variable reference "{{}}" in section "dsh-generative-ui:inline"
+
+The loader reads `{{…}}` as a variable reference and rejects the whole section when the contents
+are not a name. React's own `style={{ … }}` is exactly that token. Six had accumulated across
+`prompt.ts` and `skill.ts` — the oldest days old — each one added by a rule written to *show* a
+style object, which is to say the failure was caused by the rules being specific.
+
+Nothing in 305 tests caught it. Every test reads the exported string; `dsh` is the only thing
+that **parses** it, and the parse has a syntax nobody had written down. Now
+`test/prompt.test.ts` asserts neither text contains `{{`, and the rules write `style={ { … } }`
+— same JSX, same meaning to a reader, no collision.
+
+**A prompt has a consumer, and the consumer has a grammar.** A string that exists, is complete,
+is well-formed markdown, and is pinned by a dozen assertions can still be rejected in full by the
+one program that reads it.
+
+It was found by running `scripts/eval.sh` — by *using* the thing rather than testing it. That is
+the whole lesson: the test suite verifies what the code says about itself, and one real
+invocation checked something none of it could.
+
+With it loading, four fresh cards over four prompts: **all four compile, no screen fires on any
+of them, and all four use `:focus-visible`** — against a corpus where 73 of 378 strip the ring
+and put nothing back. Four cards is not a rate and is not offered as one; it is the first
+evidence that the rules do anything at all, which until this fix was strictly zero.
