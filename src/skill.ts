@@ -41,6 +41,11 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     `The \`-i\` is not optional when the card imports \`${CAPABILITY_PREFIX}/*\`: without it every one of those lines`,
     "is reported as `Cannot find module`, and there is nothing to fix — they resolve at render time.",
     "",
+    "**It silences that error rather than typing the calls.** Measured: a map pointing at a file",
+    "that does not exist reports `OK` just the same, so `$dsh/*` ends up `any` and a wrong",
+    "argument or a misspelt result field passes the check. Everything else in the card is really",
+    "type-checked; the capability calls are on you.",
+    "",
     "That map holds type declarations, so it serves `check` and `lint`.",
   ].join("\n");
   if (standaloneMap === undefined) return `${check} \`build\` and \`dev\` want runnable JS and will fail on it.`;
