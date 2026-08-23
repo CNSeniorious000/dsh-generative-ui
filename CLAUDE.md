@@ -4753,6 +4753,36 @@ measurement.** Three times this stretch — 41 for `UNREACHABLE-CONTROL`, 28 her
 first count was several times the true one, and each time the tell was the same: the number was
 interestingly large. Print the matches, not the count.
 
+### The audit could not see a third of the source (2026-08-23)
+
+`scripts/mutation-audit.sh` reported *every condition is constrained by a test* for weeks. Its
+file list was `src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts` — two directories at one
+depth, `.ts` only. Five files matched none of those patterns, including `GenUISurface.tsx`, which
+holds the two error decisions the suite was written to constrain, and `session.ts`, which runs on
+every frame of every streamed reply. Switched to `fd -e ts -e tsx . src`: **28 unconstrained
+conditions** appeared in code that had been reported clean.
+
+Its summary line hid it a second way. A file where every condition came back UNCOVERED printed
+`no branches (0 \`if (\` in prose, declined)` — the wording for a file with nothing to check, on
+the file with nothing checked. Now `N conditions, NONE constrained by a test`.
+
+Closing them found two things worth having beyond the tests:
+
+- `deliveryFor` — the frame-delivery state machine, lifted out of an effect behind three refs.
+  `pushCode` appends while a session event carries the whole prefix, so its four answers are the
+  difference between a correct surface and a buffer that doubles every frame. Eight tests.
+- `revokeAll` — a **real leak**, not just missing coverage. The disposer iterated the blob-url
+  array while `inlineSubPages` was still appending to it, so a url added after the disposer ran
+  was never revoked: one blob leaked per edit. Draining the array instead makes both callers
+  idempotent whichever order they run in.
+
+20 remain, all inside React render and effect bodies that need a real DOM. Recorded rather than
+papered over: this repo stubs `document` by hand where it needs it, and a DOM library for four
+components is a worse trade than an honest number.
+
+**A checker that reports success has to be checked against what it is looking at.** It ran, it
+printed a reassuring line, and the answer was right about the two thirds it could see.
+
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
 `GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
