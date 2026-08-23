@@ -5406,9 +5406,9 @@ Scored against all 18 screens at the end of the day:
 | | clean under every screen |
 | --- | --- |
 | 378 corpus cards, written before the rules | **203 (54%)** |
-| 13 cards generated after them | **13 (100%)** |
+| 15 cards generated after them | **15 (100%)** |
 
-Thirteen is a small number and the screens were written *from* the corpus, so some of the gap is
+Fifteen is a small number and the screens were written *from* the corpus, so some of the gap is
 that these defects are exactly the ones now being warned about — that is the intent, not a
 confound, but it does mean the honest claim is narrow: **the specific things measured, screened,
 and written down stopped happening.** Not that the cards are better in general, which nothing
