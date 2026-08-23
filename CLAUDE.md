@@ -5474,6 +5474,12 @@ under an error boundary, and read back. **369 of 378 painted (97.6%).** The nine
 | 1 reading `'date'` of undefined | `UNGUARDED-LAST-INDEX` |
 | 1 `Expression expected` | a leaked `</｜｜DSML｜｜parameter>` token — a corrupt extraction, not a defect |
 
+`paint-cards.ts` now reports that last one as `CORRUPT EXTRACTION` in its own category rather
+than as a failure, because a leaked control token means the generation was truncated mid-write —
+the card was never finished, let alone wrong. **A category for "the input is damaged" keeps the
+defect count honest**; without it, one broken download reads as one broken card forever, and the
+next reader goes looking for a bug in code the model never got to write.
+
 **Eight of the nine map exactly onto an existing screen, and the ninth is not a card problem.**
 That is the useful result: the screens were derived from reading code, and rendering — an
 entirely independent method — finds the same set and nothing else. Each of the six runtime
