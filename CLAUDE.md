@@ -3204,9 +3204,13 @@ anything a reader could notice on a card that renders inline.
 
 Considered narrowing it to user-triggered fetches, on the theory that a card loading once on
 mount has nothing to announce — the reader arrives and it is already there. **Checked instead of
-assuming: 7 of the 9 mount-fetching cards show a loading state first**, so the content does change
+assuming: 9 of the 9 mount-fetching cards show a loading state first**, so the content does change
 while the reader is present and the announcement is wanted. No refinement needed; the hypothesis
 was wrong and testing it cost two minutes.
+
+(It read as 7 of 9 until the two exceptions turned out to say `正在统计项目文件…` and `正在扫描
+src…` — a loading state my English-only regex could not see. A measurement on a Chinese-language
+corpus that greps for `loading|pending` is measuring the language, not the behaviour.)
 
 Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
 prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
