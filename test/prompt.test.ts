@@ -31,7 +31,10 @@ const RULES = [
 
 for (const [name, phrase] of RULES) {
   test(`the prompt still carries the rule about ${name}`, () => {
-    expect(INLINE_PROMPT).toContain(phrase);
+    // Occurrences, not presence. A phrase appearing twice cannot detect one of them going —
+    // the `streamText` assertion below was pinned on a line that appears in both halves of its
+    // code block, so deleting either half left the test green.
+    expect(INLINE_PROMPT.split(phrase).length - 1).toBe(1);
   });
 }
 
@@ -64,7 +67,7 @@ const SKILL_RULES = [
 
 for (const [name, phrase] of SKILL_RULES) {
   test(`the skill still shows the code for ${name}`, () => {
-    expect(skillBody("types.json", "standalone.json")).toContain(phrase);
+    expect(skillBody("types.json", "standalone.json").split(phrase).length - 1).toBe(1);
   });
 }
 
