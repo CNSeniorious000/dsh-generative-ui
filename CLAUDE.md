@@ -5496,6 +5496,25 @@ slider, an unguarded number field all render perfectly and are still defects. **
 controls by whether the defect is fatal is itself information** — it says which screens are
 catching a broken card and which are catching a bad one.
 
+### The judgement boundary survived the day's prompt edits (2026-08-23)
+
+Today added six rules and rewrote two. The thing most at risk from that is not any single rule but
+the **boundary**: a widened prompt that starts building a card for `今天星期几` has made the
+plugin worse in a way no screen can see, because the card it builds will be perfectly clean.
+
+Re-ran both sides of `test/eval-fixtures.md`:
+
+| | result |
+| --- | --- |
+| `今天星期几`, `HTTP 状态码 418 是什么意思` | prose, `fence=0 canvas=0` both |
+| `帮我算下房贷`, `这个 cron 到底几点跑？`, `chmod 755 到底是啥权限` | UI, all three |
+
+All eight cards generated across those runs compile, pass all 18 screens, and paint.
+
+**A prompt change needs the boundary re-measured, not just the new rule tested.** Every rule
+added today argues for building something; nothing in a day of that work would have noticed the
+prose side eroding, and it is the side with no checker at all.
+
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
 example shows `Fragment` missing while `useState` is already imported — which teaches the
