@@ -4727,6 +4727,20 @@ assertions are pinned, disagreed immediately. **A presence check is only as stro
 specificity of what it looks for**; a keyword that could plausibly appear for another reason
 finds coverage that is not there.
 
+Checking the third direction — rules with no screen — found nothing worth adding, and the way it
+failed is the point. Most unscreened rules are judgements about *when* a card is the right answer
+("'看看都有啥' is a request to browse"), which no text predicate can check. The two that looked
+mechanical both produced numbers that evaporated on inspection: `&&` chained into an arrow scored
+28 cards and is actually **1** (the counting was per-card over a pattern that matches the legal
+form too — `rg -o` shows a single hit, the known FAIL), and `?? []` near an unguarded index
+scored 11 because the predicate was an `||` of two loosely-related patterns and the second arm
+matched alone.
+
+**A number produced by a regex written in the same minute as the question is a hypothesis, not a
+measurement.** Three times this stretch — 41 for `UNREACHABLE-CONTROL`, 28 here, 11 here — the
+first count was several times the true one, and each time the tell was the same: the number was
+interestingly large. Print the matches, not the count.
+
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
 `GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
