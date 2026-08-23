@@ -200,8 +200,6 @@ async function* streamFrom(cwd: string, request: Ui4aStreamOptions, signal?: Abo
   }
 }
 
-const GROUPS = ["chat", "ai", "fs", "exec"] as const;
-
 /** Blob URLs for every `$dsh/*` module, built once and reused by every surface. */
 let cached: Record<string, string> | null = null;
 
@@ -210,8 +208,11 @@ export function bindingImports(): Record<string, string> {
   const internal = moduleUrl(INTERNAL);
   const imports: Record<string, string> = {};
   const bound = bind();
-  for (const group of GROUPS) {
-    const names = Object.keys(bound[group]);
+  // Enumerated from `bind()`, not from a list beside it: a group added to the implementation and
+  // missed here would simply have no blob module, and a card importing it renders blank with
+  // nothing in the console — the failure mode this project spends the most effort on.
+  for (const [group, members] of Object.entries(bound)) {
+    const names = Object.keys(members);
     // One `export const` per name: ESM export names must be statically visible.
     const source = [`import { bind } from ${JSON.stringify(internal)};`, `const g = bind().${group};`, ...names.map((name) => `export const ${name} = g.${name};`), "export default g;"].join("\n");
     imports[capabilityModule(group)] = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
