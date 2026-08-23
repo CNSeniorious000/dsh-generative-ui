@@ -3154,6 +3154,23 @@ it came back with the `<span>`-is-not-a-label warning added the same afternoon, 
 edited now is in the next turn's context. That closes the loop the whole day rests on: measure the
 corpus → write a rule → the model receives it → generate → measure again.
 
+### A rule nobody has ever broken (2026-08-23)
+
+The skill says a card acted on should do **both** halves — `sendMessage` the result AND record it
+in state, because "a form that looks untouched after submitting reads as broken". Measured:
+
+    corpus: 31 of 31 sendMessage cards also record the choice
+    fresh:   3 of 3
+
+Never violated, before the rule or after. By the standard applied to the two deleted checks, a
+rule that finds nothing should go — but the standards differ, and the difference is worth being
+explicit about. **A check costs runtime and false confidence; a prompt rule costs tokens.** A
+check that cannot fail is indistinguishable from a broken one, while a rule everyone follows may
+be the reason they follow it, and nothing here can tell those apart.
+
+So: delete checks that measure nothing, keep rules that measure nothing, and record which is
+which rather than pretending the 31/31 is evidence the rule works.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
