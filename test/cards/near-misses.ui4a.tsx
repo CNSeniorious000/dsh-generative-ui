@@ -61,6 +61,15 @@ export default function SuspenseBoard() {
             deliberate accent — 35 of 378 corpus cards do this and are correct. */}
         <span style={{ background: "#fff", color: "#111", borderRadius: 4, padding: "0 4px" }}>{LABELS.b}</span>
         <span style={{ ...labelStyle, marginTop: 4 }}>merged</span>
+        {/* BRAND-PRIMARY-FILL: `brand-primary` as a FOREGROUND is exactly what it is for, and
+            `state-business-primary` is the colour you fill with. Neither is the mistake. */}
+        <span style={{ color: "var(--dsw-alias-brand-primary)" }}>heading</span>
+        {/* A fill with a DARK foreground: legible on light, and the screen only flags a fill
+            paired with a light one. The `#fff` below belongs to a different element entirely —
+            searching the whole file rather than the hundred characters after each fill reports
+            17 of 378 instead of 11, and this card among them. */}
+        <div style={{ background: "var(--dsw-alias-brand-primary)", color: "var(--dsw-alias-label-secondary)" }}>inverse</div>
+        <button style={{ background: "var(--dsw-alias-state-business-primary)", color: "#fff", border: "none" }}>fill</button>
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
     </Fragment>

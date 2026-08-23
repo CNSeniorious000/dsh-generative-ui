@@ -121,6 +121,18 @@ export const SCREENS = {
   // contains the bad form in prose, and a screen that reads prose reports the documentation
   // rather than the code — the same false positive `skill.ts` produces for the mutation audit.
   "COMMA-IN-STYLE": (src: string) => /style=\{\s*(?!\{)[A-Za-z_$][\w$]*\s*,/.test(src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "")),
+  // `--dsw-alias-brand-primary` as a background with a light foreground on top. Despite the
+  // name it is a *foreground* colour — it equals the body text colour in both themes (near-white
+  // on dark, near-black on light), so a tile filled with it and white text on top is a white
+  // square on dark and unreadable. The accent you fill with is `state-business-primary`.
+  //
+  // 50 of 378 cards fill with it and 12 pair it with a light foreground. Only the pairing is
+  // screened: filling with it and putting `label-primary` on top is merely odd, while filling
+  // with it and writing `#fff` is invisible half the time. The skill states this rule outright,
+  // which makes it the clearest measure of a rule the prompt has not landed.
+  "BRAND-PRIMARY-FILL": (src: string) =>
+    [...src.matchAll(/background(?:Color)?:\s*[^,;}]*brand-primary[^,;}]*/g)].some((match) =>
+      /color:\s*["']?(#fff\b|#ffffff\b|white\b|var\(--dsw-alias-bg-)/i.test(src.slice(match.index + match[0].length, match.index + match[0].length + 120))),
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
