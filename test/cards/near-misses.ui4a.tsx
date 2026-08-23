@@ -46,7 +46,10 @@ export default function SuspenseBoard() {
   const newest = rows.length === 0 ? null : rows[0].name;
   return (
     <Fragment>
-      <style>{`@container (min-width: 30rem) { .nm-row { grid-template-columns: 1fr 1fr; } }`}</style>
+      {/* NO-FOCUS-RING: the ring is removed AND replaced, which is the whole point of the rule.
+          `:focus-visible` shows it for the keyboard and not for the mouse. */}
+      <style>{`.nm-row input:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px }
+        @container (min-width: 30rem) { .nm-row { grid-template-columns: 1fr 1fr; } }`}</style>
       <div className="nm-row" style={{ containerType: "inline-size", background: "var(--dsw-alias-bg-layer-1)", padding: 12 }}>
         <button
           onClick={() => readdir(".").then((entries) => setRows(entries.map((e) => ({ name: e.name }))))}
@@ -75,6 +78,7 @@ export default function SuspenseBoard() {
             CHILD is not the div being clickable. */}
         <button type="button">{rows.length === 0 ? "载入" : "清空"}</button>
         <div className="wrap"><button aria-label="复制" onClick={() => setRows([])}><span>⧉</span></button></div>
+        <input aria-label="filter" style={{ border: "none", outline: "none", font: "inherit" }} />
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
     </Fragment>

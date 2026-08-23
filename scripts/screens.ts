@@ -148,6 +148,14 @@ export const SCREENS = {
     return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]
       .some((match) => !match[0].includes("aria-label"));
   },
+  // `outline: "none"` with nothing put back. 77 of 378 cards strip the focus ring and **0**
+  // replace it, which makes this the most common single line here that breaks keyboard use:
+  // tabbing through the card moves a cursor nobody can see. The replacement can be a
+  // `:focus-visible` rule or a `boxShadow` driven by focus state, so both count.
+  "NO-FOCUS-RING": (src: string) => {
+    const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+    return /outline:\s*["']none["']/.test(code) && !/:focus-visible|outlineOffset|outline-offset|boxShadow[^,;}]*focus|focus[^,;}]*boxShadow/i.test(code);
+  },
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by

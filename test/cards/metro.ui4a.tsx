@@ -49,6 +49,10 @@ export default function Metronome() {
   // and the transitions fall out of it — the beat still lands, it just stops moving.
   const [still] = useState(() => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true)
   const [draft, setDraft] = useState<string | null>(null)
+  // The BPM field is borderless by design, so the browser's ring has to go — and something has
+  // to come back, or tabbing into the card's main control shows nothing. Inline rather than a
+  // `:focus-visible` rule because this card has no `<style>` block.
+  const [focused, setFocused] = useState(false)
 
   const ctxRef = useRef<AudioContext | null>(null)
   const noiseRef = useRef<AudioBuffer | null>(null)
@@ -187,7 +191,8 @@ export default function Metronome() {
               const v = parseInt(raw, 10)
               if (!isNaN(v)) setBpm(clamp(v, 30, 280))
             }}
-            onBlur={() => setDraft(null)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => { setFocused(false); setDraft(null) }}
             style={{
               width: 92,
               fontSize: 52,
@@ -197,6 +202,8 @@ export default function Metronome() {
               background: "transparent",
               border: "none",
               outline: "none",
+              borderRadius: 8,
+              boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none",
               fontVariantNumeric: "tabular-nums",
             }}
           />
