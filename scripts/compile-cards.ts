@@ -21,6 +21,7 @@ const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
 for (const f of cardsIn(dir)) {
   const src = readFileSync(`${dir}/${f}`, "utf8");
+  const screened = Object.entries(SCREENS).filter(([, hits]) => hits(src)).map(([name]) => name);
   // the shape a settled card takes: normalize final, then transform
   try {
     const out = compileCard(f, normalizeGeneratedTsx(src, { mode: "final" }));
@@ -32,11 +33,14 @@ for (const f of cardsIn(dir)) {
       const base = `${dir}/${specifier.replace(/^\.\//, "")}`;
       return ![".tsx", ".ts", "/index.tsx", "/index.ts", ""].some((suffix) => existsSync(base + suffix));
     });
-    const flags = [...Object.entries(SCREENS).filter(([, hits]) => hits(src)).map(([name]) => name), dangling.length > 0 && `DANGLING-IMPORT ${dangling.join(" ")}`].filter(Boolean);
+    const flags = [...screened, dangling.length > 0 && `DANGLING-IMPORT ${dangling.join(" ")}`].filter(Boolean);
     console.log(`${f.padEnd(22)} ok  ${(out.code.length/1024).toFixed(1)}kb  ${flags.length ? "⚠ " + flags.join(",") : ""}`);
     if (flags.length) bad++;
   } catch (e) {
-    console.log(`${f.padEnd(22)} FAIL ${String((e as Error).message ?? e).split("\n")[0].slice(0,80)}`);
+    // Screens are text predicates, so they still apply to a card that did not compile — and a
+    // card broken enough to fail is exactly where a second defect hides. Reporting only the
+    // compile error here is what made this script's counts disagree with `corpus-rates.ts`.
+    console.log(`${f.padEnd(22)} FAIL ${String((e as Error).message ?? e).split("\n")[0].slice(0,80)}${screened.length ? "  ⚠ " + screened.join(",") : ""}`);
     bad++;
   }
 }

@@ -4630,6 +4630,21 @@ an order of magnitude:
 | `UNREACHABLE-CONTROL` | 18 of 378 | 0–3 of 378 |
 | `BRAND-PRIMARY-FILL` | 11 of 378 | |
 
+Those numbers come from `scripts/corpus-rates.ts`, and for a while `scripts/compile-cards.ts`
+disagreed with them by one or two on some screens. The cause is worth keeping: it computed the
+screen flags **inside** the `try` that compiles the card, so a card that failed to parse
+reported its compile error and nothing else. Two defects were hiding behind that — a
+`BRAND-PRIMARY-FILL` and a `NO-FOCUS-RING` on the three cards that do not compile.
+
+A screen is a pure text predicate; whether it fires cannot depend on the card being parseable,
+and **a card broken enough to fail compiling is exactly where a second defect hides**. Screening
+now happens before the `try`. `test/screen-on-fail.test.ts` pins both halves — the predicate
+works on unparseable source, *and* the caller still screens before it compiles, because the bug
+was in the caller and only the second assertion would have caught it.
+
+**Two scripts that count the same thing are a free cross-check, but only if you actually run
+both and reconcile the difference.** The disagreement was small enough to read as rounding.
+
 Before today the two prompts contained **zero** mentions of `aria`, `focus-visible`, `keyboard`,
 or `screen reader` — the only accessibility line in either was the trailing clause of a bullet
 about animation continuity. Every rule now covering these came out of counting, not reading, and
