@@ -2,6 +2,16 @@
  * The screens, as named predicates rather than inline regexes — `test/cards-negative/` asserts
  * each one still fires, and a control that re-implements the rule it guards proves nothing.
  */
+/**
+ * Negative-control cards owned by `replay-stream.ts` rather than by a screen.
+ *
+ * Lives here because `compile-cards.ts` exempts them from its ORPHANED check and
+ * `replay-stream.ts` is the thing that justifies the exemption — written as a literal in the
+ * exempting file, it would outlive its owner silently. Both import it from here; neither
+ * imports the other, which would run a script as a side effect of a check.
+ */
+export const REPLAY_CONTROLS = ["late-hook.tsx"] as const;
+
 export const SCREENS = {
   // `export default function Pie` next to `import { Pie } from "recharts"`: the card renders
   // itself, and dies with no useful error.

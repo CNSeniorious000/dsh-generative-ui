@@ -12,6 +12,7 @@
  * running `test/cards-negative/`, where every card is *supposed* to fail, and exits non-zero
  * if any of them passes.
  */
+import { REPLAY_CONTROLS } from "./screens.ts";
 import { normalizeGeneratedTsx } from "partial-tsx";
 
 import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
@@ -61,7 +62,7 @@ for (const path of paths) {
 // detector has gone blind and every clean run above is meaningless.
 // One named card, not the whole directory — `test/cards-negative/` holds a control per checker
 // and the others are supposed to be clean here.
-for (const name of ["late-hook.tsx"]) {
+for (const name of REPLAY_CONTROLS) {
   const src = await Bun.file(`test/cards-negative/${name}`).text();
   const step = Math.max(100, Math.floor(src.length / 60));
   let prev = -1, painted = false, late = 0;

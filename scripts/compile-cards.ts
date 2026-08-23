@@ -13,7 +13,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 import { cardsIn, compileCard, initTsxFromDisk } from "./tsx-node.ts";
 
-import { SCREENS } from "./screens.ts";
+import { REPLAY_CONTROLS, SCREENS } from "./screens.ts";
 
 
 await initTsxFromDisk();
@@ -66,7 +66,7 @@ if (process.argv[2] === undefined) {
   // The other direction: a card in `test/cards-negative/` that no checker claims is a control
   // nothing runs — it looks like coverage in the directory listing and asserts nothing. The one
   // legitimate exception is `replay-stream.ts`'s, which owns its own control.
-  const claimed = new Set([...Object.keys(CONTROLS), "late-hook.tsx"]);
+  const claimed = new Set<string>([...Object.keys(CONTROLS), ...REPLAY_CONTROLS]);
   for (const name of readdirSync("test/cards-negative")) {
     if (claimed.has(name)) continue;
     console.log(`card ${name}: ORPHANED — no screen claims it, so nothing runs it`);
