@@ -214,6 +214,7 @@ export default function Metronome() {
       {/* 速度滑杆 */}
       <input
         type="range"
+        aria-label="速度 BPM"
         min={30}
         max={280}
         step={1}

@@ -175,6 +175,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   If it does something when clicked, it is a \`<button type="button">\`. A \`div\` with an
   \`onClick\` is a div.
+
+  **A slider is the same problem with no visible text to fall back on.** 61 range inputs across
+  the corpus carry no label of any kind, and unlike a text field there is no placeholder and
+  nothing inside the control to read — a screen reader announces "slider, 40" and stops. The
+  number beside it on screen is a separate element and is not connected to it:
+
+      <input type="range" aria-label="音量" min={0} max={100} value={v} onChange={…} />
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
   cards: 131 animate and **7** honour it. The setting is not a preference about taste — people

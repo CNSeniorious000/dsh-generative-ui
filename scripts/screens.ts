@@ -133,6 +133,29 @@ export const SCREENS = {
       const window = src.slice(handler === -1 ? match.index - 120 : match.index - (before.length - handler), match.index + 160);
       return !/isNaN|Number\.isFinite|=== ""|\|\| 0|\?\?|parseFloat|value === ""/.test(window);
     }),
+  // A `type="range"` with no label of any kind. A screen reader announces "slider, 40" — the
+  // number rendered beside it is a separate element and is not connected to the control.
+  //
+  // Ranges only: a text field usually has a placeholder to fall back on, and a `<label>` wrapping
+  // the input labels it as well as `aria-label` does. Tag ends are found by brace depth, because
+  // `onChange={e => …}` puts a `>` inside the tag and a `[^>]*` regex stops there — which is how
+  // the first count of this came out at 241 instead of 61.
+  "UNLABELLED-SLIDER": (src: string) => {
+    const tagAt = (start: number) => {
+      let depth = 0;
+      for (let i = start; i < src.length; i += 1) {
+        if (src[i] === "{") depth += 1;
+        else if (src[i] === "}") depth -= 1;
+        else if (src[i] === ">" && depth === 0) return src.slice(start, i + 1);
+      }
+      return "";
+    };
+    return [...src.matchAll(/<input\b/g)].some((match) => {
+      const tag = tagAt(match.index);
+      if (!/type="range"/.test(tag) || /aria-label|aria-labelledby|\bid=/.test(tag)) return false;
+      return !/<label/.test(src.slice(Math.max(0, match.index - 250), match.index));
+    });
+  },
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
