@@ -4895,8 +4895,14 @@ replaced two conditions with one, and **that is the honest reading**: the audit 
 not behaviour. `GenUISurface` went from 3 covered to 7, and the decisions that matter — which
 error is transient, which retries, what the reader is told — are all constrained now.
 
-The 10 that remain there are `x === null` guards and ref comparisons inside effect bodies. Little
-is learned by reaching them, which is a different statement from *they are hard to reach*.
+One more — the `$dsh/chat.sendMessage` guard, which lives in a closure inside a
+`registerUi4aHost` call inside an inject callback — took it to **13**, and every one of those is
+verifiably inside a `useEffect` body: `x === null` guards and ref comparisons. Little is learned
+by reaching them, which is a different statement from *they are hard to reach*.
+
+The path from 28 to 13, for the next person who wants to go further: nothing was gained by
+mocking a DOM, and everything by asking **what decision is this condition making** and lifting
+that out. Nine of the fifteen closed were pure functions hiding inside a callback.
 
 **A checker that reports success has to be checked against what it is looking at.** It ran, it
 printed a reassuring line, and the answer was right about the two thirds it could see.
