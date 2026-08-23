@@ -6801,3 +6801,26 @@ eighth was a measurement error. **The vein that produced two screens this mornin
 — which is itself the useful signal: the next screen will have to come from a population these
 measurements do not cover, not from another pass over the same 378 cards.
 
+### Every disposable resource, audited (2026-08-24)
+
+The fresh cards are a population of their own now, and they reach for APIs the corpus never used —
+so: every resource that needs releasing, and whether the card releases it.
+
+| | corpus | fresh |
+| --- | --- | --- |
+| `setInterval` → `clearInterval` | 31/31 | 5/5 |
+| `setTimeout` in an effect | 22/25 | 5/6 |
+| `addEventListener` | 3/3 | 1/2 |
+| `requestAnimationFrame` | 0/1 | 4/7 → **7/7** |
+| `ResizeObserver` | (none) | 2/2 |
+| `createObjectURL` | (none) | 1/1 |
+
+The rAF row is the fourth measurement error of the day caught by reading a card. All three
+"uncancelled" ones are a **single-shot** rAF restoring the caret after a controlled-input update —
+`requestAnimationFrame(() => { el.selectionStart = start + 2 })`. It fires once; there is nothing
+to cancel. Counting them as leaked loops is the same category of mistake as counting
+`disabled={loading}` as unguarded.
+
+`ResizeObserver` is genuinely new — 0 corpus cards, 2 fresh — and both disconnect from the
+effect's cleanup. New API surface, handled correctly on first contact, with no rule mentioning it.
+
