@@ -105,3 +105,39 @@ resolve and an `@container` breakpoint rather than an unconditional row.
 
 The matplotlib row is the rule working, not failing: the user named the tool. What the rule
 forbids is the detour nobody asked for.
+
+## Prompts used to measure the post-rules cards (2026-08-23)
+
+Seventeen cards generated after this session's screen and rule work, all clean under all 18
+screens, 15 of 17 painting in a real browser (the two blanks are recorded in CLAUDE.md — both
+called `useState` without importing it, which is now screened).
+
+Run any with `scripts/eval.sh '<prompt>' [test/seed]`. The seed matters for the last two: without
+a project on disk the model correctly declines to invent one.
+
+| prompt | seed |
+| --- | --- |
+| `做一个搜索框，能过滤下面的列表` | |
+| `列一下这个目录下的文件，能点开看内容` | |
+| `做个计时器，可以开始暂停重置` | |
+| `把这段 JSON 用表格展示出来，能排序` | |
+| `做一个待办列表，能勾选和删除` | |
+| `画个柱状图展示这几个数字 12 45 23 8 31` | |
+| `做个颜色选择器，能复制色值` | |
+| `给我一个单位换算器，长度和重量` | |
+| `做个markdown预览，左边写右边看` | |
+| `做个卡片，点按钮就用 AI 生成三个周末活动建议，可以多点几次换一批` | |
+| `做个搜索框，输入关键词就用 grep 搜这个目录，边输边搜` | |
+| `做个音频播放器的控制面板，要有音量滑杆、播放速度滑杆、和一个跳转到第几秒的输入框` | |
+| `做个卡片展示这几个任务的进度条，加点动画让它们看起来在增长` | |
+| `做个番茄钟，能设置时长` | |
+| `做个密码强度检查器` | |
+| `做个正则表达式测试器` | |
+| `展示这个项目的依赖树` | `test/seed` |
+| `把当前目录的 git log 画成时间线` | `test/seed` |
+
+Chosen to exercise specific screens rather than to sample typical use: the media panel for
+`UNLABELLED-CONTROL` and `UNGUARDED-NUMBER-INPUT` together, the progress bars for
+`UNSTOPPABLE-MOTION`, the live grep for `UNGUARDED-ASYNC-HANDLER`, the regex tester for
+`GLOB-IN-JSX`. **A prompt set built to trip the checks is the one that tells you whether the
+rules work**; a representative sample mostly re-measures how often the defect occurs.
