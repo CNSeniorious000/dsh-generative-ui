@@ -50,3 +50,7 @@ test("backticks inside a card's body do not make it a wrapper", () => {
   const code = 'export default () => <pre>{"```js\\nlet a = 1\\n```"}</pre>\n';
   expect(p(`\`\`\`\`ui4a/tsx\n${code}\`\`\`\`\n`)).toEqual([{ code, complete: true }]);
 });
+
+// The leak does not only happen mid-stream: the model writes the tags AND then closes the fence.
+// Stripping only the unterminated body left that card failing to compile (measured on a real one).
+test("leaked markup dropped from a closed fence too", () => { const [b]=p("````ui4a/tsx\nexport default () => <div />\n</parameter>\n</invoke>\n````"); expect(b.complete).toBe(true); expect(b.code).toBe("export default () => <div />"); });

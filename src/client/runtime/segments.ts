@@ -59,7 +59,8 @@ function findClose(body: string, fence: string): number {
  * the corpus, while the model's own `</｜｜DSML｜｜parameter>` form accounts for three more and
  * was invisible to a regex written from that single sample. Those full-width bars are U+FF5C,
  * not ASCII `|`. Only stripped at the very end of an unterminated body, where nothing
- * legitimate can follow.
+ * legitimate can follow — which is true of a closed fence too: the model leaks the tags and then
+ * still writes the closing fence, and stripping only the unterminated case loses that card outright.
  */
 const TOOL_CALL_MARKUP = /\n?(?:<\/(?:antml:|｜｜DSML｜｜)?(?:parameter|invoke|tool_calls)>\s*)+$/;
 
@@ -103,7 +104,7 @@ export function parseUi4aSegments(text: string): Ui4aSegment[] {
       segments.push({ code: (inlineCode + rest.slice(bodyStart)).replace(TOOL_CALL_MARKUP, ""), complete: false });
       return segments;
     }
-    segments.push({ code: inlineCode + rest.slice(bodyStart, bodyStart + closeIndex), complete: true });
+    segments.push({ code: (inlineCode + rest.slice(bodyStart, bodyStart + closeIndex)).replace(TOOL_CALL_MARKUP, ""), complete: true });
     rest = rest.slice(bodyStart + closeIndex).replace(new RegExp(String.raw`^${open[1]}[^\n]*\n?`), "");
   }
 }
