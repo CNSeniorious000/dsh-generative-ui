@@ -3110,6 +3110,10 @@ All 22 catch their defect now, so the 57-card streak is a result rather than a b
 exemption is named and tested for staleness: `piano.ui4a.tsx` fills keys with `#ffffff`, which is
 white by definition rather than by theme.
 
+Run against the 378-card corpus as well — a different population, three months older — and all 22
+catch there too. That matters because a screen written from the corpus could easily only work on
+corpus-shaped code; these work on both.
+
 ### Is a 57-card clean streak evidence, or an unfalsifiable checker? (2026-08-23)
 
 A streak that long invites the question of whether the screens can still fire on anything a
