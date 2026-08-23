@@ -4568,3 +4568,29 @@ in `skill.ts` contain real `if` statements, indented exactly like real code, so 
 reported three "unconstrained conditions" that are documentation being taught. The mutator now
 tracks fenced blocks inside template literals and declines them — **indentation cannot separate
 an example from a statement, but the fence can.**
+
+### Checking the reference cards against the rules they exist to demonstrate (2026-08-23)
+
+`test/cards/` holds three cards this project wrote as examples. Running the rule audit over them
+rather than over the corpus: `2048` and `piano` follow every measured rule, and **`metro` — a
+metronome — did not honour `prefers-reduced-motion`**, which is the single clearest case the
+preference exists for.
+
+Fixing it exposed a flaw in the rule I had just written. The skill said "one rule at the end of
+the `<style>` block you already have", and `metro` has no `<style>` block: its pulse is a
+90ms inline `transition` driven by React state. Counting the corpus, **59 of the 131 animating
+cards style entirely inline**, so the advice was unusable for 45% of the cards it addressed.
+
+The rule now carries both forms — the `@media` line for a `<style>` block, and
+
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    style={{ transition: still ? "none" : "transform 90ms ease" }}
+
+for inline. `metro` uses the second, so the reference card demonstrates the rule rather than
+contradicting it.
+
+**Run your own examples through your own rules.** The example is the thing the model imitates
+most directly, and a rule its author could not apply to their own card is a rule with a hole in
+it. The occurrence-counting prompt test caught the edit too: adding the second form made
+`prefers-reduced-motion: reduce` appear twice, and the assertion failed until it was split into
+two — which is the check working, not a nuisance.
