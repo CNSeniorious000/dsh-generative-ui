@@ -3078,6 +3078,27 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### The same prompt, before and after (2026-08-23)
+
+Grouping the corpus by which SET of screens fires turned up a signature rather than a
+coincidence: `UNGUARDED-ASYNC-HANDLER + UNSTOPPABLE-MOTION`, 7 cards, and **four of them are the
+same card** — `CatNames`, from 给我五个猫名. A card that streams from the model and pulses while it
+waits fails exactly those two: a loading animation with no `prefers-reduced-motion`, and a
+generate handler with nothing to invalidate a superseded run.
+
+The fresh runs of that same prompt are the controlled comparison the corpus otherwise cannot
+offer — same request, same card, same two rules:
+
+| | `prefers-reduced-motion` | run guard |
+| --- | --- | --- |
+| 4 corpus `CatNames` | none | none |
+| 2 fresh `CatNames` | present | `AbortController` threaded into `streamText` |
+
+Better than an aggregate rate, because everything else is held constant. And the fresh ones go
+past what was asked: partial-JSON tolerance mid-stream, `AbortError` distinguished from a real
+failure, and a `finally` that only clears loading state if that run still owns it — which no rule
+mentions.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
