@@ -3834,3 +3834,42 @@ every hit, or a sample if there are more than a dozen.** If reading them is too 
 number is not worth having. And the direction is not random — a detector built while suspecting
 a problem finds that problem, which is exactly when the reading is most necessary and feels
 least so.
+
+### The mutation audit was under-reporting for its whole life (2026-08-23)
+
+The audit's job is to name conditions no test constrains. It reported "no module scores zero" and
+was believed. Rewriting it to mutate **one condition at a time** turned up **nine live guards**
+that no test would have noticed being deleted — including `$dsh/fs` and `$dsh/exec` with no host
+bound, both `!response.ok` denials, the `canvasChildPath` traversal fence, and the panel's
+collapse-when-empty. Three separate flaws, each of which fails silently in the safe-looking
+direction:
+
+- **Mutating a whole file at once.** A module that then throws on import collapses its entire
+  test file into one error, so the count reads like poor coverage when it is the opposite:
+  `segments.ts` scored 1 of 17 while all six of its conditions were in fact covered (5, 1, 1, 16,
+  14, 14 individually). The reverse is worse — one loud mutation masks eight silent ones in the
+  same file, which is exactly how `bindings.ts` read as "3 failing tests, fine".
+- **`perl -pe 's/if \(([^)]*)\)/if (!($1))/'`.** A regex cannot match parens. Any condition
+  containing a call — 27 across this source tree — became a **syntax error** rather than a
+  mutant, and a file that will not parse scores as though its tests were weak. Replaced with
+  `scripts/invert-ifs.mjs`, which counts depth.
+- **`echo "$out" | grep`.** zsh's `echo` expands the `\u` and `\t` that appear in *test names*,
+  corrupting the lines grep was matching. Three covered modules read as 0. `printf %s\\n` does not.
+
+**A sweep that prints nothing is indistinguishable from a sweep that cannot see.** The rewritten
+loop reported zero uncovered conditions on its first run and it was wrong: the predicate was
+`[[ -z "$(grep -oE '[0-9]+ fail')" ]]`, which never fires because `grep` happily matches ` 0 fail`.
+Proving the detector could detect required planting a **deliberately inert** condition
+(`if (Date.now() > 0) unusedProbe = 1`) — the first control planted, an always-throwing one, was
+too loud to prove anything, since a mutant that breaks the suite is exactly the case that already
+worked.
+
+Writing the missing tests found a real bug. `inline-fence.ts` skips re-scanning a claimed block
+whose rendered text has not changed — but `complete` flips on the *segment*, and **the closing
+fence adds no text to the block**, so a card whose last token completes it never left the
+streaming path. The streaming path cuts back the still-being-typed tail, so such a card renders
+permanently missing its last statement. The skip now also requires `claim.complete`.
+
+Current state: **119 of 119 conditions constrained**, 190 tests. The one remaining report is an
+`if` inside `skill.ts`'s prompt template — prose, not a branch; the mutator now skips `if (` that
+does not open a statement.
