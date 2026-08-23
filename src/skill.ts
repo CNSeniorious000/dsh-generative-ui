@@ -152,6 +152,19 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
+- **If you take the focus ring off, put something back.** \`outline: "none"\` on a borderless
+  input is the most common single line in these cards that breaks keyboard use: **77 of 378
+  remove it and 0 replace it**, so tabbing through the card moves an invisible cursor. The
+  browser's default ring is ugly next to a custom input, which is why it goes — the fix is a
+  ring you like, not no ring:
+
+      // in a <style> block
+      .card input:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px }
+      // or inline, from the state you already have
+      style={{ outline: "none", boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none" }}
+
+  \`:focus-visible\`, not \`:focus\` — it shows the ring for the keyboard and not for the mouse,
+  which is the reason the ring was annoying in the first place.
 - **A control the keyboard cannot reach is not a control.** Two shapes, both measured across 378
   real cards and neither mentioned here before: **17 cards put \`onClick\` on a \`<div>\`**, which
   takes no focus and answers no Enter or Space, and **31 buttons whose only content is an icon
