@@ -9,6 +9,7 @@
  * @module dsh-generative-ui
  */
 
+import { existsSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -36,29 +37,34 @@ export { ASSET_PREFIX, WASM_PATH } from "./contract-assets.ts";
 const wasmFile = (importMetaUrl: string) => createRequire(importMetaUrl).resolve("@esm.sh/tsx/pkg/tsx_bg.wasm");
 
 /**
+ * An absolute path to one of the package's import maps, or undefined when it is not there.
+ *
+ * `existsSync` is the point. `fileURLToPath` only rejects a malformed URL — it happily returns a
+ * path to a file that does not exist, which is what this used to do: installed in a shape where
+ * the package root is not two levels up, the skill was handed a path that resolves to nothing
+ * and told the model to pass it to `-i`. The failure then surfaces as `genui check` reporting
+ * `Cannot find module "$dsh/fs"` on correct code, and the model "fixes" imports that were right.
+ */
+export const resolvedMap = (relative: string, importMetaUrl: string): string | undefined => {
+  let path: string;
+  try {
+    path = fileURLToPath(new URL(relative, importMetaUrl));
+  } catch {
+    return undefined;
+  }
+  return existsSync(path) ? path : undefined;
+};
+
+/**
  * Absolute path of the import map that types `$dsh/*` for `genui check`.
  *
  * Resolved rather than hard-coded because the plugin lives wherever the profile installed it,
  * and the model runs the checker from the workspace — it has no way to guess that path.
  */
-const typesImportMap = (importMetaUrl: string): string | undefined => {
-  try {
-    return fileURLToPath(new URL("../types/importmap.json", importMetaUrl));
-  } catch {
-    return undefined;
-  }
-};
+const typesImportMap = (importMetaUrl: string): string | undefined => resolvedMap("../types/importmap.json", importMetaUrl);
 
 /** Absolute path of the runtime stub map `genui build` and `genui dev` resolve `$dsh/*` against. */
-const standaloneImportMap = (importMetaUrl: string): string | undefined => {
-  try {
-    return fileURLToPath(new URL("../types/standalone/importmap.json", importMetaUrl));
-  } catch {
-    // Installed in a shape where the package root is not two levels up. The skill drops the
-    // `-i` flag rather than passing a path that does not exist.
-    return undefined;
-  }
-};
+const standaloneImportMap = (importMetaUrl: string): string | undefined => resolvedMap("../types/standalone/importmap.json", importMetaUrl);
 
 /** Exported for `test/routes.test.ts`: a prefix route that stops checking its pathname serves the whole prefix. */
 export async function serveAsset(req: IncomingMessage, res: ServerResponse, file: string): Promise<void> {
