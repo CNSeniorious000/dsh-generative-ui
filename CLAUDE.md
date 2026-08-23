@@ -4594,3 +4594,27 @@ most directly, and a rule its author could not apply to their own card is a rule
 it. The occurrence-counting prompt test caught the edit too: adding the second form made
 `prefers-reduced-motion: reduce` appear twice, and the assertion failed until it was split into
 two — which is the check working, not a nuisance.
+
+### The most-broken rule turned out to be one the skill never had (2026-08-23)
+
+Sweeping for idioms that are *inert in this rendering context* found the largest single defect in
+the corpus, and it is not a rule that was being ignored — it is a rule that was never written:
+
+**77 of 378 cards set `outline: "none"`, and 0 of them put anything back.** Tabbing through such
+a card moves a cursor nobody can see. The pattern is always the same shape: a borderless input
+(`border: "none", background: "transparent", outline: "none"`), where the browser's default ring
+does look wrong — so it goes, and nothing replaces it.
+
+`NO-FOCUS-RING` now screens for it at **76 of 378**, five times louder than any other screen
+here, and spot-checking the hits found real inputs every time. The skill carries the fix in both
+forms (a `:focus-visible` rule for a `<style>` block, a focus-driven `boxShadow` for inline),
+with the note that `:focus-visible` is what makes the ring keyboard-only — which is the reason
+it was annoying to begin with.
+
+And, as with `DUPLICATE-STYLE-KEY`, **the new screen's first run flagged a reference card**:
+`metro`'s BPM field, the card's primary control, borderless with the ring stripped. Fixed with
+the inline form, since that card has no `<style>` block.
+
+A smaller finding from the same sweep: **15 of the 19 small-caps kickers apply
+`textTransform: "uppercase"` to Chinese text**, where it does nothing at all. The idiom was
+copied without the mechanism that makes it an idiom.
