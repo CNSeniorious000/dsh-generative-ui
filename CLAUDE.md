@@ -2950,6 +2950,25 @@ and `UNLABELLED-CONTROL` on 28; six screens are sole detector on nothing, meanin
 catch is already caught. That is not an argument for deleting them — a screen exists to name a
 cause, and a card flagged by five screens with the wrong one dropped gets diagnosed wrong.
 
+Auditing the second carrier, `UNLABELLED-CONTROL` (28 sole diagnoses), found a real defect in it.
+The check cleared a control whenever ANY `<label>` appeared within 250 characters — so a card
+labelling its number input correctly suppressed the finding on an unlabelled slider two lines
+below. The corpus case escaped only by luck: its label sat **1273 characters** away, five times
+the window. A constructed version of the same card, written tighter, went straight through.
+
+Now the label must actually name the control: wrapping it (implicit association) or carrying an
+id the tag references. That found two more corpus cards, both writing
+
+    <label><span>贷款金额</span></label>
+    <input type="range" … />
+
+— a label CLOSED before the control, which associates with nothing. It reads as a label and
+announces as none. **54 of 378 now, and still zero false positives across 44 fresh cards.**
+
+The lesson is about the evidence, not the regex: every real hit examined was a true positive, and
+the check was still wrong. A screen that is right on every card you have can be right by accident,
+and only a case constructed to be hard tells the difference.
+
 Which makes `NO-FOCUS-RING` worth auditing on its own: a false positive there mis-diagnoses more
 cards than a wrong answer anywhere else, and it has been retightened once already. Checked the
 whole flagged set rather than a sample — **72 of the 73 do not contain the string "focus"
@@ -5595,7 +5614,7 @@ and a number cannot be checked at all.
 
 ### The slider says its number and not what it controls (2026-08-23)
 
-`UNLABELLED-CONTROL` — **52 of 378**, immediately the second-highest screen. A `type="range"`
+`UNLABELLED-CONTROL` — **54 of 378**, immediately the second-highest screen. A `type="range"`
 with no `aria-label`, no `id`, and no wrapping `<label>` announces "slider, 3" and nothing else.
 The `<span>` rendering `n = 3` beside it is a separate element; the two are related only on
 screen. `<select>` has the identical problem — its options are its value, not its name, so an

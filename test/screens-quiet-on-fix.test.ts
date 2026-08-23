@@ -130,3 +130,41 @@ for (const [name, source, fires] of FOCUS_RING_CASES) {
     expect(SCREENS["NO-FOCUS-RING"](source)).toBe(fires);
   });
 }
+
+/**
+ * `UNLABELLED-CONTROL`, the second-largest carrier (28 sole diagnoses). Two shapes from the
+ * corpus that look like false positives and are not:
+ *
+ * - a visible `<span>` above the slider. Sighted users see a label; a screen reader announces
+ *   "slider, 20" with no name, because a `<span>` is not a `<label>` and carries no `htmlFor`.
+ *   This is the majority shape and exactly the defect only a checker finds.
+ * - a card that labels ONE control correctly and flags on a different, unlabelled one. The
+ *   presence of `<label htmlFor>` somewhere in the file says nothing about the slider.
+ */
+const LABEL_CASES: [string, string, boolean][] = [
+  ["a span above a slider is not a label", `<div><span>每天背新词</span></div>\n<input type="range" min={5} max={60} value={n} onChange={f} />`, true],
+  ["aria-label names it", `<input type="range" aria-label="每天背新词" min={5} max={60} value={n} onChange={f} />`, false],
+  ["a real label beside it", `<label htmlFor="d">每天</label>\n<input type="range" id="d" min={5} max={60} value={n} onChange={f} />`, false],
+  ["one labelled control does not vouch for another", `<label htmlFor="c">摄氏</label><input id="c" type="number" value={v} onChange={f} />\n<input type="range" min={-40} max={200} value={v} onChange={f} />`, true],
+  ["a text input is not this screen's business", `<input type="text" value={v} onChange={f} />`, false],
+  ["an unlabelled select announces its value", `<select value={n} onChange={f}><option>每天</option></select>`, true],
+];
+
+for (const [name, source, fires] of LABEL_CASES) {
+  test(`UNLABELLED-CONTROL: ${name}`, () => {
+    expect(SCREENS["UNLABELLED-CONTROL"](source)).toBe(fires);
+  });
+}
+
+/**
+ * The shape that made the lookback wrong in both directions. A `<label>` CLOSED before the
+ * control associates with nothing — no `htmlFor`, not wrapping — so it reads as a label and
+ * announces as nothing. Two corpus cards do exactly this; the old check cleared them.
+ */
+test("UNLABELLED-CONTROL: a closed label beside the control names nothing", () => {
+  expect(SCREENS["UNLABELLED-CONTROL"](`<label><span>贷款金额</span></label>\n<input type="range" min="10" max="1000" value={v} onChange={f} />`)).toBe(true);
+});
+
+test("UNLABELLED-CONTROL: a label WRAPPING the control does name it", () => {
+  expect(SCREENS["UNLABELLED-CONTROL"](`<label>年利率\n<input type="range" min={1} max={8} value={v} onChange={f} />\n</label>`)).toBe(false);
+});

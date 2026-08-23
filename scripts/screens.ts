@@ -204,7 +204,18 @@ export const SCREENS = {
       const named = /aria-label|aria-labelledby|\bid=/.test(tag);
       if (named) return false;
       if (match[0] === "<input" && !/type="range"/.test(tag)) return false;
-      return !/<label/.test(src.slice(Math.max(0, match.index - 250), match.index));
+      // A `<label>` nearby is not evidence unless it names THIS control. Any `<label>` within
+      // 250 characters used to clear the finding, so a card labelling its number input
+      // correctly suppressed the report on an unlabelled slider two lines below — the corpus
+      // case escaped only because its label happened to sit 1273 characters away.
+      //
+      // Two forms count: `htmlFor` pointing at an id this tag carries (but a tag with an `id`
+      // is already cleared above), and a label WRAPPING the control, where the association is
+      // implicit. The wrapping form is what the lookback is really for, so it is the one kept:
+      // an unclosed `<label>` before the control and no `</label>` between them.
+      const before = src.slice(Math.max(0, match.index - 250), match.index);
+      const open = before.lastIndexOf("<label");
+      return open === -1 || before.slice(open).includes("</label>");
     });
   },
   // Movement with no `prefers-reduced-motion` escape. The setting is not about taste: for people
