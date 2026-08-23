@@ -4174,6 +4174,17 @@ true when written and false within the day — three screens now report 11, 18 a
 be re-derived, so it rots in place while the command beside it stays right. **Only the numbers
 that carry an argument belong in the text**; the rest belong in a script, cited by name.
 
+The ones that do carry an argument still have to stay true, so `scripts/audit-rates.py` now
+checks every `N of 378` in this file against a live `corpus-rates.ts` run — the same job
+`audit-record.py` does for the prompt scores, on the other kind of number the record states as
+fact. It runs under `bun run audit`, and **skips** rather than fails when the corpus is not
+extracted, because a check that fails for an environmental reason is one people learn to ignore.
+
+Its first version flagged a sentence reading *`SHADOWED-EXPORT` knew only `export default
+function X`. 377 of 378 corpus cards write that* — a count of a **syntax form**, not of hits.
+Both look identical to a regex. **A checker that reports a false positive every run has the same
+value as one that reports nothing**, so it now skips lines phrased as what cards write.
+
 `scripts/screens.ts` now holds the predicates on their own, so a rate can be computed without
 running the whole compile sweep as a side effect.
 
