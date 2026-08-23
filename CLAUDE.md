@@ -4678,3 +4678,24 @@ attempts)`. Every condition in both fails a test when removed.
 
 **Two handlers on adjacent lines had the same defect**, which is what you would expect: they were
 written together, from the same idea that an error's message is what identifies it.
+
+### The node half of `apply()` had never been run (2026-08-23)
+
+`smoke.ts` loads the built **client** bundle and runs its `apply()`, and that has always been
+described as covering registration. It covers half of it: the server half only ran in a real
+profile.
+
+That half is where the plugin's whole degradation story lives. Every capability is a **nested**
+`inject` on purpose — a profile without `shell` loses `$dsh/exec` and keeps the rest, and the
+skill and the prompt sit outside the `webServer` inject so a profile with no web server still
+tells the model how to write a card. A static `inject` naming everything would take the whole
+plugin down for one missing service, which is exactly what the comments in `index.ts` warn
+about and what nothing checked.
+
+`test/apply.test.ts` runs it against a fake context that answers only a named set of services,
+and asserts which routes appear for a full profile, for one with no `shell`, and for one with
+`skills` alone. Two structural mutations fail it: dropping `shell` from the exec inject, and
+nesting the skill registration under the web server.
+
+**A test that passes on its first run has proved nothing yet** — these did, and the mutations
+are what turned them into evidence.
