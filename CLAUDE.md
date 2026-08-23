@@ -5428,3 +5428,33 @@ immediately.
 **A prompt that needs a project needs the seed**, and a zero from a harness run without one
 measures the harness. Worth stating because the reflex on seeing an empty result is to go looking
 at the prompt.
+
+### The screens said clean; two of them painted nothing (2026-08-23)
+
+All 17 freshly generated cards passed all 18 screens. Rendered for real through
+`scripts/render-cards.ts` — compile in-page, import as a blob module, `createRoot().render()`,
+read `innerText` back — **two of them were blank**, and an error boundary said why:
+
+    ReferenceError: useState is not defined
+
+Both open with a `const` lookup table or a `type` and call `useState` further down, never
+importing it. They compile, they mount, they paint nothing. `MISSING-REACT-IMPORT` looked only
+for `Fragment|StrictMode|Suspense|memo|forwardRef` and could not see it.
+
+**Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
+edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
+example shows `Fragment` missing while `useState` is already imported — which teaches the
+opposite of what these cards needed. The prompt now leads with the import line itself, and the
+screen covers the seven hooks as well as the five components.
+
+Three things worth carrying:
+
+- **A screen suite that is all green is evidence about the screens, not about the cards.** Every
+  one of these 18 was written from a defect someone had already found. A defect nobody has found
+  passes all of them by construction.
+- **Rendering is the only check that cannot be fooled this way**, and it is cheap: one server,
+  one browser, a `for` loop. It found in one run a class of failure that 378 corpus cards never
+  exhibited.
+- **Changing a prompt is a change to a program whose output you have not run.** This regression
+  was introduced by an edit made carefully, tested, and recorded — and would have shipped as an
+  improvement.
