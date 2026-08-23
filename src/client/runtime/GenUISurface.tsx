@@ -95,6 +95,28 @@ export const isUnfinishedFrame = (message: string, phase: string, streaming: boo
 
 export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) =>
   phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
+/**
+ * What to do with a frame, given what the surface already holds.
+ *
+ * `pushCode` APPENDS but a session event carries the whole prefix so far, so the difference
+ * between these four answers is the difference between a correct surface and one whose buffer
+ * doubles on every frame. Pure, because the decision is, and because a state machine that only
+ * runs inside an effect with three refs is one nothing ever checks.
+ *
+ * - `nothing`   the frame adds no text, or a settled frame re-delivers what is already painted
+ * - `replace`   settled: render the whole thing outright
+ * - `append`    streaming and the buffer is a prefix of this frame: push only the delta
+ * - `restart`   the prefix was rewritten (a re-delivered history page, or an edit)
+ */
+export type Delivery = { do: "nothing" } | { do: "replace"; code: string } | { do: "append"; delta: string } | { do: "restart"; code: string };
+
+export const deliveryFor = (code: string, delivered: string, streaming: boolean): Delivery => {
+  if (!streaming) return code === delivered ? { do: "nothing" } : { do: "replace", code };
+  if (!code.startsWith(delivered)) return { do: "restart", code };
+  const delta = code.slice(delivered.length);
+  return delta === "" ? { do: "nothing" } : { do: "append", delta };
+};
+
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
 const RETRY_BACKOFF_MS = 400;
 
@@ -224,26 +246,16 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       });
     }
     retriesRef.current = 0;
-    if (!streaming) {
-      // Settled: replace the buffer outright. `deliveredRef` must follow, or a later
-      // streaming frame would diff against a prefix this render already superseded.
-      if (code === deliveredRef.current) return;
-      renderer.render(code);
-      deliveredRef.current = code;
-      return;
-    }
-    // `pushCode` APPENDS, but a session event carries the whole prefix so far. Feed it
-    // only the delta, or the buffer doubles on every frame.
-    const delivered = deliveredRef.current;
-    if (code.startsWith(delivered)) {
-      const delta = code.slice(delivered.length);
-      if (delta === "") return;
-      renderer.pushCode(delta);
-    } else {
-      // The prefix was rewritten (a re-delivered history page, or an edit): start over
-      // but keep the painted frame so the surface does not blink.
+    const delivery = deliveryFor(code, deliveredRef.current, streaming);
+    if (delivery.do === "nothing") return;
+    // `deliveredRef` must follow every delivery, or a later streaming frame diffs against a
+    // prefix this render already superseded.
+    if (delivery.do === "replace") renderer.render(delivery.code);
+    else if (delivery.do === "append") renderer.pushCode(delivery.delta);
+    else {
+      // Keep the painted frame so the surface does not blink while it starts over.
       renderer.clear({ preserveVisualState: true });
-      renderer.pushCode(code);
+      renderer.pushCode(delivery.code);
     }
     deliveredRef.current = code;
     // The refs this reads (`importedRef`, `deliveredRef`, `streamingRef`) are how the effect
