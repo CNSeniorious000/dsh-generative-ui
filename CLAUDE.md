@@ -2925,6 +2925,28 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### Auditing rules→screens found a rule that is factually wrong (2026-08-23)
+
+The suite checks every screen has a rule. Nothing checked the reverse, and running it by hand
+left two of the 13 code rules unscreened.
+
+**`&&` does not chain into an arrow function** was real: one corpus card, `2f7a87253134.tsx`,
+writes `cur.lo >= 0 && (i: number) => i >= cur.lo`, and it is one of the six paint failures.
+The screen found it independently. (First version matched across newlines into the `.map((x) =>`
+inside a multi-line `cond && ( … )` block — 8 of 39 clean cards. Same-line, and the parens must
+hold a parameter list.)
+
+**"The React import line comes first, before anything else in the file"** was not. The screen
+found **0 of 378**, and a card written with a `const` table above the import **paints** — ES
+imports are hoisted, so the stated mechanism does not exist. It came from `92550ce`, whose
+finding was the *missing* import; "comes first" was an inference about why, never measured.
+
+Rewritten to say the true thing: write the import first not because a later one breaks, but
+because a card that starts with the data reaches `useState` without having thought about
+importing it — and that does throw. **A screen that finds nothing is not a screen that is idle;
+it is a measurement, and here it measured the rule wrong.** Kept the rule, dropped the screen,
+because there is nothing left to detect.
+
 ### The `$ui4a/` → `$dsh/` rename took completely (2026-08-23)
 
 Counting capability imports across every card the corpus delivered (403 fences in

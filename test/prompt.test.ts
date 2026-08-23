@@ -140,6 +140,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "UNREACHABLE-CONTROL": "breaks keyboard use",
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
+  "AND-INTO-ARROW": "does not chain into an arrow function",
   "UNQUOTED-CSS-UNIT": "A `style` object is JavaScript, not CSS",
   "REGEX-IN-JSX-TEXT": "A brace in JSX text is an expression",
   "UNLABELLED-CONTROL": "A slider is the same problem",

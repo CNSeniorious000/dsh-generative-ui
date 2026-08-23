@@ -54,6 +54,12 @@ export const SCREENS = {
   // Must skip the card's own `<style>` block, where `font-size: 11px` is not just legal but
   // required — a naive match fired on 35 of 39 clean cards. The discriminator is camelCase:
   // a style OBJECT writes `fontSize`, CSS writes `font-size`, and no card mixes them up.
+  // `const f = a > 0 && (i: number) => …` does not parse: the arrow binds looser than the `&&`.
+  // Fatal, and the error names neither the `&&` nor the arrow.
+  // Same line, and the parens must hold a PARAMETER LIST — `cond && (` opening a multi-line JSX
+  // block whose body happens to contain a `.map((g) => …)` matched 8 of 39 clean cards otherwise.
+  // A parameter list is identifiers, commas, and optional type annotations; JSX is not.
+  "AND-INTO-ARROW": (src: string) => /&&\s*\(\s*\w+(\s*:\s*[\w<>[\]|" ]+)?(\s*,\s*\w+(\s*:\s*[\w<>[\]|" ]+)?)*\s*\)\s*=>/.test(src),
   "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
   // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
   // expression and the parse fails on the comma. The card that did it was *showing* the pattern

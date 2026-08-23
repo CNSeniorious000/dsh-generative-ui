@@ -25,6 +25,7 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "SHADOWED-EXPORT": /^import/m,
   "UNGUARDED-ASYNC-HANDLER": /streamText|bash\(/,
   "UNGUARDED-LAST-INDEX": /\[0\]|match\(/,
+  "AND-INTO-ARROW": /&&/,
   "UNQUOTED-CSS-UNIT": /fontSize|font-size/,
   "REGEX-IN-JSX-TEXT": /\\d|\\w/,
   "UNGUARDED-NUMBER-INPUT": /type="number"/,
