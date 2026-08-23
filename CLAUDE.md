@@ -4796,3 +4796,7 @@ exists: the test fails.
 
 **Worth keeping as a property rather than as a plan.** It costs one test, and it is precisely
 the kind of thing that quietly stops being true the next time a screen is widened.
+
+The cost is not the obstacle either: all fourteen screens over the largest card in the corpus
+(13.8 kb) take **0.27 ms**, which is 1.6% of a 60fps frame. So "too expensive to run while
+streaming" is not the reason they do not — nobody has needed it yet is.
