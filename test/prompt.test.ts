@@ -9,6 +9,7 @@
 import { expect, test } from "bun:test";
 import { FENCE_LANG } from "../src/contract.ts";
 import { INLINE_PROMPT } from "../src/prompt.ts";
+import { skillBody } from "../src/skill.ts";
 
 /**
  * Every rule here exists because a real corpus card failed without it. Matched on a short
@@ -41,4 +42,45 @@ test("the prompt is whole", () => {
   expect(INLINE_PROMPT.length).toBeGreaterThan(8000);
   expect(INLINE_PROMPT).toContain("## Colors");
   expect(INLINE_PROMPT).toContain("## Width");
+});
+
+/**
+ * The skill body — 25 KB of judgement, assembled from a template with two optional interpolations
+ * and, until now, nothing checking that any of it arrives. Its failure mode is not an exception:
+ * a section lost to a stray backtick or a bad edit means the model silently stops being told
+ * something, and the evidence is a worse card weeks later.
+ */
+const SECTIONS = [
+  "Is this a UI at all",
+  "Inline or canvas",
+  "Ask with an interface when the request is underspecified",
+  "Say something before it and something after",
+  "Framing",
+  "Layout",
+  "Sound",
+  "Declare every hook before the JSX",
+  "Anything that keeps running",
+  "Running a command",
+  "Reading and writing workspace files",
+  "Generating content inside the card",
+  "Check it before you hand it over",
+  "Imports",
+];
+
+test("the skill body carries every section, in order", () => {
+  const body = skillBody("types.json", "standalone.json");
+  expect(body.split("\n").filter((line) => line.startsWith("## ")).map((line) => line.slice(3))).toEqual(SECTIONS);
+});
+
+// The two maps have genuinely different lifetimes, and the body is built for all four
+// combinations — an interpolation that throws on `undefined` would only show up in the state
+// nobody runs locally.
+test("the body assembles whether or not the maps exist", () => {
+  for (const maps of [[undefined, undefined], ["t.json", undefined], [undefined, "s.json"], ["t.json", "s.json"]] as const) {
+    const body = skillBody(maps[0], maps[1]);
+    expect(body.startsWith("# Building a generative UI")).toBe(true);
+    // Not a bare `undefined` search: the prose says "it is an `undefined` component" on purpose.
+    // What must not appear is an interpolation that leaked one — a path, or a flag's argument.
+    expect(body).not.toMatch(/undefined\.json|-i undefined|\/undefined/);
+  }
 });
