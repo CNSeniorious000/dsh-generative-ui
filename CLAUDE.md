@@ -5236,3 +5236,19 @@ asked — a live-search box over `bash`, which is exactly the shape that used to
 The ref guard *and* an `AbortController` for the superseded run *and* an unmount cleanup, none of
 which the rule spells out together. **The rules that land are the ones that show the shape**; the
 model fills in what the shape implies.
+
+The same mining pass turned up a candidate that **did not** meet the bar, and the reasoning is
+worth keeping because the raw number looked compelling. 95 of 378 cards write `key={i}` over a
+`.map`, which reads like a third of the corpus doing something wrong. It is not: an index key is
+only a defect when the list **reorders**, and most of those are static renders where the index
+genuinely does name the same item forever. Narrowed to lists that are sorted or filtered, the
+corpus rate is **2**.
+
+One fresh card has the real version — a sortable table keyed by row index, where re-sorting hands
+a row's DOM node to a different row and any per-row state goes with it. A real bug, and still not
+a screen: separating it from the harmless 93 needs to know whether the list reorders, which a
+text predicate cannot do reliably, and a screen that reports 95 for 2 real hits trains people to
+ignore it.
+
+**A defect being real is not sufficient; a screen also has to be able to tell it apart from what
+looks like it.** Recorded here instead, which is what the record is for.
