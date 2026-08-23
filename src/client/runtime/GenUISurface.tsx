@@ -138,6 +138,16 @@ export const deliver = (renderer: RendererCalls, delivery: Delivery): boolean =>
   return true;
 };
 
+/**
+ * What the card imports, as one string — the key the import-map probe is cached against.
+ *
+ * Compared by value rather than by set, so re-ordering the same imports re-probes. That is
+ * deliberate: the probe is cheap and cached downstream, and a set comparison here would be more
+ * code to get wrong than the re-probe costs.
+ */
+export const importSignature = (code: string) =>
+  [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).join(" ");
+
 /** Only what `deliver` touches — the real renderer has far more. */
 export type RendererCalls = {
   render: (code: string) => void;
@@ -258,7 +268,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     // Anything the model imports beyond the registered react family (recharts, motion, …) has no
     // entry in the import map, and an unresolvable bare specifier fails the whole module import —
     // the surface just stays blank. `mergeFallbackImports` probes esm.sh and fills those in.
-    const signature = [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).join(" ");
+    const signature = importSignature(code);
     if (signature !== importedRef.current) {
       importedRef.current = signature;
       // A later frame's probe can settle first; without this the map reverts to an older import set.

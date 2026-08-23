@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { deliver, deliveryFor } from "../src/client/runtime/GenUISurface.tsx";
+import { deliver, deliveryFor, importSignature } from "../src/client/runtime/GenUISurface.tsx";
 
 /**
  * The frame-delivery decision. `pushCode` APPENDS while a session event carries the whole
@@ -88,4 +88,27 @@ test("restart clears without blanking, then pushes the whole code", () => {
   const { renderer, calls } = spy();
   expect(deliver(renderer, { do: "restart", code: "xyz" })).toBe(true);
   expect(calls).toEqual(["clear:true", "push:xyz"]);
+});
+
+/**
+ * The import-map probe is cached against this signature. It must change when the card starts
+ * importing something new — an unresolvable bare specifier fails the WHOLE module import, so a
+ * stale signature means a surface that stays blank for good.
+ */
+test("the signature changes when a new import appears", () => {
+  const before = importSignature(`import { useState } from "react";`);
+  const after = importSignature(`import { useState } from "react";\nimport x from "recharts";`);
+  expect(before).not.toBe(after);
+});
+
+test("the signature ignores what is imported, only from where", () => {
+  expect(importSignature(`import { a } from "react";`)).toBe(importSignature(`import { b, c } from "react";`));
+});
+
+test("a card with no imports has an empty signature", () => {
+  expect(importSignature(`export default () => <b/>;`)).toBe("");
+});
+
+test("both quote styles are seen", () => {
+  expect(importSignature(`import a from 'recharts';`)).toBe("recharts");
 });
