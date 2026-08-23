@@ -22,11 +22,18 @@ const CARDS = ["test/cards/2048.ui4a.tsx", "test/cards/metro.ui4a.tsx", "test/ca
  * - `NO-FOCUS-RING` fires on `outline: "none"` and clears when the replacement appears.
  * - `UNGUARDED-NUMBER-INPUT` fires on `Number(e.target.value)` and clears on the `|| 0` after
  *   it — measured against the corpus, `01bf50a29bde` is cut mid-guard at 70%.
+ * - `UNSTOPPABLE-MOTION` fires on `@keyframes` and clears on the `@media (prefers-reduced-motion)`
+ *   block, which by convention comes last in a `<style>`.
+ *
+ * All three are the same shape, which is worth stating: the fix is written AFTER the thing it
+ * fixes, so any cut between them shows the defect alone. That is a property of how CSS and
+ * JavaScript are written, not a flaw in these three predicates, and a fourth screen with the
+ * same shape should be expected rather than investigated.
  *
  * The rest have no such ordering. This is the property that would let the screens run WHILE the
  * model types, so knowing which two cannot is the useful part.
  */
-const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT"]);
+const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTOPPABLE-MOTION"]);
 
 /**
  * The four reference cards cannot exercise every screen — none of them has a `type="number"`
