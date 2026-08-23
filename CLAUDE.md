@@ -4114,3 +4114,25 @@ prose until someone injects the failure, so:
 - **`test:shuffled`** is new: bun shares one global per run, so file order decides whether a
   leaked `fetch` stub is visible. Verified by removing the restore — caught in 6 of 6 shuffles,
   so it is a gate and not a flake.
+
+### The standalone stubs crashed on the one call the skill insists you make (2026-08-23)
+
+`gen-standalone.ts` writes the `$dsh/*` stubs that `@genui/cli build` links against, so an
+exported page keeps working with the harness gone. Its `EMPTY_RESULT` table exists precisely so
+`await readFile(...)` does not return `undefined` and kill the page at the first call.
+
+`bash` was not in the table. So `await bash("git log")` returned `undefined`, and the skill's own
+rule — **"check `exitCode`, do not catch it"** — made every exported page with a command card
+throw on the first line the card reads. `readBytes` was missing too. Both had been added to
+`bindings.ts` long after the table was written, and nothing connected the two.
+
+The root cause is the default, not the omission: an unlisted member silently produces a stub
+returning `undefined`, which is *correct* for `sendMessage` and a crash for everything else, and
+nothing can tell those apart from the binding alone. The generator now **fails** on an unlisted
+member and asks for it to be classified — verified by adding a member to `bindings.ts` and
+watching it exit 1.
+
+Found by awaiting each stub and printing the shape, which took one script. The lesson is the
+prompt-verification one again from a third direction: **the stubs are a claim about how the
+exported page behaves, and a claim nothing exercises decays.** `readFile` and `readdir` were
+fine — the two that were tested when the table was written.
