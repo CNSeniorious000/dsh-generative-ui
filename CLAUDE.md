@@ -4083,6 +4083,15 @@ exported anyway because the invariant it documents is real.
 
 Now 70 seeds and 8 unseeded runs, all clean. **State the sample size when claiming a flake is
 fixed**; "passes now" against a 50% failure rate is a 50% chance of being wrong.
+
+Then the same rules were written down as `test/isolation.test.ts`, which reads the test sources
+and fails on a file that stubs a shared global without restoring it, or mounts a transcript sweep
+without clearing leftovers first. It immediately found **two more** — `mount.test.ts` leaving a
+`document` with no `querySelectorAll`, and `compile-pipeline.test.ts` leaving a `fetch` stub, the
+very leak the section above is about. Neither was failing anything yet.
+
+**A discipline that has to be remembered is a discipline that will be forgotten.** The four fixes
+above were each a habit applied by hand; the check is what makes the next file follow them.
 - **Restore every global you stub**, even when nothing currently breaks. `stream.test.ts` and
   `canvas-sweep.test.ts` had the same leak and happened to sort harmlessly; both now restore.
 - **A rename is a real test.** This one changed no behaviour and found a bug — the accidental
