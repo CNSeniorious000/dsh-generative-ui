@@ -2996,7 +2996,15 @@ So "never matched" is not the fault. `latest` was wrong because it was a WORD TH
 the fix rather than a form of it; `aria-labelledby` is unused coverage waiting to be used. The
 question to ask of the next one is not "has this ever fired" but **"does a card written this way
 actually do the right thing?"** The remaining four dead alternations are in detecting position,
-where the cost is only coverage, not a wrong verdict.
+where the cost is only coverage, not a wrong verdict — and constructing a card for each shows
+`position: fixed`, `StrictMode`, `forwardRef`, and `#fafafa` all fire correctly. The corpus simply
+does not contain them.
+
+`useReducer` looked like the exception and is not: `MISSING-REACT-IMPORT` skips every `/^use[A-Z]/`
+name on purpose, because normalize extends an existing react import with any hook. Verified by
+rendering one — it paints. The component names beside it in the same list (`Fragment`,
+`StrictMode`, `forwardRef`) are NOT repaired, which is the entire reason that screen exists. Worth
+pinning because the audit reported it as a hole and the right answer was the opposite.
 
 Which makes `NO-FOCUS-RING` worth auditing on its own: a false positive there mis-diagnoses more
 cards than a wrong answer anywhere else, and it has been retightened once already. Checked the

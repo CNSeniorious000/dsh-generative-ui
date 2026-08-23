@@ -68,3 +68,18 @@ test("normalize does NOT supply a JSX component", () => {
   const src = `import { useState } from "react";\nexport default function C() { return <Fragment><b/></Fragment> }`;
   expect(normalizeGeneratedTsx(src, { mode: "final" })).not.toMatch(/import \{[^}]*Fragment/);
 });
+
+/**
+ * `useReducer` specifically, because auditing the screens flagged it as a hole and it is not.
+ * `MISSING-REACT-IMPORT` deliberately skips every `/^use[A-Z]/` name — `normalizeGeneratedTsx`
+ * extends an existing react import with any hook it finds used. Verified by rendering: a card
+ * calling `useReducer` with only `useState` imported paints.
+ *
+ * The component names in the same list (`Fragment`, `StrictMode`, `Suspense`, `memo`,
+ * `forwardRef`) are NOT repaired, which is the whole reason the screen exists.
+ */
+test("useReducer is repaired, so the screen is right to stay quiet", () => {
+  const source = `import { useState } from "react";\nexport default function C() { const [n, d] = useReducer(r, 0); return <button onClick={() => d("i")}>{n}</button> }`;
+  expect(normalizeGeneratedTsx(source, { mode: "final" })).toContain("useReducer");
+  expect(/import \{[^}]*useReducer[^}]*\} from "react"/.test(normalizeGeneratedTsx(source, { mode: "final" }))).toBe(true);
+});
