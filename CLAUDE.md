@@ -5516,3 +5516,14 @@ worse trade than knowing the number.
 
 **Write the count of what you skipped next to the result.** Every gate in this repo that has ever
 lied did it by omission, never by a wrong answer.
+
+Auditing the other scripts for the same shape found one more: `replay-stream.ts` had
+`catch { continue }` around its normalize, so `frames=12` on a 60-prefix card would read as a
+short card rather than as a pass that gave up on 48 of them. Now counted and printed.
+
+The count turned out to be **zero on every reference card and zero across all 378 corpus
+cards** — `normalizeGeneratedTsx` repairs every prefix it is handed, and the `catch` was dead
+code concealing nothing. That is worth knowing on its own, and it was only knowable once the
+skip was counted. **A silent skip that never fires and a silent skip that fires constantly look
+identical from the outside**, which is the whole argument for counting even where you are
+confident.
