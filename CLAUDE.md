@@ -3917,8 +3917,13 @@ the corpus, not style opinions:
   compiles and mounts and shows nothing, which is the worst failure shape in this project.
 
 All three are the same confusion about what a hook is, so they are one rule plus an import rule
-rather than four. `JSX-SUBSCRIPT` needs no rule (it is a compile error the model cannot ship) and
-`VIEWPORT-UNITS` already had one under Width.
+rather than four. `VIEWPORT-UNITS` already had one under Width.
+
+`JSX-SUBSCRIPT` was exempted here — *it is a compile error the model cannot ship* — and that
+reasoning was **wrong**, corrected later the same day. A compile error is not something the model
+cannot produce; it is something the reader receives as a blank surface. Three corpus cards fail to
+compile for exactly that class of reason, and they shipped. Screens now all have rules, enforced
+by a map in `test/prompt.test.ts` whose keys must equal the screen list.
 
 The general form: **a screen with no corresponding rule is a trap you have decided to keep
 finding rather than stop causing.** Worth checking whenever a screen is added.
