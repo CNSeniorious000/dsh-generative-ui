@@ -6963,3 +6963,27 @@ Worth writing down because the natural worry about a page of accessibility rules
 would get more elaborate to satisfy them. They got **larger** (10.4 KB against 5.7 KB median) and
 structurally identical.
 
+### Naming the case that survives a rule (2026-08-24)
+
+The one fresh card with real defects put `onClick` on a `<div className="lv-row">`. The rule
+against that already existed and had worked — 17 corpus cards to 1 fresh — so the interesting
+part was *which* case survived it: **13 of the 17 are a list row, a table cell, or a card**, where
+wrapping each one in a `<button>` feels wrong.
+
+Named that case in the skill: a `<button>` with `display: block; width: 100%; text-align: left`
+looks exactly like the row and is reachable, and if it genuinely cannot be one, then
+`role="button"`, `tabIndex={0}` and `onKeyDown` — **all three**, because any one alone leaves it
+half-reachable.
+
+Re-ran the same prompt (`每行点击可以复制` added, to force the shape):
+
+| | the row |
+| --- | --- |
+| before | `<div className="lv-row" onClick={copy} title="点击复制">` |
+| after | `<button type="button" className="lv-row">` with `.lv-row { display: flex; width: 100% }` |
+
+Clean under all 24 screens. Second time today that naming the *specific case that survives a rule*
+changed the outcome, after moving `aria-live` into the skill — and both times the rule itself was
+already correct and already delivered. **A rule that is right in general can still miss the one
+shape where following it feels wrong, and that shape is where the remaining violations live.**
+
