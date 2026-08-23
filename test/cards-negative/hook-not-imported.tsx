@@ -1,11 +1,15 @@
-// MISSING-REACT-IMPORT, the hook arm. A card that opens with its data and calls `useState`
-// further down throws `useState is not defined` at render: it compiles, it mounts, it paints a
-// blank rectangle. Zero of 378 corpus cards did this and TWO of the first 17 generated after
-// this session's prompt edits did — the screen knew only `Fragment|StrictMode|Suspense|memo|
-// forwardRef` and could not see it.
-const LENGTH = { mm: 0.001, cm: 0.01, m: 1 };
+import { useState } from "react";
 
+// MISSING-REACT-IMPORT, the arm that reaches a reader.
+//
+// `<Fragment>` beside an `import { useState }` is NOT repaired downstream, so this throws
+// `Fragment is not defined` at render: it compiles, it mounts, it paints a blank rectangle.
+//
+// A HOOK in the same position — `useMemo(...)` with only `useState` imported — is quietly
+// repaired: `normalizeGeneratedTsx` extends an existing import with any hook it finds used, and
+// inserts the whole line when there is none. It never supplies a JSX component. Measured, after
+// guessing the boundary wrong twice; `test/normalize-complete.test.ts` pins all three cases.
 export default function Convert() {
-  const [unit, setUnit] = useState<keyof typeof LENGTH>("m");
-  return <button onClick={() => setUnit("cm")}>{String(LENGTH[unit])}</button>;
+  const [unit, setUnit] = useState("m");
+  return <Fragment><button onClick={() => setUnit("cm")}>{unit}</button></Fragment>;
 }

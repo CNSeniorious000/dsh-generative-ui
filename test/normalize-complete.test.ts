@@ -39,24 +39,32 @@ test("known upstream: normalize appends to this complete card and breaks it", ()
 });
 
 /**
- * The repair's boundary, which decides how much two different screens matter.
+ * The repair's boundary, measured — and it decides which rules matter.
  *
- * `normalizeGeneratedTsx` adds a MISSING react import line, and does not extend an existing one.
- * So a card with no import at all that calls `useState` is repaired and renders; a card importing
- * `useState` that writes `<Fragment>` is not, and paints nothing. The first is why the two blank
- * fresh cards would in fact have worked for a reader; the second is why the original
- * *Import every name you write* rule exists and is aimed where it is.
+ * `normalizeGeneratedTsx` will supply a **hook**: it inserts the whole `import … from "react"`
+ * line when there is none, and extends an existing one with any hook it finds used. It will not
+ * supply a JSX **component**. So:
  *
- * If upstream starts extending existing imports, this fails — and the `Fragment` rule can then be
- * demoted, which is worth knowing rather than discovering by accident.
+ *   - no import at all + `useState`            → repaired, renders
+ *   - `import { useState }` + `useMemo(...)`   → repaired, renders
+ *   - `import { useState }` + `<Fragment>`     → NOT repaired, `Fragment is not defined`, blank
+ *
+ * Only the third reaches a reader broken, which is why `MISSING-REACT-IMPORT` deliberately stays
+ * quiet on the first two — and why *Import every name you write, `Fragment` included* is aimed
+ * exactly where the repair cannot reach. Getting this wrong twice in one afternoon produced both
+ * an overstated finding and a control card that did not break.
  */
-test("normalize adds a missing react import", () => {
+test("normalize inserts a missing react import for a hook", () => {
   const src = `const T = { a: 1 };\nexport default function C() { const [n] = useState(0); return <b>{n}</b> }`;
   expect(normalizeGeneratedTsx(src, { mode: "final" })).toMatch(/^import \{[^}]*useState[^}]*\} from "react"/m);
 });
 
-test("normalize does NOT extend an existing react import", () => {
-  const src = `import { useState } from "react";\nexport default function C() { const [n] = useState(0); return <Fragment>{n}</Fragment> }`;
-  const out = normalizeGeneratedTsx(src, { mode: "final" });
-  expect(out).not.toMatch(/import \{[^}]*Fragment/);
+test("normalize extends an existing react import with a hook", () => {
+  const src = `import { useState } from "react";\nexport default function C() { const x = useMemo(() => 1, []); return <b>{x}</b> }`;
+  expect(normalizeGeneratedTsx(src, { mode: "final" })).toMatch(/import \{[^}]*useMemo/);
+});
+
+test("normalize does NOT supply a JSX component", () => {
+  const src = `import { useState } from "react";\nexport default function C() { return <Fragment><b/></Fragment> }`;
+  expect(normalizeGeneratedTsx(src, { mode: "final" })).not.toMatch(/import \{[^}]*Fragment/);
 });

@@ -45,6 +45,12 @@ export const SCREENS = {
   // Skipped entirely when the card does a namespace or default import, which brings everything.
   "MISSING-REACT-IMPORT": (src: string) => {
     if (/import\s+\*\s+as\s+\w+\s+from\s*["']react["']|import\s+React\s*(?:,|from)/.test(src)) return false;
+    // Only the names normalize will NOT supply. Measured, because guessing it wrong twice cost an
+    // afternoon: `normalizeGeneratedTsx` adds a missing react import line, AND extends an existing
+    // one with any **hook** it finds used — but never with a JSX component. So `<Fragment>` beside
+    // `import { useState }` reaches the reader as `Fragment is not defined`, while `useMemo` in
+    // the same position is quietly repaired. `test/normalize-complete.test.ts` pins both halves.
+    const REPAIRED = /^use[A-Z]/;
     const imported = new Set([...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim())));
     // The JSX form for every name, not just `Fragment`. The `\s*[(<]` arm only sees a call or a
     // generic, so `<Suspense fallback={…}>` — the way Suspense is actually written — matched
@@ -54,7 +60,7 @@ export const SCREENS = {
     // lookup table and calling `useState` below it throws `useState is not defined`, mounts, and
     // paints nothing. The old list of five names could not see it.
     const names = /<(Fragment|StrictMode|Suspense)\b|\b(Fragment|StrictMode|Suspense|memo|forwardRef|useState|useEffect|useMemo|useCallback|useRef|useReducer|useLayoutEffect)\s*[(<]/g;
-    return [...src.matchAll(names)].some((m) => !imported.has(m[1] ?? m[2]));
+    return [...src.matchAll(names)].map((m) => m[1] ?? m[2]).some((name) => !imported.has(name) && !REPAIRED.test(name));
   },
   // `xs[xs.length - 1].field` on an array that came from outside the card. A `!xs` guard passes
   // for `[]`, so an empty result — a repo with no commits, a failed command, an empty directory —
