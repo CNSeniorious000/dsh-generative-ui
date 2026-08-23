@@ -10,21 +10,39 @@
  * quietly stops being true when a screen is widened.
  */
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { SCREENS } from "../scripts/screens.ts";
 
 const CARDS = ["test/cards/2048.ui4a.tsx", "test/cards/metro.ui4a.tsx", "test/cards/piano.ui4a.tsx", "test/cards/near-misses.ui4a.tsx"];
 
 /**
- * `NO-FOCUS-RING` is the exception, and it cannot be otherwise: it fires on `outline: "none"`
- * and clears when the replacement appears, so every card that does the right thing looks wrong
- * for the moment between the two. The rest have no such ordering.
+ * Two exceptions, and neither can be otherwise: in both, the **guard follows the defect in the
+ * text**, so a prefix cut between them shows the defect alone.
+ *
+ * - `NO-FOCUS-RING` fires on `outline: "none"` and clears when the replacement appears.
+ * - `UNGUARDED-NUMBER-INPUT` fires on `Number(e.target.value)` and clears on the `|| 0` after
+ *   it — measured against the corpus, `01bf50a29bde` is cut mid-guard at 70%.
+ *
+ * The rest have no such ordering. This is the property that would let the screens run WHILE the
+ * model types, so knowing which two cannot is the useful part.
  */
-const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING"]);
+const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT"]);
+
+/**
+ * The four reference cards cannot exercise every screen — none of them has a `type="number"`
+ * field, so `UNGUARDED-NUMBER-INPUT` was on the exception list above on the strength of a corpus
+ * run this test could not see. When the corpus IS extracted, check against it too, and require
+ * every named exception to actually be one: an exception nobody can reproduce is a screen that
+ * quietly stopped being checked.
+ */
+const corpus = (() => {
+  try { return readdirSync("/tmp/corpuscards").filter((n) => n.endsWith(".tsx")).map((n) => `/tmp/corpuscards/${n}`) }
+  catch { return [] }
+})();
 
 test("no screen accuses a card of something it has not finished writing", () => {
   const offenders = new Set<string>();
-  for (const path of CARDS) {
+  for (const path of [...CARDS, ...corpus]) {
     const src = readFileSync(path, "utf8");
     const settled = new Set(Object.entries(SCREENS).filter(([, fires]) => fires(src)).map(([name]) => name));
     for (let pct = 10; pct < 100; pct += 10) {
@@ -35,4 +53,18 @@ test("no screen accuses a card of something it has not finished writing", () => 
     }
   }
   expect([...offenders]).toEqual([]);
+});
+
+test("every screen named prefix-unsafe really is, when the corpus is there to prove it", () => {
+  if (corpus.length === 0) return; // nothing to prove it with; the check above still ran
+  const proven = new Set<string>();
+  for (const path of corpus) {
+    const src = readFileSync(path, "utf8");
+    const settled = new Set(Object.entries(SCREENS).filter(([, fires]) => fires(src)).map(([name]) => name));
+    for (let pct = 10; pct < 100; pct += 10) {
+      const prefix = src.slice(0, Math.floor((src.length * pct) / 100));
+      for (const name of PREFIX_UNSAFE) if (SCREENS[name](prefix) && !settled.has(name)) proven.add(name);
+    }
+  }
+  expect([...PREFIX_UNSAFE].filter((name) => !proven.has(name))).toEqual([]);
 });
