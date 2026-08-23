@@ -9,7 +9,7 @@
  * Importing this module from every stubbing file makes the capture happen exactly once, in
  * whichever file bun loads first, and `restoreGlobals()` then always puts back the real thing.
  */
-const NAMES = ["document", "requestAnimationFrame", "cancelAnimationFrame", "MutationObserver", "console", "fetch"] as const;
+const NAMES = ["document", "window", "requestAnimationFrame", "cancelAnimationFrame", "MutationObserver", "console", "fetch"] as const;
 
 const real = Object.fromEntries(NAMES.map((name) => [name, (globalThis as Record<string, unknown>)[name]]));
 

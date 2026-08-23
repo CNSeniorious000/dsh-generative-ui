@@ -121,7 +121,7 @@ export const widthForPointer = (clientX: number, viewportWidth: number) =>
   Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, viewportWidth - clientX));
 
 /** Drag-to-resize on the panel's left edge, mirroring the host's own invisible hit strip. */
-function useResize(initial: number) {
+export function useResize(initial: number) {
   const [width, setWidth] = useState(initial);
   const frame = useRef(0);
   const start = (event: React.PointerEvent<HTMLDivElement>) => {
