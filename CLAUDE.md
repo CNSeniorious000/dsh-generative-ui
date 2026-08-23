@@ -5485,6 +5485,17 @@ Every step was checked, and four of the six were wrong. What caught each one was
 what showed it did not break, one command, after two rounds of confident prose. The tests now pin
 all three boundary cases, so the next person gets the answer instead of the search.
 
+And the gap that let it happen is now closed generally. A negative control proved its screen
+**fires**; nothing proved the card was actually broken, so a wrong screen and a wrong control
+agreed with each other and both passed. `test/controls-break.test.ts` renders the ten controls
+whose defect is render-fatal and requires each to genuinely throw or paint nothing — verified by
+turning the `<Fragment>` in one of them into `<>`, which makes the card render and the test fail.
+
+The other twenty controls are deliberately not listed: a stripped focus ring, an unlabelled
+slider, an unguarded number field all render perfectly and are still defects. **Splitting the
+controls by whether the defect is fatal is itself information** — it says which screens are
+catching a broken card and which are catching a bad one.
+
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
 example shows `Fragment` missing while `useState` is already imported — which teaches the
