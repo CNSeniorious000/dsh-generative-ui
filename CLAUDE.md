@@ -7008,3 +7008,27 @@ So this one needed nothing, which is the point of checking before writing. Two o
 "survivors" today were real gaps worth naming; the third was already handled, and the way to tell
 was to look at where the violations actually sit rather than assume the rule was incomplete.
 
+### A screen with two constructs needs two phrases (2026-08-24)
+
+Adding the `<select>` rule exposed a gap in the check that was supposed to prevent exactly this.
+`test/prompt.test.ts` maps each screen to one phrase, so **a screen covering two constructs passes
+with a rule for only one**. `UNLABELLED-CONTROL` screens sliders and `<select>`; the slider half
+had a rule, the check was satisfied, and the select case sat screened-but-unruled — 6 corpus cards
+detectable and nothing telling the model.
+
+Four screens cover two constructs each:
+
+| screen | constructs |
+| --- | --- |
+| `UNLABELLED-CONTROL` | a range input, a `<select>` |
+| `UNREACHABLE-CONTROL` | a clickable `<div>`, an icon-only `<button>` |
+| `UNGUARDED-NUMBER-INPUT` | a number field (a range input is exempt) |
+| `BRAND-PRIMARY-FILL` | a `<div>` fill, a `<button>` fill |
+
+The two with genuinely different fixes now pin a phrase per construct. Verified the usual way:
+deleting either phrase from the skill fails the test.
+
+The general shape, and the third instance of it today: **a check that maps N things to one thing
+confirms one of them.** The rules→screens audit had the same bug in the other direction this
+morning (one bullet covering two screens), and the fix was the same — allow a list.
+

@@ -137,7 +137,9 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "NO-FOCUS-RING": "focus-visible",
   "SHADOWED-EXPORT": "Never name it after something you imported",
   "UNGUARDED-LAST-INDEX": "not a guard against empty",
-  "UNREACHABLE-CONTROL": "breaks keyboard use",
+  // Two shapes, two fixes: a clickable `<div>` needs to be a button, an icon-only button needs a
+  // name. Pinning one would confirm half the screen.
+  "UNREACHABLE-CONTROL": ["breaks keyboard use", "a screen reader announces \"button\" and nothing else"],
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
   "AND-INTO-ARROW": "does not chain into an arrow function",
@@ -146,7 +148,11 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "SWALLOWED-CAPABILITY-FAILURE": "say so where the results would have been",
   "UNQUOTED-CSS-UNIT": "A `style` object is JavaScript, not CSS",
   "REGEX-IN-JSX-TEXT": "A brace in JSX text is an expression",
-  "UNLABELLED-CONTROL": "A slider is the same problem",
+  // Two constructs, two phrases. `UNLABELLED-CONTROL` screens sliders AND `<select>`, and mapping
+  // it to one phrase let the select case sit screened-but-unruled for a day: the check passed
+  // because the slider half had a rule. A screen that covers more than one construct needs a
+  // phrase per construct, or the test confirms half of it.
+  "UNLABELLED-CONTROL": ["A slider is the same problem", "`<select>` has the same problem"],
   "UNSTOPPABLE-MOTION": "@media (prefers-reduced-motion: reduce)",
   "VIEWPORT-UNITS": "100vw",
 };
