@@ -245,3 +245,13 @@ for (const [screen, spelling, source] of UNUSED_BUT_REAL) {
 test("TRANSITION-WITHOUT-TRANSFORM: an imperative transform counts", () => {
   expect(SCREENS["TRANSITION-WITHOUT-TRANSFORM"](`<button style={{ transition: "transform .12s ease" }} onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.95)")}>x</button>`)).toBe(false);
 });
+
+/**
+ * The boundary of `NO-FOCUS-RING`, established by injection: stripping the `:focus-visible` rule
+ * from 50 fresh cards made it fire on only 5, which reads as a hole and is not. A card with no
+ * focus styling keeps the browser default — a real ring. `outline: "none"` is what removes it.
+ */
+test("NO-FOCUS-RING: no styling at all is not the defect", () => {
+  expect(SCREENS["NO-FOCUS-RING"](`<button onClick={f}>x</button>`)).toBe(false);
+  expect(SCREENS["NO-FOCUS-RING"](`<button style={{ outline: "none" }} onClick={f}>x</button>`)).toBe(true);
+});

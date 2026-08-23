@@ -3078,6 +3078,31 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### Is a 57-card clean streak evidence, or an unfalsifiable checker? (2026-08-23)
+
+A streak that long invites the question of whether the screens can still fire on anything a
+current model writes. Answered by **injection**: take each fresh card, add one defect, see if the
+screen notices.
+
+| screen | caught |
+| --- | --- |
+| `DUPLICATE-STYLE-KEY` | 48/48 |
+| `COMMA-IN-STYLE` | 48/48 |
+| `NO-FOCUS-RING` | **0/56** |
+
+The zero is the screen being right. Every fresh card defines `:focus-visible`, which clears it —
+so injecting an `outline: none` changes nothing. Stripping the ring FIRST and then injecting gave
+5 of 50, which looks like a hole and is also correct: **a card with no focus styling keeps the
+browser default**, a real affordance. `outline: "none"` removes it; writing nothing does not.
+
+That boundary was never stated, and the corpus makes it worth stating — **237 interactive cards
+define no ring at all, three times the 73 this screen catches**. Widening it to "has no focus
+ring" would triple the report and every new hit would be a card that is fine.
+
+Injection is the general answer to "is this checker still alive?", and cheaper than it sounds: the
+fresh cards are already on disk, and a one-line mutation per screen says whether the streak is a
+result or an artefact.
+
 ### A trigger rule has a rate, not a verdict (2026-08-23)
 
 The first trigger-suite run reported a miss on `98 华氏度是多少摄氏度` — a prompt quoted **verbatim

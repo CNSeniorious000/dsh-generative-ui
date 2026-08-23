@@ -335,6 +335,12 @@ export const SCREENS = {
   // replace it, which makes this the most common single line here that breaks keyboard use:
   // tabbing through the card moves a cursor nobody can see. The replacement can be a
   // `:focus-visible` rule or a `boxShadow` driven by focus state, so both count.
+  //
+  // Deliberately NOT "has no focus ring": 237 interactive corpus cards define none, three times
+  // what this catches, and they are fine — they keep the browser default, which is a real
+  // affordance. Removing it is the defect; not styling it is a choice. Measured by stripping the
+  // ring from 50 fresh cards, where the screen caught 5 — correct, since the other 45 fell back
+  // to the default rather than suppressing it.
   "NO-FOCUS-RING": (src: string) => {
     const code = src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
     // A replacement need not be an outline: a `focused` flag driving borderColor is the same
