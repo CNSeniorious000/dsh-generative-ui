@@ -6757,3 +6757,29 @@ mostly measures whether its own prompts are answerable, and reading the reply on
 what separates the two. `triggers.sh` prints the workspace path for a miss precisely so that is
 one command rather than a re-run.
 
+### The regression that was a regex (2026-08-24)
+
+Eight more properties no screen checks, measured in both populations. Five improved without a
+rule (empty states 27% → 57%, truncation 4% → 24%, scroll containers 7% → 21%, tabular figures
+25% → 39%, tooltips on truncated text 7% → 18%). Three looked unchanged.
+
+The most promising was "a button that fires an async call and is not disabled while it runs" —
+which came back **44% corpus, 14% fresh**. The first apparent regression of the day.
+
+It was wrong. The regex wanted `disabled={` followed immediately by a loading-ish word, and the
+cards write `disabled={loading}` where `loading` is the whole expression. Widened to count any
+protection — disabling, an early return, or **aborting the previous request**, which is stronger
+since the click still works and only the stale response is dropped:
+
+    corpus: 26 of 64 (41%)
+    fresh:  13 of 21 (62%)
+
+An improvement, not a regression. And the eight unprotected fresh cards all fetch once on mount
+with no user-triggered refetch, so there is no second run to guard: **21 of 21 are correct.**
+
+Worth recording because of what nearly happened. A regression is the most consequential thing a
+measurement can report — it argues for reverting a rule — and this one existed only in the regex.
+The check that caught it was reading a card that the measurement called wrong, which is the same
+move that fixed the error-handling number an hour earlier (60% → 100%). **Any surprising result
+gets one card read by hand before it gets written down.**
+
