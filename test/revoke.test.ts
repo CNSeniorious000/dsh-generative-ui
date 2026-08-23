@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { revokeAll } from "../src/client/canvas/CanvasPanel.tsx";
+import { needsResolve, revokeAll } from "../src/client/canvas/CanvasPanel.tsx";
 
 /**
  * Blob URLs for a canvas's sibling modules. Two paths revoke the same array — the effect's
@@ -52,4 +52,18 @@ test("an empty list is not an error", () => {
     revokeAll([]);
     expect(revoked).toEqual([]);
   });
+});
+
+/**
+ * The two conditions deciding whether a canvas gets the sub-page pass. Both were unconstrained
+ * inside the effect: flipping either survived the whole suite.
+ */
+test("a streaming canvas is not resolved — the next frame supersedes any prefix", () => {
+  expect(needsResolve(`import Row from "./row.tsx";`, true)).toBe(false);
+  expect(needsResolve(`import Row from "./row.tsx";`, false)).toBe(true);
+});
+
+test("a canvas with no sibling import has nothing to inline", () => {
+  expect(needsResolve(`import { useState } from "react";`, false)).toBe(false);
+  expect(needsResolve(`import Row from "./row.tsx";`, undefined)).toBe(true);
 });

@@ -44,8 +44,8 @@ export function useSubPages(cwd: string | undefined, canvas: Canvas | undefined)
   const streaming = canvas?.streaming;
 
   useEffect(() => {
-    if (cwd === undefined || id === undefined || code === undefined || streaming) return;
-    if (!importsSibling(code)) return;
+    if (cwd === undefined || id === undefined || code === undefined) return;
+    if (!needsResolve(code, streaming)) return;
     const key = `${id}:${code.length}`;
     let live = true;
     const urls: string[] = [];
@@ -76,6 +76,18 @@ export function useSubPages(cwd: string | undefined, canvas: Canvas | undefined)
  * URL revoked twice is harmless while one revoked never is a leak per edit. Emptying the list
  * as it goes makes the pair idempotent regardless of which runs first or what arrived between.
  */
+/**
+ * Whether this canvas needs the sub-page pass at all. Extracted from the effect because the
+ * mutation audit could not constrain it there — flipping `streaming` or dropping the
+ * `importsSibling` check survived every test, and both are load-bearing: resolving mid-stream
+ * inlines a prefix that the next frame supersedes, and a canvas with no sibling imports would
+ * pay a compile per frame to produce the code it already had.
+ *
+ * The `undefined` checks stay in the effect: a type predicate narrows only one parameter, and
+ * moving them here would cost the compiler its knowledge that `cwd` and `id` are strings after.
+ */
+export const needsResolve = (code: string, streaming: boolean | undefined): boolean => !streaming && importsSibling(code);
+
 export const revokeAll = (urls: string[]): void => {
   while (urls.length > 0) URL.revokeObjectURL(urls.pop()!);
 };
