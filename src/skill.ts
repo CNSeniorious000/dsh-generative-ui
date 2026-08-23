@@ -165,6 +165,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   \`:focus-visible\`, not \`:focus\` — it shows the ring for the keyboard and not for the mouse,
   which is the reason the ring was annoying in the first place.
+- **The rules below share one cause, and knowing it is worth more than the list.** A card gets
+  written as a *picture* of an interface — the slider looks right, the number reads right, the
+  ring is visual noise so it goes. Every one of them is correct through a mouse and an eye, and
+  broken through a keyboard or a screen reader. Measured: the two most common pairs of defects
+  in 378 cards are a stripped focus ring beside an unlabelled slider (8 cards) and an unlabelled
+  slider beside an unguarded number field (6) — the same card, treating its controls as decoration
+  three times over. When you add a control, ask what it announces and what happens on Tab.
 - **A control the keyboard cannot reach is not a control.** Two shapes, both measured across 378
   real cards and neither mentioned here before: **17 cards put \`onClick\` on a \`<div>\`**, which
   takes no focus and answers no Enter or Space, and **31 buttons whose only content is an icon

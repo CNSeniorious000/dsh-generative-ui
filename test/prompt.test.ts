@@ -73,6 +73,7 @@ const SKILL_RULES = [
   ["honour prefers-reduced-motion (inline)", 'matchMedia("(prefers-reduced-motion: reduce)")'],
   ["keyboard-reachable controls", "<button aria-label=\"复制\" onClick={copy}>"],
   ["a superseded async run returns", "if (id !== runId.current) return"],
+  ["the shared cause behind the control rules", "treating its controls as decoration"],
 ] as const;
 
 for (const [name, phrase] of SKILL_RULES) {
