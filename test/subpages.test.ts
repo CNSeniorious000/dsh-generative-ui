@@ -7,6 +7,7 @@
  * each side awaits the other's URL. It hung in exactly this test.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync, readdirSync } from "node:fs";
 import { importsSibling, inlineSubPages } from "../src/client/canvas/subpages.ts";
 
 const ENTRY = ".dsh/ui4a/canvases/c.ui4a.tsx";
@@ -189,4 +190,23 @@ test("and it survives being asked twice", () => {
   const code = 'import {a} from "./t/a";';
   expect(importsSibling(code)).toBe(true);
   expect(importsSibling(code)).toBe(true);
+});
+
+/**
+ * The bug class, not just the instance. A module-level `/g` regex carries `lastIndex` between
+ * call sites, so a `.test` in one function silently breaks a `matchAll` in another — which is
+ * what dropped every sibling import. Function-local `/g` is fine: each call builds a new object.
+ *
+ * `new RegExp(pattern, "g")` derived from a non-global literal is the shape that IS safe and is
+ * what `subpages.ts` uses, so the check reads declarations rather than banning the flag.
+ */
+test("no module-level regex literal carries the global flag", () => {
+  const offenders: string[] = [];
+  for (const file of readdirSync(`${import.meta.dir}/../src/client`, { recursive: true, encoding: "utf8" })) {
+    if (!file.endsWith(".ts") && !file.endsWith(".tsx")) continue;
+    const source = readFileSync(`${import.meta.dir}/../src/client/${file}`, "utf8");
+    // A top-level declaration starts at column 0; anything indented is inside a function.
+    for (const m of source.matchAll(/^(?:export )?const \w+ = \/.*\/[dimsuvy]*g[dimsuvy]*;$/gm)) offenders.push(`${file}: ${m[0]}`);
+  }
+  expect(offenders).toEqual([]);
 });

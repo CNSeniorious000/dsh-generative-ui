@@ -2949,6 +2949,12 @@ Reverting now fails 3 tests deterministically, in every order.
 **A flake that reproduces in 3 of 20 orders is not thereby an isolation problem.** The question
 that separated them was "what does production call, in what order?" — and it called exactly this.
 
+Swept the rest of the codebase: `SPECIFIER` was the only module-level `/g` regex in it. A test
+now bans the shape (`test/subpages.test.ts`), the same way one bans `[^>]*` against a JSX tag —
+function-local `/g` is fine, since each call builds a fresh object, and `new RegExp(pattern, "g")`
+derived from a non-global literal is the safe form the fix uses. Verified by adding one and
+watching it fail.
+
 ### The first fresh card that was clean and did not paint (2026-08-23)
 
 Four cards generated specifically to bait the newest screens — a regex log filter, a glob
