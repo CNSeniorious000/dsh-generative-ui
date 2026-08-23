@@ -7,8 +7,9 @@
  * Each line below was a real false positive at some point in a screen's history, or is the
  * nearest legal shape to one.
  */
-import { useState, Fragment, memo, Suspense } from "react";
+import { useState, useRef, Fragment, memo, Suspense } from "react";
 import { readdir } from "$dsh/fs";
+import { bash } from "$dsh/exec";
 
 // SHADOWED-EXPORT: a name that merely CONTAINS an imported one is not a shadow — the default
 // export below is `SuspenseBoard`, which contains `Suspense`, and must not be flagged.
@@ -41,6 +42,15 @@ const LAST = STEPS[STEPS.length - 1].toUpperCase();
 // HARDCODED-BACKGROUND: a literal white as TEXT on a coloured fill reads on both themes.
 // VIEWPORT-UNITS: a container query, not the viewport.
 export default function SuspenseBoard() {
+  // UNGUARDED-ASYNC-HANDLER: the reader can click this twice, and the ref guard means the older
+  // run stops rather than overwriting the newer one. The screen must stay quiet on it.
+  const runId = useRef(0);
+  const reload = async () => {
+    const id = ++runId.current;
+    const out = await bash("ls");
+    if (id !== runId.current) return;
+    setRows(out.stdout.split("\n").map((name) => ({ name })));
+  };
   const [rows, setRows] = useState<{ name: string }[]>([]);
   // UNGUARDED-LAST-INDEX again: externally filled, but guarded — the guard is what clears it.
   const newest = rows.length === 0 ? null : rows[0].name;
@@ -76,13 +86,17 @@ export default function SuspenseBoard() {
         {/* UNREACHABLE-CONTROL: a button whose body is an EXPRESSION announces its text fine —
             matching those took the report from 17 to 41 of 378. And a div with an onClick on a
             CHILD is not the div being clickable. */}
-        <button type="button">{rows.length === 0 ? "载入" : "清空"}</button>
+        <button type="button" onClick={reload}>{rows.length === 0 ? "载入" : "清空"}</button>
         <div className="wrap"><button aria-label="复制" onClick={() => setRows([])}><span>⧉</span></button></div>
         {/* A div that IS keyboard-reachable — role, tabIndex and a key handler. No corpus card
             does this, so without a card here the screen could have stayed unconditional on
             `<div onClick>` and nothing would have noticed it flags the fix as well as the bug. */}
         <div role="button" tabIndex={0} onClick={() => setRows([])} onKeyDown={(e) => e.key === "Enter" && setRows([])}>clear</div>
         <input aria-label="filter" style={{ border: "none", outline: "none", font: "inherit" }} />
+        {/* GLOB-IN-JSX: a glob shown as a STRING in braces is the fix, not the bug. Without this
+            no reference card contained a `<code>` pattern at all, so the screen had a negative
+            control proving it fires and nothing proving it stays quiet on the correct spelling. */}
+        <code>{"src/**/*.{ts,tsx}"}</code>
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
     </Fragment>
