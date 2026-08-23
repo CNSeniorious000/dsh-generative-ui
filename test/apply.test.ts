@@ -17,6 +17,7 @@ type Registration = { deps: readonly string[]; effects: string[] };
 
 const applyWith = (available: readonly string[]) => {
   const registrations: Registration[] = [];
+  const asked = new Set<string>();
   const effects: string[] = [];
   const stub = (): unknown => new Proxy(() => stub(), { get: () => stub(), apply: () => stub() });
   const make = (deps: readonly string[]): Record<string, unknown> => {
@@ -28,6 +29,7 @@ const applyWith = (available: readonly string[]) => {
       },
       inject: (want: readonly string[], callback: (scoped: unknown) => void) => {
         // A dependency the profile does not have: cordis never runs the callback.
+        for (const name of want) asked.add(name);
         if (!want.every((name) => available.includes(name))) return;
         registrations.push({ deps: want, effects: [] });
         callback(new Proxy(make([...deps, ...want]), { get: (target, key) => (key in target ? target[key as string] : stub()) }));
@@ -37,7 +39,7 @@ const applyWith = (available: readonly string[]) => {
   };
   const root = new Proxy(make([]), { get: (target, key) => (key in target ? target[key as string] : stub()) });
   apply(root as never);
-  return { registrations, effects };
+  return { registrations, effects, asked };
 };
 
 const ALL = ["webServer", "sessions", "fs", "sandboxPolicy", "shell", "llm", "agentDefaultModel", "skills"];
@@ -69,4 +71,17 @@ test("a profile with no web server still registers the prompt and the skill", ()
   const { effects } = applyWith(["skills"]);
   expect(effects).toContain("dsh-generative-ui: skill");
   expect(effects).not.toContain("dsh-generative-ui: workspace files");
+});
+
+/**
+ * Every service the node half asks for is one a profile can actually provide.
+ *
+ * cordis silently never runs a callback whose dependency is missing, so a typo'd or renamed
+ * service costs whatever that callback registered — with no error anywhere. The client half has
+ * the same check in `smoke.ts`; this is its counterpart, and the list is short enough that a
+ * genuinely new dependency is a deliberate one-line edit here.
+ */
+test("apply() asks for no service that does not exist", () => {
+  const { asked } = applyWith(ALL);
+  expect([...asked].filter((name) => !ALL.includes(name))).toEqual([]);
 });
