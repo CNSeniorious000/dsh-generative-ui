@@ -3226,6 +3226,24 @@ card is used by people who are not holding a mouse.
 That is also why the `:focus-visible` figure is the one worth quoting: **0 of 378 before, 51 of 58
 after.** It is not one rule among twenty-two — it is the headline of the whole corpus.
 
+### Three more areas that turned out not to be defect areas (2026-08-23)
+
+Looking for the next screen by measuring instead of guessing. Three candidates, all dead ends,
+which is worth writing down so the next reader does not re-derive them:
+
+- **Width media queries.** A card renders at the panel's width, not the window's, so `@media
+  (min-width:…)` is the wrong tool. **0 of 378 and 0 of 58** use one. The mistake has never been
+  made; `@container` went 23% → 38%.
+- **Fixed widths that force overflow.** Four corpus cards set a `width` over 100px with no
+  `max-width`; zero fresh ones. And no card in either set — not one — puts a `min-width` floor
+  above 320px outside a container query, which is the shape that would actually break a narrow
+  panel.
+- **`sendMessage` without recording**, and **`$dsh/fs`/`exec` without a failure path**: 31/31 and
+  39/39 correct in the corpus, before any rule existed.
+
+The pattern across all of these: **the model has always got structure and plumbing right.** Every
+real defect found today is about someone who is not looking at the screen or not holding a mouse.
+
 ### A rule nobody has ever broken (2026-08-23)
 
 The skill says a card acted on should do **both** halves — `sendMessage` the result AND record it
