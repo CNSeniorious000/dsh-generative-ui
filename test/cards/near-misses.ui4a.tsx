@@ -19,6 +19,9 @@ const FragmentList = memo(({ items }: { items: string[] }) => <ul>{items.map((i)
 const useStateLabel = "useState(…)";
 const hookName = useStateLabel;
 
+// COMMA-IN-STYLE: a spread merge, which is what `style={labelStyle, {...}}` was meant to be.
+const labelStyle = { fontSize: 12, color: "var(--dsw-alias-label-secondary)" };
+
 // JSX-SUBSCRIPT: a generic with an index type is not a subscripted tag.
 type Channel = { channel: "a" | "b" };
 const LABELS: Record<Channel["channel"], string> = { a: "A", b: "B" };
@@ -57,6 +60,7 @@ export default function SuspenseBoard() {
         {/* HARDCODED-BACKGROUND: a literal white surface on a card that DOES use tokens is a
             deliberate accent — 35 of 378 corpus cards do this and are correct. */}
         <span style={{ background: "#fff", color: "#111", borderRadius: 4, padding: "0 4px" }}>{LABELS.b}</span>
+        <span style={{ ...labelStyle, marginTop: 4 }}>merged</span>
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>{newest ?? hookName}</span>
       </div>
     </Fragment>

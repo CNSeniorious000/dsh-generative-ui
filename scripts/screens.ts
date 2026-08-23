@@ -109,6 +109,18 @@ export const SCREENS = {
     }
     return false;
   },
+  // `style={labelStyle, { marginTop: 14 }}` — a comma operator, not a merge. JavaScript
+  // evaluates `labelStyle`, throws it away, and applies only the object after the comma, so the
+  // element silently loses every style the named object carried. The author meant
+  // `{...labelStyle, marginTop: 14}`. Nothing fails: the card renders, one label unstyled.
+  //
+  // Found by running `@genui/cli` over the corpus, which reports it as "Left side of comma
+  // operator is unused and has no side effects" — a message that names the mechanism and not
+  // the mistake, which is why it is worth a screen with the fix in its name.
+  // Comments are stripped first: a card explaining this very trap (`test/cards/near-misses`)
+  // contains the bad form in prose, and a screen that reads prose reports the documentation
+  // rather than the code — the same false positive `skill.ts` produces for the mutation audit.
+  "COMMA-IN-STYLE": (src: string) => /style=\{\s*(?!\{)[A-Za-z_$][\w$]*\s*,/.test(src.replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "")),
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
