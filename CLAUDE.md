@@ -5218,7 +5218,7 @@ by checks derived from it; and 46% is against all 18 screens, five of which did 
 the earlier draft of this table said 28%.
 
 The column that carries weight is the last one, and it needs neither caveat: `:focus-visible`
-appears **zero times in 378 corpus cards** — not rarely, never — and in 26 of the 30 written
+appears **zero times in 378 corpus cards** — not rarely, never — and in 28 of the 34 written
 since. A behaviour absent from the entire prior distribution appearing immediately is not
 something a small sample can manufacture.
 
