@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { SCREENS } from "../scripts/screens.ts";
 
 /**
@@ -83,3 +84,20 @@ for (const [screen, source, shouldFire] of AFTER_AN_ARROW) {
     expect(SCREENS[screen](source)).toBe(shouldFire);
   });
 }
+
+/**
+ * No screen should match a tag with a regex again. `tagAt` is the shared parser; a `[^>]*` in a
+ * pattern that starts at `<` is the bug that produced three false positives, and it reads as
+ * perfectly ordinary code every time.
+ *
+ * The `<button …>…</button>` arm is exempt and named: it matches the whole element including its
+ * body, so an attribute after a handler is still inside the matched span.
+ */
+test("no screen matches a tag with [^>]*", () => {
+  const source = readFileSync(`${import.meta.dir}/../scripts/screens.ts`, "utf8")
+    .replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");   // the comments explain the bug; they are not it
+  const offenders = [...source.matchAll(/<\\?[a-zA-Z][\w\\]*\\?b?\[\^>\]\*/g)]
+    .map((m) => m[0])
+    .filter((hit) => !hit.startsWith("<button"));
+  expect(offenders).toEqual([]);
+});
