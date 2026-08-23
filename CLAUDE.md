@@ -7187,3 +7187,29 @@ distinguish "did not need to persist" from "should have and did not" without kno
 is for. The only evidence available is the before/after on the same prompt, which is exactly what
 the corpus is for.
 
+### Absences, and what a landed rule makes possible (2026-08-24)
+
+Screens see defects that are *present*. The persistence finding was an **absence**, so the obvious
+next move is to look for more of those — things a card should do, where the need depends on what
+the card is for and no text predicate can demand it.
+
+| absence | corpus | fresh |
+| --- | --- | --- |
+| a list has an empty state | 105/326 (32%) | 42/66 (**64%**) |
+| a form validates before submit | 13/19 (68%) | 6/9 (67%) |
+| numbers are formatted | 91/91 (100%) | 23/23 (100%) |
+| a delete is confirmed or undoable | 3/25 (12%) | 1/16 (6%) |
+
+Empty states doubled without a rule. Formatting was never a problem. Validation is unchanged and
+looks like a real gap at 67% — worth a look another time.
+
+The delete row is the interesting one, and it is where the **persistence rule created a defect**.
+Deleting a row used to lose nothing: the data was going away on reload regardless. Now that cards
+persist, a bare `filter` on a todo list is destructive. The raw count said ten fresh cards; reading
+them, eight are `Set.delete`, `removeChild`, or clearing a draft, and **two are real** — an undo-less
+row removal in a todo list and a ledger.
+
+Small, and it is the shape that matters: a rule that makes cards keep data makes deleting data
+mean something. Second-order effects of a landed rule are a category worth checking every time,
+and the way to find them is to look for what became *possible*, not what became wrong.
+
