@@ -5194,3 +5194,33 @@ rule offers `tabIndex`/`onKeyDown` as the remedy and the model took the better o
 that was never a div needs no affordance bolted on. **A rule that names the fix can still be
 followed by removing the problem**, which is the outcome to hope for and not the one you measure
 for, since the screen for the bad construct cannot see it.
+
+### The reader clicks twice and the older answer wins (2026-08-23)
+
+Mining the nine fresh cards for defects **no screen covers** — the way the existing screens were
+found — turned up the second-largest one in the corpus, and it had been sitting there all along.
+
+An async event handler that awaits something slow and then `setState`s, with nothing telling it a
+newer run has started. Click 生成, click it again while the first stream is still arriving, and
+both loops write interleaved; the one that started FIRST usually finishes last, so the answer the
+reader replaced overwrites the one they are looking at. `useEffect` has the `let cancelled = false`
+idiom and the corpus does use it — handlers mostly do not.
+
+**23 of 378**, second only to the focus ring, and the majority await `bash`, which has no time
+bound at all. `UNGUARDED-ASYNC-HANDLER` screens for it; the skill now shows the `runId` ref beside
+the effect-cleanup section, since an effect's cleanup does not cover a handler.
+
+Getting to that number took three passes, each one a smaller version of the same error:
+
+- A regex anchored on `\n  };` — a formatting accident, not the pattern. Reported **1 of 378**
+  while 21 cards visibly had async handlers.
+- Brace-matched, but treating `.current !==` as the only guard spelling. Reported **93%
+  unguarded**, including a card whose very first line is `const id = ++runId.current`. The corpus
+  writes the comparison the other way round: `id !== runId.current`.
+- Counting every await. `readFile` returns in a millisecond and cannot realistically be
+  overtaken; screening it would have reported a third of the corpus for a race nobody can hit.
+
+Only slow awaits (`streamText`, `bash`) count in the final screen. **Three wrong numbers before a
+right one, and every one of them looked plausible enough to write down** — the tell each time was
+reading the actual matches, which is the same lesson as `print the matches, not the count`, learnt
+again on a day it had already been recorded.
