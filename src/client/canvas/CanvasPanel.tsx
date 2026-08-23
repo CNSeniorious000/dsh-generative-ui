@@ -51,20 +51,34 @@ function useSubPages(cwd: string | undefined, canvas: Canvas | undefined) {
     const urls: string[] = [];
     const compile = async (filename: string, source: string) => (await compiler().compile(source, { filename })).code;
     void inlineSubPages(code, canvasPath(id), (specifier, from) => readCanvasChild(cwd, id, specifier, from), compile, urls).then((next) => {
-      if (!live) return void urls.forEach((url) => URL.revokeObjectURL(url));
+      // Resolved after teardown: nobody will ever render these, so revoke them here — the
+      // disposer already ran and cannot see urls the pass appended after it.
+      if (!live) return void revokeAll(urls);
       setResolved({ key, code: next });
     });
     return () => {
       live = false;
       // The surface holds the previous code, so its blobs stay reachable until it re-renders;
       // revoking on the next resolve rather than here would leak one set per edit.
-      for (const url of urls) URL.revokeObjectURL(url);
+      revokeAll(urls);
     };
   }, [cwd, id, code, streaming]);
 
   if (id === undefined || code === undefined) return "";
   return resolved !== null && resolved.key === `${id}:${code.length}` ? resolved.code : code;
 }
+
+/**
+ * Revoke every blob URL in a list, exactly once each.
+ *
+ * Both callers hand it the SAME array — the disposer, and the resolve that lands after it. The
+ * array is filled by `inlineSubPages` as it goes, so the two can see different lengths, and a
+ * URL revoked twice is harmless while one revoked never is a leak per edit. Emptying the list
+ * as it goes makes the pair idempotent regardless of which runs first or what arrived between.
+ */
+export const revokeAll = (urls: string[]): void => {
+  while (urls.length > 0) URL.revokeObjectURL(urls.pop()!);
+};
 
 /** Cheap gate: only a canvas that actually writes a relative import pays for the pass. */
 const MIN_WIDTH = 320;
