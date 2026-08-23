@@ -3901,3 +3901,24 @@ Backgrounds only, and that is a decision rather than an oversight. Six of 378 ca
 token rule outright, but three of them fail it with light *text* (`color: "#fff"` on a coloured
 button), which reads correctly on both themes. Widening to "any extreme luminance" reports all
 six and is wrong about half of them — it is the **surface** that has to come from the theme.
+
+### Every screen should trace back to a prompt rule (2026-08-23)
+
+The compile screens report; the prompt is what prevents. Checking one against the other found
+**four screened traps with no rule in the prompt at all** — and two of them are live breaks in
+the corpus, not style opinions:
+
+- `const [x, setX] = useMemo(…)` — destructuring a value that is not a pair. The card renders,
+  the slider never moves. Its author left a comment saying they had switched away from `useState`
+  deliberately.
+- A `useMemo` at **module scope** — a hook called outside a component, which throws before
+  anything renders.
+- `<Fragment key={…}>` with only `useState` imported — a `ReferenceError` at render. The card
+  compiles and mounts and shows nothing, which is the worst failure shape in this project.
+
+All three are the same confusion about what a hook is, so they are one rule plus an import rule
+rather than four. `JSX-SUBSCRIPT` needs no rule (it is a compile error the model cannot ship) and
+`VIEWPORT-UNITS` already had one under Width.
+
+The general form: **a screen with no corresponding rule is a trap you have decided to keep
+finding rather than stop causing.** Worth checking whenever a screen is added.
