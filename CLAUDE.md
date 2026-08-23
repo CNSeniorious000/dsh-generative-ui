@@ -4850,14 +4850,32 @@ one thing nobody had timed:
 
 The pair dominates, and **splitting them corrected an assumption worth stating**: the wasm
 compile is the cheaper half at 1.45 ms, while `normalizeGeneratedTsx` — the bracket-balancing
-pass that makes a half-written card parseable — costs 3.42 ms, more than twice as much. Both
-grow with the card, and a streamed frame is a whole new card, so neither can be made cheaper
-here. What matters is that it runs **once per genuine change**,
-and both halves of that already hold: `partial-react` coalesces to a microtask and single-flights
-(`runtime.ts:253`), and `GenUISurface` feeds it only the delta and returns early when the code is
-identical (`code === deliveredRef.current`).
+pass that makes a half-written card parseable — costs 3.42 ms, more than twice as much.
 
-So the finding is a bound rather than a fix: nothing else on the path is worth optimising,
-because everything else together is under a tenth of a millisecond against the compile's five.
+Cost by prefix size is **not monotonic**, which is the more useful half of the finding:
+
+| prefix of the same card | normalize (median of 30) |
+| --- | --- |
+| 25% — 3.4 kb | 0.87 ms |
+| 50% — 6.9 kb | 1.95 ms |
+| 75% — 10.3 kb | 4.31 ms |
+| 90% — 12.4 kb | **4.64 ms** |
+| 100% — 13.8 kb | 3.33 ms |
+
+The complete card is bigger than the 90% prefix and costs a third less. Truncating at a
+statement boundary instead (4.7 kb, everything balanced) costs 1.27 ms. So the price is the
+**repair**, not the length — an input the model has left mid-expression makes normalize work
+harder than a longer one that closes itself. The expensive frames are therefore exactly the
+mid-stream ones, which is to say every frame the reader actually watches.
+
+Neither half can be made cheaper here, so what matters is that the pair runs **once per genuine
+change** — and both halves of that already hold: `partial-react` coalesces to a microtask and
+single-flights (`runtime.ts:253`), and `GenUISurface` feeds it only the delta and returns early
+when the code is identical (`code === deliveredRef.current`).
+
+**Then check the aggregate before calling it a problem.** Streaming this card as 60 growing
+prefixes costs 305 ms in total — 1.5% of the ~20 s the stream itself takes. The bound is
+per-frame latency (a 5 ms frame cannot also do much else), never throughput. Everything else
+on the path together is under a tenth of a millisecond, so nothing here is worth optimising.
 **Measure the thing you are not planning to touch first** — it is what tells you whether the
 optimisation you were about to do matters.
