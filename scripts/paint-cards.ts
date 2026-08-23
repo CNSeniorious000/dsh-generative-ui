@@ -27,6 +27,23 @@ import { cardsIn, compileSettled, initTsxFromDisk } from "./tsx-node.ts";
 const realWarn = console.warn;
 console.warn = () => {};
 
+// Browser globals a card may touch during its first render. Faithful, not inert: a real Map
+// behind `localStorage` means a card that writes a draft and reads it back on mount behaves
+// exactly as it would — and without this, `localStorage is not defined` reports a working card
+// as broken, which is the failure this script exists to avoid making.
+const store = new Map<string, string>();
+Object.assign(globalThis, {
+  localStorage: {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => store.clear(),
+    key: (i: number) => [...store.keys()][i] ?? null,
+    get length() { return store.size },
+  },
+  matchMedia: (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} }),
+});
+
 await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;

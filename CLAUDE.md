@@ -5438,8 +5438,20 @@ read `innerText` back — **two of them were blank**, and an error boundary said
     ReferenceError: useState is not defined
 
 Both open with a `const` lookup table or a `type` and call `useState` further down, never
-importing it. They compile, they mount, they paint nothing. `MISSING-REACT-IMPORT` looked only
-for `Fragment|StrictMode|Suspense|memo|forwardRef` and could not see it.
+importing it. `MISSING-REACT-IMPORT` looked only for `Fragment|StrictMode|Suspense|memo|
+forwardRef` and could not see it.
+
+**Correction, found later the same day: a reader would not have seen this.**
+`normalizeGeneratedTsx` *inserts the missing React import* — verified on both cards — and
+production runs every settled card through it. The blank rectangles were my browser harness's,
+which compiled the raw source without normalizing, exactly the divergence recorded two sections
+below as *the checker was stricter than production*, discovered from the other direction and not
+recognised as the same thing for another hour.
+
+The screen is still right to fire: a card that only works because a repair pass patches it is one
+upstream change away from breaking, and the repair is there for **truncated** input, not for
+missing imports. But the severity was wrong, and the correction matters more than the finding —
+*compiles, mounts, shows nothing* was the claim, and it was not true.
 
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
@@ -5452,9 +5464,10 @@ Three things worth carrying:
 - **A screen suite that is all green is evidence about the screens, not about the cards.** Every
   one of these 18 was written from a defect someone had already found. A defect nobody has found
   passes all of them by construction.
-- **Rendering is the only check that cannot be fooled this way**, and it is cheap: one server,
-  one browser, a `for` loop. It found in one run a class of failure that 378 corpus cards never
-  exhibited.
+- **Rendering is the only check that cannot be fooled this way** — but only if it renders the way
+  production does. This run did not: it compiled raw source while production normalizes first,
+  and so reported two cards as blank that a reader would have seen render. It still found a real
+  gap in the screens; it just overstated what the gap costs.
 - **Changing a prompt is a change to a program whose output you have not run.** This regression
   was introduced by an edit made carefully, tested, and recorded — and would have shipped as an
   improvement.
