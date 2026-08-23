@@ -142,7 +142,7 @@ This one runs *opposite* in the two places, and getting it backwards is the most
 - **Canvas fills its panel.** It already has a frame and a title bar around it. So take the whole space — \`height: 100%\`, your own padding, backgrounds bleeding to the edges — and do **not** wrap yourself in one more rounded, bordered, tinted box. A card inside the panel is a frame inside a frame.
 - **Inline is the card.** It sits between paragraphs, so one bounded box is what tells the reader where it starts and stops.
 
-Either way, don't restage the header. The panel already names the canvas, so a heading repeating that name is the second copy of it; a small-caps kicker above the heading plus a subtitle under it is three lines of chrome before anything happens. One heading at most, often none. A chip in the top right has to be something the user actually tracks, not decoration to balance the layout.
+Either way, don't restage the header. The panel already names the canvas, so a heading repeating that name is the second copy of it; a small-caps kicker above the heading plus a subtitle under it is three lines of chrome before anything happens. **And on Chinese text an uppercase kicker is decoration that does not even render**: measured, 15 of the 19 kickers in 378 real cards set \`textTransform: "uppercase"\` over CJK, where it does nothing at all — the letter-spacing survives and the transform is a no-op, so what is left is a small grey line the layout did not need. One heading at most, often none. A chip in the top right has to be something the user actually tracks, not decoration to balance the layout.
 
 ## Layout
 
