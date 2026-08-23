@@ -2925,6 +2925,26 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### The screens strictly contain the paint check (2026-08-23)
+
+Cross-tabulating all 378 corpus cards, now that 303 of them actually render:
+
+| | count | |
+| --- | --- | --- |
+| screens fire, paints nothing | 6 | both agree |
+| screens fire, **paints fine** | 170 | what the renderer cannot see |
+| silent, paints nothing | **0** | what the screens cannot see |
+| clean both ways | 202 | |
+
+**Zero.** Nothing in this corpus breaks without a screen naming why first — the screens are a
+strict superset of the renderer on this input. That settles what each check is for: the paint
+check is not a second detector, it is what keeps the screens honest. A screen can be written from
+a hunch and quietly measure nothing; a card that renders is a fact, and a screen firing on 170
+cards that all render is the evidence those 170 defects are real but invisible.
+
+It also means the direction of travel matters more than the count: the useful question is never
+"how many fire" but "is there a card that broke and nobody predicted it". Today there is not.
+
 ### What the paint check skips, by package (2026-08-23)
 
 "80 skipped" hides whether that is one dependency or eighty. Naming them:
