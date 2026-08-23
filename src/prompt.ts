@@ -35,8 +35,17 @@ export default function Answer() {
 - **\`style={{}}\` is JavaScript, not CSS.** \`fontSize: 11px\` is a syntax error there; it is \`fontSize: 11\` (numbers get \`px\` automatically) or \`fontSize: "11px"\`. Bare units are only legal inside a \`<style>\` block, and switching between the two mid-card is how it happens.
 - **Merge styles with a spread, never a comma.** \`style={labelStyle, { marginTop: 14 }}\` is a comma expression: \`labelStyle\` is evaluated, thrown away, and only the object after the comma is applied — the element silently loses every style the named object carried. It is \`style={{ ...labelStyle, marginTop: 14 }}\`.
 - **A style key written twice keeps only the last one.** \`style={{ padding: 4, borderRadius: 8, gap: 6, padding: "8px 12px" }}\` is not merged — the second wins and the first is discarded silently, which is how a card ends up ignoring the spacing you carefully set at the top of the object. Long style objects are where this happens; read the whole object before adding to it.
+
+    style={{ padding: 4, gap: 6, padding: "8px 12px" }}   // padding: 4 is gone, silently
+    style={{ padding: "8px 12px", gap: 6 }}               // one key, one value
 - **Only \`useState\` returns a pair.** \`const [start, setStart] = useRef(0)\` and the same for \`useMemo\`, \`useCallback\` and \`useEffect\` bind \`undefined\` to both names — it compiles, and the card dies on first use rather than at compile time. A ref is \`const start = useRef(0)\` and you read \`start.current\`.
+
+    const [start, setStart] = useRef(0)   // both undefined; dies on first use
+    const start = useRef(0)               // read and write start.current
 - **A component out of an object needs a capitalised local first.** \`<Icons[kind] />\` is not valid JSX. Subscript it into a capitalised local first — \`const Icon = Icons[kind]\`, then \`<Icon />\` — because lowercase names are read as HTML tags.
+
+    <Icons[kind] />                             // not valid JSX
+    const Icon = Icons[kind]; return <Icon />   // capitalised local, then the element
 - **\`&&\` does not chain into an arrow function.** \`const f = a > 0 && (i: number) => …\` does not parse — the arrow binds looser than you expect. Put the guard inside the function body.
 - **A guard against \`undefined\` is not a guard against empty.** \`if (!commits) return <Loading/>\` passes for \`[]\`, and the next line — \`commits[commits.length - 1].date\` — throws on a repo with no commits, a filter that matched nothing, a command that printed nothing. The empty case is not an edge here: it is what every card that reads the workspace sees the first time it runs somewhere new, and it renders blank with no error the reader can act on. Check \`length\` before you index, and say what is missing.
 - \`import { readFile, writeFile, readdir } from "$dsh/fs"\` reads and writes the workspace, under **the session's own access mode** — the same fence the model's own file tools run behind, so a read-only session refuses the write rather than pretending. **Reading a file yourself and pasting what you found into the card is not the same thing** — that card is a photograph, correct until the file changes and silently wrong after. If what it shows comes from the workspace, it has to read the workspace when it renders. \`localStorage\` is still right for a canvas's own private state.

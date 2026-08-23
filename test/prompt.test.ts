@@ -27,6 +27,12 @@ const RULES = [
   ["empty is not undefined", "not a guard against empty"],
   ["no literal colours", "Never write literal colors"],
   ["a non-zero exit resolves", "do not catch it"],
+  // Shown as code, not described. The adherence count found rules stated in prose landing at
+  // 0-7% while the same rule as two lines landed — so the code block IS the rule here, and a
+  // future edit trimming it back to the sentence undoes the measurement rather than tidying.
+  ["a duplicate style key, as code", 'style={{ padding: 4, gap: 6, padding: "8px 12px" }}'],
+  ["destructuring useRef, as code", "// both undefined; dies on first use"],
+  ["a component out of an object, as code", "const Icon = Icons[kind]; return <Icon />"],
 ] as const;
 
 for (const [name, phrase] of RULES) {
