@@ -19,6 +19,8 @@ let reads: string[] = [];
 let listings = 0;
 let frame: any;
 let widths: number[] = [];
+let unmounts = 0;
+let columnRemoved = 0;
 let frames: (() => void)[] = [];
 
 const paint = () => { const due = frames; frames = []; for (const cb of due) cb() };
@@ -34,11 +36,11 @@ const real = { fetch: globalThis.fetch, document: (globalThis as any).document, 
 afterAll(() => { Object.assign(globalThis, real) });
 
 beforeEach(() => {
-  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = [];
+  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = []; unmounts = 0; columnRemoved = 0;
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
   (globalThis as any).cancelAnimationFrame = () => {};
   (globalThis as any).MutationObserver = class { observe() {} disconnect() {} };
-  const el = () => ({ style: { setProperty() {} }, setAttribute() {}, append() {}, remove() {}, prepend() {}, querySelector: () => null, classList: { add() {}, remove() {} } });
+  const el = () => ({ style: { setProperty() {} }, setAttribute() {}, append() {}, remove() { columnRemoved += 1 }, prepend() {}, querySelector: () => null, classList: { add() {}, remove() {} } });
   // One frame element, reused: `createColumn` reads and writes its `paddingRight`, which is how
   // `setWidth(0)` is observable — it restores whatever padding the frame had before the panel.
   // `setWidth` is only observable through the frame's `paddingRight`, so the setter records it:
@@ -60,7 +62,7 @@ const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; betwee
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
   // module resolves its import binding at evaluation time — so the mock has to be registered
   // before `index.ts` is imported, which is why the import below is dynamic.
-  mock.module("react-dom/client", () => ({ createRoot: () => ({ render: (node: any) => painted.push(node), unmount() {} }) }));
+  mock.module("react-dom/client", () => ({ createRoot: () => ({ render: (node: any) => painted.push(node), unmount() { unmounts += 1 } }) }));
   // Renders from a previous `sweep()` in the same test would make `.at(-1)` pick a stale panel.
   painted = [];
   const { mountCanvasHost } = await import(`../src/client/canvas/index.ts?${Math.random()}`);
@@ -226,4 +228,18 @@ describe("what the sweep does not do", () => {
     await sweep(calls, { sweeps: 3, width: 420, between: () => calls.push(write("die2", "body2")) });
     expect(widths.slice(0, -1)).not.toContain(0);
   });
+});
+
+/**
+ * Teardown, which the helper above has always called and nothing has ever asserted.
+ *
+ * The host owns a React root, a column element appended to `document.body`, an injected
+ * stylesheet and a transcript listener. `dispose` is what the shell calls on every HMR round,
+ * so a disposer that stops short leaks one of each per round — and the visible symptom is a
+ * second panel appearing beside the first, not a console error.
+ */
+test("dispose unmounts the panel and removes its column", async () => {
+  await sweep([write("dice", "export default () => <div />")]);
+  expect(unmounts).toBeGreaterThan(0);
+  expect(columnRemoved).toBeGreaterThan(0);
 });
