@@ -31,6 +31,10 @@ const SCREENS = {
   // What separates them is what comes after the bracket: a JSX tag continues into attributes or
   // closes, a type argument continues into `,` or `>`.
   "JSX-SUBSCRIPT": (src: string) => /<[A-Z]\w*\[[^\]]+\]\s*(\/?>|[a-zA-Z-]+=)/.test(src),
+  // A card is a component on someone else's page, so both halves are the same mistake: sizing
+  // against the window rather than the container it was given. `100vh` is the two real hits in
+  // 378; the `fixed` half has never fired on a corpus card and is kept because the prompt names
+  // it as a rule — `test/cards-negative/fixed-overlay.tsx` is what keeps it from rotting.
   "VIEWPORT-UNITS": (src: string) => /100v[wh]|position:\s*["']?fixed/.test(src),
   // A hook called outside every function body. Compiles perfectly and dies at first render with
   // React error #321 — the class §4 says only rendering catches, except this one is visible in
@@ -138,7 +142,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "fixed-overlay.tsx": "VIEWPORT-UNITS", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
