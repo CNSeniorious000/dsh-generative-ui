@@ -4501,3 +4501,28 @@ all four now fail.
 
 **An assertion on a substring is an assertion about how many times it occurs**, and `toContain`
 never tells you. Count the occurrences when you choose the phrase.
+
+### The rest of the rule audit (2026-08-23)
+
+Continuing the count through every measurable rule. What lands, and what the numbers say:
+
+- **Read on demand, not all at once**: 14 of 20 workspace-reading cards fetch on hover or click
+  rather than pre-loading. Another rule the skill shows concretely; another one that lands.
+- **Don't decorate**: 351 of 378 cards are interactive, and exactly **1** uses a decorative AI
+  icon. The rule naming the specific banned icons (`Sparkles`, `Wand2`, …) works.
+- **`position: fixed`, `100vw`, portals into `document.body`**: 0, 0, 0. The "you are a component
+  on someone else's page" rule is followed absolutely.
+- **Inline vs canvas**: 384 inline fences to 88 canvas writes, a 4:1 split — consistent with
+  "inline is the cheaper mistake when it is genuinely borderline".
+- **`localStorage` for canvas state**: 1 of 378. Almost every card is inline, where it does not
+  apply, so this is not evidence either way.
+
+Two gaps the skill had never mentioned at all, both found by counting rather than reading:
+
+- **17 cards put `onClick` on a `<div>`** — no focus, no Enter, no Space. Not reachable by
+  keyboard at all.
+- **31 icon-only buttons carry no `aria-label`** — a screen reader announces "button".
+
+Both are one word to fix and invisible to the author, since a mouse works either way. Now a rule
+with the line in it, following the finding above that a rule shown as code lands and a rule
+described in prose does not.
