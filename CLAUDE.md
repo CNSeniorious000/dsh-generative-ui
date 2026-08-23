@@ -6862,3 +6862,31 @@ through `screens-quiet-on-fix.test.ts`, which forces writing down what a card do
 like. Every false positive above would have been caught by that discipline; none of these
 throwaway measurements had it.
 
+### A number worth recording is worth a script (2026-08-24)
+
+The strongest claim in this record — *no corpus card in 378 carries three accessibility signals,
+most fresh cards do* — came from a throwaway script that no longer existed when the set grew, and
+the figure went stale within the hour ("43 of 60" against a set of 67).
+
+Two fixes, in the right order.
+
+**Automate the total.** `bun run audit` now checks every `N of <total>` written about the fresh
+set against what the set actually holds. It found the stale figure on its first run. Only the
+denominator is checked, deliberately: `43 of 67` passes with a right total and a wrong count,
+because nothing knows what 43 counted. A total moves whenever a batch lands and is worth
+automating; a one-off count has to be re-derived by whoever doubts it.
+
+**Make the count re-derivable.** `fresh-rates.ts` prints the histogram itself, for any directory:
+
+    bun scripts/fresh-rates.ts /tmp/corpuscards
+    0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
+
+    bun scripts/fresh-rates.ts
+    47 of 67 carry three or more accessibility signals (0→2 1→2 2→16 3→37 4→10)
+
+The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
+Not every number — most of today's measurements were one-offs answering a question that stayed
+answered. But the ones quoted as evidence for a claim, and the ones that move as the sets grow,
+need to be one command away or they rot within hours. Four of the day's numbers went stale in
+under a day; the audited corpus rates never did.
+
