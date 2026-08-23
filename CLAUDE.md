@@ -4800,3 +4800,26 @@ the kind of thing that quietly stops being true the next time a screen is widene
 The cost is not the obstacle either: all fourteen screens over the largest card in the corpus
 (13.8 kb) take **0.27 ms**, which is 1.6% of a 60fps frame. So "too expensive to run while
 streaming" is not the reason they do not — nobody has needed it yet is.
+
+### The sweep re-walked every argument on every streamed token (2026-08-23)
+
+`collectCanvases` parses each tool call's argument string **by hand**, character by character —
+that is what makes it correct on a half-arrived JSON prefix, and it costs about 0.16ms per
+canvas. The canvas sweep called it unconditionally, then compared a paint signature to decide
+whether to repaint. So the expensive half ran even when nothing had changed, on **every
+transcript mutation**, which during streaming is every token.
+
+Measured on the real distribution rather than a guess: across 1012 sessions, 229 have canvas
+calls, the median is 1 and the maximum is 34. At 34 the sweep cost **3.725 ms per frame** —
+about a fifth of a 60fps budget, spent re-deriving an identical result.
+
+Keyed on the calls' own bytes (`count:total argsRaw length + settled flags`), the same frame
+costs **0.014 ms**. 265×, and the key still moves on every frame that matters: a streamed
+argument grows byte by byte, and the settled flag covers the one transition that adds no bytes.
+
+Two things about testing it. The obvious test — "an unchanged sweep does no work" counted
+through disk reads — **passed without the cache**, because those reads were already guarded by
+`openedCode`; it was measuring a different guard. And `mock.module` on the collector *hung the
+test run* rather than failing, since the module under test imports it. What works is asserting
+the algorithmic property directly: the key must be an order of magnitude cheaper than the walk,
+and must change when an argument grows or a call settles.
