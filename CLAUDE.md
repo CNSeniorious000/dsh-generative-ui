@@ -5400,3 +5400,20 @@ The rate to compare against: **7 of the 131 animating corpus cards honoured the 
 `prefers-reduced-motion` also became the third prefix-unsafe screen, which is the useful
 generalisation from all this: **the fix is written after the thing it fixes**, so the streaming
 prefix always shows the defect alone. Expect the fourth.
+
+Scored against all 18 screens at the end of the day:
+
+| | clean under every screen |
+| --- | --- |
+| 378 corpus cards, written before the rules | **203 (54%)** |
+| 13 cards generated after them | **13 (100%)** |
+
+Thirteen is a small number and the screens were written *from* the corpus, so some of the gap is
+that these defects are exactly the ones now being warned about — that is the intent, not a
+confound, but it does mean the honest claim is narrow: **the specific things measured, screened,
+and written down stopped happening.** Not that the cards are better in general, which nothing
+here measures.
+
+The one figure that resists that caveat is `:focus-visible`: **0 occurrences in 378 cards** before,
+and present in 7 of the first 9 after. A behaviour absent from the entire prior distribution
+cannot appear by sampling luck.
