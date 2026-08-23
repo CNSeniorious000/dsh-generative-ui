@@ -7041,3 +7041,14 @@ Four instances in one day of the same shape, in four different files. The lesson
 lists: it is that **a one-to-one map is a claim that the thing has one part**, and nothing in the
 type says otherwise when it grows a second.
 
+So the fifth defence is structural rather than another list: a test reads each predicate (comments
+stripped) and asserts that the screens naming more than one element are exactly the ones known to.
+Add a construct to a screen and it fails until the maps grow too. Verified by adding `<textarea>`
+to an unrelated screen.
+
+It also corrected me immediately. Reading the source by eye I had four screens on that list;
+`BRAND-PRIMARY-FILL` and `UNGUARDED-NUMBER-INPUT` only *discuss* a second element in their
+comments and match on one. **The check disagreed with the hand-written list on its first run, and
+the check was right** — which is the whole argument for reading the predicate instead of the
+prose.
+

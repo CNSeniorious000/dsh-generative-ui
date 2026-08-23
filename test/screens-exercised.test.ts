@@ -71,3 +71,32 @@ test("every exemption is still needed", () => {
   const stale = Object.entries(EXEMPT).filter(([name, screen]) => !SCREENS[screen](readFileSync(`${import.meta.dir}/cards/${name}`, "utf8")));
   expect(stale).toEqual([]);
 });
+
+/**
+ * A screen whose predicate names more than one element covers more than one construct, and every
+ * per-screen map in this repo has silently confirmed only the first at some point today: the
+ * rules→screens audit, `RULE_FOR_SCREEN`, and `PAIRS` all shipped as one-to-one and all grew a
+ * second entry after a defect slipped through.
+ *
+ * This is the structural version — it reads the predicate rather than trusting a hand-maintained
+ * list, so a screen that GAINS a construct fails until its maps grow too.
+ */
+// Comments are stripped first, so this counts elements the PREDICATE names, not ones its prose
+// mentions. `BRAND-PRIMARY-FILL` and `UNGUARDED-NUMBER-INPUT` discuss a second element in their
+// comments and match on one — which is the right answer, and is why reading the source by eye put
+// them on this list wrongly.
+const MULTI_CONSTRUCT = ["UNLABELLED-CONTROL", "UNREACHABLE-CONTROL"];
+
+test("the screens naming two elements are the ones on the list", () => {
+  const source = readFileSync(`${import.meta.dir}/../scripts/screens.ts`, "utf8").replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  const found: string[] = [];
+  for (const name of Object.keys(SCREENS)) {
+    const start = source.indexOf(`"${name}":`);
+    if (start === -1) continue;
+    const next = source.indexOf('\n  "', start + 5);
+    const body = source.slice(start, next === -1 ? source.length : next);
+    const elements = new Set([...body.matchAll(/<(input|select|button|div|textarea|img|a)\b/g)].map((m) => m[1]));
+    if (elements.size > 1) found.push(name);
+  }
+  expect(found.toSorted()).toEqual(MULTI_CONSTRUCT.toSorted());
+});
