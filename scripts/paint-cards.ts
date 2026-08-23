@@ -77,6 +77,7 @@ await initTsxFromDisk();
 const dir = process.argv[2] ?? "test/cards";
 let bad = 0;
 let skipped = 0;
+const blockedBy = new Map<string, number>();
 let corrupt = 0;
 
 for (const name of cardsIn(dir)) {
@@ -113,13 +114,20 @@ for (const name of cardsIn(dir)) {
     if (/Cannot find (module|package)|Failed to resolve/.test(message)) status = `skipped — ${message.slice(0, 46)}`;
     else { status = `THREW ${message.slice(0, 64)}`; bad++ }
   }
-  if (status.startsWith("skipped")) skipped += 1;
+  if (status.startsWith("skipped")) {
+    skipped += 1;
+    // Which package, not just how many. "80 skipped" hides whether that is one dependency worth
+    // installing or eighty unrelated ones — a different decision each way.
+    const pkg = /'([^']+)'|"([^"]+)"/.exec(status);
+    if (pkg) blockedBy.set(pkg[1] ?? pkg[2]!, (blockedBy.get(pkg[1] ?? pkg[2]!) ?? 0) + 1);
+  }
   if (!status.startsWith("paints") && !status.startsWith("skipped")) console.log(`${name.padEnd(26)} ${status}`);
 }
 
 // Say how many were skipped. A check that silently passes over a third of its input reads
 // exactly like one that examined everything and found nothing wrong.
-const parts = [skipped && `${skipped} skipped — imports this process cannot resolve`, corrupt && `${corrupt} corrupt extraction`].filter(Boolean);
+const top = [...blockedBy.entries()].toSorted((a, b) => b[1] - a[1]).slice(0, 3).map(([name, n]) => `${name} ×${n}`).join(", ");
+const parts = [skipped && `${skipped} skipped${top === "" ? "" : `: ${top}`}`, corrupt && `${corrupt} corrupt extraction`].filter(Boolean);
 const note = parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 console.warn = realWarn;
 console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);

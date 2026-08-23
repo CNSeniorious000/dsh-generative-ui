@@ -2925,6 +2925,19 @@ card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under
 It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
 at all and the construct entry would otherwise have been guarding nothing.
 
+### What the paint check skips, by package (2026-08-23)
+
+"80 skipped" hides whether that is one dependency or eighty. Naming them:
+
+    80 skipped: recharts ×51, $ui4a ×21, micromatch ×3
+
+Two different things. `$ui4a ×21` is the dead prefix from before the rename — those cards cannot
+be made to run and should not be. **`recharts ×51` is a single decision**: installing it as a
+devDependency would take the corpus from 292 checked to 343. It is 7.5 MB unpacked with 11
+transitive deps, which is a trade for the user to make, not me — and the skip is honest and
+counted meanwhile, so nothing is blocked on it. Stubbing it is not an option in either direction:
+a stubbed chart renders as nothing, so the check would PASS a card showing a blank chart.
+
 ### The multi-file canvas nothing tested (2026-08-23)
 
 Running the six fixture files through the screens produced the first hit on fresh output in 44
