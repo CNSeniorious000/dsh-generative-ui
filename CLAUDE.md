@@ -4777,3 +4777,22 @@ guard, the braces in JSX text, and the three syntax traps were all added today.
 **That is the shape worth aiming for: a failure observed in a browser, a screen that finds it in
 a corpus, and a rule that stops it being written.** The screen alone tells you the rate; the
 rule alone is unverifiable; together the rate is the measurement of whether the rule works.
+
+### Screens are prefix-safe, measured (2026-08-23)
+
+The screens run on settled cards. The obvious next use is warning while the model is still
+typing, and that only works if a screen never fires on a prefix of a card it clears when
+finished — otherwise it reports a card that is fine, at exactly the moment the reader is
+watching it appear.
+
+Measured over every 10% prefix of all 378 corpus cards: **thirteen of fourteen screens never do
+this.** The exception is `NO-FOCUS-RING`, and it cannot be otherwise — it fires on
+`outline: "none"` and clears when the replacement arrives, so a card doing the right thing looks
+wrong for the moment between the two lines.
+
+`test/screens-prefix.test.ts` holds the property on the reference cards, with that one screen
+named as the exception. Verified by making `MISSING-REACT-IMPORT` fire before `export default`
+exists: the test fails.
+
+**Worth keeping as a property rather than as a plan.** It costs one test, and it is precisely
+the kind of thing that quietly stops being true the next time a screen is widened.
