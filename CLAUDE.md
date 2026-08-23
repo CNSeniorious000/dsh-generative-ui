@@ -4656,6 +4656,18 @@ is conventional — a screen there would report a fifth of the corpus for a judg
 line between these and the focus ring is that **`outline: "none"` with no replacement is wrong
 in every context, and 9px is only wrong in some.**
 
+A screen firing on a fifth of the corpus is normally a sign the screen is wrong, so this one was
+audited element by element before being believed. Of the 76 hits, **57 sit inline on an
+`<input>`**, one on a `<textarea>`, and the remaining 18 in a hoisted
+`const input: React.CSSProperties` that is then applied as `style={input}` to a real `<input>` —
+which is why a first pass, looking only at the nearest enclosing tag, could not classify them.
+Zero sit on something a keyboard cannot focus. The rate is real: the corpus strips the focus ring
+off a fifth of its controls and puts nothing back.
+
+**When a check fires far more than its neighbours, the cheap read is that it is broken.** Here
+the audit had to reach through a level of indirection to show it was not, and the indirection is
+the same reason the models keep doing it — the `outline: "none"` is nowhere near the `<input>`.
+
 ### The retry re-imported for a failure re-importing cannot fix (2026-08-23)
 
 `GenUISurface`'s retry busts every esm.sh URL and re-imports, which fixes exactly one thing: a
