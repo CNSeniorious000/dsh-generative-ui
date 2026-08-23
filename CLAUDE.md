@@ -4175,3 +4175,24 @@ re-implementation, `types/check.ts` transcribing its own `.d.ts`, `EMPTY_RESULT`
 `bindings.ts` had outgrown, and now this. **Whenever a fact is written down twice, one copy is
 already wrong or about to be**; the sweep for it is `grep -rn 'transcrib\|by hand\|hand-written\|
 re-implement'`, and every hit either explains why the duplication is deliberate or is a bug.
+
+### When deriving is wrong: gate the hand list instead (2026-08-23)
+
+Having removed four duplicated lists in a row, the next one looked identical: `gen-standalone.ts`
+keeps an `ASYNC` set naming which stubs need `async`, which is obviously derivable from the
+bindings. It is not. The real members are **arrow functions returning promises**, so
+`constructor.name === "AsyncFunction"` matches exactly one of the five, and the derived version
+silently emitted four synchronous stubs. An `await` on a non-promise shrugs; a `for await` does
+not, and neither does anything reading `.exitCode` off a value that arrived a tick early.
+
+Caught only because the generated files were diffed after the change. **A derivation that
+compiles and produces a plausible-looking output is the dangerous kind** — the four missing
+`async` keywords are invisible unless you count them.
+
+So the list stays hand-written, and the honesty comes from a gate instead: a member that is in
+neither `ASYNC` nor `VOID_MEMBERS` fails the generator by name. Same for `EMPTY_RESULT`. Both
+verified by adding a member to `bindings.ts` and watching it exit 1.
+
+The rule is narrower than "never write a fact twice": **derive it when the source really
+determines it, and gate it when it does not.** A gate costs three lines and fails loudly; a
+wrong derivation fails silently and looks like good engineering.
