@@ -4406,3 +4406,28 @@ rather than a path — which is what makes `mapNotes` drop the advice.
 
 **A comment describing a guarantee is a place to check the guarantee exists.** This one was
 written by someone who knew exactly what should happen, which is what made it convincing.
+
+### The prompt's own example, copied into a reply (2026-08-23)
+
+Re-measuring the fence parser against all 1012 sessions (389 openers, 384 segments) turned up
+four messages where an opener produced no segment. Three are correct — prose *mentioning*
+`ui4a/tsx` in inline backticks. The fourth is a bug, and its origin is this project:
+
+    `````ui4a/tsx
+    ````ui4a/tsx
+    export default () => <div>hi</div>
+    ````
+    `````
+
+The prompt shows the block wrapped in five backticks so the four-backtick fence survives the
+example, and once in 389 openers the model copied the wrapper into its reply. The parser took
+the outer fence, so **the card's body was the inner fence as text** — which compiles cleanly in
+both modes, so nothing errors anywhere and the reader gets a blank card.
+
+Fixed by treating an opener whose body immediately opens another `ui4a/tsx` fence as a wrapper
+and descending into it. The corpus count is unchanged at 384; that one card now yields its real
+contents instead of garbage. A second test pins the near miss — a card whose *body* merely
+contains a backtick run (printing a markdown example) must not be descended into.
+
+**The failure came from documentation being followed too literally.** Worth remembering when
+writing an example: whatever scaffolding it needs to be shown, someone will copy.
