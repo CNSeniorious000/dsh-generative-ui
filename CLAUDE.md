@@ -3202,6 +3202,12 @@ making cards smaller. And the size costs nothing that matters: median compile is
 2.0ms for a corpus card and 2.4ms for a fresh one — sublinear in the byte count, and far below
 anything a reader could notice on a card that renders inline.
 
+Considered narrowing it to user-triggered fetches, on the theory that a card loading once on
+mount has nothing to announce — the reader arrives and it is already there. **Checked instead of
+assuming: 7 of the 9 mount-fetching cards show a loading state first**, so the content does change
+while the reader is present and the announcement is wanted. No refinement needed; the hypothesis
+was wrong and testing it cost two minutes.
+
 Now `UNANNOUNCED-ASYNC-RESULT` (63 of 378) with a rule behind it, and the fifth member of the
 prefix-unsafe set — the `aria-live` container is in the JSX, written after the fetch that fills
 it. That set predicted both of today's additions before either existed.
