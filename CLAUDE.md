@@ -3078,6 +3078,22 @@ would PASS a card showing a blank chart. That is why `lucide-react` IS stubbed a
 not — an icon that renders as nothing is still an icon-shaped hole in a working card; a chart that
 renders as nothing is the exact failure being looked for.
 
+### Two checks that measured nothing, and were not kept (2026-08-23)
+
+**"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
+counter renders `0` and `+1`, which is four characters and completely correct. Thin is not broken,
+and the metric cannot tell a minimal card from a dead one.
+
+**"Has a button with no handler."** Written, verified it CAN fail on a constructed card, then run
+on the corpus: **0 of 209 cards with buttons**. Models do not make that mistake. A checker that
+can only pass is indistinguishable from a checker that is broken, so it went in the bin rather
+than into `bun run check`, where it would have added runtime and a false sense of coverage.
+
+The general point, since three screens today came out of exactly this kind of exploration: **a
+check earns its place by finding something, and the honest response to a zero is to delete it.**
+`JSX-SUBSCRIPT` is the one exception, and it earns that by tripping on a constructed case with a
+prompt rule behind it — the defect is real and fatal, just absent from this corpus.
+
 ### Injection, applied to all 22 screens (2026-08-23)
 
 `bun run inject <dir>` writes one mutation per screen and reports how many real cards it is
