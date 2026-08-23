@@ -257,7 +257,6 @@ export default function Metronome() {
         onClick={toggle}
         aria-label={running ? "停止" : "开始"}
         style={{
-          display: "block",
           margin: "18px auto 4px",
           width: 64,
           height: 64,

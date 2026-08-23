@@ -98,6 +98,32 @@ const SCREENS = {
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),
+  // The same key twice in one `style={{…}}`: the last wins and the first is silently dropped.
+  // Nothing fails, so it survives until someone edits the dead line — the skill names it as one
+  // of the two mistakes worth a checker round trip, and no screen here caught it.
+  //
+  // Brace-matched, and depth-1 keys only. A regex bounded by `}}` stops at the first nested
+  // object and reports two cards that are fine; counting `{...spread, background: …}` as a
+  // duplicate reports a third. Checked against `@genui/cli`, which agrees on exactly one.
+  "DUPLICATE-STYLE-KEY": (src: string) => {
+    for (const start of [...src.matchAll(/style=\{/g)].map((m) => m.index + m[0].length - 1)) {
+      let depth = 0;
+      const keys: string[] = [];
+      for (let i = start; i < src.length; i += 1) {
+        const char = src[i]!;
+        if (char === "{" || char === "(" || char === "[") depth += 1;
+        else if (char === "}" || char === ")" || char === "]") {
+          depth -= 1;
+          if (depth === 0) break;
+        } else if (depth === 2 && (src[i - 1] === "{" || src[i - 1] === ",")) {
+          const key = /^\s*([a-zA-Z]\w*)\s*:/.exec(src.slice(i));
+          if (key !== null) keys.push(key[1]!);
+        }
+      }
+      if (new Set(keys).size !== keys.length) return true;
+    }
+    return false;
+  },
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an
   // expression, so `{ts,tsx}` is a comma expression over two identifiers that do not exist and
   // the card throws `ts is not defined` at render — a card explaining glob syntax breaks by
@@ -151,7 +177,7 @@ console.log(bad === 0 ? "\nall clean" : `\n${bad} with problems`);
 // compiling cleanly and each *supposed* to be flagged — a checker that reports "all clean" over
 // correct cards is indistinguishable from one that has stopped looking, and this project has
 // already shipped two detectors that were silently blind. Only runs on the default directory.
-const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "jsx-subscript-attrs.tsx": "JSX-SUBSCRIPT", "long-hex-background.tsx": "HARDCODED-BACKGROUND", "fixed-overlay.tsx": "VIEWPORT-UNITS", "viewport-height.tsx": "VIEWPORT-UNITS", "shadowed-const.tsx": "SHADOWED-EXPORT", "exported-module-hook.tsx": "MODULE-SCOPE-HOOK", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "missing-suspense.tsx": "MISSING-REACT-IMPORT", "missing-memo.tsx": "MISSING-REACT-IMPORT", "destructured-ref.tsx": "DESTRUCTURED-HOOK", "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
+const CONTROLS = { "jsx-subscript.tsx": "JSX-SUBSCRIPT", "jsx-subscript-attrs.tsx": "JSX-SUBSCRIPT", "long-hex-background.tsx": "HARDCODED-BACKGROUND", "fixed-overlay.tsx": "VIEWPORT-UNITS", "viewport-height.tsx": "VIEWPORT-UNITS", "shadowed-const.tsx": "SHADOWED-EXPORT", "exported-module-hook.tsx": "MODULE-SCOPE-HOOK", "shadowed-export.tsx": "SHADOWED-EXPORT", "module-scope-hook.tsx": "MODULE-SCOPE-HOOK", "blank-render.tsx": ["DESTRUCTURED-HOOK", "MISSING-REACT-IMPORT"], "missing-suspense.tsx": "MISSING-REACT-IMPORT", "missing-memo.tsx": "MISSING-REACT-IMPORT", "destructured-ref.tsx": "DESTRUCTURED-HOOK", "empty-result.tsx": "UNGUARDED-LAST-INDEX", "empty-first.tsx": "UNGUARDED-LAST-INDEX", "empty-second.tsx": "UNGUARDED-LAST-INDEX", "glob-in-jsx.tsx": "GLOB-IN-JSX", "duplicate-style-key.tsx": "DUPLICATE-STYLE-KEY", "hardcoded-background.tsx": "HARDCODED-BACKGROUND", "ternary-background.tsx": "HARDCODED-BACKGROUND" } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {
     const src = readFileSync(`test/cards-negative/${name}`, "utf8");
