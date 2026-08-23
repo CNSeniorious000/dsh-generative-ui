@@ -24,7 +24,16 @@ for (const f of cardsIn(dir)) {
   const screened = Object.entries(SCREENS).filter(([, hits]) => hits(src)).map(([name]) => name);
   // the shape a settled card takes: normalize final, then transform
   try {
-    const out = compileCard(f, normalizeGeneratedTsx(src, { mode: "final" }));
+    // `final`, then `streaming` — the same two-step `compiler.ts` performs, and for the same
+    // reason: normalize sometimes APPENDS to a complete card and breaks it (see
+    // `test/normalize-complete.test.ts`), and the streaming mode's cut-back recovers it.
+    // Without the fallback this script reported a card as FAIL that a reader would have seen
+    // render perfectly — the checker being stricter than production is a false alarm, and a
+    // false alarm about a real card is how a checker stops being read.
+    const out = (() => {
+      try { return compileCard(f, normalizeGeneratedTsx(src, { mode: "final" })) }
+      catch { return compileCard(f, normalizeGeneratedTsx(src, { mode: "streaming" })) }
+    })();
     // A relative import only resolves because `canvas/subpages.ts` rewrites it to a blob URL
     // before compiling — `blob:` cannot host one otherwise (CLAUDE.md §3). A card with one is
     // fine, but the file it names has to exist, and this compiles cleanly either way.
