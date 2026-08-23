@@ -5337,3 +5337,19 @@ cannot skip any of the three.
 
 **"No failures" has at least two causes and they look identical**: nothing is wrong, or nothing
 was examined. Every check worth keeping needs something that distinguishes them.
+
+The pairing data also said something the individual rules did not. 221 of 378 cards are clean
+under every screen, and the two commonest *pairs* are a stripped focus ring beside an unlabelled
+slider (8 cards) and an unlabelled slider beside an unguarded number field (6). Those are not
+three defects, they are one: **a card written as a picture of an interface**, correct through a
+mouse and an eye and broken through a keyboard or a screen reader. The skill now names that cause
+above the rules rather than leaving it to be inferred from a list.
+
+Tested with the card shape most likely to fail — a media panel with two sliders and a seek
+field, exactly the combination that trips three screens in the corpus. It came back clean: both
+sliders labelled, focus rings replaced, and the number field keeping its raw string in state and
+coercing where it is used, which is the better fix than the ternary the rule shows. It also put
+an `aria-label` on the number field, which nothing asked for.
+
+**A rule tells you what to do; the cause tells you when.** The card generalised past the three
+examples it was given, which a list of three fixes cannot do.
