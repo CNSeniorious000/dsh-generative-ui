@@ -63,6 +63,11 @@ const SCREENS = {
   // they are the dark-mode failures found by rendering — every other hardcoded colour in the
   // corpus is a chart series or an accent, not a surface.
   //
+  // Backgrounds only, deliberately. Six corpus cards ignore the token rule entirely, but the
+  // other three fail it with light *text* (`color: "#fff"` on a coloured button), which is
+  // correct on both themes — widening this to any extreme luminance reports all six and three of
+  // them are fine. It is the surface that has to come from the theme.
+  //
   // The value is matched, not the line. A first version anchored on `background: "#` and missed
   // a third card whose surface is behind a multi-line ternary (`active ? "#dcfce7" : "#fff"`),
   // which is how a model actually writes a selected state.
