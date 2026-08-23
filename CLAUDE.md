@@ -4838,16 +4838,21 @@ one thing nobody had timed:
 
 | per-frame work | 34 canvases / 14 kb card |
 | --- | --- |
-| **compile a streamed frame** | **5.71 ms** (34% of a frame) |
-| compile a settled frame | 3.35 ms |
+| **normalize + compile, streamed frame** | **5.71 ms** (34% of a frame) |
+| — of which `normalizeGeneratedTsx` | **3.42 ms** |
+| — of which the wasm compile | 1.45 ms |
+| normalize + compile, settled frame | 3.35 ms (1.93 + 0.93) |
 | collect canvases (before the key) | 3.73 ms |
 | collect canvases (after) | 0.014 ms |
 | opaque-write scan | 0.055 ms |
 | parse 138 kb of transcript for fences | 0.095 ms |
 | `matchSegment` over ten segments | 0.009 ms |
 
-The compile dominates and cannot be made cheaper here — it is a wasm parse of the whole card,
-and a streamed frame is a new card. What matters is that it runs **once per genuine change**,
+The pair dominates, and **splitting them corrected an assumption worth stating**: the wasm
+compile is the cheaper half at 1.45 ms, while `normalizeGeneratedTsx` — the bracket-balancing
+pass that makes a half-written card parseable — costs 3.42 ms, more than twice as much. Both
+grow with the card, and a streamed frame is a whole new card, so neither can be made cheaper
+here. What matters is that it runs **once per genuine change**,
 and both halves of that already hold: `partial-react` coalesces to a microtask and single-flights
 (`runtime.ts:253`), and `GenUISurface` feeds it only the delta and returns early when the code is
 identical (`code === deliveredRef.current`).
