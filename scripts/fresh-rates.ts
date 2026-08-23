@@ -34,4 +34,17 @@ console.log(`${clean} of ${cards.length} clean under all ${Object.keys(SCREENS).
 const retro = [...flagged].filter(([, names]) => names.length >= cards.length / 5);
 if (retro.length > 0) console.log(`  (${retro.map(([screen, names]) => `${screen} flags ${names.length}, most of them written before it existed`).join("; ")})`);
 console.log(`${ring} of ${cards.length} use :focus-visible (${Math.round((ring / cards.length) * 100)}%)`);
+
+// How many INDEPENDENT accessibility signals each card carries. The single sharpest number in the
+// record — no corpus card in 378 has three, and most fresh cards do — and it came from a throwaway
+// script that could not be re-run when the set grew. Derived here so the claim stays checkable.
+const SIGNALS = [/:focus-visible/, /aria-label/, /prefers-reduced-motion/, /role="/];
+const histogram = new Map<number, number>();
+for (const name of cards) {
+  const src = readFileSync(`${dir}/${name}`, "utf8");
+  const n = SIGNALS.filter((re) => re.test(src)).length;
+  histogram.set(n, (histogram.get(n) ?? 0) + 1);
+}
+const three = (histogram.get(3) ?? 0) + (histogram.get(4) ?? 0);
+console.log(`${three} of ${cards.length} carry three or more accessibility signals (${[0, 1, 2, 3, 4].map((n) => `${n}→${histogram.get(n) ?? 0}`).join(" ")})`);
 for (const [screen, names] of [...flagged].sort()) console.log(`  ${screen}: ${names.join(" ")}`);
