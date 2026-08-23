@@ -5297,3 +5297,27 @@ were **assertions rather than derivations**:
 **An exemption should be a consequence of something, not a claim about it.** Where that is not
 possible, print the exempted items rather than their count — a name can be checked at a glance
 and a number cannot be checked at all.
+
+### The slider says its number and not what it controls (2026-08-23)
+
+`UNLABELLED-SLIDER` — **46 of 378**, immediately the second-highest screen. A `type="range"`
+with no `aria-label`, no `id`, and no wrapping `<label>` announces "slider, 3" and nothing else.
+The `<span>` rendering `n = 3` beside it is a separate element; the two are related only on
+screen.
+
+Sliders specifically, not inputs generally. A text field usually has a placeholder to fall back
+on, and 106 of the corpus's unlabelled inputs sit inside a `<label>` that labels them properly —
+screening all of them reports 148 cards for a much smaller real problem. A range control has
+neither fallback, which is what makes the rate trustworthy.
+
+Two things worth carrying:
+
+**The first count was 241, and the cause was a regex.** `<input[^>]*>` stops at the first `>`,
+and `onChange={e => …}` puts one *inside the tag* — so the match ended early and never saw the
+`aria-label` that follows. Tag ends have to be found by brace depth. Every large number this
+session has been wrong in a way that made the problem look worse than it is; this is the fourth.
+
+**It fired on a reference card.** `test/cards/metro.ui4a.tsx` — hand-written, read many times
+over many sessions, and its BPM slider had no label. A new screen paying for itself against the
+repo's own examples on the first run is the strongest evidence that the rate is real and not an
+artefact of how the corpus was made.
