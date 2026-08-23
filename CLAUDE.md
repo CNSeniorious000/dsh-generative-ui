@@ -6824,3 +6824,13 @@ to cancel. Counting them as leaked loops is the same category of mistake as coun
 `ResizeObserver` is genuinely new — 0 corpus cards, 2 fresh — and both disconnect from the
 effect's cleanup. New API surface, handled correctly on first contact, with no rule mentioning it.
 
+The `addEventListener` row went the same way on reading: the one "unremoved" listener is
+`signal.addEventListener("abort", …, { once: true })` on a per-request `AbortSignal` — it removes
+itself, and the signal is garbage after the request either way. More precise than a manual
+`removeEventListener`, not less.
+
+**Every row is 100% once read properly.** Which is the real finding: resource teardown, the thing
+a React card is most often accused of getting wrong, is not a defect area in either population —
+and two of the six rows only looked like defects because the measurement did not understand the
+idiom.
+
