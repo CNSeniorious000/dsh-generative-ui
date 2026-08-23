@@ -1,25 +1,28 @@
 #!/bin/zsh
-# Which modules have tests that would notice them breaking.
+# Which conditions have a test that would notice them breaking.
 #
-# Inverts every `if` condition in one source file at a time and counts failing tests. A module
-# with mutation sites and zero failures has no test that constrains its branches — which is how
-# `compiler.test.ts` was found to be testing a re-implementation rather than the module.
+# Inverts one `if` at a time and counts failing tests. A condition whose inversion changes nothing
+# has no test constraining it — which is how `compiler.test.ts` was found to be testing a
+# re-implementation, and how nine live guards (`$dsh/fs` with no host, the traversal fence, the
+# panel collapse) were found to be unconstrained.
 #
-# `echo "$out"` cannot be used to scan the report: zsh's echo expands the `\u` and `\t` in test
-# names, which corrupted the lines grep was matching and reported three covered modules as 0.
+# Three earlier versions of this script under-reported, each silently:
 #
-# Read the two columns together. `failingTests=0` with `mutationSites=0` is a no-op, not a
-# verdict: `observe.ts` and `register.ts` are almost `if`-free and are mutation-checked by hand.
-# Arrow-expression exports (`sameCode`, `matchSegment`) have no `if` either, so a module can be
-# well covered and still score low here.
+# - Mutating a whole file at once. A module that then THROWS on import collapses its tests into
+#   one error, so `segments.ts` scored 1 out of 17 while every one of its six conditions was in
+#   fact covered. Per-condition is the only reading that means anything.
+# - `perl -e 's/if \(([^)]*)\)/'`. A regex stops at the first `)`, so any condition containing a
+#   call became a syntax error rather than a mutant — 27 of them here. `invert-ifs.mjs` matches
+#   parens instead.
+# - `echo "$out"`. zsh's echo expands the `\u` and `\t` in test names, corrupting the lines grep
+#   was matching. `printf %s\\n` does not.
 #
-# Not part of `bun run check` — it rewrites source files and takes minutes. Run it deliberately.
+# Not part of `bun run check`: it rewrites source files and takes about an hour. Run it deliberately.
 set -e
 cd "$(dirname "$0")/.."
 
-# Restore whatever is mutated no matter how this exits. `set -e` plus a rewritten source file is
-# a bad combination: a failure between the mutation and the restore leaves the tree broken, which
-# is exactly what happened once — the run aborted mid-loop and left `bindings.ts` inverted.
+# `set -e` plus a rewritten source file is a bad combination: a failure between the mutation and
+# the restore leaves the tree broken, which is exactly what happened once.
 current=""
 restore() {
   if [[ -n "$current" ]]; then
@@ -30,21 +33,32 @@ restore() {
 }
 trap restore EXIT INT TERM
 [[ -z "$(git status --porcelain)" ]] || { echo "working tree must be clean: this script rewrites source files"; exit 2 }
+
+uncovered=0
 for src in src/client/runtime/*.ts src/client/canvas/*.ts src/*.ts; do
   [[ "$src" == *panel-css* ]] && continue
-  sites=$(perl -0ne 'my $c = () = /\bif \(/g; print $c' "$src")
-  [[ "$sites" == "0" ]] && { echo "$(basename $src): mutationSites=0 (operator does not apply)"; continue }
-  cp "$src" "/tmp/ma-$(basename $src)"
+  lines=($(grep -n 'if (' "$src" | cut -d: -f1))
+  (( ${#lines} == 0 )) && { echo "${src:t}: no conditions (operator does not apply)"; continue }
+  cp "$src" "/tmp/ma-${src:t}"
   current="$src"
-  bun scripts/invert-ifs.mjs "$src"
-  out=$(bun test 2>&1 || true)
-  fails=$(printf %s\\n "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
-  # A module that THROWS on import collapses its whole file into one error, so the count reads
-  # like poor coverage when it is the opposite. `segments.ts` reported 1 for this reason; its six
-  # conditions each fail 1-14 tests when inverted alone.
-  errors=$(printf %s\\n "$out" | grep -cE "^ *[0-9]+ error" || true)
+  covered=0
+  for n in $lines; do
+    bun scripts/invert-ifs.mjs "$src" "$n"
+    out=$(bun test 2>&1 || true)
+    fails=$(printf %s\\n "$out" | grep -oE '^ *[0-9]+ fail' | head -1 | tr -dc 0-9 || true)
+    errors=$(printf %s\\n "$out" | grep -cE '^ *[0-9]+ error' || true)
+    cp "/tmp/ma-${src:t}" "$src"
+    # An `if` inside a prompt string is prose, not a branch — `skill.ts` has one. Nothing
+    # distinguishes it automatically; it is reported and read.
+    if [[ "${fails:-0}" == "0" && "$errors" == "0" ]]; then
+      printf '  %s:%s  UNCOVERED  %s\n' "${src:t}" "$n" "$(sed -n "${n}p" "$src" | sed 's/^ *//' | cut -c1-72)"
+      uncovered=$((uncovered + 1))
+    else
+      covered=$((covered + 1))
+    fi
+  done
   restore
-  note=""
-  if [[ "$errors" != "0" ]]; then note="  (module threw on import — count is a floor, mutate conditions singly)"; fi
-  echo "$(basename $src): mutationSites=$sites failingTests=${fails:-0}$note"
+  echo "${src:t}: ${covered}/${#lines} conditions covered"
 done
+echo
+echo $([[ "$uncovered" == "0" ]] && echo "every condition is constrained by a test" || echo "$uncovered unconstrained")
