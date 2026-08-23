@@ -183,6 +183,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   If it does something when clicked, it is a \`<button type="button">\`. A \`div\` with an
   \`onClick\` is a div.
 
+  **A clickable row is the case that survives this rule** — 13 of the 17 are a list row, a table
+  cell, or a card, where wrapping each one in a \`<button>\` feels wrong. It is not: a \`<button>\`
+  with \`display: block; width: 100%; text-align: left\` looks exactly like the row and is
+  reachable. If the row genuinely cannot be one — a virtualised list measuring its own height —
+  then \`role="button" tabIndex={0}\` and an \`onKeyDown\` for Enter and Space, all three, because
+  any one alone leaves it half-reachable.
+
   **A slider is the same problem with no visible text to fall back on.** 61 range inputs across
   the corpus carry no label of any kind, and unlike a text field there is no placeholder and
   nothing inside the control to read — a screen reader announces "slider, 40" and stops.
