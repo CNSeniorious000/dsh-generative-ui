@@ -6666,3 +6666,20 @@ Two measurement lessons, both mine rather than the model's: `setError` is not th
 (`setErrMsg`, `setStatus("error")`, `错误`, rendering `stderr`), and a `catch` that rethrows is the
 opposite of a swallow. The first pass said 60% and the real number is 100%.
 
+### Appending to the record, correctly (2026-08-24)
+
+Three times in one session I inserted a dated section by anchoring on a neighbouring heading, and
+twice that put a 2026-08-24 entry above 2026-08-23 ones. The pre-push hook caught both — that is
+the third structural gate to hold the line today, after `bun run check` and the rate audit.
+
+`scripts/append-section.py` does it correctly: find the last section whose date is `<=` the new
+one's, insert after its body. The record is oldest-first, which is not obvious from reading it,
+because the most recent work is at the bottom of a 6,600-line file.
+
+    python3 scripts/append-section.py 2026-08-24 "Title" < body.md
+
+The fourth attempt failed differently and is worth noting: `git checkout CLAUDE.md` did not revert
+the bad insert because the file was already staged, so the helper appended a **second copy** of the
+same section. `no section title appears twice` caught that one. A gate that only catches ordering
+would have let a duplicate through, and vice versa — the two checks are not redundant.
+
