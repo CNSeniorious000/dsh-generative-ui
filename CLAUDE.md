@@ -2883,6 +2883,16 @@ writing" frame that will never render.
 where nothing legitimate can follow. Two mutations kill the tests: removing the strip, and
 dropping the `$` anchor (which would eat a lookalike inside a template string).
 
+**Anchored to unterminated bodies only, it missed the case that actually happens.** The one
+card in the 378-card corpus carrying leaked markup — `6d82723c61a7.tsx`, the `｜｜DSML｜｜`
+spelling — has a *closed* fence: the model wrote the tags and then still wrote the closing
+backticks. The strip never ran on it. It is invisible to the compiler check (both modes
+compile it — the tags land after the last statement, where TypeScript reads them as JSX) and
+only the paint check sees it, as `CORRUPT EXTRACTION`. Stripping on the complete path too
+recovers the card: it paints. The lesson is the anchor's own justification read backwards —
+"nothing legitimate can follow" is a fact about the *tags*, not about whether the fence
+closed, so scoping the strip to one of the two paths was never load-bearing.
+
 The method that found it is the same one that found the four runtime bugs before it: **read
 the corpus as a specification for the parser, not as a sample of model behaviour.** A count
 that comes out 73/72 is not a rounding error — the one row that does not balance is a bug
