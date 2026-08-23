@@ -16,6 +16,8 @@ import { SCREENS } from "../scripts/screens.ts";
 const PAIRS: Record<string, [string, string]> = {
   "JSX-SUBSCRIPT": [`<Icons[kind] size={12} />`, `{(() => { const I = Icons[kind]; return <I size={12} /> })()}`],
   "GLOB-IN-JSX": ["<code>src/**/*.{ts,tsx}</code>", `<code>{"src/**/*.{ts,tsx}"}</code>`],
+  "UNQUOTED-CSS-UNIT": ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+  "REGEX-IN-JSX-TEXT": ["  ^\\w+@\\w+\\.\\w{2,}$", `  const ok = /^\\w+@\\w+\\.\\w{2,}$/.test(v);`],
   "COMMA-IN-STYLE": ["<div style={base, { color: 'red' }} />", "<div style={{ ...base, color: 'red' }} />"],
   "DUPLICATE-STYLE-KEY": ["<div style={{ padding: 4, padding: 8 }} />", "<div style={{ padding: 4, margin: 8 }} />"],
   "MODULE-SCOPE-HOOK": ["const [n, setN] = useState(0);\nexport default function C() { return null }", "export default function C() { const [n, setN] = useState(0); return null }"],

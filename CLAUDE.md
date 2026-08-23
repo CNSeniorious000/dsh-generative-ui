@@ -2898,6 +2898,33 @@ the corpus as a specification for the parser, not as a sample of model behaviour
 that comes out 73/72 is not a rounding error — the one row that does not balance is a bug
 report written by production.
 
+### Two fatal defects had a rule and no screen (2026-08-23)
+
+The paint check's remaining unexplained failures — the only two of six that no screen flagged —
+were both **parse** errors, and both already had a prompt rule:
+
+- `fontSize: 11px` in a style object. `11px` is not a JS token, so the whole file fails; the
+  error points into the JSX several lines away, not at the property.
+- `^\w+@\w+\.\w{2,}$` as bare JSX text. JSX reads `{2,}` as an expression and dies on the comma.
+
+So the loop had a hole on the side nobody checks: **a rule with no screen is a rule you cannot
+tell is working.** Writing the screens took three wrong versions each, and every wrong version
+failed the same way — by matching the FIX:
+
+- `UNQUOTED-CSS-UNIT` first fired on 35 of 39 clean cards, all inside `<style>` blocks where
+  `font-size: 11px` is required. The discriminator is camelCase: a style object writes
+  `fontSize`, CSS writes `font-size`, and no card mixes them.
+- `REGEX-IN-JSX-TEXT` first fired on every card holding a regex LITERAL (`/^\d{1,2}$/.test(v)`),
+  then on the three corpus cards that display a pattern the RIGHT way — quoted and escaped.
+  Three discriminators, one per wrong version: no `/` or `(` on the line, no quote, and a single
+  backslash. Only the unquoted unescaped form reaches the JSX parser.
+
+Final: one corpus card each, zero false positives across 39 fresh cards and the reference set.
+And asked to build the exact thing that broke — a regex tester displaying that pattern — a fresh
+card writes `const DEFAULT_PATTERN = "^\\w+@\\w+\\.\\w{2,}$"` and is clean under all 20 screens.
+It is `test/cards/regex-tester.ui4a.tsx` now, because no reference card contained a regex escape
+at all and the construct entry would otherwise have been guarding nothing.
+
 ### The `$ui4a/` → `$dsh/` rename took completely (2026-08-23)
 
 Counting capability imports across every card the corpus delivered (403 fences in

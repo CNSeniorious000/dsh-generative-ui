@@ -47,6 +47,26 @@ export const SCREENS = {
   // What separates them is what comes after the bracket: a JSX tag continues into attributes or
   // closes, a type argument continues into `,` or `>`.
   "JSX-SUBSCRIPT": (src: string) => /<[A-Z]\w*\[[^\]]+\]\s*(\/?>|[a-zA-Z-]+=)/.test(src),
+  // A CSS unit written unquoted in a style object: `fontSize: 11px`. `11px` is not a JS token,
+  // so the file does not parse at all — the reader gets nothing, and the error points into JSX
+  // (`Expected '</'`) rather than at the property. React wants either the bare number or the
+  // string. One corpus card, on two lines of the same element; it never survived to render.
+  // Must skip the card's own `<style>` block, where `font-size: 11px` is not just legal but
+  // required — a naive match fired on 35 of 39 clean cards. The discriminator is camelCase:
+  // a style OBJECT writes `fontSize`, CSS writes `font-size`, and no card mixes them up.
+  "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
+  // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
+  // expression and the parse fails on the comma. The card that did it was *showing* the pattern
+  // to the reader, which is a reasonable thing to want — the fix is `{"…"}` or a code element,
+  // not dropping the feature. Any brace-quantifier in text position is the tell.
+  // Text position, and the opening tag is usually on the PREVIOUS line, so this cannot anchor
+  // on `>`. Three discriminators, each found by a wrong version of this screen firing on cards
+  // that were RIGHT: no `/` or `(` (that is a regex literal being passed to something), no
+  // quote (a quoted `"\\w{2,}"` is a string — the correct way to SHOW a pattern, and all three
+  // other corpus cards that display one do exactly that), and a single backslash (`\\w` in
+  // source is an escaped string, `\w` bare is JSX text). Only the unquoted, unescaped form
+  // reaches the JSX parser as `{2,}`.
+  "REGEX-IN-JSX-TEXT": (src: string) => /^[^/("'`<>=\n]*(?<!\\)\\[dwsSWD][^/("'`<>\n]*\{\d+,\d*\}[^/("'`<>\n]*$/m.test(src),
   // A card is a component on someone else's page, so both halves are the same mistake: sizing
   // against the window rather than the container it was given. `100vh` is the two real hits in
   // 378; the `fixed` half has never fired on a corpus card and is kept because the prompt names
