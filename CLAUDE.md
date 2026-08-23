@@ -5453,17 +5453,25 @@ upstream change away from breaking, and the repair is there for **truncated** in
 missing imports. But the severity was wrong, and the correction matters more than the finding —
 *compiles, mounts, shows nothing* was the claim, and it was not true.
 
-The repair has a precise boundary, and it is the reason the original rule was written the way it
-was: normalize adds a **missing** `import … from "react"` line, and does **not** extend an
-existing one. So
+The repair's boundary is by **name**, not by line, and getting it wrong twice in one afternoon is
+the story worth keeping. Measured:
 
-- no react import at all + `useState` → repaired, renders (the two fresh cards)
-- `import { useState }` + `<Fragment>` → **not** repaired, `Fragment is not defined`, blank
+| | |
+| --- | --- |
+| no react import at all + `useState` | inserts the whole line → renders |
+| `import { useState }` + `useMemo(…)` | **extends** the existing line → renders |
+| `import { useState }` + `<Fragment>` | not supplied → `Fragment is not defined`, blank |
 
-`83d06aa1ce20` in the corpus is the second case, and it is one of the six cards that genuinely
-paint nothing. *Import every name you write, `Fragment` included* was aimed at exactly the case
-the repair cannot reach — which is why its example shows `useState` already imported, the detail
-I read as a gap this morning and widened the screen around.
+It supplies **hooks** and never JSX **components**. My first reading was "adds a missing line,
+never extends one" — which fit the two cases I had looked at and produced a negative control card
+that did not actually break. The second reading came from testing seven names in a form
+(`const x = useMemo`) that the pass ignores for every name, so everything looked un-repaired. Only
+writing each case the way a card actually writes it gave the real answer.
+
+`MISSING-REACT-IMPORT` now stays quiet on anything matching `^use[A-Z]` and fires only where the
+repair cannot reach — 1 of 378, `83d06aa1ce20`, one of the six corpus cards that genuinely paint
+nothing. *Import every name you write, `Fragment` included* was always aimed there, which is why
+its example shows `useState` already imported: the detail I read as a gap this morning.
 
 **Zero of 378 corpus cards do this. Two of the first 17 written after this session's prompt
 edits do.** The rule I touched says *Import every name you write, `Fragment` included* and its
