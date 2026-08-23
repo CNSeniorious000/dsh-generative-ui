@@ -1,0 +1,51 @@
+import { expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import { SCREENS } from "../scripts/screens.ts";
+
+/**
+ * `test/cards-negative/` proves each screen FIRES. `screens-quiet-on-fix.test.ts` proves each
+ * stays quiet on a minimal correct snippet. This proves the third thing: that a real, whole,
+ * working card in `test/cards/` actually contains the construct the screen looks at.
+ *
+ * Without it a screen can be quiet across every reference card because none of them has a
+ * `type="range"` or calls `bash` at all — coverage that looks identical to coverage that works.
+ * Two screens were in exactly that state when this was written.
+ */
+const CONSTRUCTS: Record<string, RegExp> = {
+  "BRAND-PRIMARY-FILL": /brand-primary/,
+  "COMMA-IN-STYLE": /style=\{/,
+  "DESTRUCTURED-HOOK": /useRef|useMemo/,
+  "DUPLICATE-STYLE-KEY": /style=\{/,
+  "GLOB-IN-JSX": /<code>/,
+  "HARDCODED-BACKGROUND": /background/,
+  "JSX-SUBSCRIPT": /\[\w+\]/,
+  "MISSING-REACT-IMPORT": /Fragment|Suspense|memo/,
+  "MODULE-SCOPE-HOOK": /useState/,
+  "NO-FOCUS-RING": /outline/,
+  "SHADOWED-EXPORT": /^import/m,
+  "UNGUARDED-ASYNC-HANDLER": /streamText|bash\(/,
+  "UNGUARDED-LAST-INDEX": /\[0\]|match\(/,
+  "UNGUARDED-NUMBER-INPUT": /type="number"/,
+  "UNLABELLED-SLIDER": /type="range"/,
+  "UNREACHABLE-CONTROL": /<button|onClick/,
+  "VIEWPORT-UNITS": /width|height/,
+};
+
+const cards = readdirSync(`${import.meta.dir}/cards`).filter((name) => name.endsWith(".tsx"));
+const everything = cards.map((name) => readFileSync(`${import.meta.dir}/cards/${name}`, "utf8")).join("\n");
+
+test("every screen has a construct entry", () => {
+  expect(Object.keys(CONSTRUCTS).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
+});
+
+test("some reference card contains the construct each screen looks at", () => {
+  expect(Object.entries(CONSTRUCTS).filter(([, re]) => !re.test(everything)).map(([name]) => name)).toEqual([]);
+});
+
+test("and every reference card is clean under all of them", () => {
+  const dirty = cards.filter((name) => {
+    const src = readFileSync(`${import.meta.dir}/cards/${name}`, "utf8");
+    return Object.values(SCREENS).some((fires) => fires(src));
+  });
+  expect(dirty).toEqual([]);
+});
