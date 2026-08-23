@@ -167,4 +167,5 @@ for (const source of blobs) {
 if (blobs.length === 0) throw new Error("no blob modules were synthesized — see the registry trigger above");
 const gaps = dom_gaps.length === 0 ? "" : `, ${dom_gaps.length} needing a DOM`;
 console.log(`smoke: ok — id ${id}, requires [${[...new Set(asked)].join(", ")}]`);
+console.log(`       ${disposers.length} of ${registered_effects.length} effects returned a disposer, all torn down cleanly`);
 console.log(`       apply() registered ${registered_effects.length} effects${gaps} under injections [${[...new Set(injected)].join(", ")}]`);
