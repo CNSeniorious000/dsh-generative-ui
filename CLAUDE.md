@@ -5832,3 +5832,27 @@ comparison's extra code.
 **A cache key is worth measuring against real inputs before optimising it.** The intuition that a
 growing prefix invalidates constantly is wrong here for a structural reason — the thing being
 keyed lives at the top of the file, and the file grows downward.
+
+### The arrow in a handler ends the tag, for a regex (2026-08-23)
+
+Third time, in three different screens: `<input[^>]*>` and `<div\b[^>]*onClick=` both stop at the
+`>` in `onChange={(e) => …}`, which is **inside** the tag. Everything written after the handler —
+`aria-label`, `role`, `tabIndex`, `onKeyDown` — is invisible to the match.
+
+The cost each time was a false positive, and the third one was the sharpest: a freshly generated
+JSON editor did the keyboard-reachable div **exactly right** —
+
+    <div className="je-head" onClick={() => onToggle(path)}
+      role="button" tabIndex={0} aria-expanded={open}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(path) } }}>
+
+— and `UNREACHABLE-CONTROL` reported it. A screen that flags the model for following the rule is
+worse than no screen: it is evidence *against* a rule that is working.
+
+All three now find the tag end by **brace depth**. `test/screens-quiet-on-fix.test.ts` holds the
+five shapes that separate a tag parser from a regex, kept together because the next screen to
+match a tag will need the same ones — verified by reverting to `[^>]*` and watching them fail.
+
+**Attributes come in any order, and JSX handlers contain the delimiter.** Any screen that reads a
+tag needs a parser; there is no regex spelling of this that works, only ones that have not met an
+arrow yet.
