@@ -207,3 +207,25 @@ for (const [name, text] of [["the inline prompt", () => INLINE_PROMPT], ["the sk
     expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
   });
 }
+
+/**
+ * Where a rule lives changes whether it is applied — measured, not assumed.
+ *
+ * `aria-live` sat in `INLINE_PROMPT` alone. The model quoted it back nearly verbatim when asked,
+ * and then wrote two cards without it. Moved into the skill's accessibility section, beside the
+ * `aria-label` rule that had gone 13% → 92%, both prompts came back with it.
+ *
+ * The distinction the two sections draw: the prompt is read before deciding WHAT to build, the
+ * skill while building it. A rule naming a JSX attribute or a CSS property is applied during the
+ * writing, so it belongs in the skill; a rule about whether a card is wanted at all belongs in
+ * the prompt. This pins the accessibility ones, which are the ones with a measured outcome.
+ */
+// `tabIndex` is deliberately absent: the keyboard rule says to use a `<button>` rather than to
+// patch a `<div>`, which is the better advice and the reason `UNREACHABLE-CONTROL` accepts either.
+const ACCESSIBILITY_RULES = ["aria-label", "aria-live", "prefers-reduced-motion", "<button"];
+
+test("an accessibility rule lives in the skill, where it is read while writing JSX", () => {
+  const body = skillBody("types.json", "standalone.json");
+  const promptOnly = ACCESSIBILITY_RULES.filter((rule) => !body.includes(rule));
+  expect(promptOnly).toEqual([]);
+});
