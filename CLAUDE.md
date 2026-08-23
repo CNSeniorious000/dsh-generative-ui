@@ -3149,6 +3149,11 @@ different rule each time and the check failed on a working system. **Assert what
 could have told it, not which sentence it chooses.** Verified in both directions: pointing the
 grep at an impossible string exits 1.
 
+The skill is a second section, loaded on demand, and it delivers too — asked about the slider rule
+it came back with the `<span>`-is-not-a-label warning added the same afternoon, so a section
+edited now is in the next turn's context. That closes the loop the whole day rests on: measure the
+corpus → write a rule → the model receives it → generate → measure again.
+
 ### Two checks that measured nothing, and were not kept (2026-08-23)
 
 **"Renders almost no text."** 30 of 378 cards produce under 20 characters. Reading them: a
