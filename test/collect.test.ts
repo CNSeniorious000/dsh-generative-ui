@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { collectCanvases, type ToolCallView } from "../src/client/canvas/collect";
+import { collectCanvases, toolCallsOf, type ToolCallView } from "../src/client/canvas/collect";
 
 const write = (argsRaw: string, settled = false): ToolCallView => ({ name: "write_file", argsRaw, settled });
 const codeOf = (raw: string, settled = false) => collectCanvases([write(raw, settled)]).canvases[0]?.code;
@@ -35,4 +35,49 @@ test("a \\u escape cut in half emits nothing rather than a wrong character", () 
 
 test("an unsettled write reads as streaming", () => {
   expect(collectCanvases([write(full.slice(0, 55))]).canvases[0]!.streaming).toBe(true);
+});
+
+/**
+ * `toolCallsOf` — the walk over a `tool-call` node.
+ *
+ * Four conditions here had no test that would notice them going. The consequence of each is a
+ * canvas that never appears: a write nested inside `run_code` is a sub-call, so reading only the
+ * root finds nothing, and a half-arrived call has a name but no arguments yet.
+ */
+test("a canvas written through a dispatching tool is found in the sub-calls", () => {
+  const inner = { kind: "tool-result", name: "write_file", argsRaw: full };
+  const calls = toolCallsOf({ root: { kind: "tool-result", name: "run_code", argsRaw: "{}", subCalls: [inner] } });
+  expect(calls.map((c) => c.name)).toEqual(["run_code", "write_file"]);
+  expect(collectCanvases(calls).canvases.map((c) => c.id)).toEqual(["a"]);
+});
+
+test("a node with no root yields nothing rather than throwing", () => {
+  expect(toolCallsOf(undefined)).toEqual([]);
+  expect(toolCallsOf({})).toEqual([]);
+});
+
+// The name arrives before the arguments do. A view built from half a call would carry
+// `undefined` into the parser.
+test("a call whose arguments have not arrived is skipped, its children are not", () => {
+  const child = { kind: "tool-result", name: "write_file", argsRaw: full };
+  expect(toolCallsOf({ root: { name: "run_code", subCalls: [child] } }).map((c) => c.name)).toEqual(["write_file"]);
+});
+
+/**
+ * A patch to a canvas this session never wrote still gets a panel — with empty code, which the
+ * sweep then fills by reading the file. Dropping it means editing an existing card shows nothing.
+ */
+test("a patch to a canvas never written here still yields a canvas", () => {
+  const { canvases, stale } = collectCanvases([{ name: "edit_file", argsRaw: JSON.stringify({ path: ".dsh/ui4a/canvases/b.ui4a.tsx", old_str: "x", new_str: "y" }), settled: true }]);
+  expect(canvases).toEqual([{ id: "b", code: "", streaming: false }]);
+  expect([...stale.keys()]).toEqual(["b"]);
+});
+
+// ...but a patch that follows a write in the same session must not blank the written code.
+test("a patch after a write leaves the written code alone", () => {
+  const { canvases } = collectCanvases([
+    { name: "write_file", argsRaw: full, settled: true },
+    { name: "edit_file", argsRaw: JSON.stringify({ path: ".dsh/ui4a/canvases/a.ui4a.tsx", old_str: "x", new_str: "y" }), settled: true },
+  ]);
+  expect(canvases).toEqual([{ id: "a", code: "a\tb\nc→d", streaming: false }]);
 });

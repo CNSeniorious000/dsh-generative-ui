@@ -211,4 +211,14 @@ describe("what the sweep does not do", () => {
     // teardown is what actually distinguishes them.
     expect(widths.slice(0, -1)).toContain(0);
   });
+
+  // ...and only then. The assertion above says a collapse happened before teardown; it does not
+  // say the collapse was caused by the canvas going away, so it passes just as well when the
+  // condition is inverted and the panel collapses while a canvas is on screen. Measured: with
+  // `if (canvases.length === 0)` inverted, every test above stayed green.
+  test("the panel does not collapse while a canvas is still there", async () => {
+    const calls: any[] = [write("dice", "body")];
+    await sweep(calls, { sweeps: 3, width: 420, between: () => calls.push(write("die2", "body2")) });
+    expect(widths.slice(0, -1)).not.toContain(0);
+  });
 });

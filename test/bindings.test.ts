@@ -24,6 +24,8 @@ const hostWith = (cwd: string | undefined) => registerUi4aHost({ cwd: () => cwd,
 
 test("with no host bound, fs and exec say so instead of building a URL", () => {
   expect(() => bind().fs.readFile("a.txt")).toThrow("no host bound");
+  // `sendMessage` drives the next turn; with no host it would silently swallow the card's turn.
+  expect(() => bind().chat.sendMessage("hi")).toThrow("no host bound");
   expect(() => bind().exec.bash("ls")).toThrow("no host bound");
 });
 

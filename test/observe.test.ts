@@ -12,13 +12,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 
 let pending: (() => void)[] = [];
-let observing = 0, disconnected = 0;
+let observing = 0, disconnected = 0, cancelled = 0;
 let mutate: () => void = () => {};
 
 beforeEach(() => {
-  pending = []; observing = 0; disconnected = 0;
+  pending = []; observing = 0; disconnected = 0; cancelled = 0;
   (globalThis as any).requestAnimationFrame = (cb: () => void) => { pending.push(cb); return pending.length };
-  (globalThis as any).cancelAnimationFrame = () => {};
+  (globalThis as any).cancelAnimationFrame = (id: number) => { pending[id - 1] = () => { cancelled += 1 } };
   (globalThis as any).document = { body: {} };
   (globalThis as any).MutationObserver = class {
     constructor(private readonly cb: () => void) { mutate = () => this.cb() }
@@ -68,5 +68,23 @@ describe("observeTranscript", () => {
     scheduleSweep();
     paint();
     expect(sweeps).toBe(2);
+  });
+
+  /**
+   * A sweep queued for a frame that has not arrived yet must not run after teardown.
+   *
+   * The listener set is already empty by then, so `flush` iterating it is harmless — which is
+   * why deleting the cancel changes nothing any other test can see. What it leaks is the frame
+   * itself: a card unmounted mid-stream leaves a callback holding the module alive until the
+   * browser gets round to it.
+   */
+  test("a frame queued before the last listener left is cancelled", async () => {
+    const { observeTranscript } = await load();
+    let sweeps = 0;
+    const stop = observeTranscript(() => { sweeps += 1 });
+    stop();
+    paint();
+    expect(cancelled).toBe(1);
+    expect(sweeps).toBe(0);
   });
 });
