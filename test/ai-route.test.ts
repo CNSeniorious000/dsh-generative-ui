@@ -60,6 +60,15 @@ describe("streaming", () => {
     expect(written).not.toContain("[object Object]");
   });
 
+  // A provider that finishes without saying why. `reason.kind` would throw on the undefined,
+  // taking down the whole stream at the very last chunk — after the body is already out, so the
+  // card sees a truncated answer. Measured: with the `reason !== undefined` clause dropped, every
+  // other test here still passed.
+  test("a finish with no reason at all is not a crash", async () => {
+    const { written } = await call({ body: ask, ctx: chunks({ type: "text-delta", text: "hi" }, { type: "finish" }) });
+    expect(written).toBe("hi");
+  });
+
   test("a failure with no message still names the kind", async () => {
     const { written } = await call({ body: ask, ctx: chunks({ type: "finish", reason: { kind: "length" } }) });
     expect(written).toContain("length");
