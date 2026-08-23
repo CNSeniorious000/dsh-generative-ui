@@ -4659,3 +4659,22 @@ React and into a test: each of the three conditions fails a test when removed.
 
 **"Does this repair actually address that failure?" is a question a message cannot answer** — the
 phase can, and it was being discarded one parameter away from where the decision was made.
+
+### Both error decisions were message-only; both needed the phase (2026-08-23)
+
+Having found the retry ignoring `phase`, the suppression beside it turned out to have the same
+shape. `TRANSIENT` matches `No default export found` and an unexpected EOF, and both come from
+the parse stages — the first is thrown inside `importCompiledComponent`
+(`partial-react/src/runtime.ts:360`, with its own comment explaining it is a "stream not finished
+yet" frame), the second from the transform rejecting a prefix. Neither can arrive from `render`.
+
+So a card whose own render throws a matching string was suppressed while streaming, leaving a
+blank surface and an empty console — the failure this project cares most about, produced by the
+code meant to prevent a *different* one.
+
+Both decisions are now named functions taking the phase, four lines each and out of the React:
+`isUnfinishedFrame(message, phase, streaming)` and `shouldRetry(message, phase, streaming,
+attempts)`. Every condition in both fails a test when removed.
+
+**Two handlers on adjacent lines had the same defect**, which is what you would expect: they were
+written together, from the same idea that an error's message is what identifies it.
