@@ -29,6 +29,11 @@ const PAIRS: Record<string, [string, string]> = {
   "HARDCODED-BACKGROUND": [`const s = { background: "#fff" }`, `const s = { background: "var(--dsw-alias-bg-base)" }`],
   "BRAND-PRIMARY-FILL": [`<div style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }} />`, `<div style={{ color: "var(--dsw-alias-brand-primary)" }} />`],
   "UNREACHABLE-CONTROL": ["<div onClick={f} />", "<div role='button' tabIndex={0} onClick={f} onKeyDown={g} />"],
+  "UNGUARDED-ASYNC-HANDLER": [
+    `const run = async (t: string) => { for await (const c of streamText({ prompt: t })) setOut(c) }`,
+    // The `runId` idiom the corpus already uses: bump a ref, and a stale run returns.
+    `const run = async (t: string) => { const id = ++runId.current; for await (const c of streamText({ prompt: t })) { if (id !== runId.current) return; setOut(c) } }`,
+  ],
   "NO-FOCUS-RING": [`const s = { outline: "none" }`, `const s = { outline: "none", border: focused ? "1px solid blue" : "none" }`],
 };
 

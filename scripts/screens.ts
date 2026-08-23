@@ -80,6 +80,32 @@ export const SCREENS = {
   // use design tokens elsewhere, which is a deliberate light accent on a themed card. An earlier
   // version dropped this clause after measuring that it changed nothing — that measurement was
   // taken against the narrower regex, which never saw those 35.
+  // An async EVENT HANDLER that awaits something slow and then setStates, with nothing to tell
+  // it a newer run started. Click file A, click file B while A is still loading, and A's result
+  // lands last and wins — the panel shows B selected with A's contents.
+  //
+  // `useEffect` has the `let cancelled = false` idiom and the corpus uses it; handlers mostly do
+  // not (38 of 46 cards with such a handler, and 24 of those await `bash`, which has no bound).
+  // Only slow awaits count: a `readFile` that returns in a millisecond cannot realistically be
+  // overtaken, and screening it would report a third of the corpus for a race nobody can hit.
+  "UNGUARDED-ASYNC-HANDLER": (src: string) => {
+    const bodyAt = (open: number) => {
+      let depth = 0;
+      for (let i = open; i < src.length; i++) {
+        if (src[i] === "{") depth += 1;
+        else if (src[i] === "}") { depth -= 1; if (depth === 0) return src.slice(open, i + 1) }
+      }
+      return "";
+    };
+    // A guard is any comparison against a ref or flag a later run would have moved. Written to
+    // accept either side of the `!==`: `id !== runId.current` is the spelling the corpus uses.
+    const guarded = /cancelled|aborted|\bsignal\b|\.current\b[\s\S]{0,20}?[!=]==|[!=]==[\s\S]{0,20}?\.current\b|latest|stale/;
+    return [...src.matchAll(/(?:const \w+ = async|async)\s*\([^)]*\)\s*=>\s*\{/g)].some((match) => {
+      const body = bodyAt(match.index + match[0].length - 1);
+      if (!/streamText|\bbash\(/.test(body) || !/set[A-Z]\w*\(/.test(body)) return false;
+      return !guarded.test(body);
+    });
+  },
   "HARDCODED-BACKGROUND": (src: string) =>
     !/dsw-alias|dsw-token/.test(src) &&
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,{}]|\{[^{}]*\})*)/gi)].some((match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1])),

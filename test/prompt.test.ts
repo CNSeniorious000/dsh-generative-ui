@@ -72,6 +72,7 @@ const SKILL_RULES = [
   ["honour prefers-reduced-motion (media query)", "@media (prefers-reduced-motion: reduce)"],
   ["honour prefers-reduced-motion (inline)", 'matchMedia("(prefers-reduced-motion: reduce)")'],
   ["keyboard-reachable controls", "<button aria-label=\"复制\" onClick={copy}>"],
+  ["a superseded async run returns", "if (id !== runId.current) return"],
 ] as const;
 
 for (const [name, phrase] of SKILL_RULES) {
@@ -136,6 +137,7 @@ const RULE_FOR_SCREEN: Record<string, string> = {
   "SHADOWED-EXPORT": "Never name it after something you imported",
   "UNGUARDED-LAST-INDEX": "not a guard against empty",
   "UNREACHABLE-CONTROL": "breaks keyboard use",
+  "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "VIEWPORT-UNITS": "100vw",
 };
 
