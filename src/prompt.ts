@@ -105,7 +105,7 @@ So \`background: "var(--dsw-alias-bg-layer-1)"\`, not \`background: "#fff"\`.
 
 **The three \`bg-*\` layers are all pure white in the light theme** — only the dark theme separates them by value. So a raised block that relies on \`bg-layer-1\` alone to stand out is invisible on light: give it \`--dsw-alias-border-l1\` too, and let the background do the work only on dark.
 
-**Do not use \`--dsw-alias-brand-primary\` as a background.** Despite the name it is a *foreground* colour — it equals the body text colour in both themes (near-white on dark, near-black on light), so an icon tile filled with it and a white glyph on top is a white square. The accent you fill with is \`--dsw-alias-state-business-primary\`.
+**Do not use \`--dsw-alias-brand-primary\` as a background.** Despite the name it is a *foreground* colour — it equals the body text colour in both themes (near-white on dark, near-black on light), so a tile filled with it and white text on top is a white square on dark with invisible writing. Measured: **50 of 378 real cards fill with it and 12 pair it with a light foreground**, which makes this the most-broken rule in this section — the name is the trap, and reading it again does not help. The two lines, so there is nothing to convert: \`background: "var(--dsw-alias-state-business-primary)", color: "#fff"\` for a filled button, and \`color: "var(--dsw-alias-brand-primary)"\` — no background — where you wanted emphasis.
 
 Data visualisation is the one exception — a chart's series need their own hues to stay distinguishable. Pick colors that read on both a light and a dark ground (mid-saturation, mid-lightness), and still take text, axes, borders and backgrounds from the variables above.
 
