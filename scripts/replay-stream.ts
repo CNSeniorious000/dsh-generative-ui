@@ -32,10 +32,12 @@ let bad = 0;
 for (const path of paths) {
   const src = await Bun.file(path).text();
   const step = Math.max(100, Math.floor(src.length / 60));
-  let prev = -1, painted = false, changes = 0, late = 0, frames = 0, broken = 0;
+  let prev = -1, painted = false, changes = 0, late = 0, frames = 0, broken = 0, unnormalizable = 0;
   for (let n = step; n <= src.length; n += step) {
     let out: string;
-    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
+    // A prefix normalize cannot repair is skipped — and COUNTED. `frames=12` on a card with 60
+    // prefixes reads as a short card rather than as a pass that gave up on 48 of them.
+    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { unnormalizable += 1; continue }
     frames += 1;
     // A frame that fails to compile is a card that blinks out mid-generation. `transform` is a
     // tolerant parser — it rejects structural damage (unclosed tags, unterminated strings, stray
@@ -54,7 +56,7 @@ for (const path of paths) {
     painted ||= defaultPaints(out);
   }
   if (late > 0 || broken > 0) bad += 1;
-  console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${late ? "  <-- visible remount" : ""}`);
+  console.log(`${(path.split("/").pop() ?? "").padEnd(26)} frames=${frames} hookChanges=${changes} afterDefaultPaints=${late} brokenFrames=${broken}${unnormalizable ? ` unnormalizable=${unnormalizable}` : ""}${late ? "  <-- visible remount" : ""}`);
 }
 
 // The positive control: a hook in a helper component below a long default export, so the card
