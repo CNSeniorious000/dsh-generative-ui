@@ -82,6 +82,17 @@ const MAX_RETRIES = 3;
  * each of which sends the reader somewhere different when it is wrong. Exported for
  * `test/retry.test.ts`.
  */
+/**
+ * Whether a mid-stream error is the stream not being finished yet.
+ *
+ * Both patterns come from the parse stages — `No default export found` is thrown inside
+ * `importCompiledComponent` (compile), and an unexpected EOF is the transform rejecting a
+ * prefix. A card whose own render throws a message that happens to match is a real error, so
+ * the phase is part of the question rather than the message alone.
+ */
+export const isUnfinishedFrame = (message: string, phase: string, streaming: boolean) =>
+  streaming && phase !== "render" && TRANSIENT.test(message);
+
 export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) =>
   phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
 /** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
@@ -144,7 +155,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       preserveStateOnUpdate: preserveStateRef.current,
       callbacks: {
         onError: (error, phase) => {
-          if (streamingRef.current && TRANSIENT.test(error.message)) return;
+          if (isUnfinishedFrame(error.message, phase, streamingRef.current)) return;
           // Only retry a settled surface. While streaming, the next frame re-delivers on its own,
           // and a retry there would replace the growing buffer with a stale prefix.
           // Compile phase only. A failed dependency import is reported there — `importCompiledComponent`

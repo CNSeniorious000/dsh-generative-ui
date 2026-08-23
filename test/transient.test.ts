@@ -6,7 +6,7 @@
  * captured from Chromium by importing a module that fails in that particular way.
  */
 import { describe, expect, test } from "bun:test";
-import { TRANSIENT, TRANSIENT_LOAD } from "../src/client/runtime/GenUISurface.tsx";
+import { isUnfinishedFrame, TRANSIENT, TRANSIENT_LOAD } from "../src/client/runtime/GenUISurface.tsx";
 
 describe("TRANSIENT_LOAD — a dependency that did not arrive", () => {
   // The one Chromium actually produces, for a 404, an unknown package and a dead host alike.
@@ -68,4 +68,20 @@ test("no real corpus compile failure is suppressed", () => {
     expect(TRANSIENT.test(message)).toBe(false);
     expect(TRANSIENT_LOAD.test(message)).toBe(false);
   }
+});
+
+/**
+ * Suppression is about the parse stages, not the message alone.
+ *
+ * `No default export found` is thrown inside `importCompiledComponent` and an unexpected EOF
+ * comes from the transform rejecting a prefix — both reach us as `compile` or `transform`. A
+ * card whose own render throws a matching string is a real error, and suppressing it leaves the
+ * reader with a blank surface and nothing in the console.
+ */
+test("an unfinished frame is suppressed only from the parse stages", () => {
+  expect(isUnfinishedFrame("No default export found in compiled module.", "compile", true)).toBe(true);
+  expect(isUnfinishedFrame("Unexpected end of file", "transform", true)).toBe(true);
+  expect(isUnfinishedFrame("No default export found in compiled module.", "render", true)).toBe(false);
+  // ...and never once the card has settled.
+  expect(isUnfinishedFrame("Unexpected eof", "compile", false)).toBe(false);
 });
