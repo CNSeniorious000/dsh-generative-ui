@@ -4830,3 +4830,29 @@ over the same 34 calls is **0.055 ms** (the regex bails early because `"code"` r
 **0.095 ms**. The collector was the only hot spot, and now nothing on that path exceeds a
 tenth of a millisecond. **Bounding the things you are not going to change is part of the
 measurement** — otherwise "we optimised the slow one" is a hope.
+
+### The compile is the frame budget, and it is already handled (2026-08-23)
+
+Having measured everything in the sweep path, the honest ranking puts all of it far behind the
+one thing nobody had timed:
+
+| per-frame work | 34 canvases / 14 kb card |
+| --- | --- |
+| **compile a streamed frame** | **5.71 ms** (34% of a frame) |
+| compile a settled frame | 3.35 ms |
+| collect canvases (before the key) | 3.73 ms |
+| collect canvases (after) | 0.014 ms |
+| opaque-write scan | 0.055 ms |
+| parse 138 kb of transcript for fences | 0.095 ms |
+| `matchSegment` over ten segments | 0.009 ms |
+
+The compile dominates and cannot be made cheaper here — it is a wasm parse of the whole card,
+and a streamed frame is a new card. What matters is that it runs **once per genuine change**,
+and both halves of that already hold: `partial-react` coalesces to a microtask and single-flights
+(`runtime.ts:253`), and `GenUISurface` feeds it only the delta and returns early when the code is
+identical (`code === deliveredRef.current`).
+
+So the finding is a bound rather than a fix: nothing else on the path is worth optimising,
+because everything else together is under a tenth of a millisecond against the compile's five.
+**Measure the thing you are not planning to touch first** — it is what tells you whether the
+optimisation you were about to do matters.
