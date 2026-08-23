@@ -2950,6 +2950,20 @@ and `UNLABELLED-CONTROL` on 28; six screens are sole detector on nothing, meanin
 catch is already caught. That is not an argument for deleting them — a screen exists to name a
 cause, and a card flagged by five screens with the wrong one dropped gets diagnosed wrong.
 
+Breaking the 54 flagged cards down by what they wrote INSTEAD of a label reshaped the rule:
+
+| | cards |
+| --- | --- |
+| a `<span>` directly above the control | **38** |
+| nothing nearby at all | 14 |
+| a closed `<label>` beside it | 2 |
+
+The rule said "the number beside it is a separate element". The dominant shape is not the number —
+it is a `<span>` holding the actual name, sitting right above the slider, which looks labelled and
+announces as nothing. Almost every card that fails this **has** a visible name and puts it one
+element away from where it would count. The rule now says that, and names the closed-`<label>`
+form too, which is worse still because it reads as done.
+
 Auditing the second carrier, `UNLABELLED-CONTROL` (28 sole diagnoses), found a real defect in it.
 The check cleared a control whenever ANY `<label>` appeared within 250 characters — so a card
 labelling its number input correctly suppressed the finding on an unlabelled slider two lines
