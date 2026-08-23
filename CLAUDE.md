@@ -6738,3 +6738,21 @@ six accessibility attributes nobody had screened, and from asking whether "handl
 39, a rule nobody breaks) meant the reader ever learns. **A screen set converges on what it
 already knows; the way out is to measure something it does not check.**
 
+### All eighteen trigger cases pass (2026-08-24)
+
+Both rewritten cases came back as cards:
+
+- `比较一下 t2.micro、t3.small、t3.medium 三种机型的月成本` → card
+- `按钮的圆角我想调一下，看看多大合适` → card
+
+So the final tally across all 18 cases is **18 cards, 0 prose refusals**, with one transient crash
+that produced a card on re-run. Every one of the nine trigger rules lands, and **every apparent
+failure was the fixture**: two prompts whose subject was absent from the workspace, two using a
+demonstrative pronoun with no antecedent, one upstream error, and one 80%-of-the-time rule
+measured with a single sample.
+
+Six failures, none of them a rule. That ratio is the finding — a suite that runs real model turns
+mostly measures whether its own prompts are answerable, and reading the reply on every miss is
+what separates the two. `triggers.sh` prints the workspace path for a miss precisely so that is
+one command rather than a re-run.
+
