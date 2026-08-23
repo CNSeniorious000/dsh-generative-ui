@@ -8,7 +8,12 @@
  */
 import { readFileSync } from "node:fs";
 
+import { resolve } from "node:path";
+
 import { cardsIn } from "./tsx-node.ts";
+
+/** Every $dsh group, whose generated stubs are concatenated into the one shim module. */
+const SHIM_GROUPS = ["chat", "ai", "fs", "exec"];
 
 const dir = process.argv[2] ?? ".research/cards";
 const cards = cardsIn(dir);
@@ -34,17 +39,19 @@ window.__src = {};
     "/shim/:group": () =>
       new Response(
         [
-          "const inert = () => {};",
-          "export const readFile = async () => '';",
-          "export const writeFile = async () => {};",
-          "export const readdir = async () => [];",
-          "export const bash = async () => ({ stdout: '', stderr: '', exitCode: 0 });",
-          "export const sendMessage = inert;",
+          // The generated stubs, not a third hand-written copy: `types/standalone/*.js` already
+          // returns an empty value of the right SHAPE for every member, and keeping a separate
+          // list here meant this one lacked `readBytes` entirely and gave `bash` no `truncated`
+          // or `timedOut` — so a card reading `r.truncated.stdout` threw during a render sweep
+          // and was reported broken for the harness's reason rather than its own.
+          //
+          // One union module for every group, because the route cannot know which `$dsh/*` the
+          // importer asked for; duplicate names across groups do not occur.
+          ...SHIM_GROUPS.map((group) => readFileSync(resolve(import.meta.dir, `../types/standalone/${group}.js`), "utf8").replaceAll(/^export default .*$/gm, "")),
           // `$ui4a/*` is the pre-rename prefix. Nothing resolves it in production — that is the
           // point of the rename — but 22 corpus cards were written against it, and leaving them
           // to fail here would report a build-lag artefact as a broken card.
-          "export const usePersistedState = (k, v) => [v, inert];",
-          "export async function* streamText() {}",
+          "export const usePersistedState = (k, v) => [v, () => {}];",
           "export default {};",
         ].join("\n"),
         { headers: { "content-type": "text/javascript" } },
