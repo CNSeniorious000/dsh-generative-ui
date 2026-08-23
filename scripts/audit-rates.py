@@ -41,5 +41,19 @@ for name, (count, total) in sorted(actual.items()):
             stale += 1
             print(f"{name}: record says {m.group(1)}, corpus says {count}\n    {m.group(0).strip()[:110]}")
 
+# The fresh-card total moves every time a batch lands, and it appears in prose in several places
+# ("Sixty-seven cards is not a rate", "in 60 of the 67 written"). Revised by hand six times on
+# 2026-08-24 and briefly wrong twice. `fresh-rates.ts` knows the real number; this checks the ones
+# written down against it.
+fresh_total = None
+for line in io.open("/tmp/fresh-total.txt", encoding="utf-8") if __import__("os").path.exists("/tmp/fresh-total.txt") else []:
+    m = re.match(r"(\d+) of (\d+) clean", line)
+    if m: fresh_total = int(m.group(2))
+if fresh_total is not None:
+    for m in re.finditer(r"^.*?(\d+) of (\d+) (?:written|fresh cards|generated).*$", text, re.M):
+        if int(m.group(2)) != fresh_total:
+            stale += 1
+            print(f"fresh set: record says {m.group(2)}, the set holds {fresh_total}\n    {m.group(0).strip()[:110]}")
+
 print(f"\n{stale} stale rate(s)" if stale else f"\nevery quoted rate matches the corpus ({len(actual)} screens)")
 sys.exit(1 if stale else 0)

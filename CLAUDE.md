@@ -3268,9 +3268,9 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | signals per card | 0 | 1 | 2 | 3 | 4 |
 | --- | --- | --- | --- | --- | --- |
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
-| fresh (60) | 2 | 2 | 13 | **34** | 9 |
+| fresh (67) | 2 | 2 | 16 | **37** | 10 |
 
-**Not one corpus card in 378 carries three of them. 43 of 60 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 47 of 67 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
