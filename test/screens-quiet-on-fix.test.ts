@@ -13,10 +13,16 @@ import { SCREENS } from "../scripts/screens.ts";
  *
  * Each entry is [fires on this, stays quiet on this]. The right-hand side is the point.
  */
-const PAIRS: Record<string, [string, string]> = {
+const PAIRS: Record<string, [string, string] | [string, string][]> = {
   "JSX-SUBSCRIPT": [`<Icons[kind] size={12} />`, `{(() => { const I = Icons[kind]; return <I size={12} /> })()}`],
   "GLOB-IN-JSX": ["<code>src/**/*.{ts,tsx}</code>", `<code>{"src/**/*.{ts,tsx}"}</code>`],
-  "UNQUOTED-CSS-UNIT": ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+  // Two arms, two pairs. A screen covering two constructs and pinned by one pair confirms one of
+  // them — the same one-to-one-map bug this file has now grown four times, so the value is a list.
+  "UNQUOTED-CSS-UNIT": [
+    ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
+    ['<div style={{ color: var(--dsw-alias-label-primary) }} />', '<div style={{ color: "var(--dsw-alias-label-primary)" }} />'],
+  ],
+
   "SWALLOWED-CAPABILITY-FAILURE": [`try { const r = await bash("ls"); setRows(r.stdout) } catch {}`, `try { const r = await bash("ls"); setRows(r.stdout) } catch (e) { setError(String(e)) }`],
   "UNANNOUNCED-ASYNC-RESULT": [`import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);`, `import { bash } from "$dsh/exec";\nconst f = async () => setRows((await bash("ls")).stdout);\n<div aria-live="polite">{rows}</div>`],
   "TRANSITION-WITHOUT-TRANSFORM": [`<div style={{ transition: "transform .12s ease" }} />`, `<div style={{ transition: "transform .12s ease", transform: "scale(1.02)" }} />`],
@@ -89,10 +95,14 @@ test("every screen has a pair", () => {
   expect(Object.keys(PAIRS).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
 });
 
-for (const [name, [dirty, clean]] of Object.entries(PAIRS)) {
-  test(`${name} fires on the defect and not on the fix`, () => {
-    expect(SCREENS[name](dirty)).toBe(true);
-    expect(SCREENS[name](clean)).toBe(false);
+for (const [name, entry] of Object.entries(PAIRS)) {
+  // One pair, or a list of them for a screen with more than one arm.
+  const pairs = Array.isArray(entry[0]) ? (entry as [string, string][]) : [entry as [string, string]];
+  pairs.forEach(([dirty, clean], index) => {
+    test(`${name} fires on the defect and not on the fix${pairs.length > 1 ? ` (${index + 1})` : ""}`, () => {
+      expect(SCREENS[name](dirty)).toBe(true);
+      expect(SCREENS[name](clean)).toBe(false);
+    });
   });
 }
 

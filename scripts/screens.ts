@@ -117,7 +117,17 @@ export const SCREENS = {
     const rethrown = /catch[^{]*\{[^}]{0,240}\bthrow\b/s.test(code);
     return !surfaced && !rethrown;
   },
-  "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src),
+  // Two spellings of one defect: a CSS *value* written bare where JS needs a string. `11px` is not
+  // a token, and neither is `var(--x)` — both fail the parse, and the error points into the JSX
+  // several lines away rather than at the property.
+  //
+  // The token arm is the one the prompt steers into: the colour rule says take every colour from
+  // `--dsw-alias-*`, so a card writing `color: var(--dsw-alias-label-primary)` is following it and
+  // forgetting the quotes. Anchored inside `style={{` because unquoted `var(--x)` is CORRECT in a
+  // `<style>` block, which is where most cards write it and where the camelCase discriminator the
+  // unit arm relies on cannot help — `color` is spelled the same in both.
+  "UNQUOTED-CSS-UNIT": (src: string) =>
+    /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src) || /style=\{\{[^}]*?\b[a-zA-Z]+:\s*var\(--/.test(src),
   // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
   // expression and the parse fails on the comma. The card that did it was *showing* the pattern
   // to the reader, which is a reasonable thing to want — the fix is `{"…"}` or a code element,
