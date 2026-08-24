@@ -158,4 +158,12 @@ Start with the narrow layout and widen it — one comfortable column beats two c
 
     <div style={ { flex: 1, minWidth: 0 } }>{text}</div>
 
-That alone lets the text **wrap** and keeps the button in place, which is the outcome you want: everything is still readable. Do not reach for \`overflow: hidden\` + \`textOverflow: "ellipsis"\` as a reflex — that trades a button the reader cannot see for content they cannot see, and it is only right when the row must stay exactly one line tall (a table, a list of equal-height rows). If even wrapping is too cramped, \`flexWrap: "wrap"\` on the row with \`flex: "1 1 12rem"\` on the text drops the button to its own line instead.`;
+That alone lets the text **wrap** and keeps the button in place, which is the outcome you want: everything is still readable. Do not reach for \`overflow: hidden\` + \`textOverflow: "ellipsis"\` as a reflex — that trades a button the reader cannot see for content they cannot see, and it is only right when the row must stay exactly one line tall (a table, a list of equal-height rows). If even wrapping is too cramped, \`flexWrap: "wrap"\` on the row with \`flex: "1 1 12rem"\` on the text drops the button to its own line instead.
+
+**Aligning repeated rows with a fixed \`minWidth\` breaks on the longest label, not on the average one.** Three rows whose labels are \`工作时长\` / \`休息时长\` / \`长休息时长\` under \`minWidth: 60\` measure 60, 60 and **64.5** — so the third row's controls all shift right by 4.5px and the columns stop lining up. It is invisible at a glance and obvious at 4× zoom, which is why it survives review. A grid aligns every row against the same track by construction:
+
+    <div style={ { display: "grid", gridTemplateColumns: "auto 32px 3rem 32px auto", gap: 8, alignItems: "center" } }>
+
+One value that fits your longest label today is a value that stops fitting when a label changes.
+
+**And a number column wants \`textAlign: "right"\`, not \`center\`.** \`fontVariantNumeric: "tabular-nums"\` makes every digit the same width so figures stack — and centring throws that away, because \`5\` and \`25\` then sit at different right edges. The two belong together: tabular figures, right-aligned, in a fixed track.`;
