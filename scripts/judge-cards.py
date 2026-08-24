@@ -36,6 +36,13 @@ CARDS = pathlib.Path(os.environ.get("CARDS_DIR", "/tmp/judgecards"))
 CACHE = pathlib.Path("/tmp/judge-cache"); CACHE.mkdir(exist_ok=True)
 OUT = pathlib.Path("/tmp/judge-results.jsonl")
 
+# `shoot-wave.sh` strips the whole `.ui4a.tsx` suffix chain when it names shots, so a card looked
+# up under its raw stem finds none of its own images and is skipped — which reads exactly like a
+# card that rendered nothing. Wave 2 was reported as 27 unjudgeable cards for this reason alone.
+def shot_stem(card: str) -> str:
+    return card.removesuffix(".ui4a")
+
+
 RUBRIC = """你在评审一个嵌在聊天流里的生成式 UI 卡片。它渲染在别人的应用里（不是整页），宽度由读者拖动，
 所以下面给了三个断点 320 / 440 / 720，每个断点都有浅色和深色两版，最后是它的 TSX 源码。
 
@@ -63,7 +70,7 @@ def content_for(card):
     n = 0
     for w in WIDTHS:
         for theme in ("light", "dark"):
-            f = SHOTS / f"{card}.{theme}.{w}.png"
+            f = SHOTS / f"{shot_stem(card)}.{theme}.{w}.png"
             if not f.exists(): continue
             parts.append({"type": "text", "text": f"\n{w}px {'浅色' if theme=='light' else '深色'}："})
             parts.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64(f)}"}})
@@ -109,7 +116,7 @@ async def main():
             if n < len(WIDTHS) * 2:
                 skipped.append(f"{card} ({n}/{len(WIDTHS)*2} images)"); continue
             tiny = [w for w in WIDTHS
-                    if (SHOTS / f"{card}.light.{w}.png").stat().st_size < 5000]
+                    if (SHOTS / f"{shot_stem(card)}.light.{w}.png").stat().st_size < 5000]
             if tiny:
                 skipped.append(f"{card} (blank at {tiny})"); continue
             fp = hashlib.md5((src + str(n)).encode()).hexdigest()
