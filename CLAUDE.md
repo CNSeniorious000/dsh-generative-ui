@@ -7321,3 +7321,39 @@ The fresh set is 6 of 77. Both reference cards flagged by it are now regenerated
 version carries `aria-pressed` on its 拍号 row unprompted, and the browser mount confirms the a11y
 tree agrees (`4/4=false`, `木鱼=checked`) where the old one exposed nothing at all.
 
+### A fixture that no longer reproduces on the commit that recorded it (2026-08-24)
+
+Having added a rule to the skill, the honest next step was the boundary check this file already
+demands — and the first fixture tried came back wrong. `chmod 755 到底是啥权限` is recorded here at
+**3/3 card**, quoted as the measurement that closed the "这张表是固定的" escape. Re-run today it is
+**0/3 prose**, three well-formed replies of 1277–1302 bytes, each opening with a markdown table of
+exactly the kind the rule exists to convert.
+
+Three prose replies on a rule-covered fixture is the shape of a regression, and I had just edited
+both prompts. So: the ablation, done the way this file says to do it — **re-run the old side too**,
+in a worktree at `7211930`, built there, with the profile symlink repointed at it.
+
+    branch (five screens, four library rows, the $dsh bullets, the preset-row rule)   0/3
+    origin/main, untouched                                                            0/3
+
+**Identical.** Nothing I changed moved it, and a day of rules that all argue for building a card
+did not erode the boundary in this direction either — the fixture simply does not reproduce on the
+commit that recorded it. That is a decayed measurement, not a defect: the same class as the four
+rotted identifiers, arriving in the one form this file had assumed was safe. A behaviour citation
+*can* rot, and it rots quietly when nothing re-runs it.
+
+Two things worth carrying beyond the result:
+
+- **The symlink swap contaminated a run in flight.** A 2048 regeneration was mid-generation when I
+  repointed the profile at the baseline worktree, so it measured a build I had not intended and was
+  discarded. The stale-symlink guard added this morning protects the *start* of a run, not its
+  middle; there is no version of it that could.
+- **My first attempt used the wrong prompt.** I typed `chmod 755 到底啥意思`, which is not the
+  fixture (`到底是啥权限`), and read its prose as the finding. Both wordings prose out, so the
+  conclusion survives — but a fixture is its exact string, and testing a paraphrase measures a
+  prompt nobody recorded.
+
+Left as a decayed fixture rather than acted on. Chasing it would mean re-tuning a trigger rule
+against a model that has moved, and the record already says what happens when a rule is rewritten
+to name the phrasing that fails.
+
