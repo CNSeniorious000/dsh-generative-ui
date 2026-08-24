@@ -93,11 +93,13 @@ async def judge(c, model, card, parts, fp):
     try:
         r = await c.post("/v1/chat/completions",
                          json={"model": model, "max_tokens": 3000, "messages": [{"role": "user", "content": parts}]})
-        out = r.json()["choices"][0]["message"]["content"] if r.status_code == 200 else f"HTTP {r.status_code}: {r.text[:200]}"
+        # A 200 whose `content` is null is not a verdict. Cached, it becomes a permanent empty
+        # entry that silently narrows the denominator — worse than an error, which at least shows.
+        out = (r.json()["choices"][0]["message"].get("content") or "ERR empty content") if r.status_code == 200 else f"HTTP {r.status_code}: {r.text[:200]}"
     except Exception as e:
         out = f"ERR {type(e).__name__}: {e}"
     rec = {"model": model, "card": card, "verdict": out}
-    f.write_text(json.dumps(rec, ensure_ascii=False))
+    if not out.startswith(("HTTP", "ERR")): f.write_text(json.dumps(rec, ensure_ascii=False))
     return rec
 
 

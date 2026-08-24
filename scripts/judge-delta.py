@@ -18,7 +18,7 @@ cut = time.time() - float(sys.argv[1] if len(sys.argv) > 1 else 10) * 60
 before, after = collections.defaultdict(list), collections.defaultdict(list)
 for f in glob.glob("/tmp/judge-cache/*"):
     r = json.loads(open(f).read())
-    m = re.search(r"SCORE:\s*([\d.]+)", r["verdict"])
+    m = re.search(r"SCORE:\s*([\d.]+)", r.get("verdict") or "")
     if not m: continue
     (after if os.path.getmtime(f) > cut else before)[r["card"]].append(float(m.group(1)))
 
