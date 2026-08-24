@@ -16,6 +16,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import type { Context } from "@deepseek-ai/cordis";
+import z from "@deepseek-ai/schemastery";
+import { installSettingsSection, settingsNamespace } from "@deepseek-ai/dsh-settings";
 import type {} from "@deepseek-ai/dsh-host-webserver";
 import type {} from "@deepseek-ai/dsh-system-prompt";
 import type {} from "@deepseek-ai/dsh-skill";
@@ -24,11 +26,33 @@ import type {} from "@deepseek-ai/dsh-skill";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
-import { INLINE_PROMPT, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
+import { inlinePrompt, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 
 export const name = "dsh-generative-ui";
 export const inject = ["systemPrompt"];
+
+/** The settings section this plugin owns; the key under `dsh-generative-ui:` in settings.yaml. */
+export const SETTINGS_NAMESPACE = settingsNamespace("dsh-generative-ui");
+
+/**
+ * Plugin settings. A schemastery schema, not a TypeScript type: the host validates the
+ * `settings.yaml` section against it and builds the settings UI from it, so a plain interface
+ * would be a switch nobody can find and nobody can check.
+ *
+ * `allowExec` is off by default and that default is the point. `$dsh/fs` is bounded — it takes a
+ * workspace-relative path and runs under the session's sandbox policy, so the worst it reaches is
+ * a file the user could have opened anyway. `$dsh/exec` takes an arbitrary command string, and a
+ * card is code a MODEL wrote, running in the user's browser, firing on their keystrokes. The
+ * sandbox policy still applies, but "whatever the agent's own bash tool may do" is a much larger
+ * surface than a path — and the user never approves a card's commands the way they approve the
+ * agent's.
+ */
+export const Config = z.object({
+  allowExec: z.boolean().default(false).description("Let generated cards run shell commands through `$dsh/exec`. A card is model-written code running in your browser; leave this off unless you want that."),
+});
+
+export type Config = ReturnType<typeof Config>;
 
 // Namespaced by package name because a duplicate (kind, path) throws, and a throw during apply silently fails the whole plugin.
 export { ASSET_PREFIX, WASM_PATH } from "./contract-assets.ts";
@@ -389,8 +413,50 @@ export async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<str
  *  the client half's `ctx.sessions`, which is a different service entirely. */
 type SessionStoreCtx = { sessions: { list: () => readonly { header: { cwd?: string } }[] } };
 
-export function apply(ctx: Context): void {
-  ctx.effect(() => ctx.systemPrompt.section({ name: PROMPT_SECTION_NAME, order: PROMPT_SECTION_ORDER, text: INLINE_PROMPT }), "dsh-generative-ui: inline prompt");
+// `= Config({})` rather than a bare default: schemastery fills every declared default, so an
+// omitted config is the same object the host would have built, and `allowExec` is false there.
+// A host that calls `apply(ctx)` is not a hypothetical — the existing profile tests do.
+export function apply(ctx: Context, config: Config = Config({})): void {
+  // `current()` rather than a captured boolean: the section is live, and a user who turns
+  // commands off in the settings UI means it now, not at the next restart.
+  let current = () => config;
+  // The prompt text and the exec route are both DECIDED at registration time, so a live setting
+  // needs somewhere to re-decide them. A cordis scope is that somewhere: everything below hangs
+  // off `configured`, and `onChange` disposes and rebuilds it, which re-registers the section
+  // with the new text and adds or removes the route. Reading `current()` inside the effects
+  // without this would change the value and leave the registrations as they were.
+  let configured: { dispose: () => Promise<void> } | null = null;
+  let mounted: boolean | null = null;
+  const rebuild = () => {
+    const allowExec = current().allowExec === true;
+    // `onChange` fires on every write to the section, and the section may grow other keys later.
+    // Rebuilding on a value that did not move would tear down the prompt and both routes for
+    // nothing — visible to a reader as a card losing its host mid-conversation.
+    if (allowExec === mounted) return;
+    mounted = allowExec;
+    void configured?.dispose();
+    configured = ctx.plugin({ name: "dsh-generative-ui:configured", apply: (scoped: Context) => applyWith(scoped, allowExec) });
+  };
+  // Called here as well as from `onChange`, and that is not belt-and-braces: the whole of
+  // `installSettingsSection` sits inside `ctx.inject(["settings"])`, so on a host with no settings
+  // service — `dsh --profile headless` is one — `onChange` never fires at all and nothing would
+  // ever mount. The `mounted` check above is what keeps this from double-mounting where it does.
+  rebuild();
+  installSettingsSection(ctx, SETTINGS_NAMESPACE, Config, config, {
+    setSource: (source) => {
+      current = source;
+    },
+    onChange: rebuild,
+  });
+  ctx.effect(() => () => void configured?.dispose(), "dsh-generative-ui: settings scope");
+}
+
+/** Everything whose shape depends on `allowExec`; rebuilt when the setting changes. */
+function applyWith(ctx: Context, allowExec: boolean): void {
+  // The prompt has to follow the switch. With commands off, a section that documents `bash()`
+  // teaches the model to write cards that cannot work — and the failure surfaces to the user as a
+  // dead card, not as a disabled feature.
+  ctx.effect(() => ctx.systemPrompt.section({ name: PROMPT_SECTION_NAME, order: PROMPT_SECTION_ORDER, text: inlinePrompt(allowExec) }), "dsh-generative-ui: inline prompt");
   // Both routes only matter to a browser half that exists to consume them. Scoped rather than
   // required so the plugin still teaches the model on a profile with no web server at all —
   // `dsh --profile headless` has no `webServer`, and a required injection there means the
@@ -416,8 +482,10 @@ export function apply(ctx: Context): void {
     scoped.inject(["fs", "sandboxPolicy"], (withFs) => {
       withFs.effect(() => withFs.webServer.register({ kind: "exact", path: FS_PATH, handler: (req, res) => serveFs(withFs as unknown as FsCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: workspace files");
     });
-    // And again for the shell: a host may compose a web server without a command executor.
-    scoped.inject(["shell", "sandboxPolicy"], (withShell) => {
+    // And again for the shell: a host may compose a web server without a command executor — and
+    // now also a host that has one but has not opted in. Both mean the same thing to a card, and
+    // both are expressed the same way: no route.
+    if (allowExec) scoped.inject(["shell", "sandboxPolicy"], (withShell) => {
       withShell.effect(() => withShell.webServer.register({ kind: "exact", path: EXEC_PATH, handler: (req, res) => serveExec(withShell as unknown as ExecCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: commands");
     });
     scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {

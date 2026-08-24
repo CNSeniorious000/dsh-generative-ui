@@ -8,7 +8,14 @@
  */
 import { expect, test } from "bun:test";
 import { FENCE_LANG } from "../src/contract.ts";
-import { INLINE_PROMPT } from "../src/prompt.ts";
+import { inlinePrompt } from "../src/prompt.ts";
+
+// Every rule below has to survive on the host that has the most text — commands on — because
+// that is the build these phrases were written against. The `allow-exec` suite is what pins
+// what changes when they are off.
+const PROMPT = inlinePrompt(true);
+// Same reason every `skillBody(…, true)` below passes the flag: these phrases live in sections a
+// host without commands does not get.
 import { skillBody } from "../src/skill.ts";
 
 /**
@@ -42,7 +49,7 @@ for (const [name, phrase] of RULES) {
     // Occurrences, not presence. A phrase appearing twice cannot detect one of them going —
     // the `streamText` assertion below was pinned on a line that appears in both halves of its
     // code block, so deleting either half left the test green.
-    expect(INLINE_PROMPT.split(phrase).length - 1).toBe(1);
+    expect(PROMPT.split(phrase).length - 1).toBe(1);
   });
 }
 
@@ -50,9 +57,9 @@ for (const [name, phrase] of RULES) {
 // every rule after it with it. Lint catches the syntax error only when the truncation happens to
 // leave something illegal — a length floor catches the case where it does not.
 test("the prompt is whole", () => {
-  expect(INLINE_PROMPT.length).toBeGreaterThan(8000);
-  expect(INLINE_PROMPT).toContain("## Colors");
-  expect(INLINE_PROMPT).toContain("## Width");
+  expect(PROMPT.length).toBeGreaterThan(8000);
+  expect(PROMPT).toContain("## Colors");
+  expect(PROMPT).toContain("## Width");
 });
 
 /**
@@ -78,7 +85,7 @@ const SKILL_RULES = [
 
 for (const [name, phrase] of SKILL_RULES) {
   test(`the skill still shows the code for ${name}`, () => {
-    expect(skillBody("types.json", "standalone.json").split(phrase).length - 1).toBe(1);
+    expect(skillBody("types.json", "standalone.json", true).split(phrase).length - 1).toBe(1);
   });
 }
 
@@ -100,7 +107,7 @@ const SECTIONS = [
 ];
 
 test("the skill body carries every section, in order", () => {
-  const body = skillBody("types.json", "standalone.json");
+  const body = skillBody("types.json", "standalone.json", true);
   expect(
     body
       .split("\n")
@@ -119,7 +126,7 @@ test("the body assembles whether or not the maps exist", () => {
     [undefined, "s.json"],
     ["t.json", "s.json"],
   ] as const) {
-    const body = skillBody(maps[0], maps[1]);
+    const body = skillBody(maps[0], maps[1], true);
     expect(body.startsWith("# Building a generative UI")).toBe(true);
     // Not a bare `undefined` search: the prose says "it is an `undefined` component" on purpose.
     // What must not appear is an interpolation that leaked one — a path, or a flag's argument.
@@ -174,7 +181,7 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "NEVER-LEAVES-LOADING": "Fetch the first screen from a",
   "SELF-SHADOWING-MEMO": "referenced directly or indirectly in its own initializer",
   "TOAST-WITHOUT-TOASTER": "render `<Toaster />` in your tree",
-  "INVENTED-CAPABILITY": "a sixth you reason your way to does not exist",
+  "INVENTED-CAPABILITY": "you reason your way to does not exist",
   "NAMED-NUMBERFLOW-IMPORT": "there is no named `NumberFlow` export",
 };
 
@@ -207,7 +214,7 @@ test("every code rule in the prompt has a screen enforcing it", () => {
   // The whole bullet, not just its bold header — a screen's pinned phrase is often in the body
   // (`JSX-SUBSCRIPT` pins "Subscript it into a capitalised local first", which is the sentence
   // AFTER the header). Bullets run until the next one starts.
-  const bullets = INLINE_PROMPT.split(/^- \*\*/m)
+  const bullets = PROMPT.split(/^- \*\*/m)
     .slice(1)
     .map((b) => "- **" + b);
   const covered = [...Object.values(RULE_FOR_SCREEN).flat(), ...UNSCREENABLE];
@@ -218,7 +225,7 @@ test("every code rule in the prompt has a screen enforcing it", () => {
 test("every screen has a rule telling the model not to do it", async () => {
   const { SCREENS } = await import("../scripts/screens.ts");
   expect(Object.keys(RULE_FOR_SCREEN).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
-  const both = INLINE_PROMPT + skillBody("types.json", "standalone.json");
+  const both = PROMPT + skillBody("types.json", "standalone.json", true);
   const missing = Object.entries(RULE_FOR_SCREEN).filter(([, p]) => ![p].flat().every((phrase) => both.includes(phrase)));
   expect(missing).toEqual([]);
 });
@@ -240,8 +247,8 @@ test("every screen has a rule telling the model not to do it", async () => {
  * Write `style={ { … } }` in prompt text: same JSX, same meaning to a reader, no `{{`.
  */
 for (const [name, text] of [
-  ["the inline prompt", () => INLINE_PROMPT],
-  ["the skill body", () => skillBody("types.json", "standalone.json")],
+  ["the inline prompt", () => PROMPT],
+  ["the skill body", () => skillBody("types.json", "standalone.json", true)],
 ] as const) {
   test(`${name} carries no {{ for the loader to read as a variable`, () => {
     expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
@@ -251,7 +258,7 @@ for (const [name, text] of [
 /**
  * Where a rule lives changes whether it is applied — measured, not assumed.
  *
- * `aria-live` sat in `INLINE_PROMPT` alone. The model quoted it back nearly verbatim when asked,
+ * `aria-live` sat in `PROMPT` alone. The model quoted it back nearly verbatim when asked,
  * and then wrote two cards without it. Moved into the skill's accessibility section, beside the
  * `aria-label` rule that had gone 13% → 92%, both prompts came back with it.
  *
@@ -265,7 +272,7 @@ for (const [name, text] of [
 const ACCESSIBILITY_RULES = ["aria-label", "aria-live", "motion-reduce:", "<button"];
 
 test("an accessibility rule lives in the skill, where it is read while writing JSX", () => {
-  const body = skillBody("types.json", "standalone.json");
+  const body = skillBody("types.json", "standalone.json", true);
   const promptOnly = ACCESSIBILITY_RULES.filter((rule) => !body.includes(rule));
   expect(promptOnly).toEqual([]);
 });

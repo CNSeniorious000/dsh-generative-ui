@@ -15,7 +15,7 @@ import { apply } from "../src/index.ts";
 
 type Registration = { deps: readonly string[]; effects: string[] };
 
-const applyWith = (available: readonly string[]) => {
+const applyWith = (available: readonly string[], config: unknown = {}) => {
   const registrations: Registration[] = [];
   const asked = new Set<string>();
   const effects: string[] = [];
@@ -31,6 +31,12 @@ const applyWith = (available: readonly string[]) => {
           /* the fake context cannot serve a request; registration is the subject */
         }
       },
+      // `apply()` now mounts everything through one child plugin, so the fake has to run it —
+      // the Proxy fallback would return a stub and the whole registration tree would go missing.
+      plugin: (spec: { apply: (scoped: unknown) => void }) => {
+        spec.apply(new Proxy(make(deps), { get: (target, key) => (key in target ? target[key as string] : stub()) }));
+        return { dispose: async () => {} };
+      },
       inject: (want: readonly string[], callback: (scoped: unknown) => void) => {
         // A dependency the profile does not have: cordis never runs the callback.
         for (const name of want) asked.add(name);
@@ -42,17 +48,28 @@ const applyWith = (available: readonly string[]) => {
     return context;
   };
   const root = new Proxy(make([]), { get: (target, key) => (key in target ? target[key as string] : stub()) });
-  apply(root as never);
+  apply(root as never, config as never);
   return { registrations, effects, asked };
 };
 
-const ALL = ["webServer", "sessions", "fs", "sandboxPolicy", "shell", "llm", "agentDefaultModel", "skills"];
+const ALL = ["webServer", "sessions", "fs", "sandboxPolicy", "shell", "llm", "agentDefaultModel", "skills", "settings"];
 
 test("a full profile registers every route", () => {
-  const { effects } = applyWith(ALL);
+  const { effects } = applyWith(ALL, { allowExec: true });
   for (const label of ["dsh-generative-ui: workspace files", "dsh-generative-ui: commands", "dsh-generative-ui: model stream", "dsh-generative-ui: skill"]) {
     expect(effects).toContain(label);
   }
+});
+
+// The route is the switch, so its absence is what "commands are off" MEANS — and off is what a
+// host that says nothing gets. `$dsh/exec` takes an arbitrary command string from model-written
+// code running in the user's browser; `$dsh/fs` takes a workspace path under the sandbox policy.
+// Only one of those is safe to hand out by default.
+test("a full profile does NOT register the command route by default", () => {
+  const { effects } = applyWith(ALL);
+  expect(effects).not.toContain("dsh-generative-ui: commands");
+  expect(effects).toContain("dsh-generative-ui: workspace files");
+  expect(effects).toContain("dsh-generative-ui: skill");
 });
 
 /**
@@ -62,7 +79,7 @@ test("a full profile registers every route", () => {
  * or restricted profile looks like.
  */
 test("a profile without `shell` loses only the command route", () => {
-  const { effects } = applyWith(ALL.filter((name) => name !== "shell"));
+  const { effects } = applyWith(ALL.filter((name) => name !== "shell"), { allowExec: true });
   expect(effects).not.toContain("dsh-generative-ui: commands");
   expect(effects).toContain("dsh-generative-ui: workspace files");
   expect(effects).toContain("dsh-generative-ui: model stream");

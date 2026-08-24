@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { capabilityModule } from "../src/contract.ts";
 import { bind } from "../src/client/runtime/bindings.ts";
-import { INLINE_PROMPT } from "../src/prompt.ts";
+import { inlinePrompt } from "../src/prompt.ts";
 import { skillBody } from "../src/skill.ts";
 
 /**
@@ -16,17 +16,30 @@ import { skillBody } from "../src/skill.ts";
  */
 const GROUPS = Object.keys(bind());
 
+/**
+ * `exec` is the one capability a host can withhold (`allowExec`, off by default), so the set the
+ * text must name depends on the switch. Both directions matter and they fail differently: naming
+ * one that is off teaches the model an import that will fail — and a failed import takes the whole
+ * module down, so the reader gets a blank card naming nothing. Omitting one that is on wastes it.
+ */
+const groupsFor = (allowExec: boolean) => (allowExec ? GROUPS : GROUPS.filter((g) => g !== "exec"));
+
 test("bind() exposes something to enumerate", () => {
   expect(GROUPS.length).toBeGreaterThan(0);
 });
 
-test("the prompt names every capability", () => {
-  for (const group of GROUPS) expect(INLINE_PROMPT).toContain(capabilityModule(group));
+test("the prompt names every capability the host exposes", () => {
+  for (const allowExec of [false, true]) {
+    const text = inlinePrompt(allowExec);
+    for (const group of groupsFor(allowExec)) expect(text).toContain(capabilityModule(group));
+  }
 });
 
-test("the skill names every capability", () => {
-  const body = skillBody(undefined, undefined);
-  for (const group of GROUPS) expect(body).toContain(capabilityModule(group));
+test("the skill names every capability the host exposes", () => {
+  for (const allowExec of [false, true]) {
+    const body = skillBody(undefined, undefined, allowExec);
+    for (const group of groupsFor(allowExec)) expect(body).toContain(capabilityModule(group));
+  }
 });
 
 /**
@@ -34,14 +47,18 @@ test("the skill names every capability", () => {
  * importing a `$dsh/…` that resolves to nothing — the prompt must not be the thing that taught it
  * the name. Every specifier either prompt mentions has to be one `bind()` actually returns.
  */
-test("and no capability that does not exist", () => {
-  const real = new Set(GROUPS.map(capabilityModule));
-  const both = INLINE_PROMPT + skillBody(undefined, undefined);
+test("and no capability that does not exist — or that this host withheld", () => {
+  for (const allowExec of [false, true]) checkNamedCapabilities(allowExec);
+});
+
+function checkNamedCapabilities(allowExec: boolean) {
+  const real = new Set(groupsFor(allowExec).map(capabilityModule));
+  const both = inlinePrompt(allowExec) + skillBody(undefined, undefined, allowExec);
   // `$dsh/internal` is the private module the blob shims import; it is deliberately not a
   // capability and must not appear in anything the model reads.
   const named = new Set([...both.matchAll(/\$dsh\/[\w-]+/g)].map((m) => m[0]));
   expect([...named].filter((s) => !real.has(s))).toEqual([]);
-});
+}
 
 // The module the model asked for before it existed. It is the answer to the persistence rule, so
 // the rule has to name it by its import line — a capability described in prose but never spelled

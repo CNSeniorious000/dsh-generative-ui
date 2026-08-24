@@ -68,7 +68,14 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
   ].join("\n");
 }
 
-export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined): string =>
+/**
+ * The skill, for the capabilities this host exposes.
+ *
+ * With commands off the whole `## Running a command` section is cut rather than softened: it is
+ * ~90 lines that all assume `bash()` exists, and half a section describing a capability the host
+ * does not have is worse than none — the model reads the surviving half as permission.
+ */
+export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined, allowExec = false): string =>
   ((maps) =>
     `# Building a generative UI
 
@@ -866,4 +873,7 @@ Names you half-remember are the main failure mode: a wrong export is not a typo,
 
 The same doubt covers **default vs named**, and there the answer is cheaper still: \`curl -s https://esm.sh/<package>\` prints the re-export lines, and an \`export { default }\` among them is the whole answer — \`@number-flow/react\` has one, \`vaul\` does not. For anything that does not settle it, the package's README on npm shows the import line its author wrote. Guessing here has a specific shape — \`import { X }\` where the package exports \`default\` gives you \`undefined\` and a blank card, with no error mentioning \`X\`.
 
-One lookup costs a few seconds; a wrong name costs a blank card, a confused user, and a repair round-trip.`)(mapNotes(typesMap, standaloneMap));
+One lookup costs a few seconds; a wrong name costs a blank card, a confused user, and a repair round-trip.`)(mapNotes(typesMap, standaloneMap))
+    // Cut the section whole, from its heading to the next one. Anchored on the headings rather
+    // than on line numbers so editing the prose in between cannot silently change what is cut.
+    .replace(allowExec ? "" : /\n## Running a command\n[\s\S]*?(?=\n## )/, "");
