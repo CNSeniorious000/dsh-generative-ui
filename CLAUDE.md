@@ -7719,6 +7719,30 @@ remedy the rule names. A screen can only see the first. That asymmetry is why th
 numbers here are quoted as *clean under N screens* rather than as adoption rates for any particular
 fix — and why a row like `sonner` earns its place by naming a trap, not by how often it is imported.
 
+### The prose boundary, re-checked after forty commits (2026-08-24)
+
+Forty commits landed on this branch, and every prompt rule in them argues for **building** something.
+The failure that would cost most is invisible to all thirty screens: a widened trigger that starts
+producing a card for `今天星期几`, which is a perfectly clean card answering a question that wanted
+one line.
+
+Both hard negatives, two runs each:
+
+| prompt | result |
+| --- | --- |
+| `今天星期几` | prose, prose |
+| `HTTP 状态码 418 是什么意思` | prose, prose |
+
+**4/4**, matching the 0/4-across-four-models baseline the fixtures record.
+
+Two of the replies are 46 and 48 bytes, which this file says to distrust — a short well-formed
+output is what a quota failure and an upstream 400 both look like. Read: *今天是 **2026年8月24日，
+星期一**。* The card ran `bash` to get the real date and answered in one line, which is the correct
+answer and the correct amount of work. The 418 reply is a paragraph about RFC 2324.
+
+Worth doing after any day of rule additions, and worth doing *last*: the positives are checked
+continuously by the screens and the paint check, and the negatives are checked by nothing at all.
+
 ### And the removal of the invented names cost nothing
 
 The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
