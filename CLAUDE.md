@@ -7845,6 +7845,36 @@ Worth stating as the rule for the next one: **if a rule is not landing, the ques
 say it more clearly — it is whether the model has to write anything to obey it that the rule does
 not already show.**
 
+### Which prose rules are worth converting: almost none (2026-08-24)
+
+The 0/5 → 2/2 result invites converting every prose rule to code, so the skill was swept for rules
+with no code block: **44 bold headers**. Reading them, almost none is a candidate.
+
+Most are one of three things that cannot be shown as code:
+
+- a judgement about *whether* to build (`Do not decorate an answer`, `Inline is the card`,
+  `Do it before you explore`);
+- a clause inside a rule whose code block sits a paragraph away (`The tell is the ternary you are
+  about to write` is part of the selection rule, which shows a radiogroup);
+- a fact with no action attached (`A non-zero exit resolves`, `belongs to the workspace`).
+
+Two looked like genuine code rules stated in prose, and both were measured before touching:
+
+| | corpus | fresh |
+| --- | --- | --- |
+| read on demand, not all at once | 9/15 | **6/6** |
+| show what you ran | 14/19 | **11/11** |
+
+Both already at 100%. So the prose-vs-code finding is not *prose is worse*; it is **prose is worse
+when the rule is not landing.** A rule at 6/6 has nothing to fix, and rewriting it would cost tokens
+and risk the thing that is working.
+
+The sweep also corrected its own first number: the probe looked for triple-backtick fences and
+reported 49, counting the focus-ring rule — which shows an indented code block and is the rule the
+record measures at 0% → 86%. **A detector for "has code" that only knows one spelling of code**, the
+same shape as the four over-reporting detectors already listed. Fixed to accept both, and the
+remaining 44 are what the reading above describes.
+
 ### And the removal of the invented names cost nothing
 
 The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
