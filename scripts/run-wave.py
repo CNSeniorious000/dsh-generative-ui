@@ -36,8 +36,12 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 # one default model and they must not share a settings.yaml.
 MODELS = [
     "macaron-v1-venti", "macaron-v1-coding-venti", "glm-5.2",
-    "gemini-3.7-flash", "grok-4.6", "gpt-5.6-terra", "claude-sonnet-5",
+    "gemini-3.7-flash", "grok-4.6", "gpt-5.6-terra",
 ]
+# No Anthropic model: the headless profile composes `tool-web`, and every claude-* on this gateway
+# answers a request carrying it with `The use of the web search tool is not supported` (400).
+# Measured on sonnet-5, sonnet-4-6 and opus-4-8 — a gateway capability gap, not a model one, so
+# revisit if the gateway changes rather than assuming the family cannot be sampled.
 
 # Which upstream a model queues behind; models sharing one share its concurrency budget.
 def upstream_of(model):
@@ -129,6 +133,12 @@ snapshot.mkdir(parents=True)
 for item in ("lib", "types", "package.json"):
     src = REPO / item
     (shutil.copytree if src.is_dir() else shutil.copy2)(src, snapshot / item)
+# `node_modules` is SYMLINKED, not copied: `lib/index.js` imports real packages (`schemastery`,
+# the dsh peers) and a copy in /tmp resolves none of them — measured, every job of wave 6 died with
+# `Cannot find package '@deepseek-ai/schemastery'` before reaching a model. A symlink is safe here
+# where a copy of `lib/` is not: the wave never writes to node_modules, and installing into it
+# mid-wave is the same mistake as rebuilding, caught by the same instinct rather than by this.
+(snapshot / "node_modules").symlink_to(REPO / "node_modules")
 LINK = "profiles/headless/node_modules/dsh-generative-ui"
 homes = [pathlib.Path(os.path.expanduser(f"~/.dsh-eval-{m}")) / LINK for m in MODELS]
 restore = [(h, os.readlink(h)) for h in homes if h.is_symlink()]

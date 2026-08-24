@@ -13,16 +13,19 @@ credential goes stale and fails as an auth error that looks exactly like a refus
 setting one home's model silently sets every home's, and the wave then measures one model three
 times while reporting three.
 
-Every eval home gets `reasoningEffort: low`, and that is not a global change — only these homes
-carry it. A wave measures whether the PROMPT changed what the model writes, and thinking budget is
-orthogonal to that: at the default effort a reasoning model can spend thousands of tokens before
-its first content character (glm-5.2 measured at 7432), which buys the measurement nothing and
-costs wall-clock on every one of 72 runs. `EVAL_EFFORT=…` overrides.
+`EVAL_EFFORT=low` would be worth having — a wave measures whether the PROMPT changed what the model
+writes, and thinking budget is orthogonal to that, while a reasoning model can spend thousands of
+tokens before its first content character (glm-5.2 measured at 7432). It is OFF by default because
+it does not work here yet: dsh rejects `reasoningEffort` with `UNSUPPORTED_REASONING_EFFORT` unless
+the model ENTRY declares `reasoningEfforts`, and none of the seven do — measured, all six probed
+rejected it. Declaring them means writing each provider's own wire value (OpenAI's
+`reasoning_effort`, Anthropic's thinking budget, …), and a wrong one sends the gateway a parameter
+it will not understand. Set `EVAL_EFFORT` only after adding the declarations.
 """
 import os, pathlib, shutil, sys
 
 model = sys.argv[1]
-effort = os.environ.get("EVAL_EFFORT", "low")
+effort = os.environ.get("EVAL_EFFORT")
 shared = pathlib.Path.home() / ".dsh"
 home = pathlib.Path.home() / f".dsh-eval-{model}"
 (home / "profiles").mkdir(parents=True, exist_ok=True)
@@ -39,7 +42,7 @@ lines = (shared / "settings.yaml").read_text().split("\n")
 start = lines.index("agent-default-model:")
 end = next((i for i in range(start + 1, len(lines)) if lines[i] and not lines[i][0].isspace()), len(lines))
 stanza = [l for l in lines[start + 1:end] if not l.strip().startswith(("model:", "reasoningEffort:"))]
-stanza += [f"  model: {model}", f"  reasoningEffort: {effort}"]
+stanza += [f"  model: {model}"] + ([] if effort is None else [f"  reasoningEffort: {effort}"])
 (home / "settings.yaml").write_text("\n".join(lines[:start + 1] + stanza + lines[end:]))
 
 # Read back rather than trust the write: an earlier sed version put both keys on ONE line, which
@@ -50,4 +53,4 @@ e2 = next((i for i in range(s2 + 1, len(written)) if written[i] and not written[
 got = {k.strip(): v.strip() for k, _, v in (l.partition(":") for l in written[s2 + 1:e2]) if k.strip()}
 if got.get("model") != model: sys.exit(f"eval-home: wrote model={got.get('model')!r}, wanted {model!r}")
 if got.get("reasoningEffort") != effort: sys.exit(f"eval-home: wrote reasoningEffort={got.get('reasoningEffort')!r}, wanted {effort!r}")
-print(f"{home}  model={model}  effort={effort}")
+print(f"{home}  model={model}" + ("" if effort is None else f"  effort={effort}"))
