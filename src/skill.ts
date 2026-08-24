@@ -202,6 +202,17 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   \`marginBottom\` on one child while its siblings rely on a gap is the spelling that produces one
   odd space and eleven equal ones.
 
+- **A list of options collapses the prose, not the facts — and folding the wrong half is the
+  common way to end up with a card nobody can scan.** Measured on a real card recommending six
+  ways to manage a symptom: each entry kept three lines of description permanently on screen and
+  hid one line — \`Onset: 15 min\` — behind a "Show details" link, repeated six times. The
+  mechanism was right (one panel open at a time, \`aria-expanded\` on every trigger); the choice
+  of what went inside it was backwards, and the card came out 3369px tall at every width. What
+  earns a permanent line is what the reader compares the options **by** — the name, the one
+  number that distinguishes it. The paragraph explaining why it works is what folds. A list of
+  more than about four options where every entry carries a paragraph is not a list any more, and
+  the fix is not a smaller font.
+
 - **A comparison table is read down a column, so its text cells are left-aligned and only its
   numbers are right-aligned.** Measured on a real card comparing two cell types over 12 rows:
   every cell was centred, so at 440px eight of the twelve rows wrapped to two lines and each
@@ -223,6 +234,15 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   as the reader clicks along it:
 
       border: selected ? "1px solid transparent" : "1px solid var(--dsw-alias-border-l2)"
+
+  **And once a row is filled, everything inside it has to move off that fill too.** Measured on a
+  real card: a step row filled with \`state-business-primary\` when ticked, and the checkbox inside
+  it took \`background: state-business-primary\` for its own checked state — the same token, so the
+  box vanished into the row and left a white tick floating on blue with nothing around it. The
+  same happens to a chip, a count, an icon tile: any child that had a background of its own is now
+  sitting on a background that matches it. On a filled row the children want the fill's foreground
+  (\`#fff\` here) as their colour and no background at all, or a white outline if the shape itself
+  has to stay readable.
 - **Keep nesting shallow.** A bordered box inside a bordered box is almost always wrong; a divider line does the job.
 - **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you. No \`position: fixed\`, no \`100vw\`/\`100vh\`, no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
