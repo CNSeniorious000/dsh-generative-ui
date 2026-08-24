@@ -236,6 +236,24 @@ reader cannot see for content they cannot see, and it is only right when the row
 one line tall (a table, a list of equal-height rows). If even wrapping is too cramped,
 \`flex-wrap\` on the row with \`basis-48\` on the text drops the button to its own line instead.
 
+**\`justify-between\` is the shape this fires on, and neither child needs \`flex-1\`.** Every flex
+item defaults to \`min-width: auto\` — \`flex-1\` only makes it more obvious. A header row of
+\`<div>title + subtitle</div>\` beside a \`<label>Meta <input/> kcal</label>\` overflowed its own
+card by **316px at 320 and 196px at 440**, and the shot is clipped at the card width, so the
+overflowing part is not cut off, it is *absent*. Measured on wave 2: 8 of 27 cards, every one of
+them a \`justify-between\` row. On one calorie log it hid EVERY kcal figure at 320 — the card
+read as a plain list of meal names and looked completely fine.
+
+The fix is \`min-w-0\` on whichever child is allowed to shrink, usually the text one:
+
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">{title}</div>
+      <div className="shrink-0">{value}</div>
+    </div>
+
+If the two halves genuinely cannot share one line at 320, \`flex-wrap\` on the row is the honest
+answer — a second line beats a missing number.
+
 **Aligning repeated rows by giving each label a width breaks on the longest label, not on the
 average one.** Three rows whose labels are \`工作时长\` / \`休息时长\` / \`长休息时长\` under a
 \`min-w-[60px]\` measure 60, 60 and **64.5** — so the third row's controls all shift right by 4.5px

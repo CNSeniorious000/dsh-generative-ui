@@ -35,7 +35,12 @@ export const unoConfig = (scope: string): UserConfig => ({
   // overflowing strip is not cut off, it is absent.
   preflights: [
     {
+      // Same class of bug as box-sizing: a card writes `<ul className="grid gap-1.5">`, which is
+      // correct — a grid list has no use for UA markers — and dropping the reset put them back, so
+      // a column of stray bullets sits OUTSIDE the card border at every width. Not something to
+      // ask the model to write `list-none` for on every list.
       getCSS: () => `${scope} *, ${scope} *::before, ${scope} *::after { box-sizing: border-box; }
+      ${scope} ul, ${scope} ol { list-style: none; margin: 0; padding: 0; }
       ${scope} button, ${scope} input, ${scope} select, ${scope} textarea {
         background: transparent; color: inherit; font: inherit; border: 0 solid; cursor: pointer;
       }
