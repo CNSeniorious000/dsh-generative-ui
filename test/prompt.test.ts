@@ -155,6 +155,11 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "UNLABELLED-CONTROL": ["A slider is the same problem", "`<select>` has the same problem"],
   "UNSTOPPABLE-MOTION": "@media (prefers-reduced-motion: reduce)",
   "VIEWPORT-UNITS": "100vw",
+  "SELECTION-WITHOUT-STATE": "Selected state is not a colour",
+  "NEVER-LEAVES-LOADING": "Fetch the first screen from a",
+  "SELF-SHADOWING-MEMO": "referenced directly or indirectly in its own initializer",
+  "TOAST-WITHOUT-TOASTER": "render `<Toaster />` in your tree",
+  "NAMED-NUMBERFLOW-IMPORT": "there is no named `NumberFlow` export",
 };
 
 /**

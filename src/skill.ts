@@ -46,6 +46,11 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     "argument or a misspelt result field passes the check. Everything else in the card is really",
     "type-checked; the capability calls are on you.",
     "",
+    "",
+"One more diagnostic never to skim past: *referenced directly or indirectly in its own initializer*. It means",
+    "a `const` shadows something of the same name and now refers to itself — `const rows = useMemo(() => rows(x), [x])`",
+    "beside a top-level `function rows`. That throws on the first render and the card is blank, and it arrives",
+    "surrounded by ordinary `implicitly has an 'any' type` lines that are safe to ignore. Rename the local.",
     "That map holds type declarations, so it serves `check` and `lint`.",
   ].join("\n");
   if (standaloneMap === undefined) return `${check} \`build\` and \`dev\` want runnable JS and will fail on it.`;
@@ -241,6 +246,20 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   name, so an unlabelled one announces "combo box, 每天" and the reader never learns what it
   selects. Six corpus cards, and the same two fixes. The screen catches these; nothing said so
   until now, which is why they are still here after the slider rule landed.
+- **Selected state is not a colour.** A group of choices where the picked one differs only by \`background\` or \`border\` reads as three identical buttons to anything that is not looking at it — a screen reader, a keyboard user checking where they are, a browser's own find. Put the state on the element:
+
+  \`\`\`tsx
+  <div role="radiogroup" aria-label="选择场次">
+    {SESSIONS.map((s) => (
+      <button key={s.id} role="radio" aria-checked={s.id === picked} onClick={() => pick(s.id)}
+        className={s.id === picked ? "picked" : ""}>{s.label}</button>
+    ))}
+  </div>
+  \`\`\`
+
+  \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
+
+  This is about state that *persists* after the interaction. A key that lights while held, a row that highlights on hover — those are momentary feedback and want nothing announced; a state that is over before it is read is worse than none.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
   cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
@@ -353,6 +372,8 @@ use whichever the surrounding code already uses.
 \`bash(command)\` from \`$dsh/exec\` runs one command in the workspace and resolves
 with \`{stdout, stderr, exitCode, truncated, timedOut}\`. It runs under the session's own sandbox
 mode, so it opens nothing your own bash tool has not already opened.
+
+**Fetch the first screen from a \`useEffect(…, [])\`.** That is the whole shape — a loading flag, an effect that runs the command once, \`setLoading(false)\` in a \`finally\`. Defining the loader and never calling it renders your skeleton forever.
 
 **A card that re-runs a command needs \`signal\`.** Polling on a timer, or running one per
 keystroke, stacks a second command on top of a slow first — and the panel then paints whichever

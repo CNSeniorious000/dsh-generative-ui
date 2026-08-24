@@ -7234,3 +7234,25 @@ construct (`两个下拉选时区`) or forced the shape (`每行点击可以复�
 is *applied when relevant*. This measures whether it has become part of what the model builds by
 default — and for the five rules a todo list happens to touch, it has.
 
+
+### The library hints work; the afternoon that said otherwise was measuring a stale build (2026-08-24)
+
+Four libraries added to the imports section — `@number-flow/react`, `vaul`, `sonner`,
+`@headlessui/react` — each with the one detail that goes wrong. All four verified in a browser
+first: `vaul`'s drawer lands in `BODY` without `container` and inside the card with it; `sonner`
+renders nothing unless its `Toaster` is in the tree; `@headlessui/react`'s `Field` + `Label` emit
+`aria-labelledby` on their own; and **`@number-flow/react` has no named `NumberFlow` export**,
+which the first draft of the table got wrong.
+
+Measured through the plugin the harness actually loads:
+
+| hint | picked up |
+| --- | --- |
+| `sonner` | **2/3**, and both cards import `Toaster` alongside `toast` |
+| `@number-flow/react` | 1/3 |
+| `vaul` | 1/1, with `container={hostEl}` |
+
+Every earlier number for these — the ones that said three rewordings moved nothing — came from a
+symlink pointing at a build from before the hints existed. **The detail in each row is the part
+that lands**: `sonner` was picked up twice and rendered its `Toaster` both times, which is exactly
+the failure the row exists to prevent.

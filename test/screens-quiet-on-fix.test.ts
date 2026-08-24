@@ -56,6 +56,26 @@ const PAIRS: Record<string, [string, string]> = {
     `const run = async (t: string) => { const id = ++runId.current; for await (const c of streamText({ prompt: t })) { if (id !== runId.current) return; setOut(c) } }`,
   ],
   "NO-FOCUS-RING": [`const s = { outline: "none" }`, `const s = { outline: "none", border: focused ? "1px solid blue" : "none" }`],
+  "SELECTION-WITHOUT-STATE": [
+    `OPTS.map((o) => { const sel = o.id === picked; return <button style={{ background: sel ? "#06f" : "transparent" }} /> })`,
+    `OPTS.map((o) => { const sel = o.id === picked; return <button aria-pressed={sel} style={{ background: sel ? "#06f" : "transparent" }} /> })`,
+  ],
+  "NEVER-LEAVES-LOADING": [
+    `import { bash } from "$dsh/exec";\nconst [busy, setBusy] = useState(true);\nconst load = async () => { await bash("git log"); setBusy(false) };`,
+    `import { bash } from "$dsh/exec";\nconst [busy, setBusy] = useState(true);\nuseEffect(() => { void bash("git log").then(() => setBusy(false)) }, []);`,
+  ],
+  "SELF-SHADOWING-MEMO": [
+    `function rows(n) { return [n] }\nconst rows = useMemo(() => rows(1), []);`,
+    `function rows(n) { return [n] }\nconst items = useMemo(() => rows(1), []);`,
+  ],
+  "TOAST-WITHOUT-TOASTER": [
+    `import { toast } from "sonner";\nconst f = () => toast.success("done");`,
+    `import { toast, Toaster } from "sonner";\nconst el = <Toaster />;\nconst f = () => toast.success("done");`,
+  ],
+  "NAMED-NUMBERFLOW-IMPORT": [
+    `import { NumberFlow } from "@number-flow/react";`,
+    `import NumberFlow from "@number-flow/react";`,
+  ],
 };
 
 test("every screen has a pair", () => {

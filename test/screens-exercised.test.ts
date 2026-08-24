@@ -36,6 +36,11 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "UNSTOPPABLE-MOTION": /@keyframes|transition:/,
   "UNREACHABLE-CONTROL": /<button|onClick/,
   "VIEWPORT-UNITS": /width|height/,
+  "SELECTION-WITHOUT-STATE": /\.map\(/,
+  "NEVER-LEAVES-LOADING": /useState\(true\)/,
+  "SELF-SHADOWING-MEMO": /useMemo|useCallback/,
+  "TOAST-WITHOUT-TOASTER": /<button/,
+  "NAMED-NUMBERFLOW-IMPORT": /^import \{/m,
 };
 
 const cards = readdirSync(`${import.meta.dir}/cards`).filter((name) => name.endsWith(".tsx"));

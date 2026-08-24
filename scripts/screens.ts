@@ -245,6 +245,67 @@ export const SCREENS = {
   // the input labels it as well as `aria-label` does. Tag ends are found by brace depth, because
   // `onChange={e => …}` puts a `>` inside the tag and a `[^>]*` regex stops there — which is how
   // the first count of this came out at 241 instead of 61.
+  // A group of `.map`ped buttons whose selected one differs only in styling. Sighted users see
+  // which is picked; a screen reader is told three identical buttons, and so is a keyboard user
+  // checking where they landed. 10 of 23 cards measured on 2026-08-24 — filter chips, mode
+  // switchers, session pickers, time signatures, the same shape every time.
+  //
+  // Took three versions, each refuted by a real card rather than by review: a character budget
+  // for the callback body is not a bound (900 missed one, 1500 missed another — sliced by brace
+  // depth now); `aria-label` is not state, since a static one reads the same either way; and the
+  // selection flag is rarely `===`, one tracker computing it with `.includes()`.
+  "SELECTION-WITHOUT-STATE": (src: string) =>
+    [...src.matchAll(/\.map\((?:\([^)]*\)|\w+)\s*=>\s*([{(])/g)].some((match) => {
+      const open = match[1];
+      const close = open === "{" ? "}" : ")";
+      let depth = 0;
+      let end = match.index + match[0].length - 1;
+      for (; end < src.length; end += 1) {
+        if (src[end] === open) depth += 1;
+        else if (src[end] === close && (depth -= 1) === 0) break;
+      }
+      const block = src.slice(match.index, end);
+      return /(===|\.includes\(|\.has\()/.test(block)
+        // Either spelling of "shown as selected": an inline style ternary or a conditional class.
+        && (/(background|border|color)\s*:\s*[^\n]*\?/.test(block) || /className=\{`[^`]*\$\{[^}]*\?/.test(block))
+        && /<button/.test(block)
+        && !/aria-(pressed|selected|checked)|role="(radio|tab|option|checkbox|switch)"/.test(block)
+        // A label that switches on the same flag carries the state, less conventionally but audibly.
+        && !/aria-label=\{[^}]*\?/.test(block)
+        // A key held down is momentary feedback, not a selection — announcing it would announce a
+        // state that is over before it is read.
+        && !/onPointer(Down|Up)/.test(block);
+    }),
+  // A card that starts in a loading state and never runs the thing that would leave it: no
+  // `useEffect`, so nothing calls the loader it defined. It renders its skeleton forever, compiles
+  // clean, and mounts without an error — the surface has nothing to complain about. 2 of the 5
+  // cards that load anything asynchronously, measured 2026-08-24.
+  // Matched by construct, never by an English word: an earlier version keyed on `/loading|pending/i`
+  // anywhere in the source, which any card writing 加载 in a comment or "Loading…" in prose would
+  // trip. What identifies the defect is the *declaration* — a boolean state initialised `true`
+  // whose only writer is inside a function nothing calls.
+  "NEVER-LEAVES-LOADING": (src: string) => {
+    const flags = [...src.matchAll(/const \[(\w+), (\w+)\] = useState\(true\)/g)];
+    if (flags.length === 0 || /useEffect/.test(src)) return false;
+    // Only when something async exists to wait for — a card with a `true` boolean and no fetch is
+    // just a card with an open panel.
+    if (!/\b(bash|readFile|readdir|readBytes|streamText|fetch)\s*\(/.test(src)) return false;
+    // And only when the setter is never reached from an event either: a button that starts the
+    // load is a design choice, not a stuck card.
+    return flags.some(([, , setter]) => !new RegExp(String.raw`on[A-Z]\w*=\{[^}]*\b${setter}\b`).test(src));
+  },
+  // `const weekDates = useMemo(() => weekDates(ref), [ref])` — the local const shadows the
+  // top-level `function weekDates`, so the arrow calls itself inside its own TDZ and the card
+  // throws `Cannot access 'weekDates' before initialization` on first render. `genui check` does
+  // report it, buried among six `implicitly has an 'any' type` lines that genuinely are noise.
+  "SELF-SHADOWING-MEMO": (src: string) => /^\s*const (\w+) = (?:useMemo|useCallback)\(\s*\(\)\s*=>\s*\1\(/m.test(src),
+  // sonner renders nothing unless its Toaster is in the tree, and `toast()` alone throws nothing
+  // and logs nothing — the card simply never confirms anything it does.
+  "TOAST-WITHOUT-TOASTER": (src: string) => /\btoast[.(]/.test(src) && !/<Toaster\b/.test(src),
+  // `@number-flow/react` exports the component as `default`; there is no named `NumberFlow`, so a
+  // named import is `undefined` and a blank card with nothing in the console naming it. Measured:
+  // a card wrote this 90 minutes after the rule against it landed.
+  "NAMED-NUMBERFLOW-IMPORT": (src: string) => /import\s*\{[^}]*\bNumberFlow\b[^}]*\}\s*from\s*["']@number-flow\/react["']/.test(src),
   "UNLABELLED-CONTROL": (src: string) => {
     // `<select>` has the same problem for the same reason — its options are its value, not its
     // name, so an unlabelled one announces "combo box, 每天". Six more corpus cards, and the
