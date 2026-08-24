@@ -25,7 +25,10 @@ about a dead harness reads exactly like a verdict about a bad card.
 import asyncio, base64, hashlib, json, os, pathlib, sys, httpx
 
 KEY = os.environ["LITELLM_KEY"]  # never hardcode: this is the user's gateway key
-BASE = os.environ.get("LITELLM_BASE", "https://litellm-production-2790.up.railway.app")
+# The clhh gateway carries all five of the models below and was probed reading text off a real
+# screenshot on each — worth doing before a run rather than after, because a model without vision
+# answers the rubric from the SOURCE alone and its verdict reads exactly like a real one.
+BASE = os.environ.get("LITELLM_BASE", "http://34.177.103.253:4000")
 MODELS = ["kimi-k3", "gemini-3.7-flash", "grok-4.6", "claude-opus-5", "gpt-5.6-sol"]
 WIDTHS = [320, 440, 720]
 SHOTS = pathlib.Path(os.environ.get("SHOTS_DIR", "/tmp/shots"))
