@@ -8339,6 +8339,29 @@ The method lesson is the one this file keeps relearning in new costumes: **a rat
 prompt is a fact about that prompt.** Four hypotheses were tested against a number that was never
 the rule's rate, and the fix was not another hypothesis — it was measuring a second prompt.
 
+### A flake that was load, not order (2026-08-24)
+
+A shuffled-order run failed on `a condition containing a call keeps its own parens`, at 5002.68ms —
+which is the default timeout, not an assertion. It does not reproduce on that seed: three runs of
+`bun test --randomize --seed=6` came back clean once the machine was idle.
+
+The cause is that each of those tests spawns `bun` twice, and six model evals were running at the
+time (load average 6.3). So the 5s default was measuring how loaded the machine was.
+
+`test:shuffled` exists to catch a real class of bug — a leaked global that only bites in certain
+file orders — and this file records four such causes found and fixed. What it cannot distinguish is
+a genuine order dependency from **a slow test that happened to land late in one order**, because
+both present as *one seed in twenty failed*. The tell is in the duration: an assertion failure is
+instant and a timeout is exactly the limit, to two decimal places.
+
+Fixed with a 30s timeout on the five tests that spawn a subprocess. The general form: **a test whose
+runtime depends on machine load has no business carrying a default timeout in a suite that
+deliberately runs itself twenty times.**
+
+It also caught me pushing past a red `check:ci` for the fourth time this session — the pre-commit
+hook added earlier guards the record checks only, and this failure was in the test suite. The
+pre-push hook is what would have stopped it, which is the division those two hooks were given.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
