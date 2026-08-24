@@ -8772,6 +8772,37 @@ browser border and `content-box`. A knob sized to `24 - 2*2 = 20` overflows its 
 that border, which looks like sloppy arithmetic and is a box model. `border: none` and
 `boxSizing: "border-box"` are both required.
 
+### The spacing criticism, and a 2px scale nobody was scoring against (2026-08-24)
+
+The panel's second-most-repeated criticism, on 7 of 9 cards, was that spacing is written by hand
+rather than on a scale: `padding: "6px 14px"` beside `gap: 12` beside `padding: 2%`, with the fix
+always stated as "unify to multiples of 4 or 8". It sounds obviously right, and measuring it says
+otherwise.
+
+Across the 265 corpus cards with four or more spacing values:
+
+| | |
+| --- | --- |
+| every value a multiple of **2** | 206 (77%) |
+| every value a multiple of **4** | 10 (3%) |
+
+The distribution is 8, 6, 12, 16, 10, 4, 14, 2 — a coherent 2px step, used consistently, in three
+quarters of the corpus. The models are scoring it against a 4/8 scale they know from elsewhere and
+reporting a system they do not recognise as an absence of one. **The same shape as the border
+criticism**: a principle applied without measuring what the cards actually do.
+
+The one real number in the area is that the median card uses **five distinct spacing values**,
+which is more steps than a scale usually needs. But that is a claim about restraint, not about
+correctness, and nothing in the screenshots shows a reader could tell 6px from 8px in a place where
+it matters. **No rule added** — a prompt rule costs tokens on every turn, and this one would be
+teaching a scale the cards are not using in order to fix damage nobody has demonstrated.
+
+Worth stating alongside the two criticisms that *were* actionable: of the panel's four recurring
+themes, one was right (the slider), one was wrong for this token set (borders), one was a sampling
+artefact (720 single-column, on a set with nothing to put in columns), and this one is a scale
+mismatch. A judge panel is a source of hypotheses, not verdicts — the same standing every regex in
+this file gets.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
