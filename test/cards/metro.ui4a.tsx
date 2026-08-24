@@ -1,291 +1,294 @@
-import { useEffect, useRef, useState } from "react"
-import { Play, Pause } from "lucide-react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { usePersistedState } from "$dsh/state"
+import { Play, Square, Music } from "lucide-react"
 
-function makeNoiseBuffer(ctx: AudioContext) {
-  const len = Math.floor(ctx.sampleRate * 0.05)
-  const buffer = ctx.createBuffer(1, len, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len)
-  return buffer
-}
+const BEAT_SOUNDS = [
+  { label: "木鱼", freq: 800, type: "sine" as OscillatorType },
+  { label: "电子", freq: 1200, type: "square" as OscillatorType },
+  { label: "鼓", freq: 200, type: "sine" as OscillatorType },
+]
 
-function playClick(ctx: AudioContext, time: number, accent: boolean, noise: AudioBuffer) {
-  const out = ctx.createGain()
-  out.connect(ctx.destination)
-
-  // 短促噪声瞬态，模拟木鱼的「哒」
-  const n = ctx.createBufferSource()
-  n.buffer = noise
-  const ng = ctx.createGain()
-  ng.gain.setValueAtTime(accent ? 1.0 : 0.55, time)
-  ng.gain.exponentialRampToValueAtTime(0.001, time + 0.03)
-  n.connect(ng)
-  ng.connect(out)
-  n.start(time)
-  n.stop(time + 0.04)
-
-  // 高频「叮」音头，重拍更高更亮
-  const o = ctx.createOscillator()
-  o.type = "triangle"
-  o.frequency.value = accent ? 2000 : 1400
-  const og = ctx.createGain()
-  og.gain.setValueAtTime(accent ? 0.65 : 0.38, time)
-  og.gain.exponentialRampToValueAtTime(0.001, time + 0.06)
-  o.connect(og)
-  og.connect(out)
-  o.start(time)
-  o.stop(time + 0.07)
-}
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+const TIME_SIGNATURES = [
+  { beats: 4, note: 4, label: "4/4" },
+  { beats: 3, note: 4, label: "3/4" },
+  { beats: 6, note: 8, label: "6/8" },
+  { beats: 2, note: 2, label: "2/2" },
+  { beats: 5, note: 4, label: "5/4" },
+]
 
 export default function Metronome() {
-  const [bpm, setBpm] = useState(120)
-  const [beatsPerBar, setBeatsPerBar] = useState(4)
-  const [currentBeat, setCurrentBeat] = useState(0)
+  const [bpm, setBpm] = usePersistedState<number>("metronome-bpm", 120)
+  const [timeSig, setTimeSig] = usePersistedState<number>("metronome-timesig", 4)
   const [running, setRunning] = useState(false)
-  // A metronome is the case `prefers-reduced-motion` exists for: something that pulses forever.
-  // There is no `<style>` block here to hang a media query on, so the preference is read once
-  // and the transitions fall out of it — the beat still lands, it just stops moving.
-  const [still] = useState(() => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true)
-  const [draft, setDraft] = useState<string | null>(null)
-  // The BPM field is borderless by design, so the browser's ring has to go — and something has
-  // to come back, or tabbing into the card's main control shows nothing. Inline rather than a
-  // `:focus-visible` rule because this card has no `<style>` block.
-  const [focused, setFocused] = useState(false)
+  const [currentBeat, setCurrentBeat] = useState(-1)
+  const [soundIdx, setSoundIdx] = usePersistedState<number>("metronome-sound", 0)
+  const [tapTimes, setTapTimes] = useState<number[]>([])
 
   const ctxRef = useRef<AudioContext | null>(null)
-  const noiseRef = useRef<AudioBuffer | null>(null)
-  const timerRef = useRef<number | null>(null)
-  const visualTimeoutsRef = useRef<number[]>([])
   const nextNoteTimeRef = useRef(0)
+  const timerRef = useRef<number | null>(null)
   const beatRef = useRef(0)
+  const runningRef = useRef(false)
   const bpmRef = useRef(bpm)
-  const beatsRef = useRef(beatsPerBar)
-  const tapTimesRef = useRef<number[]>([])
+  const timeSigRef = useRef(timeSig)
 
-  useEffect(() => { bpmRef.current = bpm }, [bpm])
-  useEffect(() => { beatsRef.current = beatsPerBar }, [beatsPerBar])
+  bpmRef.current = bpm
+  timeSigRef.current = timeSig
 
-  // 调度循环：用 AudioContext 时钟做前瞻调度，避免 setTimeout 累积漂移
-  useEffect(() => {
-    if (!running) return
-    const ctx = ctxRef.current!
-    nextNoteTimeRef.current = ctx.currentTime + 0.05
-    beatRef.current = 0
-    setCurrentBeat(0)
-
-    const id = window.setInterval(() => {
-      const c = ctxRef.current
-      if (!c) return
-      const secondsPerBeat = 60 / bpmRef.current
-      while (nextNoteTimeRef.current < c.currentTime + 0.12) {
-        const beat = beatRef.current
-        playClick(c, nextNoteTimeRef.current, beat === 0, noiseRef.current!)
-        const delayMs = Math.max(0, (nextNoteTimeRef.current - c.currentTime) * 1000)
-        const to = window.setTimeout(() => setCurrentBeat(beat), delayMs)
-        visualTimeoutsRef.current.push(to)
-        nextNoteTimeRef.current += secondsPerBeat
-        beatRef.current = (beat + 1) % beatsRef.current
-      }
-    }, 25)
-    timerRef.current = id
-
-    return () => {
-      window.clearInterval(id)
-      visualTimeoutsRef.current.forEach(clearTimeout)
-      visualTimeoutsRef.current = []
+  const getCtx = useCallback(() => {
+    if (!ctxRef.current) {
+      ctxRef.current = new AudioContext()
     }
-  }, [running])
+    return ctxRef.current
+  }, [])
 
-  // 卸载时清理
+  const playClick = useCallback((isAccent: boolean) => {
+    const ctx = getCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    const s = BEAT_SOUNDS[soundIdx]
+    osc.type = s.type
+    osc.frequency.value = isAccent ? s.freq * 1.5 : s.freq
+    gain.gain.setValueAtTime(isAccent ? 0.6 : 0.35, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06)
+    osc.connect(gain).connect(ctx.destination)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.06)
+  }, [getCtx, soundIdx])
+
+  const scheduler = useCallback(() => {
+    const ctx = getCtx()
+    const secondsPerBeat = 60.0 / bpmRef.current
+    while (nextNoteTimeRef.current < ctx.currentTime + 0.1) {
+      const beat = beatRef.current % timeSigRef.current
+      const isAccent = beat === 0
+      playClick(isAccent)
+      const t = nextNoteTimeRef.current
+      nextNoteTimeRef.current += secondsPerBeat
+      setTimeout(() => setCurrentBeat(beat), Math.max(0, (t - ctx.currentTime) * 1000))
+      beatRef.current++
+    }
+  }, [getCtx, playClick])
+
+  const start = useCallback(() => {
+    const ctx = getCtx()
+    if (ctx.state === "suspended") ctx.resume()
+    runningRef.current = true
+    nextNoteTimeRef.current = ctx.currentTime
+    beatRef.current = 0
+    timerRef.current = window.setInterval(scheduler, 25)
+    setRunning(true)
+  }, [getCtx, scheduler])
+
+  const stop = useCallback(() => {
+    runningRef.current = false
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setCurrentBeat(-1)
+    setRunning(false)
+  }, [])
+
+  useEffect(() => {
+    if (running) start()
+    else stop()
+    return () => {
+      if (timerRef.current !== null) clearInterval(timerRef.current)
+    }
+  }, [running, start, stop])
+
   useEffect(() => {
     return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current)
-      visualTimeoutsRef.current.forEach(clearTimeout)
-      if (ctxRef.current) ctxRef.current.close()
+      ctxRef.current?.close()
     }
   }, [])
 
-  function ensureContext() {
-    if (!ctxRef.current) {
-      const AC = window.AudioContext || (window as any).webkitAudioContext
-      ctxRef.current = new AC()
-      noiseRef.current = makeNoiseBuffer(ctxRef.current)
-    }
-    return ctxRef.current
-  }
-
-  function toggle() {
-    if (running) {
-      setRunning(false)
-      setCurrentBeat(0)
-      beatRef.current = 0
-    } else {
-      const ctx = ensureContext()
-      if (ctx.state === "suspended") ctx.resume()
-      setRunning(true)
-    }
-  }
-
-  function changeBeats(n: number) {
-    setBeatsPerBar(n)
-    setCurrentBeat(0)
-    beatRef.current = 0
-  }
-
-  function tap() {
-    const now = performance.now()
-    const times = tapTimesRef.current
-    if (times.length && now - times[times.length - 1] > 2000) times.length = 0
-    times.push(now)
-    if (times.length > 6) times.shift()
-    if (times.length >= 2) {
-      const intervals: number[] = []
-      for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1])
+  const handleTap = useCallback(() => {
+    const now = Date.now()
+    const times = [...tapTimes, now].slice(-8)
+    setTapTimes(times)
+    if (times.length >= 3) {
+      const intervals = times.slice(1).map((t, i) => t - times[i])
       const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length
-      setBpm(clamp(Math.round(60000 / avg), 30, 280))
-      setDraft(null)
+      const newBpm = Math.round(60000 / avg)
+      if (newBpm >= 30 && newBpm <= 300) setBpm(newBpm)
     }
+  }, [tapTimes, setBpm])
+
+  const handleBpmChange = (val: string) => {
+    const n = parseInt(val, 10)
+    if (val === "" || (n >= 30 && n <= 300)) setBpm(n)
   }
 
-  const shownBpm = draft ?? String(bpm)
+  const sig = TIME_SIGNATURES.find((s) => s.beats === timeSig) || TIME_SIGNATURES[0]
 
   return (
-    <div style={{ padding: 20, borderRadius: 14, border: "1px solid var(--dsw-alias-border-l1)", background: "var(--dsw-alias-bg-layer-1)", maxWidth: 360 }}>
-      {/* 拍点指示 */}
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", alignItems: "center", minHeight: 30 }}>
-        {Array.from({ length: beatsPerBar }).map((_, i) => {
-          const accent = i === 0
-          const active = i === currentBeat && running
-          const size = accent ? 16 : 12
-          return (
-            <span
-              key={i}
-              style={{
-                width: size,
-                height: size,
-                borderRadius: "50%",
-                background: active ? "var(--dsw-alias-state-business-primary)" : "transparent",
-                border: `1.5px solid ${accent || active ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-border-l2)"}`,
-                transform: active && !still ? "scale(1.25)" : "scale(1)",
-                transition: still ? "none" : "transform 90ms ease, background 90ms ease",
-              }}
-            />
-          )
-        })}
-      </div>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", padding: "24px", gap: "24px", fontFamily: "system-ui, sans-serif", color: "var(--dsw-alias-label-primary)", background: "var(--dsw-alias-bg-base)" }}>
+      <style>{`
+        .metronome-btn {
+          border: none;
+          cursor: pointer;
+          transition: transform 90ms ease, background 120ms ease;
+        }
+        .metronome-btn:hover { transform: scale(1.05); }
+        .metronome-btn:active { transform: scale(0.95); }
+        .metronome-btn:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+        .beat-dot { transition: transform 80ms ease, background 80ms ease; }
+        .beat-dot.active { transform: scale(1.3); }
+        @media (prefers-reduced-motion: reduce) {
+          .metronome-btn, .beat-dot { transition: none !important; }
+        }
+      `}</style>
 
-      {/* BPM 读数 */}
-      <div style={{ textAlign: "center", margin: "14px 0 6px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: 6 }}>
-          <input
-            type="number"
-            value={shownBpm}
-            min={30}
-            max={280}
-            onFocus={(e) => e.target.select()}
-            onChange={(e) => {
-              const raw = e.target.value
-              setDraft(raw)
-              const v = parseInt(raw, 10)
-              if (!isNaN(v)) setBpm(clamp(v, 30, 280))
-            }}
-            onFocus={() => setFocused(true)}
-            onBlur={() => { setFocused(false); setDraft(null) }}
+      {/* Beat display */}
+      <div style={{ display: "flex", justifyContent: "center", gap: "12px", padding: "20px 0" }}>
+        {Array.from({ length: timeSig }).map((_, i) => (
+          <div
+            key={i}
+            className={`beat-dot ${currentBeat === i ? "active" : ""}`}
             style={{
-              width: 92,
-              fontSize: 52,
-              fontWeight: 700,
-              textAlign: "center",
-              color: "var(--dsw-alias-label-primary)",
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              borderRadius: 8,
-              boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none",
-              fontVariantNumeric: "tabular-nums",
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              background: currentBeat === i
+                ? "var(--dsw-alias-state-business-primary)"
+                : "var(--dsw-alias-border-l1)",
+              transition: "background 80ms ease",
             }}
           />
-          <span style={{ fontSize: 13, color: "var(--dsw-alias-label-secondary)", letterSpacing: 2 }}>BPM</span>
+        ))}
+      </div>
+
+      {/* BPM */}
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "48px", fontWeight: 700, lineHeight: 1.1, color: "var(--dsw-alias-label-primary)" }}>
+          {bpm}
+        </div>
+        <div style={{ fontSize: "13px", color: "var(--dsw-alias-label-secondary)", marginTop: "4px" }}>BPM</div>
+      </div>
+
+      {/* Controls */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+        <input
+          type="range"
+          min={30}
+          max={300}
+          value={bpm}
+          onChange={(e) => setBpm(Number(e.target.value))}
+          aria-label="BPM"
+          style={{ width: "100%", maxWidth: "280px", accentColor: "var(--dsw-alias-state-business-primary)" }}
+        />
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            className="metronome-btn"
+            onClick={() => setBpm((b) => Math.max(30, b - 5))}
+            aria-label="BPM 减 5"
+            style={{ background: "var(--dsw-alias-bg-layer-1)", border: `1px solid var(--dsw-alias-border-l1)`, borderRadius: "8px", padding: "6px 12px", fontSize: "14px", color: "var(--dsw-alias-label-primary)" }}
+          >
+            −5
+          </button>
+          <button
+            className="metronome-btn"
+            onClick={() => setBpm((b) => Math.min(300, b + 5))}
+            aria-label="BPM 加 5"
+            style={{ background: "var(--dsw-alias-bg-layer-1)", border: `1px solid var(--dsw-alias-border-l1)`, borderRadius: "8px", padding: "6px 12px", fontSize: "14px", color: "var(--dsw-alias-label-primary)" }}
+          >
+            +5
+          </button>
+          <input
+            type="number"
+            min={30}
+            max={300}
+            value={bpm}
+            onChange={(e) => handleBpmChange(e.target.value)}
+            aria-label="BPM 数值"
+            style={{ width: "64px", textAlign: "center", border: `1px solid var(--dsw-alias-border-l1)`, borderRadius: "8px", padding: "6px", fontSize: "14px", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)" }}
+          />
         </div>
       </div>
 
-      {/* 速度滑杆 */}
-      <input
-        type="range"
-        aria-label="速度 BPM"
-        min={30}
-        max={280}
-        step={1}
-        value={bpm}
-        onChange={(e) => { setBpm(+e.target.value); setDraft(null) }}
-        style={{ width: "100%", accentColor: "var(--dsw-alias-state-business-primary)", margin: "8px 0 14px" }}
-      />
-
-      {/* 拍号 + 定速 */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {[2, 3, 4, 5, 6, 7].map((n) => (
+      {/* Time signature */}
+      <div>
+        <div style={{ fontSize: "13px", color: "var(--dsw-alias-label-secondary)", marginBottom: "8px" }}>拍号</div>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
+          {TIME_SIGNATURES.map((s) => (
             <button
-              key={n}
-              onClick={() => changeBeats(n)}
+              key={s.label}
+              className="metronome-btn"
+              onClick={() => setTimeSig(s.beats)}
+              aria-pressed={timeSig === s.beats}
               style={{
-                minWidth: 34,
-                height: 30,
-                borderRadius: 8,
-                border: `1px solid ${n === beatsPerBar ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-border-l1)"}`,
-                background: n === beatsPerBar ? "var(--dsw-alias-state-business-primary)" : "transparent",
-                color: n === beatsPerBar ? "var(--dsw-alias-bg-base)" : "var(--dsw-alias-label-secondary)",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontVariantNumeric: "tabular-nums",
+                background: timeSig === s.beats ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-bg-layer-1)",
+                color: timeSig === s.beats ? "#fff" : "var(--dsw-alias-label-primary)",
+                border: `1px solid ${timeSig === s.beats ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-border-l1)"}`,
+                borderRadius: "8px",
+                padding: "8px 14px",
+                fontSize: "14px",
+                fontWeight: timeSig === s.beats ? 600 : 400,
               }}
             >
-              {n}<span style={{ opacity: 0.6, fontSize: 10 }}>/4</span>
+              {s.label}
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Sound & tap */}
+      <div style={{ display: "flex", gap: "12px", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "var(--dsw-alias-label-secondary)" }}>
+          <Music size={14} />
+          <select
+            value={soundIdx}
+            onChange={(e) => setSoundIdx(Number(e.target.value))}
+            aria-label="节拍声音"
+            style={{ border: `1px solid var(--dsw-alias-border-l1)`, borderRadius: "6px", padding: "4px 6px", fontSize: "13px", background: "var(--dsw-alias-bg-layer-1)", color: "var(--dsw-alias-label-primary)" }}
+          >
+            {BEAT_SOUNDS.map((s, i) => (
+              <option key={i} value={i}>{s.label}</option>
+            ))}
+          </select>
+        </div>
         <button
-          onClick={tap}
+          className="metronome-btn"
+          onClick={handleTap}
+          aria-label="点按测速"
           style={{
-            height: 30,
-            padding: "0 12px",
-            borderRadius: 8,
-            border: "1px solid var(--dsw-alias-border-l1)",
-            background: "transparent",
+            background: "var(--dsw-alias-bg-layer-1)",
+            border: `1px solid var(--dsw-alias-border-l1)`,
+            borderRadius: "8px",
+            padding: "6px 12px",
+            fontSize: "13px",
             color: "var(--dsw-alias-label-secondary)",
-            fontSize: 12,
-            cursor: "pointer",
           }}
         >
-          轻拍定速
+          点按测速
         </button>
       </div>
 
-      {/* 播放按钮 */}
-      <button
-        onClick={toggle}
-        aria-label={running ? "停止" : "开始"}
-        style={{
-          margin: "18px auto 4px",
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          border: "none",
-          cursor: "pointer",
-          background: "var(--dsw-alias-state-business-primary)",
-          color: "var(--dsw-alias-bg-base)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: running ? "0 0 0 8px color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent)" : "none",
-          transition: still ? "none" : "box-shadow 150ms ease",
-        }}
-      >
-        {running ? <Pause size={26} /> : <Play size={26} style={{ marginLeft: 3 }} />}
-      </button>
+      {/* Play / Stop */}
+      <div style={{ display: "flex", justifyContent: "center", marginTop: "auto" }}>
+        <button
+          className="metronome-btn"
+          onClick={running ? stop : start}
+          aria-label={running ? "停止" : "开始"}
+          style={{
+            background: running ? "var(--dsw-alias-state-error-primary)" : "var(--dsw-alias-state-business-primary)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "12px",
+            padding: "14px 40px",
+            fontSize: "16px",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          {running ? <Square size={18} /> : <Play size={18} />}
+          {running ? "停止" : "开始"}
+        </button>
+      </div>
     </div>
   )
 }
