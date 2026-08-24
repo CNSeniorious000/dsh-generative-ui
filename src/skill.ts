@@ -351,6 +351,19 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
 
+  **When the style lives in \`<style>\` and the state lives in JSX, they are two spellings that
+  must agree, and nothing checks that they do.** Measured on a real card: the CSS said
+  \`.sev-btn[aria-pressed="true"]\` and the JSX wrote \`aria-checked={o.id === severity}\` twenty
+  lines below. Both spellings are correct on their own — the selector is valid, the attribute is
+  the right one for a \`role="radio"\` — and they simply never meet, so all three buttons rendered
+  identically at every width while the card carried a full selected-state block in its
+  \`<style>\`. It compiles, it renders, no checker fires, and only a screenshot shows it. The same
+  failure produced an unstyled slider (\`className="r"\` on the \`<input>\` against a \`.s::…\`
+  selector). **Whenever a \`<style>\` rule keys off something JSX writes — an attribute, a class,
+  a data-* attribute — write the two lines next to each other and read them as one.** The cheaper habit
+  is to keep the state in the inline \`style\` ternary you are already writing, and let
+  \`<style>\` hold only what inline cannot express (pseudo-elements, \`@container\`, \`:focus-visible\`).
+
   This is about state that *persists* after the interaction. A key that lights while held, a row that highlights on hover — those are momentary feedback and want nothing announced; a state that is over before it is read is worse than none.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
 - **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
