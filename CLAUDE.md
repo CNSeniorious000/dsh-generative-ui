@@ -367,9 +367,13 @@ Three other empirical corrections:
 
 - **Half the canvases had no persistence** (8/19 used localStorage in the first round), so a refresh lost everything.
   A canvas is by definition "somewhere the user comes back to," which makes this fatal. The skill now requires
-  `localStorage`. Note: **do not write `usePersistedState`** — that's the playground's `$dsh/state`, which this
-  plugin never implemented, and making the model import something nonexistent fails compilation outright, which is
-  far worse than losing state. `rg` for any API you promise in a prompt before you promise it.
+  it. **This entry used to forbid `usePersistedState`, and that is no longer true** — the denial was written when
+  `$dsh/state` did not exist here, then the model kept importing it anyway (five of six habit-tracker runs, and a
+  reworded denial did not stop it), so `bindings.ts` implements it: `useState`'s signature, `localStorage` behind
+  it, no host needed. The prompt now teaches it. Kept as a correction rather than deleted, because the lesson is
+  the general one: **when the model reaches for the same missing API run after run, implementing it beats
+  rewording the refusal** — and a stale prohibition costs more than the thing it forbids, since it sends the next
+  reader to remove working code.
 - **The model hand-rolls implementations to avoid library traps** (dropping recharts for hand-built SVG, dropping a
   markdown renderer for a bare textarea). The original "never hold back because it isn't available" missed the point —
   its worry wasn't availability but the library being painful. Added a line naming the common libraries.
