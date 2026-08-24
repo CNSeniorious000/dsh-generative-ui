@@ -8091,6 +8091,52 @@ The limit to state plainly: 17 runs, three prompts, all card-shaped, one model. 
 now marks ineligible cells lowercase, so the next person can check the rate on any prompt without
 re-deriving any of this.
 
+### The one rule that still misses, and two hypotheses that did not explain it (2026-08-24)
+
+With the delivery problem fixed, one rule still fails on runs that **did** load the skill.
+`UNANNOUNCED-ASYNC-RESULT` is 8 of 23 fetching cards in the fresh set (35%) — and it was **5 of 5**
+the day it moved into the skill.
+
+Two hypotheses, both tested and both wrong:
+
+**Accretion.** `aria-live` had ended up 2215 characters inside a 3688-character bullet about
+keyboard reachability, sharing it with five other rules. Split into its own bullet (1793 + 1894)
+and re-run on the same prompt: **still a miss.** Structure is not the cause.
+
+**Dilution.** `src/skill.ts` grew 38,205 → 46,045 bytes (+21%) across 16 commits since that 5/5,
+most of them today. But its neighbours in the same section, from the same era, held:
+
+| rule | fresh set |
+| --- | --- |
+| `prefers-reduced-motion` | 102/109 (94%) |
+| `:focus-visible` | 100/113 (88%) |
+| `aria-label` on an icon button | 36/41 (88%) |
+| **`aria-live` on a fetch** | **8/23 (35%)** |
+
+A general dilution would not spare three siblings and take one. Nor is it the headline's grammar —
+the keyboard rule also names a situation rather than an attribute and sits at 88%.
+
+What separates all four cleanly is something else:
+
+| rule | what the author sees after applying it |
+| --- | --- |
+| focus ring | a ring appears |
+| reduced motion | the motion stops |
+| keyboard-reachable | a `<button>` instead of a `<div>` |
+| **`aria-live`** | **nothing at all** |
+
+Every rule that lands changes something visible to whoever wrote the card. `aria-live` changes
+nothing on screen, in any state, ever — the card looks identical with and without it. That is the
+same property this file already identifies as the *cause* of the accessibility defects
+(«a card written as a picture of an interface, correct through a mouse and an eye»), and it appears
+to apply to the rules as well as to the cards: **a rule whose effect the author cannot perceive is
+the hardest kind to make stick.**
+
+Recorded as the surviving hypothesis rather than acted on, because the obvious action — say it
+louder — is what this file has twice reverted. If it is right, the lever is not the wording but
+something that makes the omission visible: `UNANNOUNCED-ASYNC-RESULT` already is that thing, and
+it is doing its job at 15 cards in the fresh set.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
