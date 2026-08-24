@@ -261,7 +261,15 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   on light and dark, and outshouts the number beside it. **43 of the 52 corpus cards with a slider
   ship it untouched**, including all three reference cards. \`accent-color\` does not fix it: measured
   side by side, it swaps one blue band for another. The track is a pseudo-element, so only a
-  \`className\` in your \`<style>\` block can reach it:
+  \`className\` in your \`<style>\` block can reach it. **The class goes on the \`<input>\` itself, and
+  every selector below starts from that same element** — write \`.s::-webkit-slider-track\`, never
+  \`.s input[type=range]::-webkit-slider-track\`. Measured on a real card: the model took the class
+  as a wrapper name, put \`className="r"\` on the input, and wrote \`.r input[type=range]\` — asking
+  for an input *inside* the input. Not one declaration matched, and the card shipped the OS-blue
+  track while carrying the whole override block in its \`<style>\`. It compiles, it renders, and
+  nothing tells you: the fix is invisible in the source and only the screenshot shows it failed.
+
+      <input type="range" className="s" … />
 
       .s { flex: 1; appearance: none; -webkit-appearance: none; background: transparent; }
       .s::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--dsw-alias-border-l2); }

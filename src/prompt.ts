@@ -152,6 +152,14 @@ Data visualisation is the one exception — a chart's series need their own hues
     <style>{\`
       .row { display: grid; gap: 12px; }
       @container (min-width: 30rem) { .row { grid-template-columns: 1fr 1fr; } }
+
+**Reflowing text is not a responsive layout, and it is what you ship when you write no query at
+all.** A card with no \`@container\` rule still "works" at every width — the text simply wraps — so
+nothing looks broken while you write it, and the failure only shows in a screenshot. Measured on
+one card at 320 / 440 / 720: a two-column ingredient grid kept both columns at 320, where every
+label broke onto a second line, and kept them at 720, where the right third of the card was empty.
+Any multi-column grid needs the query that collapses it to one column; anything with a fixed width
+beside a flexible one needs the query that lets it take the extra space.
     \`}</style>
 
 Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.
