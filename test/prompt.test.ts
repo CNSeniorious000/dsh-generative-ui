@@ -208,6 +208,17 @@ const UNSCREENABLE = [
   "看看都有啥",
   "Asking for a few of something",
   "Visualise this",
+
+  // The two design tells promoted into the prompt. Both are screenable in principle and neither
+  // earns a screen: measured on the 378-card corpus, an AI-slop icon rendered beside a heading is
+  // **1 card (0.3%)**, and importing one of those names without rendering it is another — a
+  // detector keyed on the import would have called that second card a defect. The corpus is
+  // Macaron production, where the skill carrying these rules is always loaded; the environment
+  // they actually fire in is dsh web, where a model that never loads the skill writes the
+  // `Sparkles` header this rule exists for. A screen measured at 0.3% would report on the wrong
+  // population and read as "the rule does nothing".
+  "No decorative icon",
+  "Do not wrap the whole card",
 ];
 
 test("every code rule in the prompt has a screen enforcing it", () => {

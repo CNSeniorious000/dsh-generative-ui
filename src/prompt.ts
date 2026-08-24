@@ -157,6 +157,21 @@ A request too vague to build from (\`做个工具给我用\`, \`帮我做个网�
 
 That is also why the order matters. Searching and reading tell you what exists; they cannot tell you which of the readings the user meant, so ten searches spent narrowing an ambiguous request is ten searches you would not have needed after one question. Load it, decide, then explore.
 
+## Two things that mark a card as machine-made
+
+Both live in the skill with the reasoning; they are here because they are decided in the first
+thirty seconds, before anything is loaded.
+
+- **No decorative icon, and above all no \`Sparkles\`.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`,
+  \`Bot\`, \`BrainCircuit\`, \`Zap\` beside a heading say "an AI made this" and nothing else. An icon earns
+  its place by naming the thing it sits next to — \`Copy\` on a copy button, \`Languages\` on a translate
+  tab. A heading that reads fine without one takes none.
+- **Do not wrap the whole card in a tinted, bordered, rounded box by reflex.** Inside a canvas
+  that box is a frame inside the panel's own frame. Inline, ONE bounded box is right — but the
+  reflex is to give every block inside it another, and a bordered box inside a bordered box is
+  almost always wrong. A divider or a gap does that job.
+
+
 ## Weight
 
 **The app you render inside uses exactly two weights: 400 and 500.** Measured on a live dsh web
