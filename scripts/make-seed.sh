@@ -7,9 +7,9 @@
 # The seeds are generated rather than committed because one of them is a git repository, and a
 # repository inside a repository is not something git will carry.
 #
-# Usage: scripts/make-seed.sh <kind> [dir]   — kinds: git, env, src
+# Usage: scripts/make-seed.sh <kind> [dir]   — kinds: git, diff, env, src
 set -eu
-kind=${1:?usage: make-seed.sh <git|env|src> [dir]}
+kind=${1:?usage: make-seed.sh <git|diff|env|src> [dir]}
 dir=${2:-/tmp/dsh-seed-$kind}
 rm -rf "$dir"
 mkdir -p "$dir"
@@ -70,6 +70,23 @@ case "$kind" in
         n=$((n + 1))
       done
     done
+    ;;
+  diff)
+    # A working tree with UNCOMMITTED changes, which the `git` seed deliberately does not have.
+    # The resident layer names `git log` ("最近改了啥, 梳理一下 git 历史") and never says `diff`,
+    # and a real session went 12 bash calls deep reading a diff before answering in markdown —
+    # so the question of whether the browse rule reaches `帮我看看 diff 都是些啥` needs a fixture
+    # where there is a diff to read.
+    "$0" git "$dir" >/dev/null
+    # Spread across several files and both directions, so summarising it loses something: a
+    # one-file one-hunk diff really is fine as prose and would measure the wrong thing.
+    perl -pi -e 's/^export const parseAtom = .*/export const parseAtom = (t: Token) => t.kind === "Atom" \&\& !t.synthetic;/' "$dir/src/parser.ts"
+    perl -pi -e 's/^export const parseRange = .*/export const parseRange = (t: Token) => t.kind === "Range" \&\& t.span.end > t.span.start \&\& t.lo <= t.hi;/' "$dir/src/parser.ts"
+    perl -pi -e 's|^export const GROUP = .*|export const GROUP = /^[a-z_][a-z0-9_.-]*$/iu;|' "$dir/src/lexer.ts" 2>/dev/null || true
+    printf -- '- `parseAtom` no longer accepts synthetic tokens.\n' >> "$dir/docs/notes.md"
+    printf 'export const VERSION = "2.0.0";\n' > "$dir/src/version.ts"
+    mkdir -p "$dir/bench"
+    printf 'run("parse", () => parse(SAMPLE));\n' > "$dir/bench/parse.bench.ts"
     ;;
   env)
     cat > "$dir/.env" <<'ENV'

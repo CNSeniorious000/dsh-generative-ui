@@ -95,7 +95,18 @@ out=$(mktemp)
 # ("this block, not a tool") is invisible without them.
 # The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
 # path has been through /private, so match on the trailing mktemp name instead of rebuilding it.
-sess=$(ls -td "${DSH_HOME:-$HOME/.dsh}/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
+# dsh exits before the transcript is on disk, so a lookup right after it returns finds nothing and
+# the run is reported `crash/nosession` — with a complete reply sitting in `$out`. Measured three
+# times in one session, including on two runs whose replies opened with a ui4a fence. Poll briefly
+# for the file rather than sleeping: it is usually there within a second, and a run that genuinely
+# never reached a model still falls through after the deadline.
+sess=""
+for _ in $(seq 40); do
+  sess=$(ls -td "${DSH_HOME:-$HOME/.dsh}/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
+  [ -n "$sess" ] && [ -s "$sess/session.jsonl.zstd" ] && break
+  sess=""
+  sleep 0.25
+done
 # `name` sits inside `data`, well past the first `}` — grep the whole record, take the last name.
 calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
   | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
@@ -110,13 +121,13 @@ calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
 # plainly produced a card could report `crash` with no way to tell whether the transcript was
 # missing or the turn was unfinished, and no path to go and look. Say which, and where.
 if [ ! -s "$out" ] || [ -z "$sess" ]; then
-  echo "crash/nosession  $(head -c 100 "$out" | tr '\n' ' ')  $d  reply=$out"
+  echo "crash/nosession  $(tr '\n' ' ' < "$out" | cut -c1-100)  $d  reply=$out"
   exit 2
 fi
 # Matched loosely on purpose: `"kind": "completed"` with or without spaces, so the check does
 # not turn on dsh's JSON formatting.
 if ! zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null | grep -qE '"kind" *: *"completed"'; then
-  echo "crash/unfinished  $(head -c 100 "$out" | tr '\n' ' ')  $d  reply=$out  session=$sess"
+  echo "crash/unfinished  $(tr '\n' ' ' < "$out" | cut -c1-100)  $d  reply=$out  session=$sess"
   exit 2
 fi
 # A rule that lives in the SKILL can only be measured on a run that loaded it, and a run that did
