@@ -12,7 +12,15 @@ import { unoConfig } from "./uno-config.ts";
  * Accumulate rather than replace: several cards share one document, and each one's classes must
  * stay in the sheet after another card is added.
  */
-export const GENUI_ROOT_CLASS = "genui-root";
+/**
+ * The class every generated rule is prefixed with, and the one the surface carries.
+ *
+ * Named after the contract rather than after this plugin: the same class exists in
+ * `ui4a-playground` under the same constant name, so the two runtimes can be diffed line for
+ * line. It is also the only marker on the surface node — a second `data-*` hook naming the same
+ * thing was removed because nothing read it.
+ */
+export const UI4A_ROOT_CLASS = "ui4a-root";
 const PLUGIN_ID = "dsh-generative-ui";
 
 let generator: Promise<UnoGenerator> | null = null;
@@ -35,7 +43,7 @@ let sheet: HTMLStyleElement | null = null;
  */
 export async function ensureUnoStyles(code: string, streaming = false): Promise<void> {
   if (typeof document === "undefined") return;
-  const uno = await (generator ??= createGenerator(unoConfig(`.${GENUI_ROOT_CLASS}`)));
+  const uno = await (generator ??= createGenerator(unoConfig(`.${UI4A_ROOT_CLASS}`)));
   const extracted = await uno.applyExtractors(code);
   const fresh = [...extracted].filter((token) => !tokens.has(token));
   if (fresh.length === 0 && streaming) return;

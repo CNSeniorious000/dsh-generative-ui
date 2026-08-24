@@ -8,7 +8,7 @@ import { GenUIRenderer } from "partial-react";
 import { createBrowserTsxCompiler } from "./compiler.ts";
 import { mergeFallbackImports } from "partial-react/import-map";
 import { localImports } from "./bindings.ts";
-import { GENUI_ROOT_CLASS, ensureUnoStyles } from "./uno.ts";
+import { UI4A_ROOT_CLASS, ensureUnoStyles } from "./uno.ts";
 
 export type GenUISurfaceProps = {
   /** Full source when settled; the growing prefix while streaming. */
@@ -349,5 +349,5 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   // both. Without `container-type` here a `@container` rule is inert rather than wrong
   // (measured: the guarded declaration simply never applies), which is the kind of failure
   // that reads as the model writing something bad.
-  return <div ref={hostRef} className={[GENUI_ROOT_CLASS, className].filter(Boolean).join(" ")} data-genui-root="" style={{ containerType: "inline-size" }} />;
+  return <div ref={hostRef} className={[UI4A_ROOT_CLASS, className].filter(Boolean).join(" ")} style={{ containerType: "inline-size" }} />;
 }

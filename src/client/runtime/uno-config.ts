@@ -5,7 +5,7 @@ import type { UserConfig } from "@unocss/core";
  * Two things the host forces on this config, both non-negotiable:
  *
  * `important` receives a SELECTOR STRING, which is how UnoCSS scopes: every rule comes out
- * `.genui-root :is(.gap-4){…}`. The runtime sheet is appended to `<head>` last, so an unscoped
+ * `.ui4a-root :is(.gap-4){…}`. The runtime sheet is appended to `<head>` last, so an unscoped
  * `hidden` written by a card would win over the shell's own `hidden` and make part of the app
  * vanish. The playground has that bug on record (a sidebar disappearing); we start scoped.
  *

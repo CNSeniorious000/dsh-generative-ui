@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createGenerator } from "@unocss/core";
 import { unoConfig } from "../src/client/runtime/uno-config.ts";
 
-const generate = async (tokens: string[], scope = ".genui-root") => {
+const generate = async (tokens: string[], scope = ".ui4a-root") => {
   const uno = await createGenerator(unoConfig(scope));
   const extracted = await uno.applyExtractors(tokens.join(" "));
   const { css, matched } = await uno.generate(extracted, { preflights: true });
@@ -16,7 +16,7 @@ test("every generated rule is scoped to the genui root", async () => {
   const { css } = await generate(["grid", "gap-4", "hidden", "flex", "text-left"]);
   const rules = [...css.matchAll(/^\s*(\.[^{@\s][^{]*)\{/gm)].map((m) => m[1].trim());
   expect(rules.length).toBeGreaterThan(3);
-  expect(rules.filter((r) => !r.startsWith(".genui-root "))).toEqual([]);
+  expect(rules.filter((r) => !r.startsWith(".ui4a-root "))).toEqual([]);
 });
 
 // presetWind4's reset is 3.5KB of `*, ::before, ::after { margin: 0; border: 0 solid }`, and it
@@ -69,8 +69,8 @@ test("every colour name maps to a host token, and brand is not among them", asyn
 // inside the scope, because the host has buttons of its own.
 test("form controls are normalised, and only inside the scope", async () => {
   const { css } = await generate(["grid"]);
-  expect(css).toContain(".genui-root button");
-  const control = css.slice(css.indexOf(".genui-root button"));
+  expect(css).toContain(".ui4a-root button");
+  const control = css.slice(css.indexOf(".ui4a-root button"));
   expect(control).toContain("background: transparent");
   expect(control).toContain("font: inherit");
   // Nothing may address a bare element globally — `button {` with no scope in front of it would
