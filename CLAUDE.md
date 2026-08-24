@@ -1208,6 +1208,11 @@ that turned out to be mine. What the panel was worth was its *prose*:
 | `bg-layer-2` melts into the card in light, fine in dark | **right, and not a card defect** — measured `#ffffff` for all three background tokens in light. Recorded in §3.7; the model cannot know it |
 | `max-w-[34rem]` wastes 180px at 720 | **half right.** Four judges got the fact from the SOURCE while I read the same screenshot and saw a full-bleed form — the clip is taken at the host width, so unused width has no visible edge, and `shot-card.mjs` now reports `UNUSED`. But the *verdict* was wrong on the card I then looked at: five meal rows stretched full-bleed put a name and its number a screen apart, which is exactly what §Width's `max-w-[28rem]` rule exists to prevent. Unused width is a signal to look, not a defect to minimise |
 
+The panel's cache used to key on `md5(model + card + SOURCE)`. That is wrong for a check whose
+whole input is the images: the `text-base` fix changed how every card rendered without touching a
+byte of source, so a rerun would have replayed 117 stale verdicts at full confidence and I would
+have compared a fix against itself. Keyed on the image bytes now.
+
 Three probes now report what the eye cannot, in `shot-card.mjs`: `OVERFLOW` (content past the
 card's right edge), `CRUSHED` (a control narrower than its own label), `UNUSED` (width the card
 declined to paint). **Each was verified to fire on a case that should fire AND stay silent on one
