@@ -11,7 +11,10 @@ import { PLATFORM_MODULES } from "./platform.ts";
 
 const PLATFORM = new Set(PLATFORM_MODULES);
 
-const source = await Bun.file("lib/client.js").text();
+// Follows `BUILD_OUTDIR`, so a check that built elsewhere (during a wave, which owns `lib/`)
+// verifies the bundle it just produced rather than whatever `lib/` still holds — otherwise the
+// check is green about a stale artefact, which is the failure mode it exists to prevent.
+const source = await Bun.file(`${process.env.BUILD_OUTDIR ?? "lib"}/client.js`).text();
 let registered: { id: string; factory: (require: (id: string) => unknown) => Record<string, unknown> } | null = null;
 
 // Minimal stand-ins for what the bundle touches while its module bodies evaluate.

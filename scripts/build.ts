@@ -1,16 +1,28 @@
 import { resolve } from "node:path";
 
-// A wave measures `lib/`, so rebuilding while one runs changes the prompt under jobs that are
+/**
+ * Where the two halves land. Overridable so a build can be a pure CHECK — see the wave guard
+ * below, which is about writing `lib/`, not about compiling.
+ */
+const OUTDIR = process.env.BUILD_OUTDIR ?? "lib";
+
+// A wave measures `lib/`, so REPLACING it while one runs changes the prompt under jobs that are
 // already in flight: they come back `stale` (the eval guard catches those) or, worse, they come
 // back with a VERDICT produced by a different prompt than the one the wave reported. That has
 // happened four times, and every time it was the same shape — an unrelated edit, a reflexive
 // `bun run build`, and a wave whose numbers mix two prompts. Remembering not to do it has not
-// worked, so the build refuses instead. `WAVE_ROOT` env var or `--force` to override.
-if (!Bun.argv.includes("--force")) {
+// worked, so the build refuses instead.
+//
+// The guard is on the OUTPUT, not on building: `bun run check` compiles to prove the tree is
+// sound, and a check that cannot run during a wave means no push during a wave — which is how
+// this first showed up. `BUILD_OUTDIR=… ` sends the artefacts somewhere else and the guard has
+// nothing to protect. `--force` still overrides for a wave known to be void.
+if (OUTDIR === "lib" && !Bun.argv.includes("--force")) {
   const ps = Bun.spawnSync(["pgrep", "-f", "run-wave.py"]);
   if (ps.exitCode === 0 && new TextDecoder().decode(ps.stdout).trim() !== "") {
-    console.error("refusing to build: a wave is running, and rebuilding moves the prompt under jobs already in flight.");
-    console.error("  wait for it, or `bun run build --force` if you know this wave is already void.");
+    console.error("refusing to overwrite lib/: a wave is running, and replacing it moves the prompt under jobs already in flight.");
+    console.error("  to check the tree without touching it: BUILD_OUTDIR=/tmp/build-check bun run build");
+    console.error("  or `bun run build --force` if you know this wave is already void.");
     process.exit(1);
   }
 }
@@ -56,7 +68,7 @@ const bundleReactDomServer: import("bun").BunPlugin = {
  */
 const node = await Bun.build({
   entrypoints: ["src/index.ts"],
-  outdir: "lib",
+  outdir: OUTDIR,
   target: "node",
   format: "esm",
   external: ["@deepseek-ai/*"],
@@ -65,7 +77,7 @@ const node = await Bun.build({
 
 const client = await Bun.build({
   entrypoints: ["src/client/index.ts"],
-  outdir: "lib",
+  outdir: OUTDIR,
   target: "browser",
   format: "cjs",
   external: PLATFORM_MODULES,

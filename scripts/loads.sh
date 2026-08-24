@@ -8,6 +8,11 @@
 #
 # Every test reads the exported string; this is the only thing that PARSES it. One boot, no model
 # call worth caring about, and it catches the failure that makes all the other tests meaningless.
+# Unlike `smoke`, this cannot follow BUILD_OUTDIR: it boots real dsh, which loads the plugin
+# through the profile's symlink into `lib/`. During a wave that is deliberate — `lib/index.js` is
+# then the exact prompt the wave is measuring, so parsing it is the more useful check of the two.
+# What it does NOT prove in that case is that the tree you are about to push parses; `bun test`
+# and `smoke` cover the tree, and the next build after the wave covers this.
 set -u
 cd "$(dirname "$0")/.."
 if ! command -v dsh > /dev/null; then
