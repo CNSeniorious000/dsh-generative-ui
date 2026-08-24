@@ -53,7 +53,9 @@ await Bun.write("/tmp/dsh-harness-dom.js", "const D = globalThis.ReactDOM;\nexpo
 // One entry exporting both, so a driver can stand in for a package the browser cannot fetch.
 // It lives outside the repo — a temp file in the working tree survives a failed build and shows
 // up as an untracked file in whatever the next command looks at.
-const entry = `${tmpdir()}/dsh-surface-entry.ts`;
+// Port-scoped: two harnesses run side by side to shoot a card in both themes, and a fixed
+// name makes the second one unlink the first one's entry mid-build.
+const entry = `${tmpdir()}/dsh-surface-entry-${port}.ts`;
 const from = (path: string) => JSON.stringify(resolve(import.meta.dir, "..", path));
 await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, ""].join("\n"));
 
