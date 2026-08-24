@@ -1208,6 +1208,20 @@ that turned out to be mine. What the panel was worth was its *prose*:
 | `bg-layer-2` melts into the card in light, fine in dark | **right, and not a card defect** — measured `#ffffff` for all three background tokens in light. Recorded in §3.7; the model cannot know it |
 | `max-w-[34rem]` wastes 180px at 720 | **half right.** Four judges got the fact from the SOURCE while I read the same screenshot and saw a full-bleed form — the clip is taken at the host width, so unused width has no visible edge, and `shot-card.mjs` now reports `UNUSED`. But the *verdict* was wrong on the card I then looked at: five meal rows stretched full-bleed put a name and its number a screen apart, which is exactly what §Width's `max-w-[28rem]` rule exists to prevent. Unused width is a signal to look, not a defect to minimise |
 
+**The `text-base` fix, measured against its own control.** Re-shot and re-judged wave 2 — same 27
+cards, same source, same five models, only the rendering fixed — and split the cards by whether
+they write `text-base`:
+
+| | n | mean delta | |
+| --- | --- | --- | --- |
+| cards that write `text-base` | 12 | **+0.45 ± 0.16** | 8 up |
+| cards that do not | 10 | −0.01 ± 0.08 | 4 up |
+
+The control group did not move at all, and several of its cards drew the *identical* score from
+every judge twice. That is what makes the +0.45 readable: the panel's spread is ~2.0 and the
+pooled delta was a meaningless +0.23, but paired and split by exposure it separates cleanly.
+`scripts/judge-delta.py` does the paired read and refuses to call anything significant below 2 SE.
+
 The panel's cache used to key on `md5(model + card + SOURCE)`. That is wrong for a check whose
 whole input is the images: the `text-base` fix changed how every card rendered without touching a
 byte of source, so a rerun would have replayed 117 stale verdicts at full confidence and I would
