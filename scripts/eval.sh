@@ -29,6 +29,18 @@ fi
 # DSH_HOME can point at an isolated home with a different default model — used to keep
 # measuring when the primary account runs out of balance, and to compare models.
 #
+# WHICH MODEL TO MEASURE ON. The default eval home runs `macaron-v1-tall`, which is small enough
+# that a rule can look like it works when all it did was patch around the model being dim. The
+# models dsh actually runs are `macaron-v1-venti`, `macaron-v1-coding-venti` and `glm-5.2`; a rule
+# is worth shipping when it holds on those. One home per model, each with its own settings.yaml —
+# and settings.yaml must be a REAL FILE there, not the symlink back to the shared home that the
+# bootstrap below creates, or editing one home's model silently edits every home's:
+#
+#   DSH_HOME=~/.dsh-eval-macaron-v1-venti ./scripts/eval.sh "…"
+#
+# Confirm the run used the model you asked for rather than a silent fallback:
+#   zstd -dc "$sess/session.jsonl.zstd" | grep -o '"model":"[^"]*"' | sort -u
+#
 # It ALSO decides where the session transcript lands, and that is why it defaults to an eval home
 # rather than to `~/.dsh`. dsh writes one session per working directory, this script makes a fresh
 # `mktemp -d` per run, and the user's sidebar lists them all: a day of measuring left **2,143

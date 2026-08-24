@@ -991,6 +991,13 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
 - **A trigger rule has a rate, not a verdict.** One run decides nothing (`98 华氏度` reads 0/1 and
   4/5). With ~30% of runs skipping the skill, a nominal three-run test yields about two eligible
   samples — enough to see never→always and nothing smaller.
+- **Measure on the models dsh actually runs.** Every number in this section up to 2026-08-24 was
+  taken on `macaron-v1-tall`, which is small; a rule that helps it may be patching around the model
+  rather than teaching it anything, and is not worth carrying into the prompt for that. The models
+  worth optimising for are `macaron-v1-venti`, `macaron-v1-coding-venti` and `glm-5.2`. One eval
+  home per model (`~/.dsh-eval-<model>`), and check `settings.yaml` there is a real file rather
+  than the symlink the bootstrap makes — otherwise every home shares one model and the comparison
+  is between a model and itself.
 - **Every rate above was measured on prompts written to test a rule, and real user questions are a
   different distribution.** 11 first-turn questions pulled from the warehouse — a recipe, period
   cramps, protein powder for a child, a comparison of two cell types, "what date was last week
