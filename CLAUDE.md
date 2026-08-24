@@ -8699,6 +8699,79 @@ numbers stack at the origin (4 of 5 caught this, I had not); the game-over overl
 That card is `test/cards/2048.ui4a.tsx`, regenerated this morning and recorded here as "clean,
 paints, mounts, responds" — every one of those was true, and the board had never worked.
 
+### The panel was wrong about borders, and the rule was wrong about headers (2026-08-24)
+
+Nineteen of the panel's 45 verdicts flagged the same thing: a block setting `bg-layer-1` **and**
+`border-l1` is "视觉层级冗余", the redundant-affordance anti-pattern every designer knows. Seven of
+the nine cards were called on it, each verdict naming the line.
+
+The criticism is wrong here, and finding out took an A/B rather than an argument. Rendered side by
+side in the real harness:
+
+| | light | dark |
+| --- | --- | --- |
+| background only | **invisible** | fine |
+| border only | fine | indistinguishable from both |
+| both | fine | fine |
+
+Light paints `bg-base`, `bg-layer-1` and `bg-layer-2` all `#fff`, so a block with only a background
+is not a subtle block — it is not there. Dark gives the layers real values and carries it alone. So
+each ground has a *different* sufficient answer and only "both" works on both, which is what the
+rule already said in its body. **The panel is reasoning from a design principle that assumes a
+background you can see.**
+
+What was actually wrong was the header. The rule read `**A border or a background, never both**`
+with the exception in the sentence after it, and this file's own record says a rule containing a
+recognisable negative gets matched on the negative — the models did exactly that, and so would a
+reader. Rewritten to lead with what to do.
+
+**And the boundary needed stating, because a second case looks identical from a distance.** Once an
+element carries a *real* fill — a selected segment on `state-business-primary` — that fill separates
+it completely, and a leftover `border-l2` is a grey ring around a blue block, related to nothing on
+either theme. 4 of 378 corpus cards do this. The fix is `border: "1px solid transparent"` rather
+than `none`, or the selected item loses a pixel of height and the row twitches as the reader clicks
+along it.
+
+Two rules that read the same and mean the opposite: **faint layers need both; a filled control needs
+neither.** The distinguishing question is whether the background is one you can actually see.
+
+### The slider nobody had ever written a rule about (2026-08-24)
+
+The user pointed at a screenshot of a slider and said it looked unstyled and redundant. Both halves
+were right, and neither prompt had ever mentioned sliders at all — this was a missing rule, not a
+rule failing to land.
+
+**43 of the 52 corpus cards with a range input ship the browser's own track**, including all three
+reference cards that have one. That track is painted in the OS accent: a thick fully-saturated blue
+that ignores the design tokens, renders identically on light and dark, and outshouts the number
+label beside it — which is the half that actually carries the value.
+
+Measured in the harness on both grounds rather than reasoned about:
+
+- **`accent-color` is not the fix.** It swaps one blue band for another; the heavy fill remains.
+- **Only a `className` reaches it.** The track and thumb are pseudo-elements, and an inline `style`
+  cannot express `::-webkit-slider-runnable-track` at all. This is the second thing in this project
+  that a `<style>` block is required for, after breakpoints.
+- **The thumb must contrast the TRACK, not follow the background.** `bg-base` made it vanish on
+  dark, where the track is nearly the same value — I shipped that bug into my own example and the
+  screenshot caught it. `label-primary` inverts with the theme and reads on both.
+- **`@headlessui/react` has no Slider.** Verified against its 65 exports, so unlike `Switch`,
+  `RadioGroup` and `Listbox` there is nothing to delegate to and the pseudo-elements must be written
+  by hand.
+
+The shape is left as a judgement, keyed on what the number means, because the three are not
+interchangeable: a value you **pick** (speed, font size) gets a plain track and a thumb marking
+where you are — filling the left would claim 120ms is an amount of something; an amount you can
+**change** (budget, volume) fills the left, because the length *is* the quantity; an amount you
+**cannot** change is not a slider at all — two nested `<div>`s render identically and announce
+honestly, where a `readOnly` range still says "slider" to a screen reader and invites a drag that
+does nothing.
+
+One more found the same way: `@headlessui/react`'s `Switch` is a `<button>`, so it arrives with a
+browser border and `content-box`. A knob sized to `24 - 2*2 = 20` overflows its track by exactly
+that border, which looks like sloppy arithmetic and is a box model. `border: none` and
+`boxSizing: "border-box"` are both required.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
