@@ -3279,7 +3279,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 67 of 99 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 69 of 101 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6891,7 +6891,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    67 of 99 carry three or more accessibility signals (0→5 1→5 2→22 3→50 4→17)
+    69 of 101 carry three or more accessibility signals (0→5 1→5 2→22 3→48 4→21)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7933,3 +7933,37 @@ Three things worth carrying, the last one new:
   chars) was real, the reasoning about accretion was plausible, and the phenomenon it explained
   did not exist. This is the eleventh measurement artefact in this file and the first where the
   tell was *already printed in the output I was reading* — `tools=[…]` was on screen every time.
+### The rule was 8 of 8, and the confound is 30% (2026-08-24)
+
+The retraction above left the className rule unmeasured — every previous run of it had skipped the
+skill. With `skill=yes` now printed as the first field, four more runs of the same prompt, all four
+eligible:
+
+**4 of 4 clean under all 30 screens**, and two of them use the className spelling with
+`aria-pressed={s.value === size}` beside it. Across every eligible run of this rule today: **8 of
+8.** The rule has never failed on a card that read it.
+
+The confound is worth sizing, because it governs how many runs a skill-rule test needs. Across 30
+runs today: **21 loaded the skill, 9 did not — 30%.** So
+
+| runs | chance at least one is void |
+| --- | --- |
+| 3 | 66% |
+| 4 | 76% |
+| 5 | 83% |
+
+**A three-run test of a skill rule is more likely than not to contain a sample that cannot measure
+it.** That is why three separate conclusions today came out wrong in the same direction: a void
+sample always looks like a miss, never like a success, so the noise is one-sided and every affected
+result understated the rule.
+
+Two changes rather than a habit. `eval.sh` prints `skill=yes|no` as the first field on the line —
+the tool list always carried it and was read past every time — and `run-fixtures.sh` prints a
+lowercase cell for an ineligible run, so a grid used to measure a skill rule shows which cells
+could even count. Both are pinned by tests that fail when the field is removed.
+
+The general form, which is not specific to this project: **when a measurement can silently fail in
+only one direction, its noise is a bias.** Repetition does not fix it and averaging makes it worse
+— the fix is a field on the output that says whether the sample was valid, which is the same answer
+this file reached for crashes (`turn/end` reason), for stale builds (exit 4), and now for this.
+
