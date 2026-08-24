@@ -54,7 +54,10 @@ for f in sorted(d.glob("*.txt")):
         "md": sum(1 for line in text.splitlines() if ROW.match(line)),
         "listish": is_list_shape(text),
         "bytes": int(m.get("bytes", 0) or 0),
-        "fam": wave[int(idx)]["fam"] if int(idx) < len(wave) else "?",
+        # A hand-built wave (a targeted pool written straight into `wave.json`) carries the raw
+        # corpus fields and no `fam`. Grouping by family is a nicety; crashing the whole score on
+        # a missing label is not — this wave took 80 minutes to run.
+        "fam": (wave[int(idx)].get("fam") or wave[int(idx)].get("cat") or "?") if int(idx) < len(wave) else "?",
     })
 
 n = len(rows)
@@ -91,8 +94,8 @@ for key in ("model", "fam"):
 short = sorted({r["i"] for r in rows if r["card"] and len(wave[r["i"]]["q"].replace("用户：", "").strip()) < 25})
 if short:
     print("  very short turns that still produced a card — check these are not over-firing:")
-    for i in short: print(f"    [{wave[i]['fam']}] {wave[i]['q'].replace('用户：','')[:70]}")
+    for i in short: print(f"    [{wave[i].get('fam') or wave[i].get('cat') or '?'}] {wave[i]['q'].replace('用户：','')[:70]}")
 missed = sorted({r["i"] for r in rows if not r["card"] and r["listish"]})
 if missed:
     print("  turns answered as a markdown table by at least one run:")
-    for i in missed: print(f"    [{wave[i]['fam']}] {wave[i]['q'].replace('用户：','')[:78]}")
+    for i in missed: print(f"    [{wave[i].get('fam') or wave[i].get('cat') or '?'}] {wave[i]['q'].replace('用户：','')[:78]}")
