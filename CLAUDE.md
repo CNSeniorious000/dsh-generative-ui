@@ -3277,7 +3277,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 52 of 77 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 56 of 81 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    52 of 77 carry three or more accessibility signals (0→3 1→4 2→18 3→39 4→13)
+    56 of 81 carry three or more accessibility signals (0→3 1→4 2→18 3→42 4→14)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7317,7 +7317,7 @@ boundary. **Whatever decides this is local to the element, not to the author's i
 grid reads as a set of toggles and the preset row reads as decoration, so the same model writes the
 attribute on one and not the other without noticing the two are the same widget.
 
-The fresh set is 6 of 77. Both reference cards flagged by it are now regenerated: `metro`'s new
+The fresh set was 6 of the 77 cards it held when this was written (`bun scripts/fresh-rates.ts` re-derives it against whatever it holds now). Both reference cards flagged by it are now regenerated: `metro`'s new
 version carries `aria-pressed` on its 拍号 row unprompted, and the browser mount confirms the a11y
 tree agrees (`4/4=false`, `木鱼=checked`) where the old one exposed nothing at all.
 
