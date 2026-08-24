@@ -26,6 +26,8 @@ const PLUGIN_ID = "dsh-generative-ui";
 let generator: Promise<UnoGenerator> | null = null;
 const tokens = new Set<string>();
 let sheet: HTMLStyleElement | null = null;
+/** Whether the sheet already carries the preflight block. Reset with the sheet, not with the tokens. */
+let preflighted = false;
 
 /**
  * Per frame this does the two cheap things only: EXTRACT the class names out of the code
@@ -46,14 +48,31 @@ export async function ensureUnoStyles(code: string, streaming = false): Promise<
   const uno = await (generator ??= createGenerator(unoConfig(`.${UI4A_ROOT_CLASS}`)));
   const extracted = await uno.applyExtractors(code);
   const fresh = [...extracted].filter((token) => !tokens.has(token));
-  if (fresh.length === 0 && streaming) return;
+  if (fresh.length === 0 && streaming && preflighted) return;
   for (const token of fresh) tokens.add(token);
   sheet ??= createSheet();
   if (streaming) {
+    // Preflights FIRST, on the very first streaming frame, and never again. They were reachable
+    // only through the settled path, so for the whole of a stream the card rendered without
+    // `box-sizing: border-box` and without the button/list reset — measured on a first card in a
+    // fresh page: 31 seconds of streaming with `pre: false` and a painting card whose `<input>`
+    // computed `content-box`. That is not "unstyled until it settles", it is *wrongly* styled
+    // while the reader watches: a `w-full px-3 border` input is padding-plus-border wider than
+    // its parent, so the layout is visibly broken and then jumps when the stream ends.
+    //
+    // They are a fixed block that depends on nothing the model types, so there is no reason for
+    // them to wait for anything, and generating them once costs a single call.
+    if (!preflighted) {
+      preflighted = true;
+      const { css } = await uno.generate([], { preflights: true });
+      sheet.textContent += splitVendorRules(css);
+    }
+    if (fresh.length === 0) return;
     const { css } = await uno.generate(fresh, { preflights: false });
     sheet.textContent += splitVendorRules(css);
     return;
   }
+  preflighted = true;
   const { css } = await uno.generate(tokens, { preflights: true });
   sheet.textContent = splitVendorRules(css);
 }
@@ -100,5 +119,6 @@ export function disposeUnoStyles(): void {
   sheet?.remove();
   sheet = null;
   generator = null;
+  preflighted = false;
   tokens.clear();
 }

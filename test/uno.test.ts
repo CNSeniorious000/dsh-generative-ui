@@ -126,3 +126,32 @@ test("a merged vendor rule is split so Chromium keeps the half it understands", 
   expect(fixed).toContain("::-webkit-slider-thumb{");
   expect(fixed).toContain("::-moz-range-thumb{");
 });
+
+// Preflights were reachable only through the SETTLED path, so a card was styled without
+// `box-sizing: border-box` and without the button/list reset for the whole of its stream.
+// Measured in a real browser on a first card in a fresh page: 31 seconds of streaming with no
+// preflight in the sheet and a painting card whose `<input>` computed `content-box` — a
+// `w-full px-3 border` input is then padding-plus-border wider than its parent, so the layout
+// is visibly wrong while the reader watches and jumps into place when the stream ends. The
+// block is fixed content that depends on nothing the model types, so the first streaming frame
+// is early enough and there is never a reason to wait.
+test("the first streaming frame emits the preflight block", async () => {
+  // A stub rather than a DOM library: the module touches exactly `createElement`, two
+  // `setAttribute`s, `head.appendChild` and `textContent`, and the repo has no jsdom.
+  const style = { attrs: {} as Record<string, string>, textContent: "", setAttribute(k: string, v: string) { this.attrs[k] = v; }, remove() {} };
+  const previous = (globalThis as { document?: unknown }).document;
+  (globalThis as { document?: unknown }).document = { createElement: () => style, head: { appendChild: (n: unknown) => n } };
+  try {
+    const uno = await import("../src/client/runtime/uno.ts");
+    uno.disposeUnoStyles();
+    await uno.ensureUnoStyles(`<div className="grid gap-2"><input className="w-full px-3 border" /></div>`, true);
+    expect(style.textContent).toContain("box-sizing");
+    // …and exactly once: every later frame appends, so a repeated block would grow without bound.
+    const before = style.textContent.split("box-sizing").length;
+    await uno.ensureUnoStyles(`<div className="grid gap-2 text-sm"><input className="w-full px-3 border" /></div>`, true);
+    expect(style.textContent.split("box-sizing").length).toBe(before);
+    uno.disposeUnoStyles();
+  } finally {
+    (globalThis as { document?: unknown }).document = previous;
+  }
+});
