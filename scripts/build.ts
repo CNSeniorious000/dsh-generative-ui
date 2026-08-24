@@ -74,6 +74,16 @@ const client = await Bun.build({
   // drags require("stream"/"url"/"util") into a browser bundle.
   conditions: ["browser"],
   plugins: [bundleReactDomServer],
+  // Pinned, because otherwise the bundle depends on the CALLER'S environment. Bun picks the JSX
+  // runtime from NODE_ENV and the `define` below does not reach the transform — it rewrites
+  // strings in the code. Measured: `NODE_ENV=production bun run build` emits 0
+  // `require("react/jsx-dev-runtime")`, `NODE_ENV=test` emits 3 (GenUISurface, CanvasPanel,
+  // CanvasLauncher). `bun test` sets NODE_ENV=test for its children, and one test shells out to
+  // `bun run build` — so running the test suite left `lib/` in a state where the shell's module
+  // table has no `react/jsx-dev-runtime`, the client half failed to load, and dsh web showed
+  // "Failed to load plugins" over a blank page. It cost two wrong diagnoses before the pattern
+  // showed: the bundle was fine right after a build and broken right after a test.
+  jsx: { runtime: "automatic", development: false },
   define: {
     // @esm.sh/tsx's entry reads `import.meta.url`, which does not exist in a CJS factory.
     // Only read on the branches taken when no wasm path was passed, and we always pass one.
