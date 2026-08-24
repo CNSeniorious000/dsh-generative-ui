@@ -8040,3 +8040,38 @@ Three things worth keeping:
 - The honest limit: one prompt, one card type, 11 runs. Whether it generalises is the next thing
   to measure, and the tool list now makes that cheap to check on any prompt.
 
+### The skill-load result generalises, and the crash check gets a diagnosis (2026-08-24)
+
+The 62% → 11/11 result was one prompt, so it was re-run on two others — a todo list (which had
+skipped the skill in 3 of its 5 earlier runs) and the chmod calculator:
+
+    todo   skill=yes, skill=yes, skill=yes
+    chmod  skill=yes, skill=yes
+
+**5 of 5 across two more prompts**, and the cards are what the skill promises: both todo cards
+implement undo (the rule measured at 0/2 before it was shown as code), both chmod cards carry
+selection state on their preset rows, and all four are clean under every screen.
+
+The boundary was re-checked in the same batch, because a stronger *load the skill* push is exactly
+the kind of edit that could pull a one-line answer toward a card. Both hard negatives stayed prose
+— **and both correctly declined to load the skill**, which is the more informative half: the new
+sentence is conditional on having decided to build, and a request that never decides never reaches
+it.
+
+### A crash verdict on a run that plainly produced a card
+
+One chmod run reported `crash` with the card visible in the same line:
+
+    crash    给你个 chmod 权限计算器…  ````ui4a/tsx import { useS
+
+Both crash branches printed the identical string, so there was no way to tell *no transcript*
+(never reached a model) from *turn not completed* (reached it and failed) — and neither printed the
+workspace or the session path, so there was nowhere to go and look. Split into `crash/nosession`
+and `crash/unfinished`, each carrying its paths; `run-fixtures.sh` still folds both into `C` with
+its `crash*` match, so the grid is unchanged.
+
+This is the fifth version of that check, and the first change to it that is not about *detecting*
+a new failure but about *diagnosing* the ones it already detects. The four previous versions each
+replaced a pattern that missed something; this one keeps the structural test — `turn/end` with
+`reason.kind` — and fixes that its two verdicts were indistinguishable at the output.
+
