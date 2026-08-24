@@ -47,11 +47,18 @@ test("whether the skill loaded is reported, not left in the tool list", () => {
 // the three text assertions above deliberately overlap with this one: they hold everywhere.
 const hasDsh = Bun.spawnSync(["which", "dsh"]).exitCode === 0;
 
+// This test rebuilds, and `bun run build` refuses while a wave is running — for a good reason: a
+// rebuild moves the prompt under jobs already in flight. So during a wave the test would fail on
+// its own first line, reporting a guard doing its job as a broken suite. Skip instead, and say so:
+// a skip is visible in the run's output, a red test on a tree nobody changed teaches nothing.
+const waveRunning = Bun.spawnSync(["pgrep", "-f", "run-wave.py"]).exitCode === 0;
+if (waveRunning) console.log("skipping the timeout test: a wave is running, so `bun run build` will refuse");
+
 // Build first, deliberately. The staleness guard exits 4 BEFORE the timeout can fire, and `src/`
 // goes "newer" than `lib/` for reasons that are not edits at all — a `git checkout` or a restored
 // backup bumps an mtime. Without this the test measures which guard ran first, which is not what
 // it is asking about, and it fails on a tree nobody has changed.
-test.skipIf(!hasDsh)(
+test.skipIf(!hasDsh || waveRunning)(
   "a run that exceeds EVAL_TIMEOUT reports timeout and exits 3",
   () => {
     expect(Bun.spawnSync(["bun", "run", "build"]).exitCode).toBe(0);
