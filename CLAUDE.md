@@ -8424,6 +8424,79 @@ profile symlink temporarily pointed at a baseline worktree — for an ablation �
 branch tree exits 4, which is the guard doing its job and also makes the timeout untestable there.
 The check was run in the tree the symlink pointed at instead.
 
+### Real user queries, first contact (2026-08-24)
+
+Every eval in this file so far used prompts I wrote. The Codesign warehouse holds what users
+actually type, so I sampled it — 33 categories × (50 typical + 50 vague) = **3,300 real first-turn
+queries** from `dwd_macaron_codesign_turn_detail_total_day` (snapshot `20260823`, 8/14–8/20, a
+12.5% user-level sample). Ten of them, picked because their answer plainly has a shape, went
+through `scripts/eval.sh` unchanged:
+
+| | invented fixtures | real user queries |
+| --- | --- | --- |
+| produced UI | 18 of 18 | **1 of 10** |
+| loaded the skill | 17 of 17 | **2 of 10** |
+
+The one that worked is the strongest single case for the feature: `hazme un paquete con vuelos y
+hotel todo incluido en cancún zona hotelera` produced a 230-line canvas asking origin, dates, party
+size and budget as four `role="radio"` groups — the *form* case, clean under all 30 screens, and the
+mount confirms every option announces its state.
+
+The other nine are the finding. Two of them **ask for the missing information in prose**:
+
+    Suggest an outfit that matches the occasion and weather based on my weekend plans
+    → "I need a few details: 1. What are your weekend plans? 2. Where are you? …"
+
+    Q talla me vendría bien de pantalón
+    → "Para recomendarte una talla necesito saber tus medidas: cintura, cadera, largo…"
+
+That is a form, typed out. And `33 lacs me best gari with sunroof` came back as a ranked
+comparison of five cars with prices and specs — a table, in markdown.
+
+**Why my fixtures do not predict this** is visible in the queries themselves. Real ones are
+Hinglish, Spanish, Korean, Persian; they arrive mid-conversation (median `ai_turn_index` is 21,
+p90 is 105); and they name their subject casually rather than in the shapes the trigger rules
+match. Every rule in `prompt.ts` was tuned on prompts I wrote in the two languages I write in,
+against a corpus where Chinese is **0.2%** of turns and Spanish is 30.7%.
+
+The fixture set is not wrong — it is a set of unit tests for rules, and it still passes. What it
+cannot do is estimate the rate on the input the product receives, and this file has quoted its
+pass rate as though it could.
+
+### The harness had no palette (2026-08-24)
+
+The Cancún card was the first real-query card, so it got the full treatment — screens, mount, and a
+screenshot. It looked **broken**: no chips, no borders, no card frame, just headings and bare text
+running down the page.
+
+The card was fine. `scripts/surface-harness.ts` served **zero design tokens**, so every
+`var(--dsw-alias-…)` in every card resolved to nothing. The card's own source has four `border`,
+four `background`, four `borderRadius` and 16 token references; all of them rendered as absent.
+
+That is the same class as every other instrument failure in this file, in the one place that had
+never been checked because nothing had ever been *looked* at: `mount-card.sh` reads `innerText` and
+the a11y tree, and both are completely unaffected by a missing palette. **A harness can be correct
+about everything it measures and still be lying about what the reader sees.**
+
+Fixed by capturing the real values from a live `dsh web`: 350 tokens per theme, both grounds, into
+`test/fixtures/dsw-tokens-{light,dark}.json`, served by the harness as a `:root` block. `THEME=dark`
+switches. Re-shot, the same card is a proper form — bordered chips in four groups, a card frame, a
+disabled submit — and correct on both grounds.
+
+`scripts/shot-card.mjs` is the screenshot half, kept separate because it needs playwright, which
+this repo does not depend on (run it from a checkout that has one). ego-browser's
+`Page.captureScreenshot` times out against this page in every variant tried — with and without
+`captureBeyondViewport`, fresh tab, fresh task space — so the CDP path is not an option here.
+
+Two smaller traps on the way: `process.env` does not reach the ego-browser subprocess (the heredoc
+is unquoted, so it must interpolate like `$port` does), and a harness started with `(… &)` in a
+subshell dies with it, which presents as `ERR_CONNECTION_REFUSED` a second later.
+
+The rule this earns, and it is the one this whole loop rests on: **a screenshot is not a nice-to-have
+on top of the text checks — it is the only check that can see the thing the rules are about.** Every
+accessibility rule in the skill is about what a reader perceives, and until today nothing in this
+repo had rendered a card with the palette it ships with.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:

@@ -96,6 +96,22 @@ const file = (path: string) => new Response(readFileSync(path, "utf8"), { header
  * what the browser resolves against.
  */
 
+/*
+ * The host's design tokens, captured from a live `dsh web` (both themes, 350 values each).
+ *
+ * Without them every `var(--dsw-alias-…)` resolves to nothing, so a card that borders and fills
+ * correctly renders as unstyled text — and a screenshot of that is a picture of the harness, not
+ * of the card. The first real card screenshotted here looked broken for exactly this reason.
+ *
+ * THEME=dark to see the ground the app actually ships with.
+ */
+const theme = process.env.THEME === "dark" ? "dark" : "light";
+const themeVars = Object.entries(
+  JSON.parse(readFileSync(new URL(`../test/fixtures/dsw-tokens-${theme}.json`, import.meta.url), "utf8")) as Record<string, string>,
+)
+  .map(([name, value]) => `${name}:${value}`)
+  .join(";");
+
 Bun.serve({
   port,
   routes: {
@@ -114,6 +130,7 @@ Bun.serve({
     "/": () =>
       new Response(
         `<!doctype html><meta charset=utf8>
+<style>:root{${themeVars}}body{margin:0;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family,system-ui,-apple-system,sans-serif)}</style>
 <script src="/umd/react.js"></script><script src="/umd/react-dom.js"></script>
 <div id=root></div>`,
         { headers: { "content-type": "text/html" } },
