@@ -7967,3 +7967,37 @@ only one direction, its noise is a bias.** Repetition does not fix it and averag
 — the fix is a field on the output that says whether the sample was valid, which is the same answer
 this file reached for crashes (`turn/end` reason), for stale builds (exit 4), and now for this.
 
+### A skill rule can only reach seven runs in ten (2026-08-24)
+
+The 30% figure has a consequence beyond measurement hygiene: **a rule in the skill can only reach
+seven runs in ten**, and the three it misses are not runs that declined to build a card. Every
+skill-less run of the font-size prompt today produced UI — `fence=1`, `fence=2`, `fence=1` — they
+built without reading how.
+
+Same prompt, same card, split by whether the skill was read:
+
+| | cards | screens firing per card |
+| --- | --- | --- |
+| loaded the skill | 6 | **0, 0, 0, 0, 0, 0** |
+| did not | 2 | **1, 1** |
+
+That is the corpus-scale finding (`66% vs 18%` capability use inside workspace sessions) as a
+controlled comparison: one prompt, one card type, one variable. The skill is what makes a card
+correct; the resident layer is what makes it exist.
+
+Which reframes the residue on every screen. `SELECTION-WITHOUT-STATE` sits at 5 in today's cards
+and the rule is 8 of 8 on runs that read it — **the remaining defects are not a rule failing, they
+are the 30% of turns the rule never reaches.** No amount of rewording moves that; it is the same
+population §4.5 measured at 25% producing UI without the skill, and the same experiment that section
+retired: a description cannot route a request the model has already classified.
+
+Two honest limits on this. The 30% is over 30 runs of a handful of prompts, all card-shaped, so it
+is a rate for *this* kind of request rather than in general. And nothing here says the skill-less
+cards are bad — one of them is a clean, working font-size previewer that simply announces its
+selection to nobody.
+
+The actionable half is narrow and worth stating: **when a screen's residue is small and the rule
+behind it is at 100% on eligible runs, stop rewording.** The next lever is not the skill's text —
+it is whatever decides that a card gets built without reading it, and this file has already spent
+two experiments establishing that the catalog description is not that lever.
+
