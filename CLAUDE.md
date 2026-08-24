@@ -1423,6 +1423,19 @@ instruction to do unnecessary work.**
   **snapshot the inputs into the run's own directory**, **fingerprint `lib/index.js` and
   `lib/client.js` separately** (a prompt change invalidates the run, a render change only means
   re-shoot), and **never cache a result whose text says the process died**.
+
+  Broken a fourth and fifth time since, so it is now a mechanism rather than a rule to remember:
+  **`bun run build` refuses while a wave is running** (`--force` to override). Both later breaks
+  were the same shape — an unrelated edit, a reflexive rebuild, and a wave whose verdicts mix two
+  prompts. Note the second-order effect the first time you meet it: with the build refused, `lib/`
+  stays at whatever it was, so a *test* failure or a smoke error right after an edit may be
+  reporting the OLD bundle. Read the build's own output before diagnosing the failure.
+- **A wave that cannot measure anything must refuse to start, not finish instantly.** `eval.sh`'s
+  guards exit 4 in milliseconds, so waves 5-9 once reported `WAVE DONE … 72 runs` across four
+  seconds — 360 files all reading `stale`, and a reflection written about them. `run-wave.py` now
+  probes before spending anything, and the probe is a **real turn against each model home**, not a
+  stubbed one: the static guards only check that the credential variable is *set*, and a key that
+  is set but rejected produces `AUTH: 401` on all 72 runs while the wave still reports DONE.
 - **An eval home reads its gateway key from an env var, and unset it hangs rather than fails.**
   `apiKeyEnv: LITELLM_24000_API_KEY` in each `~/.dsh-eval-<model>/settings.yaml`; with it unset,
   dsh starts, opens a session and sits there — process alive, connection open, nothing returned,
@@ -1438,6 +1451,78 @@ instruction to do unnecessary work.**
 - **Read one card by hand before believing a surprising result.** Four times in one afternoon a
   measurement said something was wrong and one `grep -A3` said otherwise — including a "regression"
   that argued for reverting a rule and existed only in the regex.
+
+### 6.85 Match the host, and measure it rather than assuming it
+
+Three "looks bolted on" complaints in one session all turned out to be one thing: the card is
+styled against a design language nobody measured. The host publishes the answer; read it.
+
+- **Weight.** dsh web uses exactly two: measured on a live window, **54 of 61 visible text nodes
+  at 400 and 7 at 500, none at 600 or above**. The generated corpus does the opposite —
+  `font-semibold` **246 times**, `font-bold` 6. A card therefore lands a whole step heavier than
+  every surface around it, which is most of what "inconsistent" means here. The prompt now says
+  body default, `font-medium` for emphasis, and that `font-semibold`/`font-bold` have no
+  counterpart in this app at all.
+- **Hairlines the host does not draw.** The panel had a `border-l1` under its title bar and under
+  its tab strip. dsh web's own conversation header (`wSkVaW_header`) computes
+  `border-bottom-color: rgba(0, 0, 0, 0)` on a transparent background with no box-shadow — it
+  separates itself with 76px of height and nothing else. Two lines across a panel inside that same
+  frame read as chrome the app does not have.
+- **`bg-base` is the page's own colour.** Light `#fff`, dark `#151517` — the same value the
+  transcript behind the card is painted with. A wrapper painted with it draws nothing visible: an
+  invisible 16px inset and a rounded corner nobody can find, while the `bg-layer-1` blocks inside
+  read as the real frame. A frame inside an invisible frame.
+- **A rule in the skill only fires where the skill is loaded.** The `Sparkles`-is-slop rule has
+  been in the skill for a while; a real dsh web session still produced a `Sparkles` header, because
+  the model never loaded the skill (the `skill` tool call landed at seq 190, after the user asked
+  for a card in so many words). Measured: `icon`, `lucide`, `Sparkles` appeared **zero times** in
+  the prompt. Anything decided in the first thirty seconds belongs in the prompt, with the
+  reasoning left in the skill.
+
+  This also explains a corpus rate that looks like a dead rule: an AI-slop icon rendered beside a
+  heading is **1 of 378 cards (0.3%)**. The corpus is Macaron production, where the skill is always
+  loaded — the population where the rule fires is the one the corpus does not contain. Do not read
+  a low corpus rate as "the rule does nothing" without asking which environment the corpus samples.
+
+### 6.86 Errors that reach only the reader teach the model nothing
+
+`onError` had no consumer: a card that failed to compile painted a red panel and the model never
+learned anything. Measured on a real session — the surface reported *"'modern-monaco' has no
+export named 'MonacoEditor'; module exports: Workspace, errors, hydrate, init, lazy"*, which
+contains the fix, and the records after that point mention `MonacoEditor` six times and
+`no export named` **zero**. The reader saw the answer; the one party who could act on it did not.
+
+`report-error.ts` now sends it back through `conversation.send`, and the three constraints are all
+load-bearing: only errors that survived settling and retries (`GenUISurface` already separates
+those), **once per message** (a settled card that fails re-renders on every later frame, and a
+message per render is a loop the user has to kill), and **announced as automatic** (the model is
+about to read a user-role message nobody typed; without saying so it apologises to a person who
+said nothing). Verified end to end in a browser: the card failed, the `[自动]` message appeared
+16.5s later, and the model replied *"its actual exports are Workspace, errors, hydrate, init, and
+lazy … instead of using the named import I assumed existed"*.
+
+### 6.87 What dsh gives you, and one seam that does not fit
+
+Read `deepseek-ai/deepseek-harness/docs` before hand-rolling: `capability-seams.md` is the index of
+every `ctx.*` service, and `defensive-patterns.md`'s first rule ("report orthogonal outcomes
+independently — `timedOut`, `signal`, `exitCode`") is the same bug class as the card that renders
+"no matches" for a search that was killed at 15s.
+
+- **Settings are a seam, not a config field.** `installSettingsSection(ctx, ns, schema, entry,
+  hooks)` from `@deepseek-ai/dsh-settings`, with `Config` a **schemastery** `z.object(...)` — not a
+  TypeScript interface, which compiles to nothing and leaves the host with no schema to validate
+  or render. The whole helper sits inside `ctx.inject(["settings"])`, so on a host without that
+  service `onChange` never fires: mount once explicitly as well, and dedup so a host that *has*
+  settings does not mount twice. `dsh --profile headless` is such a host, and getting this wrong
+  costs the entire plugin there.
+- **`ctx.approval` is the right question and the wrong seam for a card.** It answers "may this
+  specific action proceed?", `tool-bash` consumes it, and it fails closed. But `request()` takes an
+  `agent` and throws outright without an open turn — *"approval.request() outside an open turn …
+  Ask from inside the turn that needs the decision."* A card's command fires on the reader's
+  keystroke, long after that turn ended. `ctx.userQuestions.ask()` does work outside a turn (its
+  `agent` is optional), so a per-command prompt is buildable — what stops it is that a card runs
+  one command per keystroke, and a dialog per keystroke is not a safety feature. Hence a
+  capability-level setting plus the session's own sandbox policy per command.
 
 ### 6.9 The tools, and what each is for
 
