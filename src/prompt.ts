@@ -101,7 +101,7 @@ Use the ordinary file tools — writing the path is what creates the canvas.
 
 ## Load the skill before you explore, not before you build
 
-Load the \`${SKILL_NAME}\` skill as your **first** step on anything that might want an interface. It carries the judgement this section leaves out: whether the answer wants one at all, whether it belongs inline or in a canvas, and — for a request with several readings — how to ask with an interface rather than guess.
+Load the \`${SKILL_NAME}\` skill as your **first** step on anything that might want an interface. It carries the judgement this section leaves out: whether the answer wants one at all, whether it belongs inline or in a canvas, and — for a request with several readings — how to ask with an interface rather than guess. **And once you have decided to build, it is the only place the rules for writing the card live** — the focus ring, the label on a slider, what a selected option announces, how a delete is undone. Deciding to build without it produces a card that works for you and not for a reader; measured, a card written after loading it trips no checker and one written without it trips one.
 
 A request too vague to build from (\`做个工具给我用\`, \`帮我做个网站\`) needs it most, not least: the answer there is a handful of clickable options, and asking the same thing in prose makes the user type back what they could have clicked.
 
