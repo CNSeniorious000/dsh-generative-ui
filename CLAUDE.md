@@ -8176,6 +8176,44 @@ morning both would have counted as a miss.
 The honest state of `UNANNOUNCED-ASYNC-RESULT`: **the weakest rule in the set, cause unknown, three
 hypotheses tested and none established.** The screen catches it, which is what the screen is for.
 
+### A screen at zero for a day catches a card stuck at 加载中 forever (2026-08-24)
+
+`NEVER-LEAVES-LOADING` has read **0 of 378** since it was ported, one of five screens sitting at
+zero — the state this file is careful to call *a measurement, not an idle checker*, provided a
+constructed control proves it can still fire.
+
+It fired today, on a freshly generated file browser:
+
+    const [loading, setLoading] = useState(true)
+    const load = async (p: string) => { … setLoading(false) }
+
+`load` is **defined and never called.** No `useEffect`, no handler, no reference anywhere else in
+the file — `grep -n '\bload\b'` returns exactly the definition line. The card starts loading and
+stays loading.
+
+Every other check passes it. It compiles. `paint-cards.ts` reports it renders something, because
+a spinner is something. `mount-card.sh` in a real browser:
+
+    before        ↑ 返回 workspace 加载中…
+    after a click ↑ 返回 workspace 加载中…
+    afterRemount  ↑ 返回 workspace 加载中…
+
+Eleven nodes, no errors, and nothing will ever happen. This is the exact failure the screen was
+written for — *"it renders 加载中… forever, compiles clean, and mounts without an error — the surface
+has nothing to complain about"* — reproduced by a model rather than by a control card, one day after
+the screen was ported to a branch where it had never found anything.
+
+Two things worth keeping:
+
+- **A screen at zero across a whole corpus is not evidence it is useless.** This one went from 0 of
+  378 to catching the most broken card of the session in a single batch. The distinction the file
+  already draws — *can it fire on a constructed case?* — is what separates a screen worth keeping
+  from one worth deleting, and it is the only distinction that works.
+- **The paint check and the mount driver both pass it**, which bounds what those checks are for.
+  A card that renders is not a card that works, and the only thing that could tell the difference
+  here was a text predicate reading the source. Three layers of verification, and the cheapest one
+  is the only one that saw it.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
