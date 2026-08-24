@@ -7708,8 +7708,19 @@ One of those two cards did fire `VIEWPORT-UNITS`, on a **hand-rolled toast**:
 `position: fixed` leaves the card's subtree entirely and floats over the whole app — the failure the
 "you are a component on someone else's page" rule exists for, arriving through the one case the
 `sonner` row covers. The row named the trap *inside* sonner (`toast()` without `<Toaster />`) and
-never said why to reach for it at all. It does now, with the measured reason: a hand-written toast
-is almost always `position: fixed`.
+never said why to reach for it at all. It does now.
+
+**And then the rate was checked, which narrowed the claim.** Across both populations, 20 cards
+show a transient confirmation and **not one other uses `position: fixed`** — 5 use `absolute`,
+which is correct and is what the same rule's other half already permits. So a hand-rolled toast is
+*not* almost always fixed; it is almost always right, and this was one card getting it wrong.
+The sentence is worth keeping (the failure is real and silent, and `VIEWPORT-UNITS` is what caught
+it) but it is a note about a trap, not a measured tendency — the distinction this file draws
+between a rule kept because it costs nothing and a rule kept because a number moved.
+
+Re-run on the same prompt afterwards: the card writes `position: "absolute"` for its toast, inside
+its own subtree. It did not adopt `sonner` — it removed the defect instead, which is the outcome
+already recorded twice today as the better one and the one no screen can observe.
 
 ### The library rows, tested where they should not fire
 
