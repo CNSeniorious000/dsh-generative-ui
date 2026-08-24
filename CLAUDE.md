@@ -7826,14 +7826,19 @@ Rewritten to point at the line instead, with the remedy as code:
 
 Same prompt, same three-word ask, nothing about undo in it:
 
-| | undo offered |
-| --- | --- |
-| as a consequence | **0 of 5** |
-| as code | **2 of 3** |
+| | runs that loaded the skill | undo offered |
+| --- | --- | --- |
+| as a consequence | 2 of 5 | **0 of 2** |
+| as code | 2 of 3 | **2 of 2** |
 
-The third run never loaded the skill at all (`tools=[bashx45]`, forty-five bash calls and no
-`skill`), so the rule was not read rather than not applied — the distinction §4.5 draws, and the
-reason the tool list is printed beside the count. Two of the two runs that read it followed it.
+**Counting only the runs that read the rule**, which is the only population it can act on. Three of
+the five prose runs and one of the three code runs never called `skill` at all — one of them
+`tools=[bashx45]`, forty-five bash calls and no skill load — so the rule was not read rather than
+not applied. That distinction is §4.5's, and the tool list is printed beside every count for
+exactly this. The raw figures (0 of 5, 2 of 3) mix the two and understate both sides.
+
+Two against two is a thin result and is stated as one. What it is not is a wording comparison
+across seven runs, which is how it first went into this file.
 
 And written the taught way exactly — `const [undo, setUndo] = useState<Todo | null>(null)`, the
 removed row captured before the filter, a 撤销 button that puts it back. Both cards clean under all
