@@ -7482,6 +7482,42 @@ this. Worth adding one observation to that entry: the cost here was not a wrong 
 corrected for on the same principle. A gate that quietly stops looking at something reports the
 same word as a gate that looked and was satisfied.
 
+### Porting a day of work onto a base 537 commits ahead (2026-08-24)
+
+The day's work was done on a checkout **537 commits behind `origin/main`**, branched at `9371b08`.
+Every measurement in it was real; every file it touched had moved. `stale-base-work` preserves that
+history untouched, and `port-onto-main` is the branch off `7211930` where the work actually lands —
+22 commits, and `bun run check` green including the `loads` step CI cannot run.
+
+What ported, and the shape each took on the newer base:
+
+| | |
+| --- | --- |
+| `$dsh/state` | a real module, not a denial — 5 of 6 runs invented the identical API |
+| the `registerUi4aHost` fix | `$dsh/internal` registers from `bindingImports()`, so a page with no host renders |
+| the four library rows | NumberFlow / vaul / sonner / headlessui, each with the prop that goes wrong |
+| six screens | five ported plus `INVENTED-CAPABILITY`, each with origin's five obligations |
+| the harness | `surface-harness.ts`, `mount-card.sh`, `make-seed.sh`, `pickup.sh` |
+| `eval.sh` | a stale-symlink guard, a timeout, and the transcript moved out of the workspace |
+| CI | `check:ci` — everything `bun run check` does except `loads`, which needs a dsh binary |
+
+Two reference cards were regenerated rather than edited, per `test/cards/README.md`. The metronome
+came back with `aria-pressed` on its 拍号 row and `$dsh/state` persistence, both unprompted, and the
+mount confirms the a11y tree agrees. 2048 took **four** attempts, and the failures are the more
+useful half of the record:
+
+1. the wrong prompt — no segmented control at all, so clean for lack of the construct;
+2. contaminated mid-run when I repointed the profile symlink at a baseline worktree;
+3. clean under 25 screens and **`window is not defined`** — a `window.innerWidth` read during
+   render, found only by the paint check, and 0 of 456 elsewhere;
+4. clean, paints, mounts, responds.
+
+The CI change is worth stating plainly because it is the only structural one: both workflows ran
+`lint`, `typecheck` and `smoke` — three of `check`'s eleven steps — so **the screens, the paint
+check, the replay, the rate audit and the shuffled-order run had never run on any push.** Every
+gate this record spends its length building was local-only. That is the same shape as the four
+rotted citations: nothing failed, so nothing said it was not happening.
+
 ### The card that fixed the rule broke on something else
 
 The third run's card is clean under all 25 screens and **does not compile**:
