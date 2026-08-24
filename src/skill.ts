@@ -187,20 +187,19 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 ## Layout
 
-- **The space between blocks is the root's job, and it belongs in the inline \`style\` where you
-  can see it.** A card is two to four stacked blocks, and what separates them is one declaration
-  on the element that holds them — not a margin on each child, which collapses and doubles
-  unpredictably, and not a class in \`<style>\` that has to find its element:
+- **The space between blocks is the root's job, and it is one class on the element that holds
+  them.** A card is two to four stacked blocks, and what separates them is a \`gap\` on their
+  parent — not a margin on each child, which collapses and doubles unpredictably:
 
-      <div style={ { display: "grid", gap: 16, … } }>
+      <div className="grid gap-4">
 
-  Measured on a real card: the root's layout was written as \`.r { display: grid; gap: 12px }\` in
-  \`<style>\`, the class landed on an \`<input>\` twenty lines away, and the two blocks below ended
-  up flush against each other — no border between them, no space, reading as one block with a
-  stray heading in the middle. Nothing failed; the gap simply never applied. Written inline on
-  the element it governs, that cannot happen. Inside a block, the same \`gap\` separates its rows;
-  \`marginBottom\` on one child while its siblings rely on a gap is the spelling that produces one
-  odd space and eleven equal ones.
+  Measured on a card written before this syntax: the root's layout was \`.r { display: grid; gap:
+  12px }\` in a \`<style>\` block, the class landed on an \`<input>\` twenty lines away, and the two
+  blocks below ended up flush — no border between them, no space, reading as one block with a
+  stray heading in the middle. Nothing failed; the gap simply never applied. A class written on
+  the element it governs cannot come apart from it, which is most of why the styling here is
+  classes. Inside a block the same \`gap\` separates its rows; a \`mb-4\` on one child while its
+  siblings rely on the gap is what produces one odd space and eleven equal ones.
 
 - **A list of options collapses the prose, not the facts — and folding the wrong half is the
   common way to end up with a card nobody can scan.** Measured on a real card recommending six
@@ -248,16 +247,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
-- **If you take the focus ring off, put something back.** \`outline: "none"\` on a borderless
-  input is the most common single line in these cards that breaks keyboard use: **77 of 378
-  remove it and 0 replace it**, so tabbing through the card moves an invisible cursor. The
+- **If you take the focus ring off, put something back.** \`outline-none\` on a borderless input
+  is the most common single thing in these cards that breaks keyboard use: **77 of 378 remove the
+  ring and 0 replace it**, so tabbing through the card moves an invisible cursor. The
   browser's default ring is ugly next to a custom input, which is why it goes — the fix is a
   ring you like, not no ring:
 
-      // in a <style> block
-      .card input:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px }
-      // or inline, from the state you already have
-      style={ { outline: "none", boxShadow: focused ? "0 0 0 2px var(--dsw-alias-state-business-primary)" : "none" } }
+      <input className="outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
 
   \`:focus-visible\`, not \`:focus\` — it shows the ring for the keyboard and not for the mouse,
   which is the reason the ring was annoying in the first place.
@@ -304,26 +300,23 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   **And a bare \`<input type="range">\` is the loudest thing on the card.** The browser paints its
   own track in the OS accent — a thick, fully saturated blue that ignores your theme, is identical
   on light and dark, and outshouts the number beside it. **43 of the 52 corpus cards with a slider
-  ship it untouched**, including all three reference cards. \`accent-color\` does not fix it: measured
-  side by side, it swaps one blue band for another. The track is a pseudo-element, so only a
-  \`className\` in your \`<style>\` block can reach it. **The class goes on the \`<input>\` itself, and
-  every selector below starts from that same element** — write \`.s::-webkit-slider-track\`, never
-  \`.s input[type=range]::-webkit-slider-track\`. Measured on a real card: the model took the class
-  as a wrapper name, put \`className="r"\` on the input, and wrote \`.r input[type=range]\` — asking
-  for an input *inside* the input. Not one declaration matched, and the card shipped the OS-blue
-  track while carrying the whole override block in its \`<style>\`. It compiles, it renders, and
-  nothing tells you: the fix is invisible in the source and only the screenshot shows it failed.
+  ship it untouched**, including all three reference cards. \`accent-color\` does not fix it:
+  measured side by side, it swaps one blue band for another. The track and the thumb are
+  pseudo-elements, which utilities reach through a bracketed selector on the input itself:
 
-      <input type="range" className="s" … />
+      <input type="range" className="flex-1 min-w-0 appearance-none bg-transparent
+        [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full
+        [&::-webkit-slider-runnable-track]:bg-line-2
+        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-1.5
+        [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-label" />
 
-      .s { flex: 1; appearance: none; -webkit-appearance: none; background: transparent; }
-      .s::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--dsw-alias-border-l2); }
-      .s::-webkit-slider-thumb {
-        appearance: none; -webkit-appearance: none; margin-top: -5px;
-        width: 14px; height: 14px; border-radius: 50%;
-        background: var(--dsw-alias-label-primary);   /* contrasts the TRACK, so it inverts with the theme */
-      }
-      .s:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+  The thumb takes \`bg-label\`, which contrasts the TRACK and therefore inverts with the theme.
+  Note what this spelling removes: the previous version of this rule taught the same overrides in
+  a \`<style>\` block, and a card wrote \`className="r"\` on the input against a \`.r
+  input[type=range]\` selector — asking for an input *inside* the input. Not one declaration
+  matched, the OS-blue track shipped, and the dead override block sat in the source looking
+  correct. A bracketed selector is attached to the element it styles and cannot miss it.
 
   Then decide what the control means, because the three shapes are not interchangeable and you can
   tell them apart from what the number is:
@@ -331,7 +324,10 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   - **Picking a value** (speed, font size, a threshold) — plain track, thumb marks *where you are*.
     Filling the left half would claim the value accumulates, and 120ms is not an amount of anything.
   - **An adjustable amount** (budget, volume, progress you can scrub) — fill the left of the track,
-    because its length IS the quantity. \`background: linear-gradient(to right, var(--dsw-alias-state-business-primary) var(--p), var(--dsw-alias-border-l2) var(--p))\`.
+    because its length IS the quantity. The fill moves with the value, so this is one of the few
+    places a \`style\` object is right: put the gradient there and leave the rest in classes.
+
+        style={ { background: \`linear-gradient(to right, var(--dsw-alias-state-business-primary) \${pct}%, var(--dsw-alias-border-l2) \${pct}%)\` } }
   - **An amount they cannot change** — fill only, and then it is not a slider at all. Two nested
     \`<div>\`s render identically and announce honestly; a \`readOnly\` range still says "slider" to a
     screen reader and invites a drag that does nothing.
@@ -396,37 +392,34 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
 
-  **When the style lives in \`<style>\` and the state lives in JSX, they are two spellings that
-  must agree, and nothing checks that they do.** Measured on a real card: the CSS said
-  \`.sev-btn[aria-pressed="true"]\` and the JSX wrote \`aria-checked={o.id === severity}\` twenty
-  lines below. Both spellings are correct on their own — the selector is valid, the attribute is
-  the right one for a \`role="radio"\` — and they simply never meet, so all three buttons rendered
-  identically at every width while the card carried a full selected-state block in its
-  \`<style>\`. It compiles, it renders, no checker fires, and only a screenshot shows it. The same
-  failure produced an unstyled slider, and there it cost twice over: the card's \`<style>\` opened
-  with \`.r { display: grid; gap: 12px }\` — the root container's own layout — and then put
-  \`className="r"\` on the \`<input type=range>\`. So the slider silently became a grid, every
-  \`.r input[type=range]::…\` override addressed an input inside an input and matched nothing, **and
-  the root never got its \`gap\`**, so the two blocks below it sit flush against each other with no
-  space at all. One misplaced class, three symptoms, none of them where the class is. **Whenever a \`<style>\` rule keys off something JSX writes — an attribute, a class,
-  a data-* attribute — write the two lines next to each other and read them as one.** The cheaper habit
-  is to keep the state in the inline \`style\` ternary you are already writing, and let
-  \`<style>\` hold only what inline cannot express (pseudo-elements, \`@container\`, \`:focus-visible\`).
+  **Write the state and the style it produces as one token, and this whole class of bug stops
+  existing.** \`aria-checked:bg-accent\` is a single string: there is no second place for it to
+  disagree with. Measured on a card written before that was possible — the CSS said
+  \`.sev-btn[aria-pressed="true"]\`, the JSX twenty lines below wrote \`aria-checked={o.id ===
+  severity}\`, both correct on their own, and they simply never met. All three buttons rendered
+  identically at every width while the card carried a full selected-state block it never used. It
+  compiled, it rendered, no checker fired, and only a screenshot showed it. The same card's
+  \`<style>\` also opened with \`.r { display: grid; gap: 12px }\` and put \`className="r"\` on an
+  \`<input type=range>\`: the slider became a grid, every slider override addressed an input inside
+  an input, and the root never got its \`gap\`, so the blocks below sat flush. One misplaced class,
+  three symptoms, none of them where the class was.
+
+  So: a state variant (\`aria-checked:\`, \`data-[open=true]:\`, \`hover:\`, \`focus-visible:\`) rather
+  than a selector that has to go and find the element.
 
   This is about state that *persists* after the interaction. A key that lights while held, a row that highlights on hover — those are momentary feedback and want nothing announced; a state that is over before it is read is worse than none.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
-- **A card that animates needs one line for \`prefers-reduced-motion\`.** Measured across 378 real
-  cards: 131 animate and **7** honour it. The setting is not a preference about taste — people
-  turn it on for vestibular disorders and migraine, and a looping demo is exactly what it is for.
-  With a \`<style>\` block it is one rule at the end of it, covering everything:
+- **A card that animates needs the \`motion-reduce:\` variant on whatever moves.** Measured across
+  378 real cards: 131 animate and **7** honour the preference. It is not a preference about taste
+  — people turn it on for vestibular disorders and migraine, and a looping demo is exactly what it
+  is for. It is one more token beside the transition you already wrote:
 
-      @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }
+      <div className="transition-transform duration-150 motion-reduce:transition-none" />
 
-  **59 of those 131 cards style entirely inline**, where a media query has nowhere to live — so
-  read the preference instead and let the value fall out of it:
-
-      const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      style={ { transition: still ? "none" : "transform 90ms ease" } }
+  For a keyframe animation the pair is \`animate-… motion-reduce:animate-none\`. The old spelling
+  of this rule needed a \`<style>\` block for the media query, which is why 59 of those 131 cards
+  could not follow it at all: they styled inline, and a media query has nowhere to live in a
+  style object. A variant has nowhere it cannot live.
 
   Where the motion IS the explanation — a packet crossing a diagram, a sort swapping two bars —
   shorten it rather than removing it (\`animation-duration: .01s\`), so the card still steps.
@@ -734,9 +727,12 @@ Either way, the way to see your work actually run is to write the canvas and loo
 **Two mistakes it reports that do not blow up**, both found in real cards written here, and both
 the kind you never notice because the thing still works:
 
-- **A duplicate key in a style object.** \`{ display: "block", …, display: "flex" }\` keeps the
-  last one and silently drops the first. It looked right because \`flex\` was what the button
-  wanted — the dead line survives until someone edits the wrong one.
+- **Two utilities that set the same property.** \`className="grid … flex"\` does not merge and does
+  not error — which of them wins is decided by the order the rules were generated in, not by the
+  order you wrote them, so it can differ between a streaming frame and the settled card. The
+  older form of this was a duplicate key in a style object (\`{ display: "block", …, display:
+  "flex" }\`, last one wins, first silently dropped); the class form is harder to see because the
+  two words sit inside one string. Read the whole class list before adding a layout word to it.
 - **Writing a ref during render.** \`statusRef.current = status\` in the component body reads as a
   cheap way to keep a loop's view of state fresh, and React is explicit that it is not one; do it in
   an effect. A long-running AutoPlay is exactly where this bites, because the loop outlives the

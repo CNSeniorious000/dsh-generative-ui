@@ -384,12 +384,23 @@ export const SCREENS = {
   // is left is 47 cards transitioning `transform`/`all` and 16 with `@keyframes`, and **7 of 131
   // animating cards honour it at all**, the worst adherence rate measured here.
   "UNSTOPPABLE-MOTION": (src: string) =>
-    !/prefers-reduced-motion/.test(src) &&
+    // Two spellings of the guard, and the class one had to be added or this screen reported the
+    // CORRECT card: probed, `animate-[…] motion-reduce:animate-none` fired identically to the
+    // same keyframes with no guard at all, so the screen could no longer tell right from wrong.
+    // A screen that fires on both is worse than one that fires on neither — it teaches the reader
+    // to ignore it.
+    !/prefers-reduced-motion|\bmotion-reduce:/.test(src) &&
     // `transition: all` is NOT enough on its own: 9 corpus cards write it on a button whose only
     // animated properties are colour and border, and `all` there means nothing moves. Requires a
     // transform to exist somewhere — either named in the transition, or present as a property the
     // `all` would pick up.
-    (/@keyframes/.test(src) || /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src) || (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
+    (/@keyframes/.test(src) ||
+      /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src) ||
+      // The class spellings of the same thing: `transition-transform`, `animate-spin`, and the
+      // arbitrary `animate-[…]`. Without these the screen only sees cards written with a style
+      // object, which is no longer how a card is written.
+      /\b(?:transition-transform|animate-(?:spin|ping|pulse|bounce|\[))/.test(src) ||
+      (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
   // `transition: "transform .12s ease"` on an element whose transform is never set. The
   // transition animates nothing — it reads as polish and costs a repaint budget for a property
   // that does not change. Four of 378 corpus cards.

@@ -69,8 +69,8 @@ test("the prompt is whole", () => {
 const SKILL_RULES = [
   ["abort the previous streamText", "const ctrl = (running.current = new AbortController())"],
   ["abort the previous bash when polling", "ctrl.abort(); clearInterval(timer)"],
-  ["honour prefers-reduced-motion (media query)", "@media (prefers-reduced-motion: reduce)"],
-  ["honour prefers-reduced-motion (inline)", 'matchMedia("(prefers-reduced-motion: reduce)")'],
+  ["honour prefers-reduced-motion (transition)", "motion-reduce:transition-none"],
+  ["honour prefers-reduced-motion (keyframes)", "motion-reduce:animate-none"],
   ["keyboard-reachable controls", '<button aria-label="复制" onClick={copy}>'],
   ["a superseded async run returns", "if (id !== runId.current) return"],
   ["the shared cause behind the control rules", "treating its controls as decoration"],
@@ -168,7 +168,7 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   // because the slider half had a rule. A screen that covers more than one construct needs a
   // phrase per construct, or the test confirms half of it.
   "UNLABELLED-CONTROL": ["A slider is the same problem", "`<select>` has the same problem"],
-  "UNSTOPPABLE-MOTION": "@media (prefers-reduced-motion: reduce)",
+  "UNSTOPPABLE-MOTION": "motion-reduce:transition-none",
   "VIEWPORT-UNITS": "100vw",
   "SELECTION-WITHOUT-STATE": "Selected state is not a colour",
   "NEVER-LEAVES-LOADING": "Fetch the first screen from a",
@@ -262,7 +262,7 @@ for (const [name, text] of [
  */
 // `tabIndex` is deliberately absent: the keyboard rule says to use a `<button>` rather than to
 // patch a `<div>`, which is the better advice and the reason `UNREACHABLE-CONTROL` accepts either.
-const ACCESSIBILITY_RULES = ["aria-label", "aria-live", "prefers-reduced-motion", "<button"];
+const ACCESSIBILITY_RULES = ["aria-label", "aria-live", "motion-reduce:", "<button"];
 
 test("an accessibility rule lives in the skill, where it is read while writing JSX", () => {
   const body = skillBody("types.json", "standalone.json");
