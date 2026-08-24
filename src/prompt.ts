@@ -160,6 +160,14 @@ one card at 320 / 440 / 720: a two-column ingredient grid kept both columns at 3
 label broke onto a second line, and kept them at 720, where the right third of the card was empty.
 Any multi-column grid needs the query that collapses it to one column; anything with a fixed width
 beside a flexible one needs the query that lets it take the extra space.
+
+**And with \`overflow: hidden\` on the wrapper it does not even wrap — it disappears.** A
+three-column comparison table on that same card was clipped at 320: the header read \`PROC…\`, a
+cell read \`Sin orgánul\`, and the text that did not fit was simply gone, with no scrollbar and
+nothing to indicate anything was missing. \`overflow: hidden\` is what you reach for to keep a
+border radius from being cut by a child, and it silently turns "too narrow" into "content lost".
+If a table cannot collapse to one column, it wants \`overflow-x: auto\` on its own wrapper, never
+\`hidden\`.
     \`}</style>
 
 Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.
