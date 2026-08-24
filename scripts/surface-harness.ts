@@ -30,7 +30,7 @@ import { unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
-import { WASM_PATH } from "../src/contract-assets.ts";
+import { AI_STREAM_PATH, WASM_PATH } from "../src/contract-assets.ts";
 
 const port = Number(process.argv[2] ?? 47895);
 /** Optional card file, served at `/card` and scanned for the icons its lucide shim must declare. */
@@ -60,7 +60,7 @@ await Bun.write("/tmp/dsh-harness-dom.js", "const D = globalThis.ReactDOM;\nexpo
 // name makes the second one unlink the first one's entry mid-build.
 const entry = `${tmpdir()}/dsh-surface-entry-${port}.ts`;
 const from = (path: string) => JSON.stringify(resolve(import.meta.dir, "..", path));
-await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, ""].join("\n"));
+await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, `export { registerUi4aHost } from ${from("src/client/runtime/bindings.ts")};`, ""].join("\n"));
 
 const bundle = await (
   await Bun.build({
@@ -129,6 +129,63 @@ Bun.serve({
     // partial-react imports it; nothing under test calls it.
     "/m/react-dom-server.js": () => js("export const renderToString = () => '';\nexport default { renderToString };"),
     "/surface.js": () => js(bundle),
+    // `$dsh/ai`, forwarded to a real model when one is configured.
+    //
+    // Without this route a streaming card renders its ERROR branch and a judge scores the harness:
+    // measured on a wave-3 card whose shot was `Ops, deu um bug aqui buscando os livros` in red —
+    // the card handling failure correctly, which is exactly what should not be photographed. 9 of
+    // 11 wave-3 canvases import a `$dsh/*` capability; 6 import this one.
+    //
+    // Canned data was tried first and is worse than it looks. These cards feed the stream to a
+    // `partial-json` parser against a schema their own prompt declares (`{"items":[{"title",
+    // "author","vibe","blurb","match"}]}` on the card measured here), so a generic `{items:[…]}`
+    // fills one field per row and leaves the rest blank — a picture of a card missing most of its
+    // content, which reads as a layout defect. The card's prompt says exactly what it wants; the
+    // honest stand-in is to ask a model, which is what production does.
+    //
+    // No key configured -> 501 with a body saying so, NOT a canned success. A shot taken against
+    // an unconfigured harness must be recognisable as one.
+    [AI_STREAM_PATH]: async (request: Request) => {
+      const key = process.env.LITELLM_24000_API_KEY;
+      const base = process.env.LITELLM_24000_BASE ?? "http://34.177.103.253:24000/v1";
+      const model = process.env.HARNESS_AI_MODEL ?? "glm-5.2";
+      if (!key) return new Response("[harness] $dsh/ai needs LITELLM_24000_API_KEY — no canned answer is offered, because a shot of one is not a shot of this card", { status: 501 });
+      const { prompt } = (await request.json()) as { prompt?: string };
+      const upstream = await fetch(`${base}/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model, stream: true, max_tokens: 8000, messages: [{ role: "user", content: prompt ?? "" }] }),
+      });
+      if (!upstream.ok || !upstream.body) return new Response(`[harness] upstream ${upstream.status}`, { status: 502 });
+      // The card wants raw text, not SSE frames: unwrap `data:` lines into their delta content.
+      const stream = new ReadableStream({
+        async start(controller) {
+          const reader = upstream.body!.getReader();
+          const decoder = new TextDecoder();
+          let buffered = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffered += decoder.decode(value, { stream: true });
+            const lines = buffered.split("\n");
+            buffered = lines.pop() ?? "";
+            for (const line of lines) {
+              if (!line.startsWith("data:")) continue;
+              const payload = line.slice(5).trim();
+              if (payload === "[DONE]") continue;
+              try {
+                const piece = JSON.parse(payload)?.choices?.[0]?.delta?.content;
+                if (piece) controller.enqueue(new TextEncoder().encode(piece));
+              } catch {
+                /* a partial frame — the next chunk completes it */
+              }
+            }
+          }
+          controller.close();
+        },
+      });
+      return new Response(stream, { headers: { "content-type": "text/plain; charset=utf-8" } });
+    },
     "/card": () => (cardPath === undefined ? new Response("no card", { status: 404 }) : new Response(readFileSync(cardPath, "utf8"), { headers: { "content-type": "text/plain" } })),
     "/icons": () => new Response(JSON.stringify(lucideNames), { headers: { "content-type": "application/json" } }),
     [WASM_PATH]: () => new Response(readFileSync(`${REPO_ROOT}node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm`), { headers: { "content-type": "application/wasm" } }),

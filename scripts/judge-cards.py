@@ -127,6 +127,15 @@ async def main():
                     if (SHOTS / f"{shot_stem(card)}.light.{w}.png").stat().st_size < 5000]
             if tiny:
                 skipped.append(f"{card} (blank at {tiny})"); continue
+            # A card that streams its content through `$dsh/ai` is photographed mid-flight: the
+            # harness forwards to a real model, and a reasoning model spends thousands of tokens
+            # before its first content character (glm-5.2: 7432), so the shot is the card's own
+            # loading state. Grading that is grading the harness — the same class of mistake as
+            # judging a blank image, and the reason the check above exists. Measured on wave 3:
+            # 6 of 11 canvases import this capability.
+            src_text = (CARDS / f"{card}.tsx").read_text()
+            if "$dsh/ai" in src_text:
+                skipped.append(f"{card} (streams via $dsh/ai — shot is its loading state)"); continue
             fp = hashlib.md5((keymat + str(n)).encode()).hexdigest()
             print(f"# {card}: {n} images", flush=True)
             tasks += [one(card, m, parts, fp) for m in MODELS]
