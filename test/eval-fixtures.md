@@ -112,8 +112,14 @@ Seventeen cards generated after this session's screen and rule work, all clean u
 screens, 15 of 17 painting in a real browser (the two blanks are recorded in CLAUDE.md — both
 called `useState` without importing it, which is now screened).
 
-Run any with `scripts/eval.sh '<prompt>' [test/seed]`. The seed matters for the last two: without
-a project on disk the model correctly declines to invent one.
+Run any with `scripts/eval.sh '<prompt>' [seed]`. The seed matters for the last two: without a
+project on disk the model correctly declines to invent one.
+
+`test/seed` is checked in and has **one** commit, which is enough for a dependency tree and not for
+anything about history — asked what changed recently it correctly answers "one commit, nothing
+since", and that scores as a rule failure. `scripts/make-seed.sh git` builds the 24-commit,
+three-author repository those prompts need. Three runs were spent on the wrong one before this line
+existed.
 
 | prompt | seed |
 | --- | --- |
@@ -134,7 +140,7 @@ a project on disk the model correctly declines to invent one.
 | `做个密码强度检查器` | |
 | `做个正则表达式测试器` | |
 | `展示这个项目的依赖树` | `test/seed` |
-| `把当前目录的 git log 画成时间线` | `test/seed` |
+| `把当前目录的 git log 画成时间线` | `make-seed.sh git` |
 
 ## Async cards, added 2026-08-23
 
@@ -148,7 +154,7 @@ rule moved into the skill's accessibility section it came back with one.
 | `做个文件浏览器，点目录能进去看里面有什么` | |
 | `做个命令运行器，输入 shell 命令看输出` | |
 | `做个日志查看器，读文件并实时过滤` | |
-| `这仓库最近几次提交都改了啥` | `test/seed` |
+| `这仓库最近几次提交都改了啥` | `make-seed.sh git` |
 
 ## Sampled rather than written, 2026-08-23
 
