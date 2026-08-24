@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createGenerator } from "@unocss/core";
+import { presetWind4 } from "@unocss/preset-wind4";
 import { unoConfig } from "../src/client/runtime/uno-config.ts";
 
 const generate = async (tokens: string[], scope = ".ui4a-root") => {
@@ -93,11 +94,17 @@ test("box-sizing is border-box inside the scope, and not outside it", async () =
 // card: `<h2 className="text-base font-semibold">` computed color #ffffff, font-size 24px, opacity
 // 1, on a white card. Present, laid out, invisible, and invisible to every probe too. 18 corpus
 // cards wrote `text-base`. Any future colour name has to clear the same bar.
-test("no colour name shadows a Wind4 sizing utility", async () => {
-  for (const t of ["text-base", "text-sm", "text-lg", "text-xs", "text-xl"]) {
-    const { css } = await generate([t]);
-    expect(css).toContain("font-size");
-  }
+test("no colour name shadows a Wind4 utility", async () => {
+  const plain = await createGenerator({ presets: [presetWind4({ preflights: { reset: false } })] });
+  const NAMES = ["page", "layer", "layer-2", "line", "line-2", "label", "muted", "accent", "hover", "danger", "success", "warn"];
+  const collisions: string[] = [];
+  for (const n of NAMES)
+    for (const p of ["text", "bg", "border", "w", "h", "p", "m", "gap", "rounded", "shadow", "font", "leading", "tracking"]) {
+      const t = `${p}-${n}`;
+      const { css } = await plain.generate(await plain.applyExtractors(t), { preflights: false });
+      if (css.trim()) collisions.push(t);
+    }
+  expect(collisions).toEqual([]);
   // and the renamed one still reaches the same host variable
   const { css } = await generate(["bg-page"]);
   expect(css).toContain("--dsw-alias-bg-base");
