@@ -88,6 +88,21 @@ for (const width of widths) {
     return worst.sort((a, b) => b.px - a.px)[0] || null;
   });
   if (over) console.log(`OVERFLOW ${width} +${over.px}px ${over.tag}.${over.cls}`);
+  // The other half of the same squeeze. `min-width: auto` makes a sibling overflow; `shrink`
+  // makes the element itself collapse, and a button crushed to a coloured lozenge with its label
+  // clipped away does NOT overflow, so the check above is blind to it. Measured on a wave 2 card:
+  // an "Añadir" button rendered 44px wide with no text in it, and every screen passed.
+  const crushed = await p.evaluate(() => {
+    const host = document.getElementById("shot-host");
+    const out = [];
+    for (const el of host.querySelectorAll("button, a[href]")) {
+      const r = el.getBoundingClientRect();
+      const label = (el.innerText || el.getAttribute("aria-label") || "").trim();
+      if (r.width > 0 && label && el.scrollWidth > r.width + 2) out.push({ px: Math.round(r.width), want: el.scrollWidth, label: label.slice(0, 24) });
+    }
+    return out.sort((a, b) => b.want - a.want)[0] || null;
+  });
+  if (crushed) console.log(`CRUSHED ${width} "${crushed.label}" ${crushed.px}px wants ${crushed.want}px`);
   if (errs.length) console.log(`pageerror ${width}:`, errs[0]);
   await p.screenshot({ path: `${prefix}.${width}.png`, clip: box });
   console.log(`saved ${prefix}.${width}.png  ${box.width}x${box.height}`);
