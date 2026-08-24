@@ -17,9 +17,25 @@ fi
 # And it must be built from the current source: `lib/` older than `src/` means the last edit is
 # not in what dsh will read. Same failure as the symlink, one step further along — every prompt
 # A/B measures the previous prompt, and the numbers look exactly like a rule that did nothing.
-if [ -n "$(find "$here/src" -newer "$here/lib/index.js" -name '*.ts' -o -newer "$here/lib/index.js" -name '*.tsx' 2>/dev/null | head -1)" ]; then
-  echo "stale  src/ is newer than lib/ — run \`bun run build\`" >&2
+#
+# The two halves are checked against their OWN output, which is the same split `run-wave.py`
+# fingerprints. Scanning all of `src/` against `lib/index.js` alone conflates them, and the two
+# are not the same failure: `src/client/` compiles into `lib/client.js` and changes how a card
+# RENDERS, while what an eval measures is the prompt and the skill in `lib/index.js`. Measured —
+# a wave lost 67 of 72 runs to three edited files under `src/client/`, none of which the eval was
+# reading. A render change means re-shoot the screenshots, not discard the verdicts.
+stale_half() {
+  [ -n "$(find "$1" \( -name '*.ts' -o -name '*.tsx' \) -newer "$2" 2>/dev/null | head -1)" ]
+}
+# `src/client/` is excluded from the node half by pruning it, so an edit there cannot fail this.
+if [ -n "$(find "$here/src" -path "$here/src/client" -prune -o \( -name '*.ts' -o -name '*.tsx' \) -newer "$here/lib/index.js" -print 2>/dev/null | head -1)" ]; then
+  echo "stale  src/ (node half) is newer than lib/index.js — run \`bun run build\`" >&2
   exit 4
+fi
+# The client half only decides how a card is rendered, so a stale one is a warning, not a verdict:
+# the run's `skill=`/`fence=`/`canvas=` numbers stand and only the screenshots need retaking.
+if stale_half "$here/src/client" "$here/lib/client.js"; then
+  echo "note: src/client/ is newer than lib/client.js — verdicts stand, RE-SHOOT the screenshots" >&2
 fi
 # The gateway credential is the third way to measure nothing and not be told. The provider block
 # in each eval home reads its key from `apiKeyEnv`, and with that variable unset dsh starts, opens

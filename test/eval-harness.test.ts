@@ -89,7 +89,18 @@ test("a plugin symlink pointing elsewhere is refused", () => {
 });
 
 test("a build older than the source is refused", () => {
-  expect(script).toContain("src/ is newer than lib/");
+  expect(script).toContain("(node half) is newer than lib/index.js");
+});
+
+// The two halves are not the same failure, and conflating them cost a wave 67 of its 72 runs:
+// three edited files under `src/client/` — which compile into `lib/client.js` and only change how
+// a card RENDERS — were scanned against `lib/index.js`, the half that carries the prompt and the
+// skill the eval is actually measuring. A render change means re-shoot the screenshots; it is not
+// a reason to throw the verdicts away.
+test("a stale client half is a note, not a refusal", () => {
+  expect(script).toContain("RE-SHOOT the screenshots");
+  // The node-half check must not see `src/client/` at all, or the note is unreachable.
+  expect(script).toMatch(/-path "\$here\/src\/client" -prune/);
 });
 
 // A day of measuring left 2,143 `tmp.XXXXXXXX` conversations in the user's sidebar against 85 real
