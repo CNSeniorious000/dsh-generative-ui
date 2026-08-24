@@ -55,8 +55,20 @@ test.skipIf(!hasDsh)(
   "a run that exceeds EVAL_TIMEOUT reports timeout and exits 3",
   () => {
     expect(Bun.spawnSync(["bun", "run", "build"]).exitCode).toBe(0);
+    // A dummy credential, because `eval.sh` refuses (exit 4) when the variable its DSH_HOME names
+    // is unset — with it unset, dsh opens a session and hangs with no error, and a whole wave was
+    // spent that way.
+    const keyenv = Bun.spawnSync(["bash", "-c", `grep -oE 'apiKeyEnv: *[A-Z0-9_]+' "\${DSH_HOME:-$HOME/.dsh}/settings.yaml" 2>/dev/null | head -1 | awk '{print $2}'`]);
+    const varName = new TextDecoder().decode(keyenv.stdout).trim();
+    // …and `EVAL_CMD`, because the dummy credential is exactly what makes `dsh` unusable HERE: the
+    // gateway answers `AUTH: 401` in well under a second, so the process exits before the alarm
+    // fires and the script reports `crash`, not `timeout`. Measured across six identical runs:
+    // 142, 1, 142, 1, 1, 1 — the assertion was turning on gateway latency. A command that simply
+    // outlasts the alarm makes the branch under test the alarm, not dsh. `perl -esleep(30)` rather
+    // than `sleep 30`: this environment refuses a foreground `sleep`, and the refusal exits fast
+    // enough to reproduce the very flake being fixed.
     const proc = Bun.spawnSync(["bash", "scripts/eval.sh", "写一个非常复杂的看板应用"], {
-      env: { ...process.env, EVAL_TIMEOUT: "1" },
+      env: { ...process.env, EVAL_TIMEOUT: "1", EVAL_CMD: "perl -esleep(30)", ...(varName === "" ? {} : { [varName]: "test-only-never-sent" }) },
     });
     expect(proc.exitCode).toBe(3);
     // `toStartWith`, not `toContain`: an earlier version let SIGALRM kill the subshell, and the

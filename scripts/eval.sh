@@ -81,7 +81,12 @@ out=$(mktemp)
 # 142 by hand is what keeps the line clean, and the SIGTERM is what stops a timed-out `dsh`
 # outliving the run that gave up on it.
 ( cd "$d" && perl -e '$SIG{ALRM} = sub { kill 15, $p; exit 142 }; alarm shift; $p = fork; if (!$p) { exec @ARGV } waitpid $p, 0; exit $? >> 8' \
-    "${EVAL_TIMEOUT:-900}" dsh --profile headless "$prompt" > "$out" 2>&1 )
+    "${EVAL_TIMEOUT:-900}" ${EVAL_CMD:-dsh --profile headless} "$prompt" > "$out" 2>&1 )
+# `EVAL_CMD` exists for one test and nothing else: the timeout path cannot be measured through
+# `dsh`, because a run with a throwaway credential comes back 401 in well under a second and the
+# alarm never fires. Measured — six identical runs went 142/1/142/1/1/1, so the assertion turned
+# on how fast the gateway answered. With a command that reliably outlasts the alarm the branch
+# below is testable; nothing else sets it.
 # A timeout has two very different causes and the verdict alone cannot separate them: the model
 # was producing slowly (a machine under load — every timeout so far arrived while a dozen other
 # evals were running), or it wedged and produced nothing. Print the bytes it had written and where
