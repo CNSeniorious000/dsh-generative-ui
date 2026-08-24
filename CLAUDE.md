@@ -974,6 +974,12 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
 - **A recipe is followed as a recipe.** `display: block; width: 100%; text-align: left` was written
   for one layout; cards reaching for `display: flex` took none of the three, including the
   `text-align` that mattered. The rules that transfer name one property and why it is needed.
+- **Widening the skill's own description does not widen what loads it.** Naming five concrete
+  shapes in `SKILL_DESCRIPTION` — a markdown table, doses that vary by age, a numbered option set,
+  anything the user is logging — moved the load rate on real questions from 3/11 to 2/10: nothing,
+  or slightly worse. The description is what the model reads *while choosing among skills*; a
+  question it never classified as UI-adjacent never gets that far. The lever is the resident layer,
+  which is read on every turn.
 - **Where a rule lives decides whether it is applied.** `aria-live` in `prompt.ts` alone: absent.
   The same text moved into the skill, next to the other JSX-attribute rules: present, replicated on
   two prompts. The resident layer is read before deciding *what* to build; the skill is read while
@@ -985,6 +991,14 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
 - **A trigger rule has a rate, not a verdict.** One run decides nothing (`98 华氏度` reads 0/1 and
   4/5). With ~30% of runs skipping the skill, a nominal three-run test yields about two eligible
   samples — enough to see never→always and nothing smaller.
+- **Every rate above was measured on prompts written to test a rule, and real user questions are a
+  different distribution.** 11 first-turn questions pulled from the warehouse — a recipe, period
+  cramps, protein powder for a child, a comparison of two cell types, "what date was last week
+  Thursday" — loaded the skill **3 times and produced one card**. Not one of them asks for an
+  interface; they are short, multilingual, and conversational, and the model answers them in
+  markdown without ever reaching the decision the skill exists to make. A rule measured at 100% on
+  a written prompt can be at 0% here simply because nothing loads it. Sample the corpus, not the
+  test set, before believing a trigger number.
 
 ### 6.3 What the cards get wrong
 

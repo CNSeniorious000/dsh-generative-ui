@@ -69,7 +69,8 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
 }
 
 export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined): string =>
-  ((maps) => `# Building a generative UI
+  ((maps) =>
+    `# Building a generative UI
 
 ## Is this a UI at all
 
@@ -81,6 +82,8 @@ Two specific traps:
 
 - **Do not restate the reply as a card.** If the interface only repeats what the prose next to it already said, one of them is redundant, and it is the card.
 - **Do not decorate an answer.** A metric with an icon and a border is still just a number. Ship the number.
+
+**And a long answer is not automatically prose.** The trap above is a card whose body is one paragraph; the opposite trap is a wall of markdown that was a list of things to *do*. A recipe, a workout, a packing list, a set of steps — the reader works through those one item at a time, loses their place, and comes back to them. Ticking an item off is the whole interaction, and markdown cannot offer it. If you are about to write \`- \` more than about six times and the items are actions rather than facts, that is the block, not prose.
 
 Conversely: "visualise this", "show me a chart", "make it interactive", "let me try it" are unambiguous requests for the block. Build it directly — don't reach for \`run_code\` or an image; the fence renders in the browser.
 
