@@ -3277,7 +3277,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 60 of 88 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 65 of 94 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    60 of 88 carry three or more accessibility signals (0→5 1→4 2→19 3→43 4→17)
+    65 of 94 carry three or more accessibility signals (0→5 1→4 2→20 3→48 4→17)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7687,6 +7687,37 @@ selecting 研发 filters ten items to three, zero errors, clean under all 30 scr
 could not see it is the harness, not the card, and this is exactly the division the file draws
 between the two — `paint-cards.ts` is 378 cards in two seconds without a browser, and the browser
 is for the cases it cannot reach.
+
+### Both edits measured on the card that motivated them (2026-08-24)
+
+Two edits made this hour were tested on the prompt whose baseline card produced the defect each was
+aimed at (`做个笔记本，能记点东西，刷新还在`), six runs across the two:
+
+| | result |
+| --- | --- |
+| `$dsh/state` reached for | **6 of 6** |
+| a capability invented | **0 of 6** |
+| toast positioned `absolute` (inside the card) | **4 of 4** that show one |
+| toast positioned `fixed` (escapes the card) | **0** |
+| `sonner` adopted | 0 |
+
+The invented-name removal cost nothing, which was the question: taking `$dsh/storage` / `$dsh/db` /
+`$dsh/http` out of the bullet — because a rule naming its own counter-examples is a rule the model
+can match on — did not make the set less clear. Every run still reaches for the real module, and
+several use it three times over.
+
+The toast row did not produce a `sonner` import and does not need to have. Every card that shows a
+confirmation contains it with `position: absolute`, which is the correct answer and what the
+containment rule permits; the one baseline card that wrote `fixed` remains the only instance in
+both populations. **A row that points at a library is not failing when the model solves the problem
+without one** — the same reading already applied to the pomodoro's `Notification` beating an
+in-page toast, and to `<input type="range">` beating a segmented control with `aria-pressed`.
+
+Which is worth stating as the general shape, since it has now come up four times in a day: the
+measurable outcome of a rule is often **the absence of the defect**, not the presence of the
+remedy the rule names. A screen can only see the first. That asymmetry is why the fresh-card
+numbers here are quoted as *clean under N screens* rather than as adoption rates for any particular
+fix — and why a row like `sonner` earns its place by naming a trap, not by how often it is imported.
 
 ### And the removal of the invented names cost nothing
 
