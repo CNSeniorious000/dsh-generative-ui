@@ -157,6 +157,21 @@ A request too vague to build from (\`做个工具给我用\`, \`帮我做个网�
 
 That is also why the order matters. Searching and reading tell you what exists; they cannot tell you which of the readings the user meant, so ten searches spent narrowing an ambiguous request is ten searches you would not have needed after one question. Load it, decide, then explore.
 
+## Weight
+
+**The app you render inside uses exactly two weights: 400 and 500.** Measured on a live dsh web
+window — 61 visible text nodes, 54 at \`font-weight: 400\` and 7 at \`500\`, and **not one at 600 or
+above**. Cards do the opposite: across the generated corpus, \`font-semibold\` appears **246 times**
+and \`font-bold\` 6, so a card lands in the transcript a whole step heavier than every surface
+around it. That is most of what "this looks bolted on" turns out to be.
+
+So: body text takes the default, and a heading or a value you want picked out takes
+\`font-medium\`. **\`font-semibold\` and \`font-bold\` have no counterpart in this app at all** — if
+\`font-medium\` does not feel like enough separation, the fix is a size step or a colour step
+(\`text-muted\` for what is secondary), not more weight. Emphasis by weight is the one axis the host
+does not use, so it is the one that reads as foreign.
+
+
 ## Colors
 
 Your UI renders inside this app, which has light and dark themes and switches between them at
