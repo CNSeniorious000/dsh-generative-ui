@@ -53,4 +53,4 @@ for (const name of cards) {
 }
 const three = (histogram.get(3) ?? 0) + (histogram.get(4) ?? 0);
 console.log(`${three} of ${cards.length} carry three or more accessibility signals (${[0, 1, 2, 3, 4].map((n) => `${n}→${histogram.get(n) ?? 0}`).join(" ")})`);
-for (const [screen, names] of [...flagged].sort()) console.log(`  ${screen}: ${names.join(" ")}`);
+for (const [screen, names] of [...flagged].toSorted()) console.log(`  ${screen}: ${names.join(" ")}`);
