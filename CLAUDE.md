@@ -1208,6 +1208,13 @@ that turned out to be mine. What the panel was worth was its *prose*:
 | `bg-layer-2` melts into the card in light, fine in dark | **right, and not a card defect** — measured `#ffffff` for all three background tokens in light. Recorded in §3.7; the model cannot know it |
 | `max-w-[34rem]` wastes 180px at 720 | **right, and I could not see it** — four judges got it from the SOURCE while I read the same screenshot and saw a full-bleed form. The clip is taken at the host width, so unused width has no visible edge. `shot-card.mjs` now reports `UNUSED` |
 
+Three probes now report what the eye cannot, in `shot-card.mjs`: `OVERFLOW` (content past the
+card's right edge), `CRUSHED` (a control narrower than its own label), `UNUSED` (width the card
+declined to paint). **Each was verified to fire on a case that should fire AND stay silent on one
+that should not** — the first `UNUSED` was silent on the very card four judges flagged, because
+`.ui4a-root` is a full-width wrapper and "furthest painted right edge" always found it at the host
+edge. A probe that reports nothing looks identical to a clean wave.
+
 The general lesson is the one the second row states: a screenshot clipped at the host width cannot
 show overflow (the lost strip is absent, not cut) and cannot show unused width. Reading the images
 myself and having five models read them is not redundant — they fail differently.
