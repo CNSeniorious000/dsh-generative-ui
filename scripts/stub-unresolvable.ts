@@ -5,11 +5,23 @@
  * module level — importing it for this one function ran the whole check as a side effect, in the
  * test suite and anywhere else that wanted it.
  */
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
+
+/**
+ * The capability groups with a generated stub, read from the directory rather than listed here.
+ *
+ * A hand-written list went stale the moment `$dsh/state` was added: the card importing it was
+ * reported as `skipped`, which reads exactly like a card using a package this process cannot
+ * resolve — a silent hole in the one check that proves a reference card renders. The generator
+ * writes one `.js` per group, so the directory IS the list.
+ */
+const STUBBED = new Set(readdirSync(resolve(import.meta.dir, "../types/standalone")).filter((f) => f.endsWith(".js")).map((f) => f.slice(0, -3)));
 
 export const stubUnresolvable = (source: string): string =>
   source
-    .replaceAll(/(["'])\$dsh\/(ai|fs|exec|chat)\1/g, (_whole, quote: string, group: string) => `${quote}${resolve(import.meta.dir, `../types/standalone/${group}.js`)}${quote}`)
+    .replaceAll(/(["'])\$dsh\/([\w-]+)\1/g, (whole, quote: string, group: string) =>
+      (STUBBED.has(group) ? `${quote}${resolve(import.meta.dir, `../types/standalone/${group}.js`)}${quote}` : whole))
     // `lucide-react` is icons and nothing else, so a Proxy returning an empty <svg> for any
     // name renders it faithfully enough for this check — and keeps a reference card from being
     // silently skipped in `bun run check`, which is the failure this whole script exists for.
