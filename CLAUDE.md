@@ -7879,121 +7879,50 @@ record measures at 0% → 86%. **A detector for "has code" that only knows one s
 same shape as the four over-reporting detectors already listed. Fixed to accept both, and the
 remaining 44 are what the reading above describes.
 
-### Code was not the answer twice: a rule that grew too long (2026-08-24)
+### Every miss was a run that never read the rule (2026-08-24)
 
-The delete rule went 0/5 → 2/2 when the remedy became copyable code, and the obvious generalisation
-— *show the fix as code and it lands* — was tested immediately on the one rule still missing.
-`SELECTION-WITHOUT-STATE`'s residue in today's cards is 5, three of them the className spelling, so
-the className sentence was rewritten as the line with the attribute already on it:
+The delete rule going 0/5 → 2/3 as code invited the generalisation *show the fix as code and it
+lands*, so it was tested on the one rule with a residue: `SELECTION-WITHOUT-STATE`'s className
+spelling, rewritten as the line with the attribute already on it.
 
     <button className={`btn${picked === x ? " active" : ""}`} aria-pressed={picked === x}>
 
-Same prompt as before, three runs, four cards: **0 of 4.** Every one writes
-`className={`fp-btn${size === s ? " active" : ""}`}` — character for character the left half of the
-line above — without the attribute.
+Three runs, four cards, **0 of 4** — every one writing the left half of that line without the
+attribute. Written up as *code was not sufficient*, with a length comparison between the two rules
+and a theory about a rule growing by accretion until the thing at the top is no longer what gets
+applied.
 
-So the generalisation is wrong, or at least incomplete. Showing the fix as code is not sufficient,
-and the honest question is what else differs between the two rules:
+**All of it was wrong, and `eval.sh` was printing the reason on every line.** None of those three
+runs loaded the skill: `tools=[bashx2 writex1]`, `tools=[bashx1]`,
+`tools=[bashx2 readx1 str_replace_editorx2 writex1]`. The rule was never read.
 
-| | delete | selection |
-| --- | --- | --- |
-| length of the rule | **667 chars** | **2277 chars** |
-| bold sub-rules inside it | 0 | 3 |
-| code blocks inside it | 1 | 2 |
-| result | 2/2 | 0/4 |
+Pairing every run of this rule against whether the skill was loaded:
 
-The selection rule accumulated three separate findings today — the conditional-background tell, the
-preset row, the className spelling — each added because the previous one left a residue, and each
-one correct. Together they are three and a half times the length of a rule that works.
+| run | skill | state attribute | flagged |
+| --- | --- | --- | --- |
+| cls1 | yes | `aria-pressed` | no |
+| cls2 | yes | 3 attributes | no |
+| cls3 | **no** | none | **yes** |
+| sel1 | **no** | none | **yes** |
+| sel2 | yes | 3 attributes | no |
+| sel3 | yes | 3 attributes | no |
 
-This file already records the shape: **tidying the expression rule into a bulleted list cost it half
-its rate**, on the same content, and was reverted. That was structure changing behaviour with the
-words unchanged. This looks like the same thing from the other direction — a rule growing by
-accretion until the thing at the top is no longer what gets applied.
+**4 of 4 with the skill, 0 of 2 without.** Perfect separation. The rule lands every time it is
+read, and the "2/3" recorded twice today was measuring the skill-load rate rather than the rule.
 
-Recorded rather than acted on. Cutting the rule down means choosing which measured finding to drop,
-and every one of the three was added because it fixed something. The next experiment worth running
-is not another rewording but a **split**: the same content as two short rules in different places,
-against this one long one — which is a real A/B and not a third guess at the wording.
+The same correction applies to the delete rule, where it was caught rather than missed: its third
+run was `tools=[bashx45]` — forty-five bash calls and no `skill`. Two of the two runs that read
+that rule followed it.
 
-### And the removal of the invented names cost nothing
+Three things worth carrying, the last one new:
 
-The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
-plausible-sounding names that do not resolve. `test/capabilities.test.ts`, written an hour later to
-assert the prompts name no capability that does not exist, **failed on my own rule** — and it is the
-same defect the file records at length: a rule that names its own counter-examples hands the model
-a pattern to match — the phrasing rule recorded above went from every run wrong to every run right
-only once its is-not pair was removed.
-
-Removed and measured on the prompt most likely to pull toward inventing a storage module
-(`做个笔记本，能记点东西，刷新还在`): both cards import `$dsh/state`, neither invents anything. The
-sentence now says only that a sixth does not exist, without supplying three candidate names for it.
-
-One of those two cards did fire `VIEWPORT-UNITS`, on a **hand-rolled toast**:
-
-    <div aria-live="polite" style={{ position: "fixed", bottom: 20, left: "50%", … }}>
-
-`position: fixed` leaves the card's subtree entirely and floats over the whole app — the failure the
-"you are a component on someone else's page" rule exists for, arriving through the one case the
-`sonner` row covers. The row named the trap *inside* sonner (`toast()` without `<Toaster />`) and
-never said why to reach for it at all. It does now.
-
-**And then the rate was checked, which narrowed the claim.** Across both populations, 20 cards
-show a transient confirmation and **not one other uses `position: fixed`** — 5 use `absolute`,
-which is correct and is what the same rule's other half already permits. So a hand-rolled toast is
-*not* almost always fixed; it is almost always right, and this was one card getting it wrong.
-The sentence is worth keeping (the failure is real and silent, and `VIEWPORT-UNITS` is what caught
-it) but it is a note about a trap, not a measured tendency — the distinction this file draws
-between a rule kept because it costs nothing and a rule kept because a number moved.
-
-Re-run on the same prompt afterwards: the card writes `position: "absolute"` for its toast, inside
-its own subtree. It did not adopt `sonner` — it removed the defect instead, which is the outcome
-already recorded twice today as the better one and the one no screen can observe.
-
-### The library rows, tested where they should not fire
-
-`做个番茄钟，倒计时要看着舒服，结束时提示一下` names a counter and a confirmation without naming a
-library — 0/3 for all four rows. Reading the cards, that is correct three times over:
-
-- **`sonner`**: all three answer 结束时提示 with a system `Notification` and/or a `AudioContext`
-  beep. A pomodoro alert has to reach someone who is not looking at the tab, and an in-page toast
-  does not. Better than the hint.
-- **`@number-flow/react`**: a `mm:ss` countdown is a clock, not a running total. The row says
-  "a running total, score, or counter the user watches change", and a timer is none of them.
-
-What the same three runs *do* show is the ported `$dsh/state` landing unprompted — **2 of 3**, one
-of them with five `usePersistedState` calls, correct signature and namespaced keys. That module was
-declined on this base for months and implemented yesterday because five of six runs invented it.
-
-One true positive fell out: `UNGUARDED-NUMBER-INPUT` on the third card's duration field, where
-`Number("")` is `0`, so backspacing to retype snaps the pomodoro to zero minutes. Everything else
-about that field is right — labelled, `min`/`max` bounded — which is the pattern already recorded:
-rules land per-construct, and this is a construct with its own rule that this card missed.
-
-### The card that fixed the rule broke on something else
-
-The third run's card is clean under all 25 screens and **does not compile**:
-
-    <div style={{ marginBottom: 12, color: var(--dsw-alias-label-primary) }}>
-
-A bare `var(--…)` in a style object is a call to an undefined `var`. Same family as `fontSize:
-11px`, which has had a screen since August — but that screen anchors on numeric units, so the token
-spelling walked straight past it.
-
-This arm is the one the **prompt steers into**. The colour rule says take every colour from a
-`--dsw-alias-*` token, so a card writing this is following the instruction and forgetting the
-quotes. And it cannot reuse the unit arm's camelCase discriminator: `color` is spelled identically
-in CSS and in a style object, and unquoted `var(--x)` is *correct* in a `<style>` block, which is
-where most cards write it. Anchoring inside `style={{` separates them — 1 of 378 corpus cards,
-0 of 77 fresh, 0 of 10 reference, unchanged from before the arm existed.
-
-Two process notes, both re-treads:
-
-- **`git checkout` during an ablation reverted the arm I was testing**, and the next several
-  minutes were spent debugging a regex that was no longer in the file. The record already says to
-  restore from git rather than a snapshot; the other half is that a `checkout` mid-experiment
-  discards the experiment.
-- **The pair map needed to grow a list**, for the fifth time. A screen with two arms pinned by one
-  pair confirms one arm — and adding the second as a `"NAME/token"` key fails the test that asserts
-  the pair keys equal the screen list, which is that test working.
-
+- **`skill` in the tool list is part of the measurement, not context.** §4.5 established that the
+  decision to build precedes the load, and that a card written without the skill is one that
+  decided early. What follows is that a rule living in the skill can only be measured on runs that
+  loaded it — and this file prints that list beside every count precisely so it can be checked.
+- **A rate below 100% on a skill rule has two causes** wanting opposite responses: reword it, or
+  accept that some runs never reach it. Only the tool list separates them, and it is one `grep`.
+- **I wrote a theory before checking the instrument.** The length comparison (667 against 2277
+  chars) was real, the reasoning about accretion was plausible, and the phenomenon it explained
+  did not exist. This is the eleventh measurement artefact in this file and the first where the
+  tell was *already printed in the output I was reading* — `tools=[…]` was on screen every time.
