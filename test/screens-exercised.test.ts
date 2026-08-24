@@ -40,6 +40,7 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "NEVER-LEAVES-LOADING": /useState\(true\)/,
   "SELF-SHADOWING-MEMO": /useMemo|useCallback/,
   "TOAST-WITHOUT-TOASTER": /<button/,
+  "INVENTED-CAPABILITY": /\$dsh\//,
   "NAMED-NUMBERFLOW-IMPORT": /^import \{/m,
 };
 

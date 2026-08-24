@@ -159,6 +159,7 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "NEVER-LEAVES-LOADING": "Fetch the first screen from a",
   "SELF-SHADOWING-MEMO": "referenced directly or indirectly in its own initializer",
   "TOAST-WITHOUT-TOASTER": "render `<Toaster />` in your tree",
+  "INVENTED-CAPABILITY": "a sixth you reason your way to does not exist",
   "NAMED-NUMBERFLOW-IMPORT": "there is no named `NumberFlow` export",
 };
 

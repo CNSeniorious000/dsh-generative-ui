@@ -10,6 +10,9 @@
  * exempting file, it would outlive its owner silently. Both import it from here; neither
  * imports the other, which would run a script as a side effect of a check.
  */
+import { capabilityModule } from "../src/contract.ts";
+import { bind } from "../src/client/runtime/bindings.ts";
+
 export const REPLAY_CONTROLS = ["late-hook.tsx"] as const;
 
 /**
@@ -29,6 +32,16 @@ export const tagAt = (source: string, start: number): string => {
   }
   return "";
 };
+
+/**
+ * Every `$dsh/…` specifier that resolves to something.
+ *
+ * Enumerated from `bind()` rather than listed again here: a group added to the implementation and
+ * missed by a hand-written list would make this screen flag a *working* capability. Calling a
+ * member needs a host, but enumerating the keys never calls one — the same trick
+ * `gen-standalone.ts` uses to generate the standalone stubs.
+ */
+const CAPABILITIES = new Set(Object.keys(bind()).map(capabilityModule));
 
 export const SCREENS = {
   // `export default function Pie` next to `import { Pie } from "recharts"`: the card renders
@@ -306,6 +319,13 @@ export const SCREENS = {
   // named import is `undefined` and a blank card with nothing in the console naming it. Measured:
   // a card wrote this 90 minutes after the rule against it landed.
   "NAMED-NUMBERFLOW-IMPORT": (src: string) => /import\s*\{[^}]*\bNumberFlow\b[^}]*\}\s*from\s*["']@number-flow\/react["']/.test(src),
+  // A `$dsh/…` specifier outside the bound set resolves to nothing at render time, and ESM takes
+  // the whole module down with it: `Failed to resolve module specifier`, a blank card, and every
+  // other check reporting clean. Matches all three ways a specifier appears — `from "x"`, a
+  // side-effect `import "x"`, and `import("x")`; the first version matched only `from` and let
+  // both of the others through.
+  "INVENTED-CAPABILITY": (src: string) =>
+    [...src.matchAll(/(?:from|import)\s*\(?\s*["'](\$dsh\/[^"']+)["']/g)].some((m) => !CAPABILITIES.has(m[1])),
   "UNLABELLED-CONTROL": (src: string) => {
     // `<select>` has the same problem for the same reason — its options are its value, not its
     // name, so an unlabelled one announces "combo box, 每天". Six more corpus cards, and the

@@ -72,6 +72,13 @@ const PAIRS: Record<string, [string, string]> = {
     `import { toast } from "sonner";\nconst f = () => toast.success("done");`,
     `import { toast, Toaster } from "sonner";\nconst el = <Toaster />;\nconst f = () => toast.success("done");`,
   ],
+  // The fix is not "add a guard" — it is reaching for the module that exists. `$dsh/state` is the
+  // real one; the invented names are always adjacent to it, which is why the pair differs only in
+  // the specifier.
+  "INVENTED-CAPABILITY": [
+    `import { usePersistedState } from "$dsh/storage";`,
+    `import { usePersistedState } from "$dsh/state";`,
+  ],
   "NAMED-NUMBERFLOW-IMPORT": [
     `import { NumberFlow } from "@number-flow/react";`,
     `import NumberFlow from "@number-flow/react";`,
