@@ -257,6 +257,8 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   </div>
   \`\`\`
 
+  **The row of presets is where this gets dropped.** Measured: three cards answering the same \`chmod\` question, months apart, each wrote \`aria-pressed\` on its permission-bit grid and then nothing at all on the preset row twenty lines below — 755, 644, 700 shown as pills, the active one differing only by \`background\`. \`PRESETS.map\` is the commonest shape this fires on across 378 cards. A grid of toggles looks like state and a preset row looks like decoration; they are the same widget, and the one that looks like decoration is the one that gets it wrong.
+
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
 
   This is about state that *persists* after the interaction. A key that lights while held, a row that highlights on hover — those are momentary feedback and want nothing announced; a state that is over before it is read is worse than none.
