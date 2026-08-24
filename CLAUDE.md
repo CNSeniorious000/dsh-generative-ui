@@ -7285,3 +7285,39 @@ The set is derived from `bind()`, not listed a second time in the screen. A grou
 implementation and missed by a hand-written list would make this screen flag a **working**
 capability, which is the failure mode this file spends most of its length on.
 
+### The largest defect in the corpus, and three cards that half-fix it (2026-08-24)
+
+`SELECTION-WITHOUT-STATE` fires on **114 of 378** corpus cards, which makes it the largest defect
+this project has measured — 56% more than `NO-FOCUS-RING`, the previous leader. A number that size
+is a hypothesis, so eight hits were read individually before it was believed.
+
+All eight are real, and the shape never varies: a `<button>` inside a `.map`, selection expressed
+only as a colour and a font weight, and **no state attribute anywhere in the file** — that last
+holds for 111 of the 114. A sighted reader sees which segment is active; a screen reader announces
+"button, 慢" for the selected one and "button, 快" for the others, identically.
+
+The three cards that *do* carry a state attribute somewhere are where a false positive would hide,
+and they turned out to be the sharpest evidence in the set. Two of them are the same `chmod` card
+answered twice, months apart:
+
+| | the permission-bit grid | the preset row below it |
+| --- | --- | --- |
+| `5bfe697147a4` | `aria-pressed={on}` | nothing |
+| `e3880ae549ac` | `aria-pressed={grid[ri][bi]}` | nothing |
+| `83d06aa1ce20` | `aria-pressed={active}` | nothing |
+
+Three independent generations, one file each, the attribute written on the first `.map` of buttons
+and dropped on the second. Not a card that does not know the rule — a card that applies it and then
+stops, twenty lines later, on a construct that looks less like a checkbox and behaves identically.
+
+That is *rules land per-construct, not per-card* with a cleaner demonstration than the one already
+recorded: there the same signal was threaded through two handlers and missed on a third in one
+large file, and here it is three unrelated cards making the identical split at the identical
+boundary. **Whatever decides this is local to the element, not to the author's intent** — the
+grid reads as a set of toggles and the preset row reads as decoration, so the same model writes the
+attribute on one and not the other without noticing the two are the same widget.
+
+The fresh set is 6 of 77. Both reference cards flagged by it are now regenerated: `metro`'s new
+version carries `aria-pressed` on its 拍号 row unprompted, and the browser mount confirms the a11y
+tree agrees (`4/4=false`, `木鱼=checked`) where the old one exposed nothing at all.
+
