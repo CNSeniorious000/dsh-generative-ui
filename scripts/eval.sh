@@ -59,7 +59,15 @@ out=$(mktemp)
 # outliving the run that gave up on it.
 ( cd "$d" && perl -e '$SIG{ALRM} = sub { kill 15, $p; exit 142 }; alarm shift; $p = fork; if (!$p) { exec @ARGV } waitpid $p, 0; exit $? >> 8' \
     "${EVAL_TIMEOUT:-900}" dsh --profile headless "$prompt" > "$out" 2>&1 )
-[ $? -eq 142 ] && { echo "timeout after ${EVAL_TIMEOUT:-900}s"; exit 3; }
+# A timeout has two very different causes and the verdict alone cannot separate them: the model
+# was producing slowly (a machine under load — every timeout so far arrived while a dozen other
+# evals were running), or it wedged and produced nothing. Print the bytes it had written and where
+# to look, the same way the crash branches do; a verdict with nowhere to go is a verdict nobody
+# can act on.
+[ $? -eq 142 ] && {
+  echo "timeout after ${EVAL_TIMEOUT:-900}s  bytes=$(wc -c < "$out" | tr -d ' ')  $d  reply=$out"
+  exit 3
+}
 # Tool calls live in the session transcript, not the reply — the visualisation rule
 # ("this block, not a tool") is invisible without them.
 # The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
