@@ -6,6 +6,7 @@
  * (top-level `import.meta` is the classic one), a banner/footer wrapper that does
  * not call `load()`, and any bare `require()` the shell's module table cannot answer.
  */
+import { resolve } from "node:path";
 import { PLATFORM_MODULES } from "./platform.ts";
 
 const PLATFORM = new Set(PLATFORM_MODULES);
@@ -186,5 +187,26 @@ if (dom_gaps.length > 0) console.log(`       ${dom_gaps.length} not run here, no
 const CLIENT_SERVICES = new Set(["conversation", "workspaces"]);
 const unknown = [...new Set(injected)].filter((name) => !CLIENT_SERVICES.has(name));
 if (unknown.length > 0) throw new Error(`apply() injects ${unknown.join(", ")}, which no profile provides — that callback would never run. Add it to CLIENT_SERVICES if it is real.`);
+
+/**
+ * The STATIC `inject` is a hard dependency: cordis withholds the whole plugin until every name in
+ * it resolves, so a service listed there and never read costs the entire client half on any host
+ * that lacks it — silently, with no error naming the cause. The check above only sees
+ * `ctx.inject(...)` CALLS, so this list went unexamined; `slots` sat in it unused, and the panel
+ * had long since moved to a DOM portal because dsh has no additive slot for a whole column.
+ *
+ * Read as source text rather than by exercising the module: a name is used if it appears anywhere
+ * beyond its own declaration, which is exactly the question, and a fake context cannot answer it.
+ */
+const clientSource = await Bun.file(resolve(import.meta.dir, "../src/client/index.ts")).text();
+const declared = /export const inject = \[([^\]]*)\]/.exec(clientSource)?.[1] ?? "";
+const staticInjects = [...declared.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+const unused = staticInjects.filter((name) => {
+  const uses = [...clientSource.matchAll(new RegExp(`\\b${name}\\b`, "g"))].length;
+  return uses <= 1; // the declaration itself
+});
+if (unused.length > 0) {
+  throw new Error(`static inject lists ${unused.join(", ")}, which nothing reads — a hard dependency on a service this plugin does not use, so a host without it loses the whole client half for nothing.`);
+}
 
 console.log(`       apply() registered ${registered_effects.length} effects${gaps} under injections [${[...new Set(injected)].join(", ")}]`);
