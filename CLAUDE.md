@@ -7582,6 +7582,48 @@ Both spellings are named now. Two notes from writing it:
   trigger rule has a rate rather than a verdict — the same is true of a construct rule, and 2/3 is
   what this one has been measured at.
 
+### A rule read, delivered, and not applied (2026-08-24)
+
+The className clause was added because one run in three expressed selection through an interpolated
+class name and the tell named only `background`. Re-run three times after the edit:
+
+| run | selection spelling | state attribute |
+| --- | --- | --- |
+| 1 | style object | `aria-pressed` |
+| 2 | style object | 3 attributes |
+| 3 | **className** | **none** |
+
+**Still 2/3, and the miss is the same spelling on the same prompt** — byte for byte the line now
+printed in the skill:
+
+    className={`fp-btn${size === s ? " active" : ""}`}
+
+Delivery is not the question: the sentence is in the assembled body (verified by index, not by
+assumption) and in `lib/index.js`. The rule is being read and not reached for.
+
+That is the shape this file already names as not a wording problem — a rule the model reads,
+quotes, or has in front of it and does not apply. The earlier `knob` reframing went 1/4 across two
+rewrites and was reverted; the *rule vs process* fix rescued two fixtures and broke two and was
+reverted. What separates the edits that landed today (the preset row 3/3, the `<select>` label,
+`aria-live` moved into the skill) is that each named a **case** the model could recognise, not a
+second spelling of a case it already had.
+
+So the honest state is: the construct rule sits at 2/3 on this prompt, one spelling accounts for
+every miss observed, and naming that spelling did not move it. Left as measured rather than
+rewritten a third time — the file's own record of what happens when a rule is pushed harder at a
+model that is already reading it is two reverts and no gain.
+
+The screen catches it either way, which is the part that matters for the corpus: it fires on the
+className form (`8 of 114`), and the miss above was flagged the moment it was written. **A rule that
+lands 2 times in 3 and a screen that catches the third is a working loop**; a rule at 3/3 with no
+screen would be a claim with nothing behind it.
+
+Worth recording alongside: auditing the screen in the other direction found it answers correctly on
+both. Six corpus cards carry a state attribute at all; the screen is silent on three (including one
+with a full `role="tablist"` / `role="tab"` / `aria-selected` set) and fires on the three chmod
+cards that write the attribute on their bit grid and not on their preset row — already verified by
+hand as true positives.
+
 ### The library rows, tested where they should not fire
 
 `做个番茄钟，倒计时要看着舒服，结束时提示一下` names a counter and a confirmation without naming a
