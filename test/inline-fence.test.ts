@@ -15,6 +15,7 @@ import { resetTranscriptObservers } from "../src/client/runtime/observe.ts";
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 let painted: { code: string; streaming: boolean }[] = [];
+let previews: { code: string; lang?: string }[] = [];
 let unmounts = 0;
 let frames: (() => void)[] = [];
 let blocks: any[] = [];
@@ -60,6 +61,7 @@ beforeEach(() => {
   // `querySelectorAll` — one stale listener turns every test here red.
   resetTranscriptObservers();
   painted = [];
+  previews = [];
   unmounts = 0;
   frames = [];
   blocks = [];
@@ -78,7 +80,14 @@ beforeEach(() => {
       observers = observers.filter((o) => o.fire !== this.cb);
     }
   };
-  const mount = () => ({ tag: "DIV", textContent: "", setAttribute() {}, remove() {}, querySelectorAll: () => [] });
+  // `attrs` matters now: the module mounts TWO roots per claim — the card, and a source preview
+  // that stands in for the host's own block while the card compiles — and a test that cannot tell
+  // them apart reads one `render` as the other.
+  const mount = () => {
+    const el: any = { tag: "DIV", textContent: "", attrs: {} as Record<string, string>, remove() {}, querySelectorAll: () => [] };
+    el.setAttribute = (k: string, v: string) => { el.attrs[k] = v; };
+    return el;
+  };
   (globalThis as any).document = {
     createElement: mount,
     body: { querySelectorAll: (sel: string) => (sel.includes("md-code-block") ? blocks.filter((b) => b.attrs["data-ui4a-claimed"] === undefined) : []) },
@@ -103,7 +112,7 @@ const start = async (segments: () => any[]) => {
   mock.module("react-dom/client", () => ({
     createRoot: (node: any) => ({
       render: (el: any) => {
-        painted.push(el.props);
+        (node.attrs?.["data-ui4a-preview"] === undefined ? painted : previews).push(el.props);
         node.textContent = el.props.code;
       },
       unmount() {
@@ -179,17 +188,31 @@ test("completion re-renders a block whose code stopped changing", async () => {
 });
 
 /**
- * The block is hidden only once the card paints, and only then.
+ * There is always source on screen until the card paints — never a blank gap.
  *
- * Hiding at claim time leaves a blank gap for however long the card takes to have a body — with
- * the source sitting right there the whole time.
+ * The rule §3.5 records is that hiding at claim time leaves nothing to look at for however long
+ * the card takes to have a body. That still holds; what changed is WHICH source is shown. The
+ * host's own block is hidden immediately and replaced by one we render, for two measured reasons:
+ * its markdown parser truncates `ui4a/tsx` at the slash, so `ui4a` reaches shiki, matches no
+ * grammar, and the code renders unhighlighted; and a 300-line card streams for over a minute with
+ * every line of it on screen. Ours passes `lang="tsx"` and is capped.
+ *
+ * So the invariant to protect is not "the block is visible" — it is "a preview exists until the
+ * card paints, and is gone afterwards".
  */
-test("the source block is hidden when the card paints, not when it is claimed", async () => {
+test("a highlighted source preview stands in until the card paints", async () => {
   const block = makeBlock("export default () => <div />");
   const { stop } = await start(() => [segment("export default () => <div />")]);
-  expect(block.style.display).toBeUndefined();
+  // claimed: the host's block is out, ours is in, and it asks for the grammar the host could not
+  expect(block.style.display).toBe("none");
+  expect(previews).toHaveLength(1);
+  expect(previews[0]?.lang).toBe("tsx");
+  expect(previews[0]?.code).toBe("export default () => <div />");
   observers.at(-1)?.fire();
   paint();
+  // painted: the preview is torn down, and the host's block stays hidden behind the card
+  await Promise.resolve();
+  expect(unmounts).toBe(1);
   expect(block.style.display).toBe("none");
   stop();
 });

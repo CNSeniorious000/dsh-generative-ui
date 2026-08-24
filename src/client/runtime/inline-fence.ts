@@ -21,14 +21,28 @@
  * and detaching a node React still owns invites a NotFoundError on its next commit.
  */
 import { createRoot, type Root } from "react-dom/client";
+import { createElement } from "react";
+import { CodeBlock } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { ReactElement } from "react";
 import type { Ui4aSegment } from "./segments.ts";
 import { observeTranscript } from "./observe.ts";
 
 const CLAIMED = "data-ui4a-claimed";
 const MOUNT = "data-ui4a-mount";
+const PREVIEW = "data-ui4a-preview";
 
-type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string; painted: MutationObserver | null };
+/** Unmounting a root during React's own commit throws; defer it like every other teardown here. */
+const dropPreview = (claim: { preview: { host: HTMLElement; root: Root } | null }) => {
+  const preview = claim.preview;
+  if (preview === null) return;
+  claim.preview = null;
+  queueMicrotask(() => {
+    preview.root.unmount();
+    preview.host.remove();
+  });
+};
+
+type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string; painted: MutationObserver | null; preview: { host: HTMLElement; root: Root } | null };
 
 /**
  * Whether the card has actually painted something a reader can see.
@@ -101,6 +115,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
     claim.painted?.disconnect();
     claim.root.unmount();
     claim.mount.remove();
+    dropPreview(claim);
     if (restore && claim.block.isConnected) {
       claim.block.style.display = "";
       claim.block.removeAttribute(CLAIMED);
@@ -121,7 +136,19 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       const mount = document.createElement("div");
       mount.setAttribute(MOUNT, "");
       block.parentElement?.insertBefore(mount, block.nextSibling);
-      const claim: Claim = { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "", painted: null };
+      // Swap the host's block for our own CodeBlock while the card is still compiling. Two
+      // reasons, both reported from a real transcript: the host keys highlighting on the fence
+      // language, and its markdown parser truncates `ui4a/tsx` at the slash — so `ui4a` reaches
+      // shiki, matches no grammar, and the source renders as unhighlighted plain text. Passing
+      // `lang="tsx"` is all it takes; `dsh-client-ui-primitives` is in the platform table, so
+      // this resolves to the shell's own component and costs nothing to bundle. The second
+      // reason is height: a 300-line card streams for over a minute with all of it on screen,
+      // and this preview is capped.
+      const previewHost = document.createElement("div");
+      previewHost.setAttribute(PREVIEW, "");
+      block.parentElement?.insertBefore(previewHost, block);
+      block.style.display = "none";
+      const claim: Claim = { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "", painted: null, preview: { host: previewHost, root: createRoot(previewHost) } };
       // The source stays visible until the card paints. Checked at most once per frame and
       // torn down the moment it fires: a streaming card mutates thousands of times, and
       // `textContent` walks the whole subtree, so a per-mutation check would be
@@ -134,7 +161,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
           if (!hasPainted(mount)) return;
           claim.painted?.disconnect();
           claim.painted = null;
-          if (claim.block.isConnected) claim.block.style.display = "none";
+          dropPreview(claim);
         });
       });
       claim.painted.observe(mount, { childList: true, subtree: true, characterData: true });
@@ -179,6 +206,10 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       claim.code = code;
       claim.complete = complete;
       claim.root.render(render({ code, streaming: !complete }));
+      // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
+      // what markdown has painted, so this is the newer text and the one the reader wants while
+      // waiting. Dropped the moment the card paints.
+      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx" }));
     }
   };
 
