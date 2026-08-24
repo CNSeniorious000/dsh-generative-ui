@@ -59,7 +59,10 @@ const spy = () => {
     read: () => attempts,
     effects: {
       attempts: () => attempts,
-      setAttempts: (n: number) => { attempts = n; calls.push(`attempts=${n}`) },
+      setAttempts: (n: number) => {
+        attempts = n;
+        calls.push(`attempts=${n}`);
+      },
       schedule: (ms: number) => calls.push(`schedule ${ms}`),
       report: () => calls.push("report"),
     },

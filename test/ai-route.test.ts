@@ -10,13 +10,37 @@ import { serveAi } from "../src/index.ts";
 
 const chunks = (...items: unknown[]) => ({
   agentDefaultModel: { currentSelection: () => ({ provider: "p", model: "m" }) },
-  llm: { async *stream() { for (const item of items) yield item } },
+  llm: {
+    async *stream() {
+      for (const item of items) yield item;
+    },
+  },
 });
 
 const call = async (opts: { query?: string; body?: string; ctx?: any; live?: Set<string>; method?: string } = {}) => {
-  let status = 0, written = "";
-  const res = { writeHead(code: number) { status = code; return res }, write(chunk: string) { written += chunk; return true }, end() { return res } };
-  const req: any = { method: opts.method ?? "POST", url: `/x?${opts.query ?? "cwd=%2Fw"}`, on() {}, async *[Symbol.asyncIterator]() { if (opts.body !== undefined) yield opts.body } };
+  let status = 0,
+    written = "";
+  const res = {
+    writeHead(code: number) {
+      status = code;
+      return res;
+    },
+    write(chunk: string) {
+      written += chunk;
+      return true;
+    },
+    end() {
+      return res;
+    },
+  };
+  const req: any = {
+    method: opts.method ?? "POST",
+    url: `/x?${opts.query ?? "cwd=%2Fw"}`,
+    on() {},
+    async *[Symbol.asyncIterator]() {
+      if (opts.body !== undefined) yield opts.body;
+    },
+  };
   await serveAi((opts.ctx ?? chunks()) as never, () => opts.live ?? new Set(["/w"]), req, res as never);
   return { status, written };
 };
@@ -78,7 +102,15 @@ describe("streaming", () => {
   // A throw mid-stream cannot become a status code, so it has to arrive as text or the card
   // sees a truncated answer and no reason.
   test("a mid-stream throw is written into the body", async () => {
-    const broken = { ...chunks(), llm: { async *stream() { yield { type: "text-delta", text: "par" }; throw new Error("upstream died") } } };
+    const broken = {
+      ...chunks(),
+      llm: {
+        async *stream() {
+          yield { type: "text-delta", text: "par" };
+          throw new Error("upstream died");
+        },
+      },
+    };
     const { status, written } = await call({ body: ask, ctx: broken });
     expect(status).toBe(200);
     expect(written).toContain("par");

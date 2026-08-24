@@ -63,10 +63,7 @@ describe("inlineSubPages", () => {
 
   test("a cycle degrades instead of hanging", async () => {
     const files = { "./t/a": 'import {b} from "./t/b"; export const a=1;', "./t/b": 'import {a} from "./t/a"; export const b=2;' };
-    const settled = await Promise.race([
-      run(files, 'import {a} from "./t/a"; export default a;'),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("hung on a cycle")), 3000)),
-    ]);
+    const settled = await Promise.race([run(files, 'import {a} from "./t/a"; export default a;'), new Promise<never>((_, reject) => setTimeout(() => reject(new Error("hung on a cycle")), 3000))]);
     // Neither member can be minted, so both keep the specifier they had — the same failure
     // as before this feature existed, rather than a new one.
     expect(settled.urls).toHaveLength(0);

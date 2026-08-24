@@ -44,13 +44,7 @@ export const importsSibling = (code: string) => SPECIFIER.test(code);
  * card, so a sub-page may be TSX and may itself import a sibling.
  * @param urls collects every blob created, so the caller can revoke them with the surface.
  */
-export async function inlineSubPages(
-  code: string,
-  entry: string,
-  read: (specifier: string, from: string) => Promise<{ source: string; filename: string } | null>,
-  compile: (filename: string, source: string) => Promise<string>,
-  urls: string[],
-): Promise<string> {
+export async function inlineSubPages(code: string, entry: string, read: (specifier: string, from: string) => Promise<{ source: string; filename: string } | null>, compile: (filename: string, source: string) => Promise<string>, urls: string[]): Promise<string> {
   // Keyed by the RESOLVED filename, never by the specifier: `./types` written in two different
   // child files is two different targets, and a specifier-keyed map silently serves the first
   // one to both. Measured on a real split — the model gives every child a sibling import.
@@ -99,10 +93,9 @@ export async function inlineSubPages(
       return url === undefined || url === "" ? whole : `${lead}${JSON.stringify(url)}`;
     });
 
-  for (let progress = true; progress; ) {
+  for (let progress = true; progress;) {
     progress = false;
-    const ready = [...sources].filter(([filename, found]) =>
-      urlFor.get(filename) === "" && [...found.specifiers.values()].every((dep) => urlFor.get(dep) !== ""));
+    const ready = [...sources].filter(([filename, found]) => urlFor.get(filename) === "" && [...found.specifiers.values()].every((dep) => urlFor.get(dep) !== ""));
     const built = await Promise.all(ready.map(async ([filename, found]) => [filename, await compile(filename, rewrite(found.source, found.specifiers))] as const));
     for (const [filename, compiled] of built) {
       const url = URL.createObjectURL(new Blob([compiled], { type: "text/javascript" }));

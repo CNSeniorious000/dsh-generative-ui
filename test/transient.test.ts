@@ -11,10 +11,7 @@ import { isUnfinishedFrame, TRANSIENT, TRANSIENT_LOAD } from "../src/client/runt
 describe("TRANSIENT_LOAD — a dependency that did not arrive", () => {
   // The one Chromium actually produces, for a 404, an unknown package and a dead host alike.
   test("a failed dynamic import is retried", () => {
-    for (const message of [
-      "Failed to fetch dynamically imported module: https://esm.sh/recharts?target=es2022",
-      "Failed to fetch dynamically imported module: http://127.0.0.1:47791/x.js",
-    ]) expect(TRANSIENT_LOAD.test(message)).toBe(true);
+    for (const message of ["Failed to fetch dynamically imported module: https://esm.sh/recharts?target=es2022", "Failed to fetch dynamically imported module: http://127.0.0.1:47791/x.js"]) expect(TRANSIENT_LOAD.test(message)).toBe(true);
   });
 
   // Firefox and Safari word it differently; both were in the pattern before this test existed.
@@ -60,11 +57,7 @@ describe("TRANSIENT — a frame that is merely incomplete", () => {
  * accidentally widened to cover "Expected" would fail here.
  */
 test("no real corpus compile failure is suppressed", () => {
-  for (const message of [
-    "Expected '</', got 'ident' at 0c24e4dad59d.tsx:119:35",
-    "An arrow function is not allowed here at 2f7a87253134.tsx:150:56",
-    "Expected '</', got '}' at 5745802818e1.tsx:43:23",
-  ]) {
+  for (const message of ["Expected '</', got 'ident' at 0c24e4dad59d.tsx:119:35", "An arrow function is not allowed here at 2f7a87253134.tsx:150:56", "Expected '</', got '}' at 5745802818e1.tsx:43:23"]) {
     expect(TRANSIENT.test(message)).toBe(false);
     expect(TRANSIENT_LOAD.test(message)).toBe(false);
   }

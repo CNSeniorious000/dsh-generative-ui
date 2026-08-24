@@ -73,7 +73,7 @@ window.__src = {};
 </script>`,
         { headers: { "content-type": "text/html" } },
       ),
-    "/card/:name": req => new Response(readFileSync(`${dir}/${req.params.name}`, "utf8"), { headers: { "content-type": "text/plain" } }),
+    "/card/:name": (req) => new Response(readFileSync(`${dir}/${req.params.name}`, "utf8"), { headers: { "content-type": "text/plain" } }),
     // Capability shims. Without them ~90 of the corpus cards fail to import and the run reports
     // them as broken for a reason that is the harness's, not the card's. They resolve and return
     // inert values — enough to mount, which is what is being measured.

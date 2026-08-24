@@ -20,23 +20,35 @@ let frames: (() => void)[] = [];
 let blocks: any[] = [];
 let observers: { target: any; fire: () => void }[] = [];
 
-const paint = () => { const due = frames; frames = []; for (const cb of due) cb() };
+const paint = () => {
+  const due = frames;
+  frames = [];
+  for (const cb of due) cb();
+};
 
 /** A `.md-code-block` wrapper with a `<pre>` inside, plus the members the module touches. */
 const makeBlock = (text: string) => {
   const pre = { textContent: text };
   const block: any = {
-    attrs: {} as Record<string, string>, style: {}, isConnected: true, children: [] as any[],
+    attrs: {} as Record<string, string>,
+    style: {},
+    isConnected: true,
+    children: [] as any[],
     querySelector: (sel: string) => (sel === "pre" ? pre : null),
-    setAttribute(k: string, v: string) { this.attrs[k] = v },
-    removeAttribute(k: string) { delete this.attrs[k] },
-    setText(next: string) { pre.textContent = next },
+    setAttribute(k: string, v: string) {
+      this.attrs[k] = v;
+    },
+    removeAttribute(k: string) {
+      delete this.attrs[k];
+    },
+    setText(next: string) {
+      pre.textContent = next;
+    },
   };
   block.parentElement = { insertBefore: (node: any) => block.children.push(node) };
   blocks.push(block);
   return block;
 };
-
 
 // Restore after EACH test: the stub below is narrower than other files' (a `document` with
 // no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
@@ -47,13 +59,24 @@ beforeEach(() => {
   // Another file's leaked sweep would run against ITS captured root, which no longer has a
   // `querySelectorAll` — one stale listener turns every test here red.
   resetTranscriptObservers();
-  painted = []; unmounts = 0; frames = []; blocks = []; observers = [];
-  (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
+  painted = [];
+  unmounts = 0;
+  frames = [];
+  blocks = [];
+  observers = [];
+  (globalThis as any).requestAnimationFrame = (cb: () => void) => {
+    frames.push(cb);
+    return frames.length;
+  };
   (globalThis as any).cancelAnimationFrame = () => {};
   (globalThis as any).MutationObserver = class {
     constructor(private cb: () => void) {}
-    observe(target: any) { observers.push({ target, fire: () => this.cb() }) }
-    disconnect() { observers = observers.filter((o) => o.fire !== this.cb) }
+    observe(target: any) {
+      observers.push({ target, fire: () => this.cb() });
+    }
+    disconnect() {
+      observers = observers.filter((o) => o.fire !== this.cb);
+    }
   };
   const mount = () => ({ tag: "DIV", textContent: "", setAttribute() {}, remove() {}, querySelectorAll: () => [] });
   (globalThis as any).document = {
@@ -67,16 +90,39 @@ beforeEach(() => {
 // the NEXT test's `paint()` ran a sweep against a torn-down document — one real failure then
 // cascaded into a dozen that had nothing wrong with them.
 let started: (() => void)[] = [];
-afterEach(() => { for (const stop of started.splice(0)) try { stop() } catch { /* already stopped */ } });
+afterEach(() => {
+  for (const stop of started.splice(0))
+    try {
+      stop();
+    } catch {
+      /* already stopped */
+    }
+});
 
 const start = async (segments: () => any[]) => {
-  mock.module("react-dom/client", () => ({ createRoot: (node: any) => ({ render: (el: any) => { painted.push(el.props); node.textContent = el.props.code }, unmount() { unmounts += 1 } }) }));
+  mock.module("react-dom/client", () => ({
+    createRoot: (node: any) => ({
+      render: (el: any) => {
+        painted.push(el.props);
+        node.textContent = el.props.code;
+      },
+      unmount() {
+        unmounts += 1;
+      },
+    }),
+  }));
   const { claimInlineFences } = await import(`../src/client/runtime/inline-fence.ts?${Math.random()}`);
   const { scheduleSweep } = await import("../src/client/runtime/observe.ts");
   const stop = claimInlineFences({ segments, render: (props: any) => ({ props }) });
   started.push(stop);
   paint();
-  return { stop, again: () => { scheduleSweep(); paint() } };
+  return {
+    stop,
+    again: () => {
+      scheduleSweep();
+      paint();
+    },
+  };
 };
 
 const segment = (code: string, complete = true) => ({ code, complete, lang: "ui4a/tsx" });

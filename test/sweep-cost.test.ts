@@ -21,7 +21,7 @@ const calls: ToolCallView[] = Array.from({ length: 34 }, (_, i) => ({
 }));
 
 /** The same key `mountCanvasHost` computes, kept here so the shape is asserted rather than described. */
-const keyOf = (views: readonly ToolCallView[]) => `${views.length}:${views.reduce((total, call) => total + call.argsRaw.length + (call.settled ? 1 : 0) , 0)}`;
+const keyOf = (views: readonly ToolCallView[]) => `${views.length}:${views.reduce((total, call) => total + call.argsRaw.length + (call.settled ? 1 : 0), 0)}`;
 
 /*
  * The BEST of several batches, not the mean of one — and few enough iterations that the whole

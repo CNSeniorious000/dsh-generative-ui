@@ -123,14 +123,11 @@ export const DEFAULT_WIDTH = 420;
  * the same thing), and `offerable` minus the tabs is what keeps the menu from listing what is
  * already on screen.
  */
-export const activeCanvas = (canvases: readonly Canvas[], activeId: string | null) =>
-  canvases.find((canvas) => canvas.id === activeId) ?? canvases[canvases.length - 1];
+export const activeCanvas = (canvases: readonly Canvas[], activeId: string | null) => canvases.find((canvas) => canvas.id === activeId) ?? canvases[canvases.length - 1];
 
-export const otherCanvases = (canvases: readonly Canvas[], offerable: readonly string[]) =>
-  offerable.filter((id) => !canvases.some((canvas) => canvas.id === id));
+export const otherCanvases = (canvases: readonly Canvas[], offerable: readonly string[]) => offerable.filter((id) => !canvases.some((canvas) => canvas.id === id));
 
-export const widthForPointer = (clientX: number, viewportWidth: number) =>
-  Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, viewportWidth - clientX));
+export const widthForPointer = (clientX: number, viewportWidth: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, viewportWidth - clientX));
 
 /** Drag-to-resize on the panel's left edge, mirroring the host's own invisible hit strip. */
 export function useResize(initial: number) {

@@ -17,19 +17,25 @@ import { createBrowserTsxCompiler, disposeCompiler } from "../src/client/runtime
 let server: ReturnType<typeof Bun.serve>;
 beforeAll(() => {
   // A random high port: the plugin's own routes are mounted by the shell, not by us.
-  server = Bun.serve({ port: 0, async fetch(req) {
-    if (new URL(req.url).pathname !== WASM_PATH) return new Response("no", { status: 404 });
-    return new Response(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer(), { headers: { "content-type": "application/wasm" } });
-  } });
+  server = Bun.serve({
+    port: 0,
+    async fetch(req) {
+      if (new URL(req.url).pathname !== WASM_PATH) return new Response("no", { status: 404 });
+      return new Response(await Bun.file("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm").arrayBuffer(), { headers: { "content-type": "application/wasm" } });
+    },
+  });
   // The browser resolves `WASM_PATH` against the page origin; bun's `fetch` has no origin at
   // all, so the relative path is rewritten to an absolute one for the duration of the test.
   const realFetch = globalThis.fetch;
-  (globalThis as any).fetch = (input: any, init?: any) =>
-    realFetch(typeof input === "string" && input.startsWith("/") ? new URL(input, server.url.origin).href : input, init);
+  (globalThis as any).fetch = (input: any, init?: any) => realFetch(typeof input === "string" && input.startsWith("/") ? new URL(input, server.url.origin).href : input, init);
 });
 // `restoreGlobals` puts back the real fetch — this file replaces it for the whole file, so
 // the restore belongs at the same scope as the install.
-afterAll(() => { disposeCompiler(); server.stop(true); restoreGlobals() });
+afterAll(() => {
+  disposeCompiler();
+  server.stop(true);
+  restoreGlobals();
+});
 
 const compile = (code: string, options?: Parameters<ReturnType<typeof createBrowserTsxCompiler>["compile"]>[1]) => createBrowserTsxCompiler().compile(code, options);
 
@@ -73,11 +79,7 @@ describe("createBrowserTsxCompiler", () => {
  * What the code really promises is that *something compiles*, and that is what is tested.
  */
 test("every settled card yields output that compiles", async () => {
-  for (const card of [
-    "export default function A() {\n  const rows = [1, 2,\n  return <div>x</div>\n}",
-    "export default function A() {\n  return (\n    <div>hi</div>\n",
-    'export default function A() {\n  return <div className="ab',
-  ]) {
+  for (const card of ["export default function A() {\n  const rows = [1, 2,\n  return <div>x</div>\n}", "export default function A() {\n  return (\n    <div>hi</div>\n", 'export default function A() {\n  return <div className="ab']) {
     // Compiling is the promise; a non-empty result is not. `type T` alone normalizes to the
     // empty string, which compiles to nothing — see the note below.
     expect((await compile(card)).code.length).toBeGreaterThan(0);

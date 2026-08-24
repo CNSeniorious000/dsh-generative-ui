@@ -21,7 +21,10 @@ let release: (() => void) | undefined;
 // `releaseBindings()` does NOT do this: it revokes cached blob URLs and leaves `host` alone.
 // Registering a throwaway host and immediately calling its disposer is the only way to reach
 // the module's `host = null` from outside.
-beforeEach(() => { releaseBindings(); registerUi4aHost({} as never)() });
+beforeEach(() => {
+  releaseBindings();
+  registerUi4aHost({} as never)();
+});
 afterEach(() => {
   release?.();
   release = undefined;

@@ -51,11 +51,11 @@ test("a path outside the canvases directory owns no canvas", () => {
 test("no `from` can move the resolution out of the canvas directory", () => {
   const root = canvasChildDir(id);
   const cases = [
-    `${CANVAS_DIR}/other/board.tsx`,      // another canvas's child
-    `/etc/${root}/x.tsx`,                 // absolute, outside the workspace
-    `C:\\w\\${root.replaceAll("/", "\\")}\\board.tsx`,  // a Windows path
+    `${CANVAS_DIR}/other/board.tsx`, // another canvas's child
+    `/etc/${root}/x.tsx`, // absolute, outside the workspace
+    `C:\\w\\${root.replaceAll("/", "\\")}\\board.tsx`, // a Windows path
     `/w/${root}/nested/${root}/board.tsx`, // the root appearing twice
-    root,                                 // naming the directory rather than a file in it
+    root, // naming the directory rather than a file in it
     "",
   ];
   for (const from of cases) {

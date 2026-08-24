@@ -92,12 +92,18 @@ export function parseUi4aSegments(text: string): Ui4aSegment[] {
     // openers in the corpus are prose, and 14 of them put the sentence right after the
     // language (`\`\`\`\`ui4a/tsx\`\`\`\` 块，原地渲染成…`). Anything that is not code and not
     // `key=value` meta is one; skipping the whole opener costs 0 of 390 real cards.
-    if (trailing !== "" && !CODE_LINE.test(trailing) && !FENCE_META.test(trailing)) { rest = rest.slice(bodyStart); continue; }
+    if (trailing !== "" && !CODE_LINE.test(trailing) && !FENCE_META.test(trailing)) {
+      rest = rest.slice(bodyStart);
+      continue;
+    }
     // A wrapper: the model opened a wider fence and then opened the real one inside it, the way
     // this project's own prompt shows the block (`\`\`\`\`\`` around `\`\`\`\`ui4a/tsx`). Taking the
     // outer one gives a body that is the inner fence AS TEXT — which compiles, silently, to a
     // card that renders nothing. Once in 389 corpus openers, and it costs the reader the card.
-    if (/^[^\S\n]*`{3,}ui4a\/tsx/.test(rest.slice(bodyStart))) { rest = rest.slice(bodyStart); continue; }
+    if (/^[^\S\n]*`{3,}ui4a\/tsx/.test(rest.slice(bodyStart))) {
+      rest = rest.slice(bodyStart);
+      continue;
+    }
     const inlineCode = CODE_LINE.test(trailing) ? `${trailing}\n` : "";
     const closeIndex = findClose(rest.slice(bodyStart), open[1]);
     if (closeIndex === -1) {

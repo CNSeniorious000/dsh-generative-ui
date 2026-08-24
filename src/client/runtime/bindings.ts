@@ -96,8 +96,7 @@ export function bind() {
      * every byte above 0x7f replaced by U+FFFD — corrupt, and silently so. Anything handed to
      * `decodeAudioData`, a MIDI parser or an image decoder has to come through here.
      */
-    readBytes: (path: string) =>
-      request<{ base64: string }>("GET", path, undefined, "bytes=1").then((body) => decodeBase64(body.base64)),
+    readBytes: (path: string) => request<{ base64: string }>("GET", path, undefined, "bytes=1").then((body) => decodeBase64(body.base64)),
     /**
      * Writes the file, subject to the session's own access mode.
      *

@@ -11,6 +11,9 @@ for (const name of readdirSync("/tmp/corpuscards")) {
   // An array built from a literal or a counted loop cannot be empty; one filled from outside
   // the card — bash, fs, ai, fetch — can, and that is the only case worth flagging.
   const external = new RegExp(`set${m[1][0].toUpperCase()}${m[1].slice(1)}\\b`).test(src) || /\$dsh\/(exec|fs|ai)/.test(src);
-  if (!guarded && external) { hits++; console.log(`${name}: ${m[0]}`) }
+  if (!guarded && external) {
+    hits++;
+    console.log(`${name}: ${m[0]}`);
+  }
 }
 console.log({ unguardedLastIndex: hits, of: readdirSync("/tmp/corpuscards").length });

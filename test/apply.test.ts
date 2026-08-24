@@ -25,7 +25,11 @@ const applyWith = (available: readonly string[]) => {
       effect: (run: () => unknown, label?: string) => {
         effects.push(label ?? "(unlabelled)");
         registrations.at(-1)?.effects.push(label ?? "(unlabelled)");
-        try { run() } catch { /* the fake context cannot serve a request; registration is the subject */ }
+        try {
+          run();
+        } catch {
+          /* the fake context cannot serve a request; registration is the subject */
+        }
       },
       inject: (want: readonly string[], callback: (scoped: unknown) => void) => {
         // A dependency the profile does not have: cordis never runs the callback.

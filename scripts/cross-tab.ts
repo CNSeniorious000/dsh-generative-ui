@@ -13,11 +13,14 @@ import { readFileSync, readdirSync } from "node:fs";
 import { SCREENS } from "./screens.ts";
 
 const dir = process.argv[2];
-if (dir === undefined) { console.log("cross-tab: pass a directory of cards"); process.exit(0) }
+if (dir === undefined) {
+  console.log("cross-tab: pass a directory of cards");
+  process.exit(0);
+}
 
 // The paint check owns the rendering; this reads its report rather than re-implementing it, so
 // the two can never disagree about what "renders nothing" means.
-const report = await new Response((Bun.spawn(["bun", `${import.meta.dir}/paint-cards.ts`, dir]).stdout)).text();
+const report = await new Response(Bun.spawn(["bun", `${import.meta.dir}/paint-cards.ts`, dir]).stdout).text();
 const broken = new Set([...report.matchAll(/^(\S+\.tsx)\s+(?:THREW|BLANK)/gm)].map((m) => m[1]));
 
 const counts = { both: 0, screenOnly: 0, paintOnly: 0, neither: 0 };
@@ -27,8 +30,10 @@ for (const name of readdirSync(dir).filter((n) => n.endsWith(".tsx"))) {
   const dead = broken.has(name);
   if (fires && dead) counts.both += 1;
   else if (fires) counts.screenOnly += 1;
-  else if (dead) { counts.paintOnly += 1; unpredicted.push(name) }
-  else counts.neither += 1;
+  else if (dead) {
+    counts.paintOnly += 1;
+    unpredicted.push(name);
+  } else counts.neither += 1;
 }
 
 console.log(`screens fire + paints nothing : ${counts.both}`);

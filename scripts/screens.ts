@@ -51,7 +51,15 @@ export const SCREENS = {
   // export default X`, which shadows exactly the same way and was invisible.
   "SHADOWED-EXPORT": (src: string) => {
     const def = (/export default function (\w+)/.exec(src) ?? /export default ([A-Z]\w*)\s*;?\s*$/m.exec(src))?.[1];
-    const imported = [...src.matchAll(/import\s*\{([^}]+)\}\s*from/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim()));
+    const imported = [...src.matchAll(/import\s*\{([^}]+)\}\s*from/g)].flatMap((m) =>
+      m[1].split(",").map((x) =>
+        x
+          .trim()
+          .split(/\s+as\s+/)
+          .pop()!
+          .trim(),
+      ),
+    );
     return def !== undefined && imported.includes(def);
   },
   // JSX only, not generics: `<Foo[k] />` is illegal, `useState<Foo[]>` is everywhere. An
@@ -126,8 +134,7 @@ export const SCREENS = {
   // forgetting the quotes. Anchored inside `style={{` because unquoted `var(--x)` is CORRECT in a
   // `<style>` block, which is where most cards write it and where the camelCase discriminator the
   // unit arm relies on cannot help — `color` is spelled the same in both.
-  "UNQUOTED-CSS-UNIT": (src: string) =>
-    /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src) || /style=\{\{[^}]*?\b[a-zA-Z]+:\s*var\(--/.test(src),
+  "UNQUOTED-CSS-UNIT": (src: string) => /[{,]\s*[a-z]+[A-Z]\w*:\s*-?[\d.]+(px|rem|em|vh|vw|deg)\b/.test(src) || /style=\{\{[^}]*?\b[a-zA-Z]+:\s*var\(--/.test(src),
   // A regex written as bare JSX text: `<div>^\w+@\w+\.\w{2,}$</div>`. JSX reads `{2,}` as an
   // expression and the parse fails on the comma. The card that did it was *showing* the pattern
   // to the reader, which is a reasonable thing to want — the fix is `{"…"}` or a code element,
@@ -162,7 +169,17 @@ export const SCREENS = {
     // `import { useState }` reaches the reader as `Fragment is not defined`, while `useMemo` in
     // the same position is quietly repaired. `test/normalize-complete.test.ts` pins both halves.
     const REPAIRED = /^use[A-Z]/;
-    const imported = new Set([...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) => m[1].split(",").map((x) => x.trim().split(/\s+as\s+/).pop()!.trim())));
+    const imported = new Set(
+      [...src.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']react["']/g)].flatMap((m) =>
+        m[1].split(",").map((x) =>
+          x
+            .trim()
+            .split(/\s+as\s+/)
+            .pop()!
+            .trim(),
+        ),
+      ),
+    );
     // The JSX form for every name, not just `Fragment`. The `\s*[(<]` arm only sees a call or a
     // generic, so `<Suspense fallback={…}>` — the way Suspense is actually written — matched
     // nothing, and the screen was `Fragment`-only in practice.
@@ -184,16 +201,11 @@ export const SCREENS = {
     // reached for the other end — and taking only the first match lets one benign index on a
     // literal array hide every real one after it. Neither costs anything: the report is 1 of 378
     // either way, and the difference only shows up on a card not yet written.
-    const names = [
-      ...[...src.matchAll(/(\w+)\[\s*(\w+)\.length\s*-\s*1\s*\]\s*\./g)].filter((m) => m[1] === m[2]).map((m) => m[1]!),
-      ...[...src.matchAll(/(\w+)\[\s*0\s*\]\s*\./g)].map((m) => m[1]!),
-    ];
+    const names = [...[...src.matchAll(/(\w+)\[\s*(\w+)\.length\s*-\s*1\s*\]\s*\./g)].filter((m) => m[1] === m[2]).map((m) => m[1]!), ...[...src.matchAll(/(\w+)\[\s*0\s*\]\s*\./g)].map((m) => m[1]!)];
     // Externally-filled arrays only, on purpose: three other cards index the last element of an
     // array they built from a literal or a counted loop, which cannot be empty, and flagging
     // those is how a screen becomes noise.
-    return /\$dsh\/(exec|fs|ai)/.test(src) && names.some((name) =>
-      new RegExp(`set${name[0]!.toUpperCase()}${name.slice(1)}\\b`).test(src) &&
-      !new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src));
+    return /\$dsh\/(exec|fs|ai)/.test(src) && names.some((name) => new RegExp(`set${name[0]!.toUpperCase()}${name.slice(1)}\\b`).test(src) && !new RegExp(`${name}\\.length\\s*(===?\\s*0|>\\s*0|\\?)|!${name}\\.length`).test(src));
   },
   // A light surface colour written as a literal: `background: "#fff"`. The card has assumed a
   // white page, so it renders white-on-white in dark mode. Three of 378 corpus cards match, and
@@ -225,7 +237,10 @@ export const SCREENS = {
       let depth = 0;
       for (let i = open; i < src.length; i++) {
         if (src[i] === "{") depth += 1;
-        else if (src[i] === "}") { depth -= 1; if (depth === 0) return src.slice(open, i + 1) }
+        else if (src[i] === "}") {
+          depth -= 1;
+          if (depth === 0) return src.slice(open, i + 1);
+        }
       }
       return "";
     };
@@ -288,16 +303,18 @@ export const SCREENS = {
         else if (src[end] === close && (depth -= 1) === 0) break;
       }
       const block = src.slice(match.index, end);
-      return /(===|\.includes\(|\.has\()/.test(block)
+      return (
+        /(===|\.includes\(|\.has\()/.test(block) &&
         // Either spelling of "shown as selected": an inline style ternary or a conditional class.
-        && (/(background|border|color)\s*:\s*[^\n]*\?/.test(block) || /className=\{`[^`]*\$\{[^}]*\?/.test(block))
-        && /<button/.test(block)
-        && !/aria-(pressed|selected|checked|current)|role="(radio|tab|option|checkbox|switch)"/.test(block)
+        (/(background|border|color)\s*:\s*[^\n]*\?/.test(block) || /className=\{`[^`]*\$\{[^}]*\?/.test(block)) &&
+        /<button/.test(block) &&
+        !/aria-(pressed|selected|checked|current)|role="(radio|tab|option|checkbox|switch)"/.test(block) &&
         // A label that switches on the same flag carries the state, less conventionally but audibly.
-        && !/aria-label=\{[^}]*\?/.test(block)
+        !/aria-label=\{[^}]*\?/.test(block) &&
         // A key held down is momentary feedback, not a selection — announcing it would announce a
         // state that is over before it is read.
-        && !/onPointer(Down|Up)/.test(block);
+        !/onPointer(Down|Up)/.test(block)
+      );
     }),
   // A card that starts in a loading state and never runs the thing that would leave it: no
   // `useEffect`, so nothing calls the loader it defined. It renders its skeleton forever, compiles
@@ -334,8 +351,7 @@ export const SCREENS = {
   // other check reporting clean. Matches all three ways a specifier appears — `from "x"`, a
   // side-effect `import "x"`, and `import("x")`; the first version matched only `from` and let
   // both of the others through.
-  "INVENTED-CAPABILITY": (src: string) =>
-    [...src.matchAll(/(?:from|import)\s*\(?\s*["'](\$dsh\/[^"']+)["']/g)].some((m) => !CAPABILITIES.has(m[1])),
+  "INVENTED-CAPABILITY": (src: string) => [...src.matchAll(/(?:from|import)\s*\(?\s*["'](\$dsh\/[^"']+)["']/g)].some((m) => !CAPABILITIES.has(m[1])),
   "UNLABELLED-CONTROL": (src: string) => {
     // `<select>` has the same problem for the same reason — its options are its value, not its
     // name, so an unlabelled one announces "combo box, 每天". Six more corpus cards, and the
@@ -373,9 +389,7 @@ export const SCREENS = {
     // animated properties are colour and border, and `all` there means nothing moves. Requires a
     // transform to exist somewhere — either named in the transition, or present as a property the
     // `all` would pick up.
-    (/@keyframes/.test(src)
-      || /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src)
-      || (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
+    (/@keyframes/.test(src) || /transition(?:Property)?:\s*["']?[^;"'`}]*transform\b/.test(src) || (/transition(?:Property)?:\s*["']?[^;"'`}]*\ball\b/.test(src) && /transform:\s*(?:translate|scale|rotate|matrix)/.test(src))),
   // `transition: "transform .12s ease"` on an element whose transform is never set. The
   // transition animates nothing — it reads as polish and costs a repaint budget for a property
   // that does not change. Four of 378 corpus cards.
@@ -411,9 +425,9 @@ export const SCREENS = {
   // The split is clean and worth stating: **every corpus hit is an ordinary surface (5 of 5) and
   // every fresh hit is a knob (3 of 3)**, so the exemption costs nothing and the residue is real.
   "HARDCODED-BACKGROUND": (src: string) =>
-    [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,;{}]|\{[^{}]*\})*)/gi)].some((match) =>
-      /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1]) &&
-      !/::(?:-webkit-slider-thumb|-moz-range-thumb|-webkit-slider-runnable-track|-moz-range-track)|\b(?:knob|thumb|handle)\b/i.test(src.slice(Math.max(0, match.index - 160), match.index))),
+    [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,;{}]|\{[^{}]*\})*)/gi)].some(
+      (match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1]) && !/::(?:-webkit-slider-thumb|-moz-range-thumb|-webkit-slider-runnable-track|-moz-range-track)|\b(?:knob|thumb|handle)\b/i.test(src.slice(Math.max(0, match.index - 160), match.index)),
+    ),
   // The same key twice in one `style={{…}}`: the last wins and the first is silently dropped.
   // Nothing fails, so it survives until someone edits the dead line — the skill names it as one
   // of the two mistakes worth a checker round trip, and no screen here caught it.
@@ -461,9 +475,7 @@ export const SCREENS = {
   // screened: filling with it and putting `label-primary` on top is merely odd, while filling
   // with it and writing `#fff` is invisible half the time. The skill states this rule outright,
   // which makes it the clearest measure of a rule the prompt has not landed.
-  "BRAND-PRIMARY-FILL": (src: string) =>
-    [...src.matchAll(/background(?:Color)?:\s*[^,;}]*brand-primary[^,;}]*/g)].some((match) =>
-      /color:\s*["']?(#fff\b|#ffffff\b|white\b|var\(--dsw-alias-bg-)/i.test(src.slice(match.index + match[0].length, match.index + match[0].length + 120))),
+  "BRAND-PRIMARY-FILL": (src: string) => [...src.matchAll(/background(?:Color)?:\s*[^,;}]*brand-primary[^,;}]*/g)].some((match) => /color:\s*["']?(#fff\b|#ffffff\b|white\b|var\(--dsw-alias-bg-)/i.test(src.slice(match.index + match[0].length, match.index + match[0].length + 120))),
   // A control the keyboard cannot reach. Two shapes, both invisible to whoever wrote the card
   // because a mouse works either way: `onClick` on a `<div>` (no focus, no Enter, no Space), and
   // a button whose only content is an icon with no `aria-label` (a screen reader says "button").
@@ -487,8 +499,7 @@ export const SCREENS = {
     if ([...code.matchAll(/<div\b(?=[^<]*\bonClick=)/g)].some((m) => !/tabIndex|onKeyDown|onKeyUp|onKeyPress|role=/.test(tagAt(code, m.index)))) return true;
     // An ICON element only. A `{expr}` body is not an icon — most are `{playing ? "暂停" : "播放"}`,
     // which announces fine, and matching those took the report from 17 to 41 of 378.
-    return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)]
-      .some((match) => !match[0].includes("aria-label"));
+    return [...code.matchAll(/<button\b[^>]*>[\s\n]*<[A-Z]\w*[^>]*\/>[\s\n]*<\/button>/g)].some((match) => !match[0].includes("aria-label"));
   },
   // `outline: "none"` with nothing put back. 77 of 378 cards strip the focus ring and **0**
   // replace it, which makes this the most common single line here that breaks keyboard use:
@@ -505,8 +516,7 @@ export const SCREENS = {
     // A replacement need not be an outline: a `focused` flag driving borderColor is the same
     // affordance, and `beaa3fbf962b` in the corpus does exactly that — the one false positive
     // in 76. Anything that reads a focus state and paints a border or shadow from it counts.
-    const replaced = /:focus-visible|outlineOffset|outline-offset|boxShadow[^,;}]*focus|focus[^,;}]*boxShadow/i.test(code)
-      || /\bfocus(?:ed)?\b[\s\S]{0,80}?\b(?:border|borderColor|boxShadow|outline)\b|\b(?:border|borderColor|boxShadow|outline)\b[^\n]{0,80}?\bfocus(?:ed)?\b/i.test(code);
+    const replaced = /:focus-visible|outlineOffset|outline-offset|boxShadow[^,;}]*focus|focus[^,;}]*boxShadow/i.test(code) || /\bfocus(?:ed)?\b[\s\S]{0,80}?\b(?:border|borderColor|boxShadow|outline)\b|\b(?:border|borderColor|boxShadow|outline)\b[^\n]{0,80}?\bfocus(?:ed)?\b/i.test(code);
     return /outline:\s*["']none["']/.test(code) && !replaced;
   },
   // A glob written as JSX text: `<code>src/*.{ts,tsx}</code>`. Inside JSX those braces are an

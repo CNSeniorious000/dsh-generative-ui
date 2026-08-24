@@ -47,7 +47,7 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     "type-checked; the capability calls are on you.",
     "",
     "",
-"One more diagnostic never to skim past: *referenced directly or indirectly in its own initializer*. It means",
+    "One more diagnostic never to skim past: *referenced directly or indirectly in its own initializer*. It means",
     "a `const` shadows something of the same name and now refers to itself — `const rows = useMemo(() => rows(x), [x])`",
     "beside a top-level `function rows`. That throws on the first render and the card is blank, and it arrives",
     "surrounded by ordinary `implicitly has an 'any' type` lines that are safe to ignore. Rename the local.",
@@ -68,7 +68,8 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
   ].join("\n");
 }
 
-export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined): string => ((maps) => `# Building a generative UI
+export const skillBody = (typesMap: string | undefined, standaloneMap: string | undefined): string =>
+  ((maps) => `# Building a generative UI
 
 ## Is this a UI at all
 

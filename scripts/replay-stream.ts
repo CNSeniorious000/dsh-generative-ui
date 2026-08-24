@@ -36,26 +36,44 @@ let bad = 0;
 for (const path of paths) {
   const src = await Bun.file(path).text();
   const step = Math.max(100, Math.floor(src.length / 60));
-  let prev = -1, painted = false, changes = 0, late = 0, frames = 0, broken = 0, unnormalizable = 0;
+  let prev = -1,
+    painted = false,
+    changes = 0,
+    late = 0,
+    frames = 0,
+    broken = 0,
+    unnormalizable = 0;
   for (let n = step; n <= src.length; n += step) {
     let out: string;
     // A prefix normalize cannot repair is skipped — and COUNTED. `frames=12` on a card with 60
     // prefixes reads as a short card rather than as a pass that gave up on 48 of them.
-    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { unnormalizable += 1; continue }
+    try {
+      out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" });
+    } catch {
+      unnormalizable += 1;
+      continue;
+    }
     frames += 1;
     // A frame that fails to compile is a card that blinks out mid-generation. `transform` is a
     // tolerant parser — it rejects structural damage (unclosed tags, unterminated strings, stray
     // braces) and shrugs at odd expressions, which is the right sensitivity here since truncation
     // produces exactly the structural kind: 58 of 65 raw prefixes of a real card fail, 0 after
     // normalize.
-    try { compileCard("f.tsx", out) } catch { broken += 1 }
+    try {
+      compileCard("f.tsx", out);
+    } catch {
+      broken += 1;
+    }
     const h = hooks(out);
     // `painted` is the PREVIOUS frame's state, deliberately. A hook and the card's first
     // markup arriving in the same frame is not a visible remount — there was nothing on
     // screen to blank. Testing the current frame counted every card whose `useState` and
     // `return (<` land in one chunk, which is most of them: 35 of 362 real cards were
     // reported as late remounts and every one was this.
-    if (prev !== -1 && h !== prev) { changes += 1; if (painted) late += 1 }
+    if (prev !== -1 && h !== prev) {
+      changes += 1;
+      if (painted) late += 1;
+    }
     prev = h;
     painted ||= defaultPaints(out);
   }
@@ -71,17 +89,25 @@ for (const path of paths) {
 for (const name of REPLAY_CONTROLS) {
   const src = await Bun.file(`test/cards-negative/${name}`).text();
   const step = Math.max(100, Math.floor(src.length / 60));
-  let prev = -1, painted = false, late = 0;
+  let prev = -1,
+    painted = false,
+    late = 0;
   for (let n = step; n <= src.length; n += step) {
     let out: string;
-    try { out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" }) } catch { continue }
+    try {
+      out = normalizeGeneratedTsx(src.slice(0, n), { mode: "streaming" });
+    } catch {
+      continue;
+    }
     const h = hooks(out);
     if (prev !== -1 && h !== prev && painted) late += 1;
     prev = h;
     painted ||= defaultPaints(out);
   }
-  if (late === 0) { console.log(`control ${name}: DETECTOR BLIND — expected a late remount, saw none`); bad += 1 }
-  else console.log(`control ${name}: ok, ${late} late remount(s) detected`);
+  if (late === 0) {
+    console.log(`control ${name}: DETECTOR BLIND — expected a late remount, saw none`);
+    bad += 1;
+  } else console.log(`control ${name}: ok, ${late} late remount(s) detected`);
 }
 
 // Non-zero so `bun run check` fails when a card would blank mid-stream, or when the control does not.

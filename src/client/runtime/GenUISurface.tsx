@@ -90,11 +90,9 @@ const MAX_RETRIES = 3;
  * prefix. A card whose own render throws a message that happens to match is a real error, so
  * the phase is part of the question rather than the message alone.
  */
-export const isUnfinishedFrame = (message: string, phase: string, streaming: boolean) =>
-  streaming && phase !== "render" && TRANSIENT.test(message);
+export const isUnfinishedFrame = (message: string, phase: string, streaming: boolean) => streaming && phase !== "render" && TRANSIENT.test(message);
 
-export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) =>
-  phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
+export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) => phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
 /**
  * What to do with a frame, given what the surface already holds.
  *
@@ -145,8 +143,7 @@ export const deliver = (renderer: RendererCalls, delivery: Delivery): boolean =>
  * deliberate: the probe is cheap and cached downstream, and a set comparison here would be more
  * code to get wrong than the re-probe costs.
  */
-export const importSignature = (code: string) =>
-  [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).join(" ");
+export const importSignature = (code: string) => [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).join(" ");
 
 /** Only what `deliver` touches — the real renderer has far more. */
 export type RendererCalls = {
@@ -205,10 +202,7 @@ export const probeOutcome = (signature: string, current: string, streaming: bool
   return !streaming && delivered !== "" ? "redeliver" : "store";
 };
 
-export const dispatchError = (
-  action: "ignore" | "retry" | "report",
-  effects: { attempts: () => number; setAttempts: (n: number) => void; schedule: (ms: number) => void; report: () => void },
-) => {
+export const dispatchError = (action: "ignore" | "retry" | "report", effects: { attempts: () => number; setAttempts: (n: number) => void; schedule: (ms: number) => void; report: () => void }) => {
   if (action === "ignore") return;
   if (action === "retry") {
     const next = effects.attempts() + 1;
@@ -226,8 +220,7 @@ export const dispatchError = (
  * fresh, and appending a query to a `blob:` URL makes it unresolvable — which would break every
  * card rather than fixing one.
  */
-export const bustFetchedImports = (imports: Record<string, string>, attempt: number): Record<string, string> =>
-  Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url]));
+export const bustFetchedImports = (imports: Record<string, string>, attempt: number): Record<string, string> => Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url]));
 
 export function GenUISurface({ code, streaming = false, preserveState = true, onError, onRendered, className }: GenUISurfaceProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -278,7 +271,9 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
         onError: (error, phase) => {
           dispatchError(errorAction(error.message, phase, streamingRef.current, retriesRef.current), {
             attempts: () => retriesRef.current,
-            setAttempts: (n) => { retriesRef.current = n },
+            setAttempts: (n) => {
+              retriesRef.current = n;
+            },
             schedule: (ms) => setTimeout(() => retryRef.current(), ms),
             report: () => onErrorRef.current?.(error, phase),
           });

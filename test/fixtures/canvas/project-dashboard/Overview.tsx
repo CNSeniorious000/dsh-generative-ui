@@ -1,22 +1,14 @@
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts"
-import { CheckCircle2, ListChecks, CalendarClock, Users } from "lucide-react"
-import { Card, KpiCard, Bar, Avatar, PageHeader } from "./ui"
-import { members, activity, weekly, loadTasks, memberById } from "./data"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { CheckCircle2, ListChecks, CalendarClock, Users } from "lucide-react";
+import { Card, KpiCard, Bar, Avatar, PageHeader } from "./ui";
+import { members, activity, weekly, loadTasks, memberById } from "./data";
 
 // recharts passes these to SVG attributes, where var() does not resolve —
 // so chart strokes/fills use fixed mid-tone hues that read on both themes.
 // The Tooltip renders HTML, so it can safely use the theme CSS variables.
-const AXIS = "#8b93a3"
-const GRID = "#8b93a3"
-const DONE = "#5b8def"
+const AXIS = "#8b93a3";
+const GRID = "#8b93a3";
+const DONE = "#5b8def";
 
 const tooltipStyle = {
   background: "var(--dsw-alias-bg-layer-2)",
@@ -26,23 +18,23 @@ const tooltipStyle = {
   color: "var(--dsw-alias-label-primary)",
   boxShadow: "0 6px 20px rgba(0,0,0,0.14)",
   padding: "8px 10px",
-}
+};
 
 export default function Overview() {
-  const tasks = loadTasks()
-  const total = tasks.length
-  const doneCount = tasks.filter((t) => t.done).length
-  const doingCount = tasks.filter((t) => t.status === "doing" && !t.done).length
-  const todoCount = tasks.filter((t) => !t.done && t.status !== "doing").length
-  const completion = total ? Math.round((doneCount / total) * 100) : 0
-  const thisWeek = weekly[weekly.length - 2]?.done ?? 0
+  const tasks = loadTasks();
+  const total = tasks.length;
+  const doneCount = tasks.filter((t) => t.done).length;
+  const doingCount = tasks.filter((t) => t.status === "doing" && !t.done).length;
+  const todoCount = tasks.filter((t) => !t.done && t.status !== "doing").length;
+  const completion = total ? Math.round((doneCount / total) * 100) : 0;
+  const thisWeek = weekly[weekly.length - 2]?.done ?? 0;
 
   const statusRows = [
     { label: "已完成", value: doneCount, tone: "success" as const },
     { label: "进行中", value: doingCount, tone: "business" as const },
     { label: "待办", value: todoCount, tone: "warn" as const },
-  ]
-  const maxStatus = Math.max(1, ...statusRows.map((s) => s.value))
+  ];
+  const maxStatus = Math.max(1, ...statusRows.map((s) => s.value));
 
   return (
     <div>
@@ -58,9 +50,7 @@ export default function Overview() {
       <div className="grid2" style={{ marginTop: 14, display: "grid", gap: 14 }}>
         <Card>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, color: "var(--dsw-alias-label-primary)" }}>
-              周完成趋势
-            </h2>
+            <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, color: "var(--dsw-alias-label-primary)" }}>周完成趋势</h2>
             <span style={{ fontSize: 12, color: "var(--dsw-alias-label-secondary)" }}>近 6 周 · 单位 个</span>
           </div>
           <ResponsiveContainer width="100%" height={236}>
@@ -82,9 +72,7 @@ export default function Overview() {
         </Card>
 
         <Card>
-          <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, marginBottom: 16, color: "var(--dsw-alias-label-primary)" }}>
-            状态分布
-          </h2>
+          <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, marginBottom: 16, color: "var(--dsw-alias-label-primary)" }}>状态分布</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {statusRows.map((s) => (
               <div key={s.label}>
@@ -105,37 +93,28 @@ export default function Overview() {
               color: "var(--dsw-alias-label-secondary)",
             }}
           >
-            共 {total} 个任务 · 整体完成率{" "}
-            <span style={{ color: "var(--dsw-alias-label-primary)", fontWeight: 600 }}>{completion}%</span>
+            共 {total} 个任务 · 整体完成率 <span style={{ color: "var(--dsw-alias-label-primary)", fontWeight: 600 }}>{completion}%</span>
           </div>
         </Card>
       </div>
 
       <Card style={{ marginTop: 14 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, marginBottom: 6, color: "var(--dsw-alias-label-primary)" }}>
-          最近动态
-        </h2>
+        <h2 style={{ fontSize: 15, fontWeight: 650, margin: 0, marginBottom: 6, color: "var(--dsw-alias-label-primary)" }}>最近动态</h2>
         <div style={{ display: "flex", flexDirection: "column" }}>
           {activity.map((a) => {
-            const m = memberById(a.who)
+            const m = memberById(a.who);
             return (
-              <div
-                key={a.id}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px" }}
-              >
+              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 8px" }}>
                 {m && <Avatar name={m.name} color={m.color} size={30} />}
                 <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>
-                  <span style={{ color: "var(--dsw-alias-label-primary)", fontWeight: 600 }}>{m?.name}</span> {a.action}{" "}
-                  <span style={{ color: "var(--dsw-alias-state-business-primary)" }}>「{a.target}」</span>
+                  <span style={{ color: "var(--dsw-alias-label-primary)", fontWeight: 600 }}>{m?.name}</span> {a.action} <span style={{ color: "var(--dsw-alias-state-business-primary)" }}>「{a.target}」</span>
                 </div>
-                <span style={{ fontSize: 12, color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" }}>
-                  {a.time}
-                </span>
+                <span style={{ fontSize: 12, color: "var(--dsw-alias-label-secondary)", whiteSpace: "nowrap" }}>{a.time}</span>
               </div>
-            )
+            );
           })}
         </div>
       </Card>
     </div>
-  )
+  );
 }

@@ -39,14 +39,12 @@ const cardPath = process.argv[3];
 // Re-export every name the UMD build defines rather than hand-listing them: the consumer is
 // partial-react, not our own code, and a hand-list cost three rounds of "does not provide an
 // export named X" — createContext, useLayoutEffect, Component, one at a time.
-const reactKeys = [...readFileSync("node_modules/react/umd/react.development.js", "utf8").matchAll(/exports\.(\w+)\s*=/g)]
-  .map(m => m[1])
-  .filter(name => /^[A-Za-z_$][\w$]*$/.test(name) && name !== "default");
+const reactKeys = [...readFileSync("node_modules/react/umd/react.development.js", "utf8").matchAll(/exports\.(\w+)\s*=/g)].map((m) => m[1]).filter((name) => /^[A-Za-z_$][\w$]*$/.test(name) && name !== "default");
 
 // The bundle resolves react through aliases onto the UMD globals rather than leaving them
 // external: with no document import map (see below) a bare `import "react"` inside the bundle
 // has nothing to resolve against.
-await Bun.write("/tmp/dsh-harness-react.js", ["const R = globalThis.React;", "export default R;", ...reactKeys.map(k => `export const ${k} = R[${JSON.stringify(k)}];`)].join("\n"));
+await Bun.write("/tmp/dsh-harness-react.js", ["const R = globalThis.React;", "export default R;", ...reactKeys.map((k) => `export const ${k} = R[${JSON.stringify(k)}];`)].join("\n"));
 await Bun.write("/tmp/dsh-harness-jsx.js", "const R = globalThis.React;\nexport const Fragment = R.Fragment;\nexport const jsx = (t, p, k) => R.createElement(t, k === undefined ? p : { ...p, key: k });\nexport const jsxs = jsx;\nexport const jsxDEV = jsx;");
 await Bun.write("/tmp/dsh-harness-dom.js", "const D = globalThis.ReactDOM;\nexport default D;\nexport const { flushSync, createPortal } = D;\nexport const createRoot = D.createRoot;\nexport const renderToString = () => '';");
 
@@ -59,18 +57,22 @@ const entry = `${tmpdir()}/dsh-surface-entry-${port}.ts`;
 const from = (path: string) => JSON.stringify(resolve(import.meta.dir, "..", path));
 await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, ""].join("\n"));
 
-const bundle = await (await Bun.build({
-  entrypoints: [entry],
-  target: "browser",
-  plugins: [{
-    name: "react-from-umd",
-    setup(build) {
-      build.onResolve({ filter: /^react(\/jsx-(dev-)?runtime)?$|^react-dom(\/(client|server))?$/ }, args => ({
-        path: args.path.startsWith("react-dom") ? "/tmp/dsh-harness-dom.js" : args.path.includes("jsx") ? "/tmp/dsh-harness-jsx.js" : "/tmp/dsh-harness-react.js",
-      }));
-    },
-  }],
-})).outputs[0].text();
+const bundle = await (
+  await Bun.build({
+    entrypoints: [entry],
+    target: "browser",
+    plugins: [
+      {
+        name: "react-from-umd",
+        setup(build) {
+          build.onResolve({ filter: /^react(\/jsx-(dev-)?runtime)?$|^react-dom(\/(client|server))?$/ }, (args) => ({
+            path: args.path.startsWith("react-dom") ? "/tmp/dsh-harness-dom.js" : args.path.includes("jsx") ? "/tmp/dsh-harness-jsx.js" : "/tmp/dsh-harness-react.js",
+          }));
+        },
+      },
+    ],
+  })
+).outputs[0].text();
 await unlink(entry);
 
 /**
@@ -80,9 +82,7 @@ await unlink(entry);
  * fail a mount test for a reason that has nothing to do with the card. A Proxy default export does
  * not work: `import { Droplets }` is a static binding the module has to declare.
  */
-const lucideNames = cardPath === undefined
-  ? []
-  : [...(readFileSync(cardPath, "utf8").match(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/)?.[1] ?? "").matchAll(/[A-Z]\w*/g)].map(m => m[0]);
+const lucideNames = cardPath === undefined ? [] : [...(readFileSync(cardPath, "utf8").match(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/)?.[1] ?? "").matchAll(/[A-Z]\w*/g)].map((m) => m[0]);
 
 const js = (source: string) => new Response(source, { headers: { "content-type": "text/javascript" } });
 const file = (path: string) => new Response(readFileSync(path, "utf8"), { headers: { "content-type": "text/javascript" } });
@@ -108,9 +108,7 @@ const file = (path: string) => new Response(readFileSync(path, "utf8"), { header
  * THEME=dark to see the ground the app actually ships with.
  */
 const theme = process.env.THEME === "dark" ? "dark" : "light";
-const themeVars = Object.entries(
-  JSON.parse(readFileSync(new URL(`../test/fixtures/dsw-tokens-${theme}.json`, import.meta.url), "utf8")) as Record<string, string>,
-)
+const themeVars = Object.entries(JSON.parse(readFileSync(new URL(`../test/fixtures/dsw-tokens-${theme}.json`, import.meta.url), "utf8")) as Record<string, string>)
   .map(([name, value]) => `${name}:${value}`)
   .join(";");
 
@@ -119,7 +117,7 @@ Bun.serve({
   routes: {
     "/umd/react.js": () => file("node_modules/react/umd/react.development.js"),
     "/umd/react-dom.js": () => file("node_modules/react-dom/umd/react-dom.development.js"),
-    "/m/react.js": () => js(["const R = globalThis.React;", "export default R;", ...reactKeys.map(k => `export const ${k} = R[${JSON.stringify(k)}];`)].join("\n")),
+    "/m/react.js": () => js(["const R = globalThis.React;", "export default R;", ...reactKeys.map((k) => `export const ${k} = R[${JSON.stringify(k)}];`)].join("\n")),
     "/m/jsx-runtime.js": () => js("const R = globalThis.React;\nexport const Fragment = R.Fragment;\nexport const jsx = (t, p, k) => R.createElement(t, k === undefined ? p : { ...p, key: k });\nexport const jsxs = jsx;\nexport const jsxDEV = jsx;"),
     "/m/react-dom.js": () => js("const D = globalThis.ReactDOM;\nexport default D;\nexport const { flushSync, createPortal } = D;"),
     "/m/react-dom-client.js": () => js("export const createRoot = globalThis.ReactDOM.createRoot;"),

@@ -14,28 +14,54 @@ const stream = (text = "", truncated = false) => ({ text, truncated });
 
 const ctxWith = (result: Record<string, unknown> = {}, seen: Spec[] = []) => ({
   shell: {
-    resolve: (request: Spec) => { seen.push(request); return request },
+    resolve: (request: Spec) => {
+      seen.push(request);
+      return request;
+    },
     run: async () => ({ exitCode: 0, stdout: stream("out"), stderr: stream(), ...result }),
   },
   sandboxPolicy: { resolve: (request?: { session?: unknown }) => ({ forSession: request?.session }) },
-  sessions: { list: () => [{ id: "s1", header: { cwd: "/w" } }, { id: "s2", header: { cwd: "/w" } }] },
+  sessions: {
+    list: () => [
+      { id: "s1", header: { cwd: "/w" } },
+      { id: "s2", header: { cwd: "/w" } },
+    ],
+  },
 });
 
 const call = async (query: string, opts: { method?: string; body?: string; ctx?: any; live?: Set<string>; onReq?: (req: any) => void; started?: Promise<void> } = {}) => {
-  let status = 0, body = "";
-  const res = { writeHead(code: number) { status = code; return res }, end(chunk?: string) { body = chunk ?? ""; return res } };
+  let status = 0,
+    body = "";
+  const res = {
+    writeHead(code: number) {
+      status = code;
+      return res;
+    },
+    end(chunk?: string) {
+      body = chunk ?? "";
+      return res;
+    },
+  };
   const handlers: Record<string, () => void> = {};
   const req: any = {
-    method: opts.method ?? "POST", url: `/x?${query}`,
-    on(event: string, fn: () => void) { handlers[event] = fn },
-    async *[Symbol.asyncIterator]() { if (opts.body !== undefined) yield opts.body },
+    method: opts.method ?? "POST",
+    url: `/x?${query}`,
+    on(event: string, fn: () => void) {
+      handlers[event] = fn;
+    },
+    async *[Symbol.asyncIterator]() {
+      if (opts.body !== undefined) yield opts.body;
+    },
   };
   const promise = serveExec((opts.ctx ?? ctxWith()) as never, () => opts.live ?? new Set(["/w"]), req, res as never);
   // `close` has to be fired while the command is genuinely in flight: the handler is registered
   // inside `serveExec` only after it has awaited the request body, and firing before that lands
   // in an empty handler table. `started` resolves when the ctx says `run` was reached — waiting
   // on the real event rather than guessing a number of microtask turns.
-  if (opts.onReq !== undefined) { await opts.started; opts.onReq({ close: () => handlers.close?.() }) }
+  if (opts.onReq !== undefined) {
+    await opts.started;
+    opts.onReq({ close: () => handlers.close?.() });
+  }
   await promise;
   return { status, json: body === "" ? null : JSON.parse(body) };
 };
@@ -104,20 +130,47 @@ describe("running", () => {
     // version of this test failed while the code was correct.
     const seen: Spec[] = [];
     let release!: () => void, reachedRun!: () => void;
-    const started = new Promise<void>((r) => { reachedRun = r });
+    const started = new Promise<void>((r) => {
+      reachedRun = r;
+    });
     const slow = {
       ...ctxWith({}, seen),
       shell: {
-        resolve: (r: Spec) => { seen.push(r); return r },
-        run: async () => { reachedRun(); await new Promise<void>((r) => { release = r }); return { exitCode: 0, stdout: stream(), stderr: stream() } },
+        resolve: (r: Spec) => {
+          seen.push(r);
+          return r;
+        },
+        run: async () => {
+          reachedRun();
+          await new Promise<void>((r) => {
+            release = r;
+          });
+          return { exitCode: 0, stdout: stream(), stderr: stream() };
+        },
       },
     };
-    await call("cwd=%2Fw&session=s1", { body, ctx: slow, started, onReq: (r) => { r.close(); release() } });
+    await call("cwd=%2Fw&session=s1", {
+      body,
+      ctx: slow,
+      started,
+      onReq: (r) => {
+        r.close();
+        release();
+      },
+    });
     expect(seen[0].signal?.aborted).toBe(true);
   });
 
   test("a shell that throws is a 500 with the message, not a crash", async () => {
-    const broken = { ...ctxWith(), shell: { resolve: (r: Spec) => r, run: async () => { throw new Error("shell exploded") } } };
+    const broken = {
+      ...ctxWith(),
+      shell: {
+        resolve: (r: Spec) => r,
+        run: async () => {
+          throw new Error("shell exploded");
+        },
+      },
+    };
     const { status, json } = await call("cwd=%2Fw&session=s1", { body, ctx: broken });
     expect(status).toBe(500);
     expect(json.error).toBe("shell exploded");

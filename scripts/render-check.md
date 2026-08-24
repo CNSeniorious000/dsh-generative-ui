@@ -55,7 +55,7 @@ returns nothing until you catch it.
   device metrics before measuring anything.
 - **An import map is fixed at page load.** Restarting the server with a new map changes nothing
   until a fresh navigation — add a cache-busting query, do not just re-run the script.
-- **Pick an uncommon port and check it is free.** A collision leaves a *different* page serving
+- **Pick an uncommon port and check it is free.** A collision leaves a _different_ page serving
   200s, and the failure looks like every card being broken.
 - **Compiling the raw source is not what production does.** It normalizes `final`, and falls back
   to `streaming` on failure. A driver that skips this measures a path nobody runs — in both

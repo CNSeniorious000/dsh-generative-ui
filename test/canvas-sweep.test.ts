@@ -25,12 +25,21 @@ let unmounts = 0;
 let columnRemoved = 0;
 let frames: (() => void)[] = [];
 
-const paint = () => { const due = frames; frames = []; for (const cb of due) cb() };
+const paint = () => {
+  const due = frames;
+  frames = [];
+  for (const cb of due) cb();
+};
 /** Force another sweep, the way a streamed token would. */
 let scheduleSweepAgain = () => {};
 
 /** Let queued microtasks (the fetch mocks) settle, then run whatever frames they scheduled. */
-const settle = async () => { for (let i = 0; i < 6; i++) { await Promise.resolve(); paint() } };
+const settle = async () => {
+  for (let i = 0; i < 6; i++) {
+    await Promise.resolve();
+    paint();
+  }
+};
 
 // Shared with every other test FILE; leaving a stub installed breaks whichever runs next.
 // Captured in `./globals.ts` rather than here — a capture in a file's own module body can
@@ -45,21 +54,61 @@ beforeEach(() => {
   // Another file's leaked sweep would run against ITS captured root, which no longer has a
   // `querySelectorAll` — one stale listener turns every test here red.
   resetTranscriptObservers();
-  painted = []; listed = []; files = {}; reads = []; frames = []; listings = 0; widths = []; unmounts = 0; columnRemoved = 0;
-  (globalThis as any).requestAnimationFrame = (cb: () => void) => { frames.push(cb); return frames.length };
+  painted = [];
+  listed = [];
+  files = {};
+  reads = [];
+  frames = [];
+  listings = 0;
+  widths = [];
+  unmounts = 0;
+  columnRemoved = 0;
+  (globalThis as any).requestAnimationFrame = (cb: () => void) => {
+    frames.push(cb);
+    return frames.length;
+  };
   (globalThis as any).cancelAnimationFrame = () => {};
-  (globalThis as any).MutationObserver = class { observe() {} disconnect() {} };
-  const el = () => ({ style: { setProperty() {} }, setAttribute() {}, append() {}, remove() { columnRemoved += 1 }, prepend() {}, querySelector: () => null, classList: { add() {}, remove() {} } });
+  (globalThis as any).MutationObserver = class {
+    observe() {}
+    disconnect() {}
+  };
+  const el = () => ({
+    style: { setProperty() {} },
+    setAttribute() {},
+    append() {},
+    remove() {
+      columnRemoved += 1;
+    },
+    prepend() {},
+    querySelector: () => null,
+    classList: { add() {}, remove() {} },
+  });
   // One frame element, reused: `createColumn` reads and writes its `paddingRight`, which is how
   // `setWidth(0)` is observable — it restores whatever padding the frame had before the panel.
   // `setWidth` is only observable through the frame's `paddingRight`, so the setter records it:
   // 0 means "collapsed back to the original padding", which is the branch under test.
-  frame = { ...el(), style: { setProperty() {}, _p: "8px", get paddingRight() { return this._p }, set paddingRight(v: string) { this._p = v; widths.push(v.endsWith("px") && v !== "8px" ? Number.parseInt(v, 10) : 0) } } };
+  frame = {
+    ...el(),
+    style: {
+      setProperty() {},
+      _p: "8px",
+      get paddingRight() {
+        return this._p;
+      },
+      set paddingRight(v: string) {
+        this._p = v;
+        widths.push(v.endsWith("px") && v !== "8px" ? Number.parseInt(v, 10) : 0);
+      },
+    },
+  };
   (globalThis as any).document = { body: el(), head: el(), createElement: el, querySelector: () => frame };
   (globalThis as any).fetch = (url: string) => {
     const parsed = new URL(url, "http://x");
     const id = parsed.searchParams.get("id");
-    if (id === null) { listings++; return Promise.resolve(new Response(JSON.stringify(listed))) }
+    if (id === null) {
+      listings++;
+      return Promise.resolve(new Response(JSON.stringify(listed)));
+    }
     reads.push(id);
     const body = files[id];
     return Promise.resolve(body === undefined ? new Response("", { status: 404 }) : new Response(body));
@@ -67,14 +116,28 @@ beforeEach(() => {
 });
 
 let mounted: { dispose: () => void }[] = [];
-afterEach(() => { for (const host of mounted.splice(0)) try { host.dispose() } catch { /* already disposed */ } });
+afterEach(() => {
+  for (const host of mounted.splice(0))
+    try {
+      host.dispose();
+    } catch {
+      /* already disposed */
+    }
+});
 
 /** Mount the host with a fixed set of tool calls, and return what the panel was rendered with. */
 const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; between?: () => void; open?: string; width?: number } = {}) => {
   // `mock.module`, not namespace assignment: an ESM namespace object is read-only, and the
   // module resolves its import binding at evaluation time — so the mock has to be registered
   // before `index.ts` is imported, which is why the import below is dynamic.
-  mock.module("react-dom/client", () => ({ createRoot: () => ({ render: (node: any) => painted.push(node), unmount() { unmounts += 1 } }) }));
+  mock.module("react-dom/client", () => ({
+    createRoot: () => ({
+      render: (node: any) => painted.push(node),
+      unmount() {
+        unmounts += 1;
+      },
+    }),
+  }));
   // Renders from a previous `sweep()` in the same test would make `.at(-1)` pick a stale panel.
   painted = [];
   const { mountCanvasHost } = await import(`../src/client/canvas/index.ts?${Math.random()}`);
@@ -90,14 +153,30 @@ const sweep = async (calls: any[], over: { cwd?: string; sweeps?: number; betwee
   // where it throws and turns one real failure into twenty-five.
   mounted.push(host);
   await settle();
-  if (over.open !== undefined) { host.show(over.open); await settle() }
+  if (over.open !== undefined) {
+    host.show(over.open);
+    await settle();
+  }
   // Stand in for the user having dragged the panel wider, so a collapse is observable.
-  if (over.width !== undefined) { const panel = painted.map((n) => n?.props).filter((p) => p?.onWidth).at(-1); panel?.onWidth(over.width) }
+  if (over.width !== undefined) {
+    const panel = painted
+      .map((n) => n?.props)
+      .filter((p) => p?.onWidth)
+      .at(-1);
+    panel?.onWidth(over.width);
+  }
   // Extra sweeps stand in for the stream continuing — the observer fires once per token.
-  for (let i = 1; i < (over.sweeps ?? 1); i++) { over.between?.(); scheduleSweepAgain(); await settle() }
+  for (let i = 1; i < (over.sweeps ?? 1); i++) {
+    over.between?.();
+    scheduleSweepAgain();
+    await settle();
+  }
   host.dispose();
   // The panel is the first child whose props carry `canvases`.
-  const withCanvases = painted.map((n) => n?.props).filter((p) => p && Array.isArray(p.canvases)).at(-1);
+  const withCanvases = painted
+    .map((n) => n?.props)
+    .filter((p) => p && Array.isArray(p.canvases))
+    .at(-1);
   return { canvases: (withCanvases?.canvases ?? []) as any[], offerable: (withCanvases?.offerable ?? []) as string[], renders: painted.length };
 };
 

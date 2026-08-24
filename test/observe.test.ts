@@ -13,7 +13,9 @@ import { restoreGlobals } from "./globals.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 let pending: (() => void)[] = [];
-let observing = 0, disconnected = 0, cancelled = 0;
+let observing = 0,
+  disconnected = 0,
+  cancelled = 0;
 let mutate: () => void = () => {};
 
 // Restore after EACH test: the stub below is narrower than other files' (a `document` with
@@ -22,19 +24,39 @@ let mutate: () => void = () => {};
 afterEach(restoreGlobals);
 
 beforeEach(() => {
-  pending = []; observing = 0; disconnected = 0; cancelled = 0;
-  (globalThis as any).requestAnimationFrame = (cb: () => void) => { pending.push(cb); return pending.length };
-  (globalThis as any).cancelAnimationFrame = (id: number) => { pending[id - 1] = () => { cancelled += 1 } };
+  pending = [];
+  observing = 0;
+  disconnected = 0;
+  cancelled = 0;
+  (globalThis as any).requestAnimationFrame = (cb: () => void) => {
+    pending.push(cb);
+    return pending.length;
+  };
+  (globalThis as any).cancelAnimationFrame = (id: number) => {
+    pending[id - 1] = () => {
+      cancelled += 1;
+    };
+  };
   (globalThis as any).document = { body: {} };
   (globalThis as any).MutationObserver = class {
-    constructor(private readonly cb: () => void) { mutate = () => this.cb() }
-    observe() { observing += 1 }
-    disconnect() { disconnected += 1 }
+    constructor(private readonly cb: () => void) {
+      mutate = () => this.cb();
+    }
+    observe() {
+      observing += 1;
+    }
+    disconnect() {
+      disconnected += 1;
+    }
   };
 });
 
 /** Runs whatever frames are queued, the way the browser would before painting. */
-const paint = () => { const due = pending; pending = []; for (const cb of due) cb() };
+const paint = () => {
+  const due = pending;
+  pending = [];
+  for (const cb of due) cb();
+};
 
 const load = async () => await import(`../src/client/runtime/observe.ts?${Math.random()}`);
 
@@ -42,7 +64,9 @@ describe("observeTranscript", () => {
   test("many mutations in one frame produce one sweep", async () => {
     const { observeTranscript } = await load();
     let sweeps = 0;
-    observeTranscript(() => { sweeps += 1 });
+    observeTranscript(() => {
+      sweeps += 1;
+    });
     paint(); // the immediate sweep on subscribe
     for (let i = 0; i < 50; i++) mutate();
     paint();
@@ -69,7 +93,9 @@ describe("observeTranscript", () => {
   test("scheduleSweep drives a listener with no DOM change at all", async () => {
     const { observeTranscript, scheduleSweep } = await load();
     let sweeps = 0;
-    observeTranscript(() => { sweeps += 1 });
+    observeTranscript(() => {
+      sweeps += 1;
+    });
     paint();
     scheduleSweep();
     paint();
@@ -87,7 +113,9 @@ describe("observeTranscript", () => {
   test("a frame queued before the last listener left is cancelled", async () => {
     const { observeTranscript } = await load();
     let sweeps = 0;
-    const stop = observeTranscript(() => { sweeps += 1 });
+    const stop = observeTranscript(() => {
+      sweeps += 1;
+    });
     stop();
     paint();
     expect(cancelled).toBe(1);

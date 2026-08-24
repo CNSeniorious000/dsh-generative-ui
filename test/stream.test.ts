@@ -3,7 +3,12 @@ import { afterAll, expect, test } from "bun:test";
 import { bind, registerUi4aHost } from "../src/client/runtime/bindings";
 
 const stream = (parts: Uint8Array[]) =>
-  new ReadableStream({ start(c) { for (const p of parts) c.enqueue(p); c.close(); } });
+  new ReadableStream({
+    start(c) {
+      for (const p of parts) c.enqueue(p);
+      c.close();
+    },
+  });
 
 // One global `fetch` is shared by every test FILE, so a stub left installed breaks whichever
 // file bun happens to run next — see the note in `read.test.ts`.
@@ -16,7 +21,9 @@ const collect = async (parts: Uint8Array[]) => {
     const out: string[] = [];
     for await (const piece of bind().ai.streamText("hi")) out.push(piece);
     return out;
-  } finally { release(); }
+  } finally {
+    release();
+  }
 };
 
 const utf8 = (s: string) => new TextEncoder().encode(s);

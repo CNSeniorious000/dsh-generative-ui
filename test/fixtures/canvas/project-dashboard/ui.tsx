@@ -1,16 +1,8 @@
 // Shared UI primitives used across every dashboard page.
-import type { CSSProperties, ReactNode, ElementType } from "react"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import type { CSSProperties, ReactNode, ElementType } from "react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
-export function Card({
-  children,
-  style,
-  padding = 16,
-}: {
-  children: ReactNode
-  style?: CSSProperties
-  padding?: number
-}) {
+export function Card({ children, style, padding = 16 }: { children: ReactNode; style?: CSSProperties; padding?: number }) {
   return (
     <div
       style={{
@@ -23,18 +15,10 @@ export function Card({
     >
       {children}
     </div>
-  )
+  );
 }
 
-export function PageHeader({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string
-  subtitle?: string
-  children?: ReactNode
-}) {
+export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
   return (
     <div
       style={{
@@ -58,29 +42,17 @@ export function PageHeader({
         >
           {title}
         </h1>
-        {subtitle && (
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>{subtitle}</p>
-        )}
+        {subtitle && <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>{subtitle}</p>}
       </div>
       {children && <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{children}</div>}
     </div>
-  )
+  );
 }
 
-export function KpiCard({
-  label,
-  value,
-  delta,
-  icon: Icon,
-}: {
-  label: string
-  value: string
-  delta: number
-  icon: ElementType
-}) {
-  const up = delta >= 0
-  const Trend = up ? TrendingUp : TrendingDown
-  const tone = up ? "var(--dsw-alias-state-success-primary)" : "var(--dsw-alias-state-error-primary)"
+export function KpiCard({ label, value, delta, icon: Icon }: { label: string; value: string; delta: number; icon: ElementType }) {
+  const up = delta >= 0;
+  const Trend = up ? TrendingUp : TrendingDown;
+  const tone = up ? "var(--dsw-alias-state-success-primary)" : "var(--dsw-alias-state-error-primary)";
   return (
     <Card>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -100,9 +72,7 @@ export function KpiCard({
           <Icon size={16} />
         </span>
       </div>
-      <div style={{ fontSize: 30, fontWeight: 680, marginTop: 12, lineHeight: 1, color: "var(--dsw-alias-label-primary)" }}>
-        {value}
-      </div>
+      <div style={{ fontSize: 30, fontWeight: 680, marginTop: 12, lineHeight: 1, color: "var(--dsw-alias-label-primary)" }}>{value}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 10, fontSize: 12 }}>
         <Trend size={14} style={{ color: tone }} />
         <span style={{ color: tone, fontWeight: 600 }}>
@@ -112,10 +82,10 @@ export function KpiCard({
         <span style={{ color: "var(--dsw-alias-label-secondary)" }}>较上周</span>
       </div>
     </Card>
-  )
+  );
 }
 
-export type Tone = "done" | "doing" | "todo" | "high" | "medium" | "low" | "muted"
+export type Tone = "done" | "doing" | "todo" | "high" | "medium" | "low" | "muted";
 
 const toneColors: Record<Tone, { fg: string; bg: string }> = {
   done: { fg: "var(--dsw-alias-state-success-primary)", bg: "color-mix(in srgb, var(--dsw-alias-state-success-primary) 15%, transparent)" },
@@ -125,7 +95,7 @@ const toneColors: Record<Tone, { fg: string; bg: string }> = {
   medium: { fg: "var(--dsw-alias-state-warn-primary)", bg: "color-mix(in srgb, var(--dsw-alias-state-warn-primary) 16%, transparent)" },
   low: { fg: "var(--dsw-alias-label-secondary)", bg: "color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent)" },
   muted: { fg: "var(--dsw-alias-label-secondary)", bg: "color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent)" },
-}
+};
 
 const toneLabel: Record<Tone, string> = {
   done: "已完成",
@@ -135,10 +105,10 @@ const toneLabel: Record<Tone, string> = {
   medium: "中等",
   low: "较低",
   muted: "",
-}
+};
 
 export function Badge({ tone, children }: { tone: Tone; children?: ReactNode }) {
-  const c = toneColors[tone]
+  const c = toneColors[tone];
   return (
     <span
       style={{
@@ -156,24 +126,11 @@ export function Badge({ tone, children }: { tone: Tone; children?: ReactNode }) 
     >
       {children ?? toneLabel[tone]}
     </span>
-  )
+  );
 }
 
-export function Bar({
-  value,
-  tone = "business",
-  height = 6,
-}: {
-  value: number
-  tone?: "business" | "success" | "warn"
-  height?: number
-}) {
-  const bg =
-    tone === "success"
-      ? "var(--dsw-alias-state-success-primary)"
-      : tone === "warn"
-        ? "var(--dsw-alias-state-warn-primary)"
-        : "var(--dsw-alias-state-business-primary)"
+export function Bar({ value, tone = "business", height = 6 }: { value: number; tone?: "business" | "success" | "warn"; height?: number }) {
+  const bg = tone === "success" ? "var(--dsw-alias-state-success-primary)" : tone === "warn" ? "var(--dsw-alias-state-warn-primary)" : "var(--dsw-alias-state-business-primary)";
   return (
     <div
       style={{
@@ -194,7 +151,7 @@ export function Bar({
         }}
       />
     </div>
-  )
+  );
 }
 
 export function Avatar({ name, color, size = 32 }: { name: string; color: string; size?: number }) {
@@ -217,5 +174,5 @@ export function Avatar({ name, color, size = 32 }: { name: string; color: string
     >
       {name.slice(0, 1)}
     </span>
-  )
+  );
 }

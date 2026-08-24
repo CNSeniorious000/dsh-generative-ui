@@ -18,7 +18,10 @@ const ctxWith = (over: Record<string, unknown> = {}, calls: Call[] = []) => ({
     readText: async () => "text body",
     readBytes: async () => new Uint8Array([0xff, 0x00, 0x80]),
     listDir: async () => [{ name: "a.ts", type: "file", size: 3, target: "SECRET", version: "SECRET" }],
-    writeText: async (...args: unknown[]) => { calls.push({ name: "writeText", args }); return undefined },
+    writeText: async (...args: unknown[]) => {
+      calls.push({ name: "writeText", args });
+      return undefined;
+    },
     ...over,
   },
   sandboxPolicy: { resolve: (request?: { session?: unknown }) => ({ forSession: request?.session }) },
@@ -26,9 +29,25 @@ const ctxWith = (over: Record<string, unknown> = {}, calls: Call[] = []) => ({
 });
 
 const call = async (query: string, opts: { method?: string; body?: string; ctx?: ReturnType<typeof ctxWith>; live?: Set<string> } = {}) => {
-  let status = 0, body = "";
-  const res = { writeHead(code: number) { status = code; return res }, end(chunk?: string) { body = chunk ?? ""; return res } };
-  const req: any = { method: opts.method ?? "GET", url: `/x?${query}`, async *[Symbol.asyncIterator]() { if (opts.body !== undefined) yield opts.body } };
+  let status = 0,
+    body = "";
+  const res = {
+    writeHead(code: number) {
+      status = code;
+      return res;
+    },
+    end(chunk?: string) {
+      body = chunk ?? "";
+      return res;
+    },
+  };
+  const req: any = {
+    method: opts.method ?? "GET",
+    url: `/x?${query}`,
+    async *[Symbol.asyncIterator]() {
+      if (opts.body !== undefined) yield opts.body;
+    },
+  };
   await serveFs((opts.ctx ?? ctxWith()) as never, () => opts.live ?? new Set(["/w"]), req, res as never);
   return { status, json: body === "" ? null : JSON.parse(body) };
 };
@@ -68,9 +87,17 @@ describe("the fence", () => {
   // The card needs to tell "you may not" from "it broke": one is worth showing the user as a
   // read-only session, the other is a bug.
   test("a sandbox denial is 403 and a missing file is 404", async () => {
-    const denied = ctxWith({ resolve: async () => { throw Object.assign(new Error("no"), { code: "FS_SANDBOX_DENIED" }) } });
+    const denied = ctxWith({
+      resolve: async () => {
+        throw Object.assign(new Error("no"), { code: "FS_SANDBOX_DENIED" });
+      },
+    });
     expect((await call("cwd=%2Fw&path=a.txt", { ctx: denied })).status).toBe(403);
-    const missing = ctxWith({ resolve: async () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }) } });
+    const missing = ctxWith({
+      resolve: async () => {
+        throw Object.assign(new Error("nope"), { code: "ENOENT" });
+      },
+    });
     expect((await call("cwd=%2Fw&path=a.txt", { ctx: missing })).status).toBe(404);
   });
 });

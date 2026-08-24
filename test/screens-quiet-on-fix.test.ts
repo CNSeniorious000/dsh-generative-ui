@@ -20,7 +20,7 @@ const PAIRS: Record<string, [string, string] | [string, string][]> = {
   // them — the same one-to-one-map bug this file has now grown four times, so the value is a list.
   "UNQUOTED-CSS-UNIT": [
     ["<span style={{ fontSize: 11px }} />", "<style>{`.chip { font-size: 11px }`}</style>"],
-    ['<div style={{ color: var(--dsw-alias-label-primary) }} />', '<div style={{ color: "var(--dsw-alias-label-primary)" }} />'],
+    ["<div style={{ color: var(--dsw-alias-label-primary) }} />", '<div style={{ color: "var(--dsw-alias-label-primary)" }} />'],
   ],
 
   "SWALLOWED-CAPABILITY-FAILURE": [`try { const r = await bash("ls"); setRows(r.stdout) } catch {}`, `try { const r = await bash("ls"); setRows(r.stdout) } catch (e) { setError(String(e)) }`],
@@ -35,22 +35,13 @@ const PAIRS: Record<string, [string, string] | [string, string][]> = {
   "DESTRUCTURED-HOOK": ["const [start, setStart] = useRef(0);", "const start = useRef(0);"],
   "SHADOWED-EXPORT": [`import { Legend } from "recharts";\nexport default function Legend() {}`, `import { Legend } from "recharts";\nexport default function Chart() {}`],
   "MISSING-REACT-IMPORT": ["export default function C() { return <Suspense /> }", `import { Suspense } from "react";\nexport default function C() { return <Suspense /> }`],
-  "UNGUARDED-LAST-INDEX": [
-    `import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows[0].name;`,
-    `import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows.length > 0 ? rows[0].name : "";`,
-  ],
+  "UNGUARDED-LAST-INDEX": [`import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows[0].name;`, `import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows.length > 0 ? rows[0].name : "";`],
   "VIEWPORT-UNITS": [`const s = { width: "100vw" }`, `const s = { width: "100%" }`],
   "HARDCODED-BACKGROUND": [`const s = { background: "#fff" }`, `const s = { background: "var(--dsw-alias-bg-base)" }`],
   "BRAND-PRIMARY-FILL": [`<div style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }} />`, `<div style={{ color: "var(--dsw-alias-brand-primary)" }} />`],
   "UNREACHABLE-CONTROL": ["<div onClick={f} />", "<div role='button' tabIndex={0} onClick={f} onKeyDown={g} />"],
-  "UNSTOPPABLE-MOTION": [
-    "@keyframes slide { from { transform: translateX(40px) } }",
-    "@keyframes slide { from { transform: translateX(40px) } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none } }",
-  ],
-  "UNLABELLED-CONTROL": [
-    `<input type="range" min={0} max={100} value={v} onChange={f} />`,
-    `<input type="range" aria-label="音量" min={0} max={100} value={v} onChange={f} />`,
-  ],
+  "UNSTOPPABLE-MOTION": ["@keyframes slide { from { transform: translateX(40px) } }", "@keyframes slide { from { transform: translateX(40px) } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none } }"],
+  "UNLABELLED-CONTROL": [`<input type="range" min={0} max={100} value={v} onChange={f} />`, `<input type="range" aria-label="音量" min={0} max={100} value={v} onChange={f} />`],
   "UNGUARDED-NUMBER-INPUT": [
     `<input type="number" onChange={(e) => setN(Number(e.target.value))} />`,
     // Keep the raw string in state and coerce where it is USED, so an empty field stays empty.
@@ -66,38 +57,20 @@ const PAIRS: Record<string, [string, string] | [string, string][]> = {
   // reported. A list of navigable rows is not a set of toggles, so `aria-current` is the more
   // precise answer there — and a screen quiet on the fix you thought of can be loud on a better one.
   "SELECTION-WITHOUT-STATE": [
-    [
-      `OPTS.map((o) => { const sel = o.id === picked; return <button style={{ background: sel ? "#06f" : "transparent" }} /> })`,
-      `OPTS.map((o) => { const sel = o.id === picked; return <button aria-pressed={sel} style={{ background: sel ? "#06f" : "transparent" }} /> })`,
-    ],
-    [
-      `rows.map((r) => { const sel = r.id === picked; return <button className={\`row\${sel ? " on" : ""}\`} /> })`,
-      `rows.map((r) => { const sel = r.id === picked; return <button aria-current={sel ? "true" : undefined} className={\`row\${sel ? " on" : ""}\`} /> })`,
-    ],
+    [`OPTS.map((o) => { const sel = o.id === picked; return <button style={{ background: sel ? "#06f" : "transparent" }} /> })`, `OPTS.map((o) => { const sel = o.id === picked; return <button aria-pressed={sel} style={{ background: sel ? "#06f" : "transparent" }} /> })`],
+    [`rows.map((r) => { const sel = r.id === picked; return <button className={\`row\${sel ? " on" : ""}\`} /> })`, `rows.map((r) => { const sel = r.id === picked; return <button aria-current={sel ? "true" : undefined} className={\`row\${sel ? " on" : ""}\`} /> })`],
   ],
   "NEVER-LEAVES-LOADING": [
     `import { bash } from "$dsh/exec";\nconst [busy, setBusy] = useState(true);\nconst load = async () => { await bash("git log"); setBusy(false) };`,
     `import { bash } from "$dsh/exec";\nconst [busy, setBusy] = useState(true);\nuseEffect(() => { void bash("git log").then(() => setBusy(false)) }, []);`,
   ],
-  "SELF-SHADOWING-MEMO": [
-    `function rows(n) { return [n] }\nconst rows = useMemo(() => rows(1), []);`,
-    `function rows(n) { return [n] }\nconst items = useMemo(() => rows(1), []);`,
-  ],
-  "TOAST-WITHOUT-TOASTER": [
-    `import { toast } from "sonner";\nconst f = () => toast.success("done");`,
-    `import { toast, Toaster } from "sonner";\nconst el = <Toaster />;\nconst f = () => toast.success("done");`,
-  ],
+  "SELF-SHADOWING-MEMO": [`function rows(n) { return [n] }\nconst rows = useMemo(() => rows(1), []);`, `function rows(n) { return [n] }\nconst items = useMemo(() => rows(1), []);`],
+  "TOAST-WITHOUT-TOASTER": [`import { toast } from "sonner";\nconst f = () => toast.success("done");`, `import { toast, Toaster } from "sonner";\nconst el = <Toaster />;\nconst f = () => toast.success("done");`],
   // The fix is not "add a guard" — it is reaching for the module that exists. `$dsh/state` is the
   // real one; the invented names are always adjacent to it, which is why the pair differs only in
   // the specifier.
-  "INVENTED-CAPABILITY": [
-    `import { usePersistedState } from "$dsh/storage";`,
-    `import { usePersistedState } from "$dsh/state";`,
-  ],
-  "NAMED-NUMBERFLOW-IMPORT": [
-    `import { NumberFlow } from "@number-flow/react";`,
-    `import NumberFlow from "@number-flow/react";`,
-  ],
+  "INVENTED-CAPABILITY": [`import { usePersistedState } from "$dsh/storage";`, `import { usePersistedState } from "$dsh/state";`],
+  "NAMED-NUMBERFLOW-IMPORT": [`import { NumberFlow } from "@number-flow/react";`, `import NumberFlow from "@number-flow/react";`],
 };
 
 test("every screen has a pair", () => {
@@ -147,11 +120,8 @@ for (const [screen, source, shouldFire] of AFTER_AN_ARROW) {
  * body, so an attribute after a handler is still inside the matched span.
  */
 test("no screen matches a tag with [^>]*", () => {
-  const source = readFileSync(`${import.meta.dir}/../scripts/screens.ts`, "utf8")
-    .replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");   // the comments explain the bug; they are not it
-  const offenders = [...source.matchAll(/<\\?[a-zA-Z][\w\\]*\\?b?\[\^>\]\*/g)]
-    .map((m) => m[0])
-    .filter((hit) => !hit.startsWith("<button"));
+  const source = readFileSync(`${import.meta.dir}/../scripts/screens.ts`, "utf8").replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, ""); // the comments explain the bug; they are not it
+  const offenders = [...source.matchAll(/<\\?[a-zA-Z][\w\\]*\\?b?\[\^>\]\*/g)].map((m) => m[0]).filter((hit) => !hit.startsWith("<button"));
   expect(offenders).toEqual([]);
 });
 
@@ -167,12 +137,12 @@ test("no screen matches a tag with [^>]*", () => {
  */
 const FOCUS_RING_CASES: [string, string, boolean][] = [
   ["a bare outline:none is the defect", `<button style={{ outline: "none" }}>x</button>`, true],
-  [":focus-visible in a style block", "<style>{`button:focus-visible { outline: 2px solid red }`}</style><button style={{ outline: \"none\" }} />", false],
+  [":focus-visible in a style block", '<style>{`button:focus-visible { outline: 2px solid red }`}</style><button style={{ outline: "none" }} />', false],
   ["a focused flag driving borderColor", `const [focused] = useState(false);\n<input style={{ outline: "none", borderColor: focused ? "blue" : "grey" }} />`, false],
   ["a focused flag driving boxShadow", `const [focused] = useState(false);\n<input style={{ outline: "none", boxShadow: focused ? "0 0 0 2px blue" : "none" }} />`, false],
   ["outlineOffset counts as a ring", `<button style={{ outline: "none", outlineOffset: 2 }} />`, false],
   ["no outline:none, nothing to say", `<button style={{ border: "1px solid" }} />`, false],
-  [":focus, not :focus-visible, still a replacement", "<style>{`button:focus { border-color: blue }`}</style><button style={{ outline: \"none\" }} />", false],
+  [":focus, not :focus-visible, still a replacement", '<style>{`button:focus { border-color: blue }`}</style><button style={{ outline: "none" }} />', false],
 ];
 
 for (const [name, source, fires] of FOCUS_RING_CASES) {
@@ -276,7 +246,7 @@ const UNUSED_BUT_REAL: [string, string, string][] = [
   ["UNLABELLED-CONTROL", "aria-labelledby", `<span id="lab">音量</span><input type="range" aria-labelledby="lab" value={v} onChange={f} />`],
   ["UNREACHABLE-CONTROL", "onKeyUp", `<div onClick={go} onKeyUp={go} tabIndex={0}>x</div>`],
   ["UNREACHABLE-CONTROL", "onKeyPress", `<div onClick={go} onKeyPress={go} tabIndex={0}>x</div>`],
-  ["NO-FOCUS-RING", "a focus box-shadow", "<style>{`button:focus { box-shadow: 0 0 0 2px blue }`}</style><button style={{ outline: \"none\" }} />"],
+  ["NO-FOCUS-RING", "a focus box-shadow", '<style>{`button:focus { box-shadow: 0 0 0 2px blue }`}</style><button style={{ outline: "none" }} />'],
 ];
 
 for (const [screen, spelling, source] of UNUSED_BUT_REAL) {

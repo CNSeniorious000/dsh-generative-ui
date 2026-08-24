@@ -90,6 +90,7 @@ Setting: a real repo the presenter knows, with a README that has drifted, uncomm
    Close on: leave step 7 autoplaying in the panel and take questions with it moving.
 
 WHAT I DELIBERATELY LEFT OUT
+
 - Any step that edits a running timer or stopwatch (state reset with nothing in localStorage to save it).
 - `跑一下测试` in any form — 15s kill, and the doc already got called out for promising it.
 - Anything that needs a third-party chart library in the first three steps: esm.sh cold start looks exactly like broken code (§4), and you cannot afford that ambiguity early.

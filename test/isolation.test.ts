@@ -15,8 +15,7 @@ import { readdirSync, readFileSync } from "node:fs";
 const FILES = readdirSync(`${import.meta.dir}`).filter((name) => name.endsWith(".test.ts"));
 // Comments mention these names too — `sweep-cost.test.ts` describes `mountCanvasHost` without
 // calling it — so the check reads code only.
-const sourceOf = (name: string) =>
-  readFileSync(`${import.meta.dir}/${name}`, "utf8").replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+const sourceOf = (name: string) => readFileSync(`${import.meta.dir}/${name}`, "utf8").replaceAll(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
 
 test("every file that stubs a shared global restores it", () => {
   const offenders = FILES.filter((name) => {

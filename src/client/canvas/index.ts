@@ -43,8 +43,7 @@ const EMPTY: ReadonlySet<string> = new Set();
  * token would cost more than the render. The offerable list belongs in it too — closing the
  * last canvas changes nothing about the visible list, and without it the launcher never paints.
  */
-export const paintSignature = (canvases: readonly Canvas[], offerable: readonly string[]): string =>
-  `${canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|")}#${offerable.join(",")}`;
+export const paintSignature = (canvases: readonly Canvas[], offerable: readonly string[]): string => `${canvases.map((c) => `${c.id}:${c.code.length}:${String(c.streaming)}`).join("|")}#${offerable.join(",")}`;
 
 export const OPAQUE_WRITE = /"(?:code|command)"\s*:[\s\S]*canvases/;
 

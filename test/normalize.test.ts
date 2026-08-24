@@ -31,7 +31,7 @@ const compiles = (source: string) => {
  * `}` and goes straight to the closing fence, so `final` must normalize too.
  */
 test("a reply that stops before its closing brackets still compiles when final", () => {
-  const truncated = 'export default function A() {\n  return (\n    <div>hi</div>\n';
+  const truncated = "export default function A() {\n  return (\n    <div>hi</div>\n";
   expect(compiles(truncated)).toBe(false);
   expect(compiles(normalizeGeneratedTsx(truncated, { mode: "final" }))).toBe(true);
 });

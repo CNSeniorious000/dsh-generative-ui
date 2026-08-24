@@ -42,7 +42,10 @@ test("every file of a real multi-file canvas is inlined", async () => {
       ENTRY_PATH,
       async (specifier, from) => {
         const path = canvasChildPath(ID, specifier, from);
-        if (path === null) { rejected.push(`${specifier} from ${from}`); return null }
+        if (path === null) {
+          rejected.push(`${specifier} from ${from}`);
+          return null;
+        }
         // The extension order and the full-path `filename` both mirror `src/index.ts`: `from`
         // must be the path the server resolved, not the bare basename, or a child's sibling
         // import resolves into another canvas's directory and is refused.

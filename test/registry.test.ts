@@ -11,7 +11,12 @@ import { buildModuleSource, moduleUrl, registerModules } from "../src/client/run
 
 /** Valid ESM, or the parse error. `transpileSync` rejects what the browser would reject. */
 const parses = (source: string) => {
-  try { new Bun.Transpiler({ loader: "js" }).transformSync(source); return true } catch { return false }
+  try {
+    new Bun.Transpiler({ loader: "js" }).transformSync(source);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 describe("buildModuleSource", () => {

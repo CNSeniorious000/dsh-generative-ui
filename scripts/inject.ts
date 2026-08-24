@@ -49,18 +49,10 @@ const INJECTIONS: Record<string, ((source: string) => string) | undefined> = {
   // strips any existing announcement.
   // Needs a try/catch WRAPPING a capability call, with nothing surfacing the failure — and the
   // card's own error handling stripped, or its `setError` elsewhere clears the screen.
-  "SWALLOWED-CAPABILITY-FAILURE": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/set(?:Err|Error|ErrMsg|Failure|Status)\w*\(/g, "setValue(").replaceAll(/\.stderr\b/g, ".stdout")}`.replace(
-    /\n(export default)/,
-    '\nconst sync = async () => { try { const r = await bash("ls"); setRows(r.stdout) } catch {} };\n$1',
-  ),
-  "UNANNOUNCED-ASYNC-RESULT": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/aria-live=["'][^"']*["']|role=["'](?:status|alert|log)["']/g, "")}`.replace(
-    /\n(export default)/,
-    '\nconst reload = async () => { const r = await bash("ls"); setEntries(r.stdout.split("\\n")) };\n$1',
-  ),
-  "UNGUARDED-LAST-INDEX": (s) => `import { bash } from "$dsh/exec";\n${s}`.replace(
-    /\n(export default)/,
-    '\nconst useLog = () => { const [lines, setLines] = useState<string[]>([]); void bash("ls").then((r) => setLines(r.stdout.split("\\n"))); return lines[lines.length - 1].trim() };\n$1',
-  ),
+  "SWALLOWED-CAPABILITY-FAILURE": (s) =>
+    `import { bash } from "$dsh/exec";\n${s.replaceAll(/set(?:Err|Error|ErrMsg|Failure|Status)\w*\(/g, "setValue(").replaceAll(/\.stderr\b/g, ".stdout")}`.replace(/\n(export default)/, '\nconst sync = async () => { try { const r = await bash("ls"); setRows(r.stdout) } catch {} };\n$1'),
+  "UNANNOUNCED-ASYNC-RESULT": (s) => `import { bash } from "$dsh/exec";\n${s.replaceAll(/aria-live=["'][^"']*["']|role=["'](?:status|alert|log)["']/g, "")}`.replace(/\n(export default)/, '\nconst reload = async () => { const r = await bash("ls"); setEntries(r.stdout.split("\\n")) };\n$1'),
+  "UNGUARDED-LAST-INDEX": (s) => `import { bash } from "$dsh/exec";\n${s}`.replace(/\n(export default)/, '\nconst useLog = () => { const [lines, setLines] = useState<string[]>([]); void bash("ls").then((r) => setLines(r.stdout.split("\\n"))); return lines[lines.length - 1].trim() };\n$1'),
   "UNGUARDED-NUMBER-INPUT": (s) => s.replace(/<div/, '<input type="number" value={q} onChange={(e) => setQ(Number(e.target.value))} /><div'),
   "UNLABELLED-CONTROL": (s) => s.replace(/<div/, '<input type="range" min={0} max={9} value={q} onChange={f} /><div'),
   "UNQUOTED-CSS-UNIT": (s) => s.replace(/style=\{\{ /, "style={{ fontSize: 11px, "),
@@ -70,13 +62,19 @@ const INJECTIONS: Record<string, ((source: string) => string) | undefined> = {
 };
 
 const dir = process.argv[2] ?? "/tmp/allfresh";
-const cards = readdirSync(dir).filter((name) => name.endsWith(".tsx")).map((name) => readFileSync(`${dir}/${name}`, "utf8"));
+const cards = readdirSync(dir)
+  .filter((name) => name.endsWith(".tsx"))
+  .map((name) => readFileSync(`${dir}/${name}`, "utf8"));
 let blind = 0;
 let missing = 0;
 
 for (const name of Object.keys(SCREENS).toSorted()) {
   const inject = INJECTIONS[name];
-  if (inject === undefined) { console.log(`${name.padEnd(30)} no injection written`); missing += 1; continue }
+  if (inject === undefined) {
+    console.log(`${name.padEnd(30)} no injection written`);
+    missing += 1;
+    continue;
+  }
   let caught = 0;
   let injected = 0;
   for (const source of cards) {

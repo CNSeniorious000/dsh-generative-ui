@@ -49,6 +49,10 @@ test("the stubs cover every capability the runtime binds", async () => {
   const { bind } = await import("../src/client/runtime/bindings.ts");
   for (const [group, members] of Object.entries(bind() as Record<string, object>)) {
     const stub = await load(group);
-    expect(Object.keys(stub).filter((k) => k !== "default").toSorted()).toEqual(Object.keys(members).toSorted());
+    expect(
+      Object.keys(stub)
+        .filter((k) => k !== "default")
+        .toSorted(),
+    ).toEqual(Object.keys(members).toSorted());
   }
 });

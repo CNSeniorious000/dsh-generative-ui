@@ -52,7 +52,11 @@ test("every screen has a construct entry", () => {
 });
 
 test("some reference card contains the construct each screen looks at", () => {
-  expect(Object.entries(CONSTRUCTS).filter(([, re]) => !re.test(everything)).map(([name]) => name)).toEqual([]);
+  expect(
+    Object.entries(CONSTRUCTS)
+      .filter(([, re]) => !re.test(everything))
+      .map(([name]) => name),
+  ).toEqual([]);
 });
 
 /**
@@ -68,7 +72,9 @@ const EXEMPT: Record<string, string> = { "piano.ui4a.tsx": "HARDCODED-BACKGROUND
 test("and every reference card is clean under all of them", () => {
   const dirty = cards.flatMap((name) => {
     const src = readFileSync(`${import.meta.dir}/cards/${name}`, "utf8");
-    return Object.entries(SCREENS).filter(([screen, fires]) => fires(src) && EXEMPT[name] !== screen).map(([screen]) => `${name}: ${screen}`);
+    return Object.entries(SCREENS)
+      .filter(([screen, fires]) => fires(src) && EXEMPT[name] !== screen)
+      .map(([screen]) => `${name}: ${screen}`);
   });
   expect(dirty).toEqual([]);
 });

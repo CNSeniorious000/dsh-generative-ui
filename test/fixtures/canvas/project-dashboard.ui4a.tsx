@@ -1,39 +1,39 @@
-import { useState, useEffect, type ElementType } from "react"
-import { LayoutDashboard, CheckSquare, Users, CalendarRange } from "lucide-react"
-import Overview from "./project-dashboard/Overview"
-import Tasks from "./project-dashboard/Tasks"
-import Team from "./project-dashboard/Team"
-import Timeline from "./project-dashboard/Timeline"
-import { project } from "./project-dashboard/data"
+import { useState, useEffect, type ElementType } from "react";
+import { LayoutDashboard, CheckSquare, Users, CalendarRange } from "lucide-react";
+import Overview from "./project-dashboard/Overview";
+import Tasks from "./project-dashboard/Tasks";
+import Team from "./project-dashboard/Team";
+import Timeline from "./project-dashboard/Timeline";
+import { project } from "./project-dashboard/data";
 
-type PageId = "overview" | "tasks" | "team" | "timeline"
+type PageId = "overview" | "tasks" | "team" | "timeline";
 
 const PAGES: { id: PageId; label: string; icon: ElementType }[] = [
   { id: "overview", label: "概览", icon: LayoutDashboard },
   { id: "tasks", label: "任务", icon: CheckSquare },
   { id: "team", label: "团队", icon: Users },
   { id: "timeline", label: "时间线", icon: CalendarRange },
-]
+];
 
-const PAGE_KEY = "pd:page"
+const PAGE_KEY = "pd:page";
 
 export default function Dashboard() {
   const [page, setPage] = useState<PageId>(() => {
     try {
-      const v = localStorage.getItem(PAGE_KEY) as PageId | null
-      return v && PAGES.some((p) => p.id === v) ? v : "overview"
+      const v = localStorage.getItem(PAGE_KEY) as PageId | null;
+      return v && PAGES.some((p) => p.id === v) ? v : "overview";
     } catch {
-      return "overview"
+      return "overview";
     }
-  })
+  });
 
   useEffect(() => {
     try {
-      localStorage.setItem(PAGE_KEY, page)
+      localStorage.setItem(PAGE_KEY, page);
     } catch {
       /* ignore */
     }
-  }, [page])
+  }, [page]);
 
   return (
     <>
@@ -128,20 +128,14 @@ export default function Dashboard() {
           </div>
 
           {PAGES.map((p) => {
-            const Icon = p.icon
-            const active = page === p.id
+            const Icon = p.icon;
+            const active = page === p.id;
             return (
-              <button
-                key={p.id}
-                type="button"
-                className={"nav" + (active ? " active" : "")}
-                onClick={() => setPage(p.id)}
-                aria-current={active ? "page" : undefined}
-              >
+              <button key={p.id} type="button" className={"nav" + (active ? " active" : "")} onClick={() => setPage(p.id)} aria-current={active ? "page" : undefined}>
                 <Icon size={18} />
                 <span className="nav-label">{p.label}</span>
               </button>
-            )
+            );
           })}
 
           <div className="nav-spacer" />
@@ -158,9 +152,7 @@ export default function Dashboard() {
                 }}
               >
                 <span>整体进度</span>
-                <span style={{ color: "var(--dsw-alias-state-business-primary)", fontWeight: 650 }}>
-                  {project.completion}%
-                </span>
+                <span style={{ color: "var(--dsw-alias-state-business-primary)", fontWeight: 650 }}>{project.completion}%</span>
               </div>
               <div
                 style={{
@@ -193,5 +185,5 @@ export default function Dashboard() {
         </main>
       </div>
     </>
-  )
+  );
 }

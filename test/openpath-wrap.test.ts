@@ -27,7 +27,12 @@ const applyWithWorkspaces = (workspaces: Record<string, unknown>) => {
       // running it here makes these tests pass or fail on test order. Only the wrap is the
       // subject; skipping the mount pins `showCanvas` at null, which is the headless case.
       if (label?.includes("canvas column")) return;
-      try { const d = run(); if (typeof d === "function") disposers.push(d as () => void) } catch { /* only this effect is the subject */ }
+      try {
+        const d = run();
+        if (typeof d === "function") disposers.push(d as () => void);
+      } catch {
+        /* only this effect is the subject */
+      }
     },
     inject: (_want: readonly string[], callback: (scoped: unknown) => void) => callback(scoped),
   };

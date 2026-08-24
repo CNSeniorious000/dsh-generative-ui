@@ -21,7 +21,10 @@ let reply: () => Response = () => new Response("body");
 
 beforeEach(() => {
   seen = [];
-  (globalThis as any).fetch = (url: string, init?: RequestInit) => { seen.push({ url, init }); return Promise.resolve(reply()) };
+  (globalThis as any).fetch = (url: string, init?: RequestInit) => {
+    seen.push({ url, init });
+    return Promise.resolve(reply());
+  };
 });
 
 describe("readCanvasFile", () => {

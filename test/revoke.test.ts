@@ -13,7 +13,11 @@ const withStubbedRevoke = (run: (revoked: string[]) => void) => {
   const revoked: string[] = [];
   const real = globalThis.URL.revokeObjectURL;
   globalThis.URL.revokeObjectURL = (url: string) => void revoked.push(url);
-  try { run(revoked) } finally { globalThis.URL.revokeObjectURL = real }
+  try {
+    run(revoked);
+  } finally {
+    globalThis.URL.revokeObjectURL = real;
+  }
 };
 
 test("every url is revoked", () => {

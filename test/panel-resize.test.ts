@@ -23,8 +23,13 @@ const drive = () => {
       removeEventListener: (type: string) => void listeners.delete(type),
     },
     document: { querySelector: () => null },
-    requestAnimationFrame: (fn: () => void) => { frames.push(fn); return frames.length },
-    cancelAnimationFrame: () => { cancelled += 1 },
+    requestAnimationFrame: (fn: () => void) => {
+      frames.push(fn);
+      return frames.length;
+    },
+    cancelAnimationFrame: () => {
+      cancelled += 1;
+    },
   });
 
   // The hook's API leaves the render through a child that stores it, rather than through an
@@ -32,7 +37,10 @@ const drive = () => {
   // A child receiving it as a prop is doing the storing on ITS render, which is the same shape a
   // ref callback has and the rule allows.
   const captured: { current?: { width: number; start: (e: unknown) => void } } = {};
-  const Sink = ({ api }: { api: { width: number; start: (e: unknown) => void } }) => { captured.current = api; return null };
+  const Sink = ({ api }: { api: { width: number; start: (e: unknown) => void } }) => {
+    captured.current = api;
+    return null;
+  };
   const Probe = () => createElement(Sink, { api: useResize(420) });
   renderToString(createElement(Probe));
   const target = { setPointerCapture: () => {}, setAttribute: () => {}, removeAttribute: () => {} };
@@ -50,7 +58,7 @@ test("many pointermoves schedule one frame, not one each", () => {
 test("after the frame runs, the next move schedules another", () => {
   const { listeners, frames } = drive();
   listeners.get("pointermove")!({ clientX: 800 });
-  frames[0]!();                                  // the browser paints
+  frames[0]!(); // the browser paints
   listeners.get("pointermove")!({ clientX: 700 });
   expect(frames.length).toBe(2);
   restoreGlobals();

@@ -71,7 +71,7 @@ const SKILL_RULES = [
   ["abort the previous bash when polling", "ctrl.abort(); clearInterval(timer)"],
   ["honour prefers-reduced-motion (media query)", "@media (prefers-reduced-motion: reduce)"],
   ["honour prefers-reduced-motion (inline)", 'matchMedia("(prefers-reduced-motion: reduce)")'],
-  ["keyboard-reachable controls", "<button aria-label=\"复制\" onClick={copy}>"],
+  ["keyboard-reachable controls", '<button aria-label="复制" onClick={copy}>'],
   ["a superseded async run returns", "if (id !== runId.current) return"],
   ["the shared cause behind the control rules", "treating its controls as decoration"],
 ] as const;
@@ -101,14 +101,24 @@ const SECTIONS = [
 
 test("the skill body carries every section, in order", () => {
   const body = skillBody("types.json", "standalone.json");
-  expect(body.split("\n").filter((line) => line.startsWith("## ")).map((line) => line.slice(3))).toEqual(SECTIONS);
+  expect(
+    body
+      .split("\n")
+      .filter((line) => line.startsWith("## "))
+      .map((line) => line.slice(3)),
+  ).toEqual(SECTIONS);
 });
 
 // The two maps have genuinely different lifetimes, and the body is built for all four
 // combinations — an interpolation that throws on `undefined` would only show up in the state
 // nobody runs locally.
 test("the body assembles whether or not the maps exist", () => {
-  for (const maps of [[undefined, undefined], ["t.json", undefined], [undefined, "s.json"], ["t.json", "s.json"]] as const) {
+  for (const maps of [
+    [undefined, undefined],
+    ["t.json", undefined],
+    [undefined, "s.json"],
+    ["t.json", "s.json"],
+  ] as const) {
     const body = skillBody(maps[0], maps[1]);
     expect(body.startsWith("# Building a generative UI")).toBe(true);
     // Not a bare `undefined` search: the prose says "it is an `undefined` component" on purpose.
@@ -139,7 +149,7 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "UNGUARDED-LAST-INDEX": "not a guard against empty",
   // Two shapes, two fixes: a clickable `<div>` needs to be a button, an icon-only button needs a
   // name. Pinning one would confirm half the screen.
-  "UNREACHABLE-CONTROL": ["breaks keyboard use", "a screen reader announces \"button\" and nothing else"],
+  "UNREACHABLE-CONTROL": ["breaks keyboard use", 'a screen reader announces "button" and nothing else'],
   "UNGUARDED-ASYNC-HANDLER": "a newer click owns the state now",
   "UNGUARDED-NUMBER-INPUT": "cannot be cleared",
   "AND-INTO-ARROW": "does not chain into an arrow function",
@@ -174,18 +184,27 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
  * as unscreenable; the point is that dropping one in requires saying so.
  */
 const UNSCREENABLE = [
-  "Four backticks", "The info string is", "Write the React import before you write the data",
+  "Four backticks",
+  "The info string is",
+  "Write the React import before you write the data",
 
-  "A question does not have to say", "A conversion is never asked once", "A plan is not prose",
-  "When they tell you they want to change something", "When they hand you an expression",
-  "看看都有啥", "Asking for a few of something", "Visualise this",
+  "A question does not have to say",
+  "A conversion is never asked once",
+  "A plan is not prose",
+  "When they tell you they want to change something",
+  "When they hand you an expression",
+  "看看都有啥",
+  "Asking for a few of something",
+  "Visualise this",
 ];
 
 test("every code rule in the prompt has a screen enforcing it", () => {
   // The whole bullet, not just its bold header — a screen's pinned phrase is often in the body
   // (`JSX-SUBSCRIPT` pins "Subscript it into a capitalised local first", which is the sentence
   // AFTER the header). Bullets run until the next one starts.
-  const bullets = INLINE_PROMPT.split(/^- \*\*/m).slice(1).map((b) => "- **" + b);
+  const bullets = INLINE_PROMPT.split(/^- \*\*/m)
+    .slice(1)
+    .map((b) => "- **" + b);
   const covered = [...Object.values(RULE_FOR_SCREEN).flat(), ...UNSCREENABLE];
   const unmatched = bullets.filter((b) => !covered.some((phrase) => b.includes(phrase)));
   expect(unmatched).toEqual([]);
@@ -215,7 +234,10 @@ test("every screen has a rule telling the model not to do it", async () => {
  *
  * Write `style={ { … } }` in prompt text: same JSX, same meaning to a reader, no `{{`.
  */
-for (const [name, text] of [["the inline prompt", () => INLINE_PROMPT], ["the skill body", () => skillBody("types.json", "standalone.json")]] as const) {
+for (const [name, text] of [
+  ["the inline prompt", () => INLINE_PROMPT],
+  ["the skill body", () => skillBody("types.json", "standalone.json")],
+] as const) {
   test(`${name} carries no {{ for the loader to read as a variable`, () => {
     expect([...text().matchAll(/\{\{[^}]*\}\}?/g)].map((m) => m[0])).toEqual([]);
   });

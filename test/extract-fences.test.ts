@@ -13,7 +13,10 @@ function extract(reply: string): string[] {
   writeFileSync(join(dir, "reply.md"), reply);
   const proc = Bun.spawnSync(["python3", "scripts/extract-fences.py", join(dir, "reply.md"), dir, "c"]);
   expect(proc.exitCode).toBe(0);
-  return readdirSync(dir).filter(name => name.endsWith(".tsx")).toSorted().map(name => readFileSync(join(dir, name), "utf8"));
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".tsx"))
+    .toSorted()
+    .map((name) => readFileSync(join(dir, name), "utf8"));
 }
 
 test("a card containing a fenced block survives", () => {

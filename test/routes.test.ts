@@ -23,8 +23,18 @@ afterAll(() => rmSync(cwd, { recursive: true, force: true }));
 
 /** A minimal ServerResponse: the handler only ever calls writeHead/end. */
 const call = async (query: string, live: ReadonlySet<string> = new Set([cwd])) => {
-  let status = 0, body = "";
-  const res = { writeHead(code: number) { status = code; return res }, end(chunk?: string) { body = chunk ?? ""; return res } };
+  let status = 0,
+    body = "";
+  const res = {
+    writeHead(code: number) {
+      status = code;
+      return res;
+    },
+    end(chunk?: string) {
+      body = chunk ?? "";
+      return res;
+    },
+  };
   await serveCanvas(() => live, { method: "GET", url: `/x?${query}` } as never, res as never);
   return { status, body };
 };
@@ -152,8 +162,18 @@ describe("sub-page reads", () => {
 // pathname check keeps it to one file. Nothing else in the plugin has that shape.
 describe("wasm asset route", () => {
   const fetchAsset = async (path: string) => {
-    let status = 0, headers: Record<string, string> = {};
-    const res = { writeHead(code: number, h?: Record<string, string>) { status = code; headers = h ?? {}; return res }, end() { return res } };
+    let status = 0,
+      headers: Record<string, string> = {};
+    const res = {
+      writeHead(code: number, h?: Record<string, string>) {
+        status = code;
+        headers = h ?? {};
+        return res;
+      },
+      end() {
+        return res;
+      },
+    };
     await serveAsset({ method: "GET", url: path } as never, res as never, join(cwd, "fake.wasm"));
     return { status, headers };
   };

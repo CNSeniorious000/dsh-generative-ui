@@ -24,31 +24,43 @@ const cards = readdirSync(dir)
 
 const CHECKS: [string, (source: string) => boolean | null][] = [
   // null means "the card does not use this", so it is neither correct nor hollow.
-  [":focus-visible selects something", (source) => {
-    const rules = [...source.matchAll(/([^{}\n]+):focus-visible[^{]*\{/g)];
-    if (rules.length === 0) return null;
-    return rules.some((rule) => {
-      const selector = rule[1].trim().replace(/^[^a-zA-Z.#]*/, "");
-      if (/^(button|input|select|textarea|a|\*|:where|summary)/.test(selector)) return true;
-      const className = /\.([\w-]+)/.exec(selector)?.[1];
-      return className !== undefined && new RegExp(String.raw`["'\`][^"'\`]*\b${className}\b`).test(source);
-    });
-  }],
-  ["AbortController is aborted and passed", (source) => {
-    if (!/new AbortController/.test(source)) return null;
-    return /\.abort\(\)/.test(source) && /signal:\s*\w+\.signal|signal\)/.test(source);
-  }],
-  ["aria-live is not inside its own conditional", (source) => {
-    const regions = [...source.matchAll(/aria-live/g)];
-    if (regions.length === 0) return null;
-    // A region opened by `{x && (` announces nothing: it enters the DOM with the content.
-    return regions.every((m) => !/\{\s*\w+\s*&&\s*\($|\?\s*\($/.test(source.slice(Math.max(0, m.index - 120), m.index).trimEnd()));
-  }],
-  ["localStorage writes are guarded", (source) => {
-    const writes = [...source.matchAll(/localStorage\.setItem/g)];
-    if (writes.length === 0) return null;
-    return writes.every((m) => /try\s*\{[^}]{0,200}$/.test(source.slice(Math.max(0, m.index - 200), m.index)));
-  }],
+  [
+    ":focus-visible selects something",
+    (source) => {
+      const rules = [...source.matchAll(/([^{}\n]+):focus-visible[^{]*\{/g)];
+      if (rules.length === 0) return null;
+      return rules.some((rule) => {
+        const selector = rule[1].trim().replace(/^[^a-zA-Z.#]*/, "");
+        if (/^(button|input|select|textarea|a|\*|:where|summary)/.test(selector)) return true;
+        const className = /\.([\w-]+)/.exec(selector)?.[1];
+        return className !== undefined && new RegExp(String.raw`["'\`][^"'\`]*\b${className}\b`).test(source);
+      });
+    },
+  ],
+  [
+    "AbortController is aborted and passed",
+    (source) => {
+      if (!/new AbortController/.test(source)) return null;
+      return /\.abort\(\)/.test(source) && /signal:\s*\w+\.signal|signal\)/.test(source);
+    },
+  ],
+  [
+    "aria-live is not inside its own conditional",
+    (source) => {
+      const regions = [...source.matchAll(/aria-live/g)];
+      if (regions.length === 0) return null;
+      // A region opened by `{x && (` announces nothing: it enters the DOM with the content.
+      return regions.every((m) => !/\{\s*\w+\s*&&\s*\($|\?\s*\($/.test(source.slice(Math.max(0, m.index - 120), m.index).trimEnd()));
+    },
+  ],
+  [
+    "localStorage writes are guarded",
+    (source) => {
+      const writes = [...source.matchAll(/localStorage\.setItem/g)];
+      if (writes.length === 0) return null;
+      return writes.every((m) => /try\s*\{[^}]{0,200}$/.test(source.slice(Math.max(0, m.index - 200), m.index)));
+    },
+  ],
 ];
 
 let hollow = 0;

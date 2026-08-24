@@ -40,7 +40,9 @@ Object.assign(globalThis, {
     removeItem: (k: string) => void store.delete(k),
     clear: () => store.clear(),
     key: (i: number) => [...store.keys()][i] ?? null,
-    get length() { return store.size },
+    get length() {
+      return store.size;
+    },
   },
   matchMedia: (query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} }),
   // Only `createElement`, and only enough of the result to survive being poked. A contrast
@@ -68,7 +70,11 @@ for (const name of cardsIn(dir)) {
   // reporting it as corrupt sent the next reader looking for a bug that was in the extraction.
   // Anything the runtime's own strip does NOT remove is still corrupt — the tags are mid-body.
   const stripped = src.replace(TOOL_CALL_MARKUP, "");
-  if (/｜｜DSML｜｜|<\/parameter>|<\/invoke>/.test(stripped)) { console.log(`${name.padEnd(26)} CORRUPT EXTRACTION — a control token leaked into the middle of the source`); corrupt += 1; continue }
+  if (/｜｜DSML｜｜|<\/parameter>|<\/invoke>/.test(stripped)) {
+    console.log(`${name.padEnd(26)} CORRUPT EXTRACTION — a control token leaked into the middle of the source`);
+    corrupt += 1;
+    continue;
+  }
   let status: string;
   try {
     // `$dsh/*` does not resolve outside dsh, and a card that uses a capability is exactly the
@@ -83,8 +89,10 @@ for (const name of cardsIn(dir)) {
     // against this process's node_modules — which is why `$dsh/*` and esm.sh-only packages are
     // reported as skipped rather than broken.
     const mod = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
-    if (typeof mod.default !== "function") { status = "NO DEFAULT EXPORT"; bad++ }
-    else {
+    if (typeof mod.default !== "function") {
+      status = "NO DEFAULT EXPORT";
+      bad++;
+    } else {
       const html = renderToString(createElement(mod.default));
       status = html.replace(/<[^>]*>/g, "").trim().length > 0 || html.length > 40 ? "paints" : "BLANK";
       if (status === "BLANK") bad++;
@@ -93,7 +101,10 @@ for (const name of cardsIn(dir)) {
     const message = String((error as Error).message ?? error).split("\n")[0];
     // An import this process cannot resolve is the harness's limit, not the card's.
     if (/Cannot find (module|package)|Failed to resolve/.test(message)) status = `skipped — ${message.slice(0, 46)}`;
-    else { status = `THREW ${message.slice(0, 64)}`; bad++ }
+    else {
+      status = `THREW ${message.slice(0, 64)}`;
+      bad++;
+    }
   }
   if (status.startsWith("skipped")) {
     skipped += 1;
@@ -107,7 +118,11 @@ for (const name of cardsIn(dir)) {
 
 // Say how many were skipped. A check that silently passes over a third of its input reads
 // exactly like one that examined everything and found nothing wrong.
-const top = [...blockedBy.entries()].toSorted((a, b) => b[1] - a[1]).slice(0, 3).map(([name, n]) => `${name} ×${n}`).join(", ");
+const top = [...blockedBy.entries()]
+  .toSorted((a, b) => b[1] - a[1])
+  .slice(0, 3)
+  .map(([name, n]) => `${name} ×${n}`)
+  .join(", ");
 const parts = [skipped && `${skipped} skipped${top === "" ? "" : `: ${top}`}`, corrupt && `${corrupt} corrupt extraction`].filter(Boolean);
 const note = parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 console.warn = realWarn;

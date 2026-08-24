@@ -1,41 +1,41 @@
-import { useState, useEffect, useMemo } from "react"
-import { Plus, Search, Trash2, CheckCircle2, Circle } from "lucide-react"
-import { Card, Badge, Avatar, PageHeader } from "./ui"
-import { loadTasks, saveTasks, memberById, type Task, type TaskStatus, type Priority } from "./data"
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Search, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Card, Badge, Avatar, PageHeader } from "./ui";
+import { loadTasks, saveTasks, memberById, type Task, type TaskStatus, type Priority } from "./data";
 
 const FILTERS: { id: "all" | TaskStatus; label: string }[] = [
   { id: "all", label: "全部" },
   { id: "todo", label: "待办" },
   { id: "doing", label: "进行中" },
   { id: "done", label: "已完成" },
-]
+];
 
-const PRIORITY_TONE: Record<Priority, "high" | "medium" | "low"> = { high: "high", medium: "medium", low: "low" }
-const STATUS_TONE: Record<TaskStatus, "done" | "doing" | "todo"> = { done: "done", doing: "doing", todo: "todo" }
+const PRIORITY_TONE: Record<Priority, "high" | "medium" | "low"> = { high: "high", medium: "medium", low: "low" };
+const STATUS_TONE: Record<TaskStatus, "done" | "doing" | "todo"> = { done: "done", doing: "doing", todo: "todo" };
 
 // A fixed "today" keeps the demo dates stable regardless of the real date.
-const TODAY = new Date("2025-07-22T00:00:00")
+const TODAY = new Date("2025-07-22T00:00:00");
 
 function fmtDue(due: string, done: boolean): { text: string; over: boolean } {
-  const d = new Date(due + "T00:00:00")
-  const diff = Math.round((d.getTime() - TODAY.getTime()) / 86400000)
-  let text: string
-  if (diff < 0) text = `逾期 ${Math.abs(diff)} 天`
-  else if (diff === 0) text = "今天到期"
-  else if (diff === 1) text = "明天到期"
-  else text = `${diff} 天后`
-  return { text, over: diff < 0 && !done }
+  const d = new Date(due + "T00:00:00");
+  const diff = Math.round((d.getTime() - TODAY.getTime()) / 86400000);
+  let text: string;
+  if (diff < 0) text = `逾期 ${Math.abs(diff)} 天`;
+  else if (diff === 0) text = "今天到期";
+  else if (diff === 1) text = "明天到期";
+  else text = `${diff} 天后`;
+  return { text, over: diff < 0 && !done };
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
-  const [filter, setFilter] = useState<"all" | TaskStatus>("all")
-  const [query, setQuery] = useState("")
-  const [draft, setDraft] = useState("")
+  const [tasks, setTasks] = useState<Task[]>(() => loadTasks());
+  const [filter, setFilter] = useState<"all" | TaskStatus>("all");
+  const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState("");
 
   useEffect(() => {
-    saveTasks(tasks)
-  }, [tasks])
+    saveTasks(tasks);
+  }, [tasks]);
 
   const counts = useMemo(
     () => ({
@@ -45,33 +45,30 @@ export default function Tasks() {
       done: tasks.filter((t) => t.done).length,
     }),
     [tasks],
-  )
+  );
 
   const visible = useMemo(() => {
     return tasks.filter((t) => {
-      if (filter === "todo" && !(!t.done && t.status === "todo")) return false
-      if (filter === "doing" && !(!t.done && t.status === "doing")) return false
-      if (filter === "done" && !t.done) return false
-      if (query && !t.title.toLowerCase().includes(query.toLowerCase())) return false
-      return true
-    })
-  }, [tasks, filter, query])
+      if (filter === "todo" && !(!t.done && t.status === "todo")) return false;
+      if (filter === "doing" && !(!t.done && t.status === "doing")) return false;
+      if (filter === "done" && !t.done) return false;
+      if (query && !t.title.toLowerCase().includes(query.toLowerCase())) return false;
+      return true;
+    });
+  }, [tasks, filter, query]);
 
-  const toggle = (id: string) =>
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done, status: !t.done ? "done" : "todo" } : t)),
-    )
+  const toggle = (id: string) => setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done, status: !t.done ? "done" : "todo" } : t)));
 
-  const remove = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id))
+  const remove = (id: string) => setTasks((prev) => prev.filter((t) => t.id !== id));
 
   const add = () => {
-    const title = draft.trim()
-    if (!title) return
-    const id = "t" + Date.now()
-    const due = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
-    setTasks((prev) => [{ id, title, assignee: "u1", status: "todo", priority: "medium", due, done: false }, ...prev])
-    setDraft("")
-  }
+    const title = draft.trim();
+    if (!title) return;
+    const id = "t" + Date.now();
+    const due = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    setTasks((prev) => [{ id, title, assignee: "u1", status: "todo", priority: "medium", due, done: false }, ...prev]);
+    setDraft("");
+  };
 
   return (
     <div>
@@ -107,7 +104,7 @@ export default function Tasks() {
 
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
         {FILTERS.map((f) => {
-          const active = filter === f.id
+          const active = filter === f.id;
           return (
             <button
               key={f.id}
@@ -121,9 +118,7 @@ export default function Tasks() {
                 padding: "7px 12px",
                 borderRadius: 999,
                 border: "1px solid " + (active ? "transparent" : "var(--dsw-alias-border-l1)"),
-                background: active
-                  ? "color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent)"
-                  : "var(--dsw-alias-bg-layer-1)",
+                background: active ? "color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent)" : "var(--dsw-alias-bg-layer-1)",
                 color: active ? "var(--dsw-alias-state-business-primary)" : "var(--dsw-alias-label-secondary)",
                 fontWeight: 600,
                 fontSize: 13,
@@ -133,7 +128,7 @@ export default function Tasks() {
               {f.label}
               <span style={{ fontSize: 11, opacity: 0.8 }}>{counts[f.id]}</span>
             </button>
-          )
+          );
         })}
         <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -141,7 +136,7 @@ export default function Tasks() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") add()
+              if (e.key === "Enter") add();
             }}
             placeholder="新增任务，回车添加"
             aria-label="新增任务标题"
@@ -179,14 +174,10 @@ export default function Tasks() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {visible.length === 0 && (
-          <Card style={{ textAlign: "center", padding: 32, fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>
-            没有匹配的任务
-          </Card>
-        )}
+        {visible.length === 0 && <Card style={{ textAlign: "center", padding: 32, fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>没有匹配的任务</Card>}
         {visible.map((t) => {
-          const m = memberById(t.assignee)
-          const due = fmtDue(t.due, t.done)
+          const m = memberById(t.assignee);
+          const due = fmtDue(t.due, t.done);
           return (
             <Card key={t.id} padding={0} style={{ padding: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", flexWrap: "wrap" }}>
@@ -201,9 +192,7 @@ export default function Tasks() {
                     padding: 2,
                     display: "inline-flex",
                     lineHeight: 0,
-                    color: t.done
-                      ? "var(--dsw-alias-state-success-primary)"
-                      : "var(--dsw-alias-label-secondary)",
+                    color: t.done ? "var(--dsw-alias-state-success-primary)" : "var(--dsw-alias-label-secondary)",
                   }}
                 >
                   {t.done ? <CheckCircle2 size={20} /> : <Circle size={20} />}
@@ -238,9 +227,7 @@ export default function Tasks() {
                     <span
                       style={{
                         fontSize: 12,
-                        color: due.over
-                          ? "var(--dsw-alias-state-error-primary)"
-                          : "var(--dsw-alias-label-secondary)",
+                        color: due.over ? "var(--dsw-alias-state-error-primary)" : "var(--dsw-alias-label-secondary)",
                       }}
                     >
                       {due.text}
@@ -270,9 +257,9 @@ export default function Tasks() {
                 </button>
               </div>
             </Card>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

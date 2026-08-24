@@ -29,8 +29,14 @@ export const compileCard = (filename: string, code: string) => transform({ filen
  * would have drifted.
  */
 export const compileSettled = (filename: string, source: string) => {
-  try { return compileCard(filename, normalizeGeneratedTsx(source, { mode: "final" })) }
-  catch { return compileCard(filename, normalizeGeneratedTsx(source, { mode: "streaming" })) }
+  try {
+    return compileCard(filename, normalizeGeneratedTsx(source, { mode: "final" }));
+  } catch {
+    return compileCard(filename, normalizeGeneratedTsx(source, { mode: "streaming" }));
+  }
 };
 
-export const cardsIn = (dir: string) => readdirSync(dir).filter(n => n.endsWith(".tsx")).toSorted();
+export const cardsIn = (dir: string) =>
+  readdirSync(dir)
+    .filter((n) => n.endsWith(".tsx"))
+    .toSorted();

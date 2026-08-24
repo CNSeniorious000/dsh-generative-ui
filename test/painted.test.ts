@@ -12,21 +12,21 @@ import { hasPainted, isPaintedText, matchSegment, sameCode } from "../src/client
 
 describe("isPaintedText", () => {
   test("a rendered card counts", () => {
-    expect(isPaintedText(("月供 4890.17 元"))).toBe(true);
+    expect(isPaintedText("月供 4890.17 元")).toBe(true);
   });
 
   test("the error boundary's output does not", () => {
-    expect(isPaintedText(("ERROR: item.difficulty is undefined"))).toBe(false);
-    expect(isPaintedText(("ERROR"))).toBe(false);
+    expect(isPaintedText("ERROR: item.difficulty is undefined")).toBe(false);
+    expect(isPaintedText("ERROR")).toBe(false);
   });
 
   test("a card whose own text opens with ERROR still counts", () => {
     // `^ERROR(:|$)` and not `startsWith("ERROR")`: a log viewer is a real card.
-    expect(isPaintedText(("ERROR 404 是什么意思？共 12 条日志"))).toBe(true);
+    expect(isPaintedText("ERROR 404 是什么意思？共 12 条日志")).toBe(true);
   });
 
   test("an empty mount does not", () => {
-    expect(isPaintedText((""))).toBe(false);
+    expect(isPaintedText("")).toBe(false);
   });
 });
 
@@ -54,8 +54,8 @@ describe("matchSegment", () => {
   // Document order decides ties: two cards that begin identically are indistinguishable until
   // the stream diverges, and the first is the one the reader is looking at.
   test("an ambiguous prefix takes the first segment", () => {
-    const segments = [seg("import { useState } from \"react\"\nconst A = 1"), seg("import { useState } from \"react\"\nconst B = 2")];
-    expect(matchSegment(segments, "import { useState } from \"react\"\n")).toBe(segments[0]);
+    const segments = [seg('import { useState } from "react"\nconst A = 1'), seg('import { useState } from "react"\nconst B = 2')];
+    expect(matchSegment(segments, 'import { useState } from "react"\n')).toBe(segments[0]);
   });
 
   test("a block belonging to no segment matches nothing", () => {

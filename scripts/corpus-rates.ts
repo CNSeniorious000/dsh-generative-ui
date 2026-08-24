@@ -16,7 +16,10 @@ import { SCREENS } from "./screens.ts";
 // specifically, and defaulting it to the five reference cards would silently report 0 for
 // everything.
 const dir = process.argv[2] ?? "/tmp/corpuscards";
-if (!existsSync(dir)) { console.error(`no corpus at ${dir} — extract it, or pass a directory`); process.exit(0) }
+if (!existsSync(dir)) {
+  console.error(`no corpus at ${dir} — extract it, or pass a directory`);
+  process.exit(0);
+}
 const cards = cardsIn(dir);
 const counts = new Map<string, string[]>();
 for (const name of cards) {

@@ -30,7 +30,7 @@ test("a condition containing a call keeps its own parens", async () => {
 }, 30_000);
 
 test("an else-if is a branch and is mutated", async () => {
-  expect(await invert("  else if (chunk.type === \"finish\") write();")).toBe("  else if (!(chunk.type === \"finish\")) write();");
+  expect(await invert('  else if (chunk.type === "finish") write();')).toBe('  else if (!(chunk.type === "finish")) write();');
 }, 30_000);
 
 // `skill.ts` documents the AbortError check inside its prompt template. Prose is not a branch.

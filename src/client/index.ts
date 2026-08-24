@@ -85,10 +85,13 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
   // The wasm half of the same problem: ~16MB per instance, one per HMR round, and upstream
   // offers no dispose — dropping the reference is all there is (see `disposeCompiler`).
-  ctx.effect(() => () => {
-    disposeCompiler();
-    dropSharedCompiler();
-  }, "dsh-generative-ui: tsx wasm instance");
+  ctx.effect(
+    () => () => {
+      disposeCompiler();
+      dropSharedCompiler();
+    },
+    "dsh-generative-ui: tsx wasm instance",
+  );
   // What `$dsh/chat` calls into. A nested fiber, not a static inject: every name in
   // `inject` is a hard dependency, and a profile without `conversation` would otherwise
   // take the whole plugin down rather than just this one capability.

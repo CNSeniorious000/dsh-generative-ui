@@ -18,12 +18,12 @@ const packages = process.argv.slice(2);
 if (packages.length === 0) throw new Error("usage: bun scripts/check-exports.ts <package>...");
 
 const base = {
-  "react": "https://esm.sh/react@18",
+  react: "https://esm.sh/react@18",
   "react-dom": "https://esm.sh/react-dom@18",
   "react-dom/client": "https://esm.sh/react-dom@18/client",
   "react/jsx-runtime": "https://esm.sh/react@18/jsx-runtime",
 };
-const code = packages.map(p => `import ${JSON.stringify(p)}`).join("\n");
+const code = packages.map((p) => `import ${JSON.stringify(p)}`).join("\n");
 const imports = await mergeFallbackImports(base, code);
 const port = 47873;
 

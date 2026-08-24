@@ -1,15 +1,12 @@
-import { CheckCircle2, Circle, CircleDashed } from "lucide-react"
-import { Card, Badge, PageHeader } from "./ui"
-import { milestones, type Milestone } from "./data"
+import { CheckCircle2, Circle, CircleDashed } from "lucide-react";
+import { Card, Badge, PageHeader } from "./ui";
+import { milestones, type Milestone } from "./data";
 
-const STATUS: Record<
-  Milestone["status"],
-  { icon: typeof CheckCircle2; tone: "done" | "doing" | "todo"; label: string; color: string }
-> = {
+const STATUS: Record<Milestone["status"], { icon: typeof CheckCircle2; tone: "done" | "doing" | "todo"; label: string; color: string }> = {
   done: { icon: CheckCircle2, tone: "done", label: "已完成", color: "var(--dsw-alias-state-success-primary)" },
   active: { icon: Circle, tone: "doing", label: "进行中", color: "var(--dsw-alias-state-business-primary)" },
   upcoming: { icon: CircleDashed, tone: "todo", label: "待开始", color: "var(--dsw-alias-label-secondary)" },
-}
+};
 
 export default function Timeline() {
   return (
@@ -18,9 +15,9 @@ export default function Timeline() {
       <Card padding={0} style={{ padding: "10px 4px" }}>
         <div style={{ position: "relative" }}>
           {milestones.map((m, i) => {
-            const s = STATUS[m.status]
-            const Icon = s.icon
-            const last = i === milestones.length - 1
+            const s = STATUS[m.status];
+            const Icon = s.icon;
+            const last = i === milestones.length - 1;
             return (
               <div key={m.id} style={{ display: "flex", gap: 16, padding: "4px 18px", position: "relative" }}>
                 {!last && (
@@ -66,18 +63,16 @@ export default function Timeline() {
                     >
                       {m.date}
                     </span>
-                    <span style={{ fontSize: 15, fontWeight: 650, color: "var(--dsw-alias-label-primary)" }}>
-                      {m.title}
-                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 650, color: "var(--dsw-alias-label-primary)" }}>{m.title}</span>
                     <Badge tone={s.tone} />
                   </div>
                   <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--dsw-alias-label-secondary)" }}>{m.note}</p>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </Card>
     </div>
-  )
+  );
 }

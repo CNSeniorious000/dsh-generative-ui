@@ -16,15 +16,23 @@ let head: any;
 let existingMap: unknown = null;
 let warnings: string[] = [];
 
-
 // Restore after EACH test: the stub below is narrower than other files' (a `document` with
 // no `querySelectorAll`), and bun shares one global per RUN. Leaving it installed breaks the
 // next file, which looks like a bug there. `./globals.ts` holds the pre-stub originals.
 afterEach(restoreGlobals);
 
 beforeEach(() => {
-  existingMap = null; warnings = [];
-  head = { children: [] as any[], prepend(node: any) { this.children.unshift(node) }, append(node: any) { this.children.push(node) } };
+  existingMap = null;
+  warnings = [];
+  head = {
+    children: [] as any[],
+    prepend(node: any) {
+      this.children.unshift(node);
+    },
+    append(node: any) {
+      this.children.push(node);
+    },
+  };
   (globalThis as any).document = {
     head,
     createElement: () => ({ type: "", textContent: "", setAttribute() {} }),

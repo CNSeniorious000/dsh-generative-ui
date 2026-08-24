@@ -17,7 +17,7 @@ test("textOf is empty for a node that carries no blocks", () => {
 
 test("callsKeyOf changes as arguments stream", () => {
   const at = (argsRaw: string) => callsKeyOf(node({ root: { kind: "tool-call", argsRaw } }));
-  expect(at("{}")).not.toBe(at("{\"a\":1}"));
+  expect(at("{}")).not.toBe(at('{"a":1}'));
 });
 
 /**
@@ -26,14 +26,13 @@ test("callsKeyOf changes as arguments stream", () => {
  * would claim `streaming` forever, which is a canvas that never stops pulsing.
  */
 test("callsKeyOf changes when a call settles, though its arguments did not grow", () => {
-  const args = "{\"path\":\"a.tsx\"}";
-  expect(callsKeyOf(node({ root: { kind: "tool-call", argsRaw: args } })))
-    .not.toBe(callsKeyOf(node({ root: { kind: "tool-result", argsRaw: args } })));
+  const args = '{"path":"a.tsx"}';
+  expect(callsKeyOf(node({ root: { kind: "tool-call", argsRaw: args } }))).not.toBe(callsKeyOf(node({ root: { kind: "tool-result", argsRaw: args } })));
 });
 
 test("callsKeyOf walks nested sub-calls", () => {
   const withChild = (childArgs: string) => callsKeyOf(node({ root: { kind: "tool-call", argsRaw: "{}", subCalls: [{ kind: "tool-call", argsRaw: childArgs }] } }));
-  expect(withChild("{}")).not.toBe(withChild("{\"deep\":1}"));
+  expect(withChild("{}")).not.toBe(withChild('{"deep":1}'));
   // and a missing root is not a crash
   expect(callsKeyOf(node(undefined))).toBe("");
 });

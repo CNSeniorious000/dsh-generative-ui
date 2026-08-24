@@ -19,14 +19,22 @@ const applyWithSessions = (current: string | undefined, scope: (id: string) => u
     sessions: { list: { getSnapshot: () => ({ current }) }, scope },
     effect: (run: () => unknown, label?: string) => {
       if (label?.includes("canvas column")) return; // needs a DOM; not the subject
-      try { run() } catch { /* only the $dsh host is the subject */ }
+      try {
+        run();
+      } catch {
+        /* only the $dsh host is the subject */
+      }
     },
     inject: (_want: readonly string[], callback: (scoped: unknown) => void) => callback(scoped),
   };
   const scoped: unknown = new Proxy(base, { get: (t, k) => (k in t ? t[k as string] : stub()) });
   const realError = console.error;
   console.error = (...args: unknown[]) => void errors.push(args.join(" "));
-  try { apply(scoped as never) } finally { console.error = realError }
+  try {
+    apply(scoped as never);
+  } finally {
+    console.error = realError;
+  }
   return { errors, sent };
 };
 
@@ -36,7 +44,11 @@ test("with no session open, sending says so rather than failing silently", () =>
   const realError = console.error;
   const seen: string[] = [];
   console.error = (...args: unknown[]) => void seen.push(args.join(" "));
-  try { bind().chat.sendMessage("hi") } finally { console.error = realError }
+  try {
+    bind().chat.sendMessage("hi");
+  } finally {
+    console.error = realError;
+  }
   expect(seen.join(" ")).toContain("no session to send into");
   expect(errors).toEqual([]);
   restoreGlobals();
@@ -48,7 +60,11 @@ test("a session id whose scope has gone is the same case", () => {
   const realError = console.error;
   const seen: string[] = [];
   console.error = (...args: unknown[]) => void seen.push(args.join(" "));
-  try { bind().chat.sendMessage("hi") } finally { console.error = realError }
+  try {
+    bind().chat.sendMessage("hi");
+  } finally {
+    console.error = realError;
+  }
   expect(seen.join(" ")).toContain("no session to send into");
   restoreGlobals();
 });
@@ -58,7 +74,14 @@ test("with a session, the text reaches conversation.send", () => {
   const sent: string[] = [];
   applyWithSessions("s1", () => ({
     inject: (_want: readonly string[], callback: (addressed: unknown) => void) =>
-      callback({ conversation: { send: (text: string) => { sent.push(text); return Promise.resolve() } } }),
+      callback({
+        conversation: {
+          send: (text: string) => {
+            sent.push(text);
+            return Promise.resolve();
+          },
+        },
+      }),
   }));
   bind().chat.sendMessage("你好");
   expect(sent).toEqual(["你好"]);

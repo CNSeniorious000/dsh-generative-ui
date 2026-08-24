@@ -52,15 +52,24 @@ const PREFIX_UNSAFE = new Set(["NO-FOCUS-RING", "UNGUARDED-NUMBER-INPUT", "UNSTO
  * quietly stopped being checked.
  */
 const corpus = (() => {
-  try { return readdirSync("/tmp/corpuscards").filter((n) => n.endsWith(".tsx")).map((n) => `/tmp/corpuscards/${n}`) }
-  catch { return [] }
+  try {
+    return readdirSync("/tmp/corpuscards")
+      .filter((n) => n.endsWith(".tsx"))
+      .map((n) => `/tmp/corpuscards/${n}`);
+  } catch {
+    return [];
+  }
 })();
 
 test("no screen accuses a card of something it has not finished writing", () => {
   const offenders = new Set<string>();
   for (const path of [...CARDS, ...corpus]) {
     const src = readFileSync(path, "utf8");
-    const settled = new Set(Object.entries(SCREENS).filter(([, fires]) => fires(src)).map(([name]) => name));
+    const settled = new Set(
+      Object.entries(SCREENS)
+        .filter(([, fires]) => fires(src))
+        .map(([name]) => name),
+    );
     for (let pct = 10; pct < 100; pct += 10) {
       const prefix = src.slice(0, Math.floor((src.length * pct) / 100));
       for (const [name, fires] of Object.entries(SCREENS)) {
@@ -76,7 +85,11 @@ test("every screen named prefix-unsafe really is, when the corpus is there to pr
   const proven = new Set<string>();
   for (const path of corpus) {
     const src = readFileSync(path, "utf8");
-    const settled = new Set(Object.entries(SCREENS).filter(([, fires]) => fires(src)).map(([name]) => name));
+    const settled = new Set(
+      Object.entries(SCREENS)
+        .filter(([, fires]) => fires(src))
+        .map(([name]) => name),
+    );
     for (let pct = 10; pct < 100; pct += 10) {
       const prefix = src.slice(0, Math.floor((src.length * pct) / 100));
       for (const name of PREFIX_UNSAFE) if (SCREENS[name](prefix) && !settled.has(name)) proven.add(name);

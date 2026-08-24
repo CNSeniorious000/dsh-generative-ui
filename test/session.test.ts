@@ -8,8 +8,7 @@ import type { ChatNodeView } from "../src/client/session.ts";
  * was constrained — the mutation audit could not see this file at all, because its glob listed
  * two directories at one depth and `src/client/` was not one of them.
  */
-const ctxWith = (current: string | undefined, binding: unknown) =>
-  ({ sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding } }) as never;
+const ctxWith = (current: string | undefined, binding: unknown) => ({ sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding } }) as never;
 
 const node = (kind: string, seq: number): ChatNodeView => ({ kind, data: {}, anchorSeq: seq });
 
@@ -25,28 +24,41 @@ test("a session whose binding has gone yields no nodes", () => {
 });
 
 test("an open session yields its nodes in order", () => {
-  const nodes = new Map([["a", node("text", 1)], ["b", node("tool", 2)]]);
+  const nodes = new Map([
+    ["a", node("text", 1)],
+    ["b", node("tool", 2)],
+  ]);
   const ctx = ctxWith("s1", { session: { getSnapshot: () => ({ chat: { nodes } }) } });
   expect(chatNodes(ctx).map((n) => n.kind)).toEqual(["text", "tool"]);
 });
 
 test("perNode reuses a result while the key is unchanged and drops what left the window", () => {
   let derived = 0;
-  const run = perNode<string>((n) => `${n.kind}:${n.anchorSeq}`, (n) => { derived += 1; return `${n.kind}!` });
-  const a = node("text", 1), b = node("tool", 2);
+  const run = perNode<string>(
+    (n) => `${n.kind}:${n.anchorSeq}`,
+    (n) => {
+      derived += 1;
+      return `${n.kind}!`;
+    },
+  );
+  const a = node("text", 1),
+    b = node("tool", 2);
   expect(run([a, b])).toEqual(["text!", "tool!"]);
   expect(derived).toBe(2);
   run([a, b]);
   expect(derived).toBe(2); // both keys unchanged: nothing re-derived
-  run([b]);               // `a` leaves the loaded window
+  run([b]); // `a` leaves the loaded window
   expect(derived).toBe(2);
-  run([a, b]);            // and comes back — its cache entry was dropped, so it re-derives
+  run([a, b]); // and comes back — its cache entry was dropped, so it re-derives
   expect(derived).toBe(3);
 });
 
 test("a changed key re-derives that node and not its neighbours", () => {
   let derived = 0;
-  const run = perNode<number>((n) => `${n.anchorSeq}`, () => ++derived);
+  const run = perNode<number>(
+    (n) => `${n.anchorSeq}`,
+    () => ++derived,
+  );
   const a = node("text", 1);
   run([a, node("text", 2)]);
   expect(derived).toBe(2);

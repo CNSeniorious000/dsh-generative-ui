@@ -18,8 +18,13 @@ const render = (cwd: string | undefined, canvas: unknown) => {
   const Probe = () => createElement("script", { type: "application/json" }, useSubPages(cwd, canvas as never));
   const html = renderToString(createElement(Probe));
   // React escapes text content; undo it so the assertion compares the source, not its markup.
-  return html.replace(/^<script type="application\/json">|<\/script>$/g, "")
-    .replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", '"').replaceAll("&#x27;", "'").replaceAll("&amp;", "&");
+  return html
+    .replace(/^<script type="application\/json">|<\/script>$/g, "")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&amp;", "&");
 };
 
 test("no canvas yields nothing to render", () => {

@@ -105,7 +105,14 @@ export async function serveCanvas(liveWorkspaces: () => ReadonlySet<string>, req
   // No id: list the directory. A canvas outlives the session that wrote it, so the panel
   // needs a source beyond the current transcript to offer one written yesterday.
   if (id === null) {
-    const ids = await readdir(join(cwd, CANVAS_DIR)).then((names) => names.flatMap((name) => { const found = canvasIdOf(`${CANVAS_DIR}/${name}`); return found === null ? [] : [found]; }), () => []);
+    const ids = await readdir(join(cwd, CANVAS_DIR)).then(
+      (names) =>
+        names.flatMap((name) => {
+          const found = canvasIdOf(`${CANVAS_DIR}/${name}`);
+          return found === null ? [] : [found];
+        }),
+      () => [],
+    );
     res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     return void res.end(JSON.stringify(ids));
   }

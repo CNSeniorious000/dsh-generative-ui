@@ -14,7 +14,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 let frame: unknown = null;
 let fire: () => void = () => {};
-let observing = 0, disconnected = 0, cleared = 0;
+let observing = 0,
+  disconnected = 0,
+  cleared = 0;
 let timeoutFn: (() => void) | null = null;
 let warnings: string[] = [];
 
@@ -23,18 +25,41 @@ let warnings: string[] = [];
 afterEach(restoreGlobals);
 
 beforeEach(() => {
-  frame = null; observing = 0; disconnected = 0; cleared = 0; timeoutFn = null; warnings = [];
+  frame = null;
+  observing = 0;
+  disconnected = 0;
+  cleared = 0;
+  timeoutFn = null;
+  warnings = [];
   (globalThis as any).document = { body: {}, querySelector: () => frame };
   (globalThis as any).MutationObserver = class {
     private live = false;
     // A disconnected observer stops delivering. Without modelling that, `fire()` after dispose
     // still invokes the callback and the disposal test fails against correct code — the fake
     // has to reproduce the part of the contract the code relies on, not just the method names.
-    constructor(private readonly cb: () => void) { fire = () => { if (this.live) this.cb() } }
-    observe() { observing += 1; this.live = true }
-    disconnect() { disconnected += 1; this.live = false }
+    constructor(private readonly cb: () => void) {
+      fire = () => {
+        if (this.live) this.cb();
+      };
+    }
+    observe() {
+      observing += 1;
+      this.live = true;
+    }
+    disconnect() {
+      disconnected += 1;
+      this.live = false;
+    }
   };
-  (globalThis as any).window = { setTimeout: (fn: () => void) => { timeoutFn = fn; return 1 }, clearTimeout: () => { cleared += 1 } };
+  (globalThis as any).window = {
+    setTimeout: (fn: () => void) => {
+      timeoutFn = fn;
+      return 1;
+    },
+    clearTimeout: () => {
+      cleared += 1;
+    },
+  };
   (globalThis as any).console = { ...console, warn: (msg: string) => warnings.push(msg) };
 });
 
@@ -44,14 +69,18 @@ describe("whenFrameReady", () => {
   test("an already-painted frame resolves without observing anything", async () => {
     frame = { id: "frame" };
     let got: unknown = null;
-    (await load())((f: unknown) => { got = f });
+    (await load())((f: unknown) => {
+      got = f;
+    });
     expect(got).toBe(frame);
     expect(observing).toBe(0);
   });
 
   test("a frame that arrives later resolves on the mutation", async () => {
     let got: unknown = null;
-    (await load())((f: unknown) => { got = f });
+    (await load())((f: unknown) => {
+      got = f;
+    });
     expect(got).toBeNull();
     expect(observing).toBe(1);
     frame = { id: "late" };
@@ -65,7 +94,9 @@ describe("whenFrameReady", () => {
 
   test("a mutation with still no frame keeps waiting", async () => {
     let calls = 0;
-    (await load())(() => { calls += 1 });
+    (await load())(() => {
+      calls += 1;
+    });
     fire();
     expect(calls).toBe(0);
     expect(disconnected).toBe(0);
@@ -83,7 +114,9 @@ describe("whenFrameReady", () => {
 
   test("disposing before the frame appears cancels both the observer and the timer", async () => {
     let calls = 0;
-    const dispose = (await load())(() => { calls += 1 });
+    const dispose = (await load())(() => {
+      calls += 1;
+    });
     dispose();
     expect(disconnected).toBe(1);
     expect(cleared).toBe(1);

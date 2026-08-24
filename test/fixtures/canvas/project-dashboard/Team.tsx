@@ -1,20 +1,20 @@
-import { Card, Avatar, Bar, Badge, PageHeader } from "./ui"
-import { members, loadTasks } from "./data"
+import { Card, Avatar, Bar, Badge, PageHeader } from "./ui";
+import { members, loadTasks } from "./data";
 
 export default function Team() {
-  const tasks = loadTasks()
+  const tasks = loadTasks();
   const stats = members.map((m) => {
-    const mine = tasks.filter((t) => t.assignee === m.id)
-    const done = mine.filter((t) => t.done).length
-    const total = mine.length
+    const mine = tasks.filter((t) => t.assignee === m.id);
+    const done = mine.filter((t) => t.done).length;
+    const total = mine.length;
     return {
       member: m,
       total,
       done,
       workload: total ? Math.round((done / total) * 100) : 0,
       open: total - done,
-    }
-  })
+    };
+  });
 
   return (
     <div>
@@ -72,5 +72,5 @@ export default function Team() {
         ))}
       </div>
     </div>
-  )
+  );
 }

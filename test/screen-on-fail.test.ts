@@ -17,8 +17,11 @@ test("a screen fires on a card that does not compile", () => {
 // which computed the flags inside the try block. This is the line that regressing would break.
 test("compile-cards screens before it tries to compile", async () => {
   const source = await Bun.file(`${import.meta.dir}/../scripts/compile-cards.ts`).text();
-  const screenAt = source.indexOf("Object.entries(SCREENS).filter");
-  const tryAt = source.indexOf("\n  try {");
+  // Match on tokens rather than on formatting: the first version anchored on `"\n  try {"`,
+  // which stopped matching the day `bun run fmt` reflowed the file — a green-to-red flip with no
+  // behaviour change behind it.
+  const screenAt = source.indexOf("Object.entries(SCREENS)");
+  const tryAt = source.search(/\btry\s*\{/);
   expect(screenAt).toBeGreaterThan(-1);
   expect(tryAt).toBeGreaterThan(-1);
   expect(screenAt).toBeLessThan(tryAt);

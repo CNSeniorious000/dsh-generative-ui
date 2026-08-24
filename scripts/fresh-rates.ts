@@ -13,14 +13,20 @@ import { SCREENS } from "./screens.ts";
 import { cardsIn } from "./tsx-node.ts";
 
 const dir = process.argv[2] ?? "/tmp/allfresh";
-if (!existsSync(dir)) { console.log(`no generated cards at ${dir} — see test/eval-fixtures.md for the prompts`); process.exit(0) }
+if (!existsSync(dir)) {
+  console.log(`no generated cards at ${dir} — see test/eval-fixtures.md for the prompts`);
+  process.exit(0);
+}
 
 const cards = cardsIn(dir);
-let clean = 0, ring = 0;
+let clean = 0,
+  ring = 0;
 const flagged = new Map<string, string[]>();
 for (const name of cards) {
   const src = readFileSync(`${dir}/${name}`, "utf8");
-  const hits = Object.entries(SCREENS).filter(([, fires]) => fires(src)).map(([screen]) => screen);
+  const hits = Object.entries(SCREENS)
+    .filter(([, fires]) => fires(src))
+    .map(([screen]) => screen);
   if (hits.length === 0) clean += 1;
   else for (const hit of hits) (flagged.get(hit) ?? flagged.set(hit, []).get(hit)!).push(name);
   if (/:focus-visible/.test(src)) ring += 1;

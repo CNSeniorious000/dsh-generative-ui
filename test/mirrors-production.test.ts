@@ -12,8 +12,8 @@ import { readFileSync, readdirSync } from "node:fs";
  * justify itself here first.
  */
 const ALLOWED = new Set([
-  "tsx-node.ts",        // defines it
-  "replay-stream.ts",   // streaming frames on purpose: that IS what production does mid-stream
+  "tsx-node.ts", // defines it
+  "replay-stream.ts", // streaming frames on purpose: that IS what production does mid-stream
 ]);
 
 test("no script compiles a settled card without production's normalize fallback", () => {

@@ -17,30 +17,23 @@ await initTsxFromDisk();
  * accessibility and behaviour defects — a stripped focus ring renders fine and is still wrong —
  * and are deliberately not listed.
  */
-const FATAL = [
-  "blank-render.tsx",
-  "destructured-ref.tsx",
-  "exported-module-hook.tsx",
-  "glob-in-jsx.tsx",
-  "hook-not-imported.tsx",
-  "jsx-subscript-attrs.tsx",
-  "missing-memo.tsx",
-  "missing-suspense.tsx",
-  "module-scope-hook.tsx",
-  "shadowed-const.tsx",
-];
+const FATAL = ["blank-render.tsx", "destructured-ref.tsx", "exported-module-hook.tsx", "glob-in-jsx.tsx", "hook-not-imported.tsx", "jsx-subscript-attrs.tsx", "missing-memo.tsx", "missing-suspense.tsx", "module-scope-hook.tsx", "shadowed-const.tsx"];
 
 const paints = (name: string) => {
   const src = readFileSync(`${import.meta.dir}/cards-negative/${name}`, "utf8");
   try {
     const { code } = compileSettled(name, src);
     const url = `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
-    return import(url).then((mod) => {
-      if (typeof mod.default !== "function") return false;
-      const html = renderToString(createElement(mod.default));
-      return html.replace(/<[^>]*>/g, "").trim().length > 0 || html.length > 40;
-    }).catch(() => false);
-  } catch { return Promise.resolve(false) }
+    return import(url)
+      .then((mod) => {
+        if (typeof mod.default !== "function") return false;
+        const html = renderToString(createElement(mod.default));
+        return html.replace(/<[^>]*>/g, "").trim().length > 0 || html.length > 40;
+      })
+      .catch(() => false);
+  } catch {
+    return Promise.resolve(false);
+  }
 };
 
 for (const name of FATAL) {

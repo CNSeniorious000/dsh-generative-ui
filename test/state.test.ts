@@ -31,11 +31,13 @@ function withStorage<T>(entries: Record<string, string>, body: () => T): T {
 // serializer leaves alone rather than comparing escaped JSON.
 const render = (key: string, initial: unknown) => {
   let seen: unknown;
-  renderToStaticMarkup(createElement(function Probe() {
-    const [value] = usePersistedState(key, initial as never);
-    seen = value;
-    return null;
-  }));
+  renderToStaticMarkup(
+    createElement(function Probe() {
+      const [value] = usePersistedState(key, initial as never);
+      seen = value;
+      return null;
+    }),
+  );
   return seen;
 };
 
