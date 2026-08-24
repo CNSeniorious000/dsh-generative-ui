@@ -8,7 +8,7 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
-import { reportCardError } from "./runtime/report-error.ts";
+import { cardRendered, reportCardError } from "./runtime/report-error.ts";
 import { disposeCompiler } from "./runtime/compiler.ts";
 import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
@@ -143,7 +143,7 @@ export function apply(ctx: ClientContext): void {
   // straight away, and doing that during registration is exactly what smoke rejects.
   let showCanvas: ((id: string) => void) | null = null;
   ctx.effect(() => {
-    const host = mountCanvasHost({ calls, cwd, sessionId, onCardError: (message, phase) => reportCardError(sendToModel, message, phase) });
+    const host = mountCanvasHost({ calls, cwd, sessionId, onCardError: (message, phase) => reportCardError(sendToModel, message, phase), onCardRendered: cardRendered });
     showCanvas = host.show;
     return () => {
       showCanvas = null;
@@ -180,7 +180,7 @@ export function apply(ctx: ClientContext): void {
     () =>
       claimInlineFences({
         segments,
-        render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase) }),
+        render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase), onRendered: cardRendered }),
       }),
     "dsh-generative-ui: inline fences",
   );

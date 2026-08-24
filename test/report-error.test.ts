@@ -1,5 +1,5 @@
 import { expect, test, beforeEach } from "bun:test";
-import { forgetReportedErrors, reportBody, reportCardError } from "../src/client/runtime/report-error.ts";
+import { cardRendered, forgetReportedErrors, reportBody, reportCardError } from "../src/client/runtime/report-error.ts";
 
 beforeEach(forgetReportedErrors);
 
@@ -8,22 +8,51 @@ beforeEach(forgetReportedErrors);
 // the surface printed `has no export named 'MonacoEditor'; module exports: Workspace, errors,
 // hydrate, init, lazy`, which contains the fix, and the transcript ends with the model never
 // having seen the string.
-test("a reported error reaches the model", () => {
+const settle = () => new Promise((r) => setTimeout(r, 1100));
+
+test("a reported error reaches the model", async () => {
   const sent: string[] = [];
   reportCardError((t) => sent.push(t), "has no export named 'MonacoEditor'", "compile");
+  await settle();
   expect(sent.length).toBe(1);
   expect(sent[0]).toContain("has no export named 'MonacoEditor'");
 });
 
+// `isUnfinishedFrame` excludes the RENDER phase deliberately — a card whose own render throws is
+// usually a real error — but a half-written component rendering mid-stream throws too, and the
+// next frame is fine. Measured in a browser: a card that ultimately rendered correctly reported
+// `Cannot read properties of undefined (reading 'getCurrentStack')`, a React internal, to the
+// model. A red panel for one frame costs nothing; a message about a card that then worked costs
+// the model a turn fixing what is not broken.
+test("an error the next frame makes untrue is never sent", async () => {
+  const sent: string[] = [];
+  reportCardError((t) => sent.push(t), "Cannot read properties of undefined", "render");
+  cardRendered();
+  await settle();
+  expect(sent).toEqual([]);
+});
+
+// …but a paint BEFORE the failure must not silence it: that is the ordinary case of a card that
+// rendered for a while and then broke on an edit.
+test("a paint before the error does not cancel it", async () => {
+  const sent: string[] = [];
+  cardRendered();
+  reportCardError((t) => sent.push(t), "TypeError: x is not a function", "render");
+  await settle();
+  expect(sent.length).toBe(1);
+});
+
 // A settled card that fails re-renders on every later frame in the transcript. One message per
 // render is a loop the user has to kill by closing the tab.
-test("the same failure is sent once, not once per render", () => {
+test("the same failure is sent once, not once per render", async () => {
   const sent: string[] = [];
   const send = (t: string) => sent.push(t);
   for (let i = 0; i < 5; i++) reportCardError(send, "same failure", "compile");
+  await settle();
   expect(sent.length).toBe(1);
   // A different failure is still worth sending — the model fixed one thing and broke another.
   reportCardError(send, "a different failure", "compile");
+  await settle();
   expect(sent.length).toBe(2);
 });
 

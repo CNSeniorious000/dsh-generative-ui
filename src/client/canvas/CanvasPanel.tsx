@@ -27,6 +27,8 @@ export type CanvasPanelProps = {
   onWidth: (width: number) => void;
   /** A canvas that failed to compile; see `runtime/report-error.ts`. */
   onCardError?: (message: string, phase: string) => void;
+  /** A canvas that painted; see `runtime/report-error.ts`. */
+  onCardRendered?: () => void;
 };
 
 /**
@@ -159,7 +161,7 @@ export function useResize(initial: number) {
   return { width, start };
 }
 
-export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth, onCardError }: CanvasPanelProps) {
+export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth, onCardError, onCardRendered }: CanvasPanelProps) {
   const { width, start } = useResize(DEFAULT_WIDTH);
   useEffect(() => onWidth(width), [width, onWidth]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -228,7 +230,7 @@ export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth
         ) : (
           // A canvas arrives as whole files, so recompiles replace rather than extend —
           // preserving state would make an edited canvas silently keep the old render.
-          <GenUISurface key={active.id} code={resolved} streaming={active.streaming} preserveState={false} onError={(error, phase) => onCardError?.(error.message, phase)} />
+          <GenUISurface key={active.id} code={resolved} streaming={active.streaming} preserveState={false} onError={(error, phase) => onCardError?.(error.message, phase)} onRendered={onCardRendered} />
         )}
       </div>
     </div>

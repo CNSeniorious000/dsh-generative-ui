@@ -13,6 +13,14 @@
  * - **Only errors that survived.** `GenUISurface` already separates a mid-stream prefix failure
  *   and a retryable network blip from a real one — the `report` branch of its error action. That
  *   branch is the only caller, so a half-written expression never reaches the model.
+ *
+ *   It is not sufficient on its own, though. `isUnfinishedFrame` excludes the RENDER phase by
+ *   design — a card whose own render throws is usually a real error — but a half-written
+ *   component rendering mid-stream throws too, and the next frame is fine. Measured in a browser:
+ *   a card that ultimately rendered correctly reported `Cannot read properties of undefined
+ *   (reading 'getCurrentStack')`, a React internal, to the model. Painting a red panel for a
+ *   frame costs nothing; sending the model a message about a card that then worked costs it a
+ *   turn spent fixing what is not broken. So the send is DEFERRED, and a paint cancels it.
  * - **Once per card, not once per frame.** A settled card that fails re-renders on every later
  *   frame of the transcript, and a message per render is a loop the user has to kill. Keyed on
  *   the message text.
@@ -23,7 +31,10 @@
 const sent = new Set<string>();
 
 /** Exported for the test: a fresh card in a fresh session should be able to report again. */
-export const forgetReportedErrors = () => sent.clear();
+export const forgetReportedErrors = () => {
+  sent.clear();
+  cardRendered();
+};
 
 export type ErrorReporter = (text: string) => void;
 
@@ -40,9 +51,29 @@ export type ErrorReporter = (text: string) => void;
 export const reportBody = (message: string, phase: string) =>
   `[automatic] The card you just wrote did not render. It failed at the ${phase} step:\n\n${message}\n\nThis was sent by the renderer, not by the user — nobody typed it, so do not apologise or address it as a request. If the error names the correct usage (the available exports, for instance), fix the card and send it again. If it does not, look it up before you change anything, and answer in the language the user has been writing in.`;
 
+/**
+ * How long an error must stand before the model hears about it. A streaming card recompiles many
+ * times a second, so a frame that throws and a frame that paints are milliseconds apart; a second
+ * is far longer than that gap and far shorter than a reader's patience with a broken card.
+ */
+const SETTLE_MS = 1000;
+
+let pending: ReturnType<typeof setTimeout> | null = null;
+
+/** Called when a surface paints. Cancels a report the very next frame made untrue. */
+export function cardRendered(): void {
+  if (pending === null) return;
+  clearTimeout(pending);
+  pending = null;
+}
+
 export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string): void {
   if (send === undefined) return;
   if (sent.has(message)) return;
   sent.add(message);
-  send(reportBody(message, phase));
+  if (pending !== null) clearTimeout(pending);
+  pending = setTimeout(() => {
+    pending = null;
+    send(reportBody(message, phase));
+  }, SETTLE_MS);
 }

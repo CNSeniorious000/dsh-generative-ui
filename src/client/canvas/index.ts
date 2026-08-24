@@ -24,6 +24,8 @@ export type CanvasHostOptions = {
    * absent, the error is still painted for the reader and simply reaches nobody else.
    */
   onCardError?: (message: string, phase: string) => void;
+  /** A canvas that painted; cancels a deferred error report the next frame made untrue. */
+  onCardRendered?: () => void;
 };
 
 const EMPTY: ReadonlySet<string> = new Set();
@@ -52,7 +54,7 @@ export const paintSignature = (canvases: readonly Canvas[], offerable: readonly 
 
 export const OPAQUE_WRITE = /"(?:code|command)"\s*:[\s\S]*canvases/;
 
-export function mountCanvasHost({ calls, cwd, sessionId, onCardError }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
+export function mountCanvasHost({ calls, cwd, sessionId, onCardError, onCardRendered }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
   /**
    * Canvas bodies re-read from disk, for the ones a patch left stale.
    *
@@ -218,6 +220,7 @@ export function mountCanvasHost({ calls, cwd, sessionId, onCardError }: CanvasHo
               cwd: cwd(),
               onOpen: show,
               onCardError,
+              onCardRendered,
               onWidth: column.setWidth,
               onClose: () => {
                 const hiding = dismissed.get(session) ?? new Set<string>();
