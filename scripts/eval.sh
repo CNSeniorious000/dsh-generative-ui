@@ -49,14 +49,17 @@ calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
 # request failed — an upstream 400, an exhausted balance, a refused tool. Three earlier versions
 # of this check grepped for error strings and each missed the next failure to come along; this
 # one asks the structure. A missing transcript still means the run never reached a model at all.
+# Two crash branches, two different causes, and they were printing the same line — so a run that
+# plainly produced a card could report `crash` with no way to tell whether the transcript was
+# missing or the turn was unfinished, and no path to go and look. Say which, and where.
 if [ ! -s "$out" ] || [ -z "$sess" ]; then
-  echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
+  echo "crash/nosession  $(head -c 100 "$out" | tr '\n' ' ')  $d  reply=$out"
   exit 2
 fi
 # Matched loosely on purpose: `"kind": "completed"` with or without spaces, so the check does
 # not turn on dsh's JSON formatting.
 if ! zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null | grep -qE '"kind" *: *"completed"'; then
-  echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
+  echo "crash/unfinished  $(head -c 100 "$out" | tr '\n' ' ')  $d  reply=$out  session=$sess"
   exit 2
 fi
 # A rule that lives in the SKILL can only be measured on a run that loaded it, and a run that did

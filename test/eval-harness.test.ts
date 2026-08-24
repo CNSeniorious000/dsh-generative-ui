@@ -18,6 +18,11 @@ test("the transcript lives outside the workspace", () => {
 test("a hung run is reported separately from a dead one", () => {
   expect(script).toContain("echo \"timeout");
   expect(script).toContain("echo \"crash");
+  // Two crash causes, and they printed the same line — a run that produced a card reported
+  // `crash` with no way to tell a missing transcript from an unfinished turn, and no path to go
+  // and look at either. `run-fixtures.sh` still matches both with `crash*`.
+  expect(script).toContain("crash/nosession");
+  expect(script).toContain("crash/unfinished");
   // and with distinct exit codes, since callers branch on them
   expect(script).toMatch(/exit 3/);
   expect(script).toMatch(/exit 2/);
