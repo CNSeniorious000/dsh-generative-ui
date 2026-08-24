@@ -52,6 +52,13 @@ for key in ("model", "fam"):
     print(f"  by {key}:")
     for k, (t, s, c, mc) in sorted(agg.items(), key=lambda kv: -kv[1][2]):
         print(f"    {k:<26} n={t:<3} skill={s:<3} card={c:<3} md-instead={mc}")
+# A 100% card rate is not automatically good news: a trigger rule can widen into "build one
+# whenever a number appears". Turns short enough to be a clarification ("intendo di soldi", four
+# words) are where over-firing shows first, so they are printed whenever they DID produce a card.
+short = sorted({r["i"] for r in rows if r["card"] and len(wave[r["i"]]["q"].replace("用户：", "").strip()) < 25})
+if short:
+    print("  very short turns that still produced a card — check these are not over-firing:")
+    for i in short: print(f"    [{wave[i]['fam']}] {wave[i]['q'].replace('用户：','')[:70]}")
 missed = sorted({r["i"] for r in rows if not r["card"] and r["md"] >= 6})
 if missed:
     print("  turns answered as a markdown table by at least one run:")
