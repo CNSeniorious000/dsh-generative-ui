@@ -7357,3 +7357,41 @@ Left as a decayed fixture rather than acted on. Chasing it would mean re-tuning 
 against a model that has moved, and the record already says what happens when a rule is rewritten
 to name the phrasing that fails.
 
+### Mounting a card is how you check what it announces (2026-08-24)
+
+`compile-cards.ts` says a card compiles, the screens say it matches no known defect, and
+`paint-cards.ts` says a first synchronous render produces something. None of them can see what a
+card *announces* — and this session's largest finding, `SELECTION-WITHOUT-STATE` at 114 of 378, is
+entirely about that.
+
+`scripts/mount-card.sh` closes it. It serves the real `GenUISurface` (`scripts/surface-harness.ts`
+— the same compiler, the same import map, the same error boundary the plugin ships), mounts one
+card in Chromium, clicks a control, and reports the accessibility state alongside the text:
+
+    bash scripts/mount-card.sh test/cards/metro.ui4a.tsx
+
+    "states": ["4/4=false", "3/4=false", "6/8=false", "木鱼=checked"]
+    "stored": ["dsh-genui:metronome-bpm = 120", "dsh-genui:metronome-timesig = 4"]
+
+Both halves are things no static check reaches. The `states` line is the screen's claim verified
+from the other side — the regenerated metronome exposes its 拍号 row as real state, where the card
+it replaced exposed **nothing at all** (`"states": []`) while looking identical on screen. The
+`stored` line is `$dsh/state` working end to end in a generated card, under the namespaced keys the
+module writes.
+
+It is deliberately not in `bun run check`: it needs a browser and about fifteen seconds a card,
+where `paint-cards.ts` does 378 in two seconds without one. The division is the same one this file
+draws for `render-cards.ts` — **the expensive verification is what tells you the cheap one is
+looking at the right thing**, and it is worth reaching for exactly when a screen makes a claim
+about what a reader would perceive.
+
+Two things about it that cost time to get right, both recorded elsewhere in this file and both
+re-encountered here:
+
+- **Its heredoc is unquoted**, because it interpolates the port — so every backtick inside runs as
+  a command substitution. A comment mentioning \`localStorage\` printed "command not found" twice
+  and the JS never saw the comment.
+- **The screens pre-pass has to use the same predicates the checker does.** The ported version
+  called a helper this branch does not export, so the pre-pass crashed while the mount below it
+  succeeded — a failure that looks like the card being fine.
+
