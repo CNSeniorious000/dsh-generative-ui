@@ -43,7 +43,13 @@ def run(job):
     r = wave[i]
     tag = f"{i:02d}-{model}-s{s}"
     dest = outdir / f"{tag}.txt"
-    if dest.exists() and dest.stat().st_size: return tag, "cached"
+    # Cache only a POSITIVELY IDENTIFIED success. Enumerating failure strings was tried and it
+    # leaked: `bash: ./scripts/eval.sh: Operation not permitted` is not `crash/` or `Terminated`
+    # or `timeout after`, so 58 of wave 3's 72 runs were written to disk as legitimate "0 cards"
+    # answers and cached forever. `eval.sh` emits exactly one shape on success — a line starting
+    # `skill=` — and every failure path (stale, timeout, crash/*, and anything the SHELL says
+    # before eval.sh even runs) is something else. So test for the success, not against the list.
+    if dest.exists() and dest.read_text().startswith("skill="): return tag, "cached"
     env = {**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{model}"), "EVAL_TIMEOUT": "900"}
     p = subprocess.run(["./scripts/eval.sh", prompt_for(r)], cwd=REPO, env=env,
                        capture_output=True, text=True, timeout=1200)

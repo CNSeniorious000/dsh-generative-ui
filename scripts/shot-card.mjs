@@ -127,6 +127,31 @@ for (const width of widths) {
     return out.sort((a, b) => b.want - a.want)[0] || null;
   });
   if (crushed) console.log(`CRUSHED ${width} "${crushed.label}" ${crushed.px}px wants ${crushed.want}px`);
+  // The gap the other three cannot see. A card whose ROOT has no padding puts its text flush
+  // against the host edge: nothing overflows (the content is flush TO the host, not past it),
+  // nothing is crushed, and no width goes unpainted — all three probes stay silent while a title
+  // loses its last character to the clip. Measured on a wave-2 card whose root was a bare
+  // `<div className="grid gap-3">`; 28 of 29 others write `p-4` and are nowhere near 0.
+  const flush = await p.evaluate(() => {
+    const host = document.getElementById("shot-host");
+    const hr = host.getBoundingClientRect();
+    let best = 1e9, who = null;
+    for (const el of host.querySelectorAll("*")) {
+      if (el.classList.contains("ui4a-root")) continue;   // the full-width wrapper, same as UNUSED
+      // Only TEXT-BEARING LEAVES. The first version measured every element, so it fired on both
+      // the defect and the control: a card's own root div is supposed to fill the host, and a
+      // card with perfect `p-4` still has a 0px-from-edge container. What loses a character to
+      // the clip is the text, so the text is what has to be measured.
+      if (el.children.length) continue;
+      if (!(el.textContent || "").trim()) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) continue;
+      const gap = Math.min(r.left - hr.left, hr.right - r.right);
+      if (gap < best) { best = gap; who = `${el.tagName.toLowerCase()}.${(el.className || "").toString().slice(0, 30)}`; }
+    }
+    return { px: Math.round(best), who };
+  });
+  if (flush.px < 4) console.log(`FLUSH ${width} ${flush.px}px from the host edge — ${flush.who}`);
   if (errs.length) console.log(`pageerror ${width}:`, errs[0]);
   await p.screenshot({ path: `${prefix}.${width}.png`, clip: box });
   console.log(`saved ${prefix}.${width}.png  ${box.width}x${box.height}`);

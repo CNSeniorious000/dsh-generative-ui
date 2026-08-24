@@ -232,6 +232,14 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   \`font-variant-numeric: tabular-nums\`, so the digits stack. Header cells take the alignment of
   the column beneath them, not their own.
 
+  **An unknown is not a zero.** A row the reader has not reported yet shows \`—\` and contributes
+  nothing to the total. \`0\` is a measurement: it says the value was taken and came out zero, and it
+  drags every average and running total down silently. Measured on one wave, one turn, one
+  context: one card rendered the not-yet-eaten dinner as \`Cena · pendiente   —\` and another
+  rendered the same row as \`kcal 0 / Prot 0 / Carb 0\`. Same question, so this is a coin flip
+  rather than a blind spot — which is what makes it worth one line. The em dash takes
+  \`text-muted\`, and if a total is shown beside incomplete rows, say what it is a total OF.
+
 - **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-page\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
 
   **And a field you type into is not a surface — it is a hole in one.** \`bg-page\` is the colour
@@ -271,6 +279,23 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **Keep nesting shallow.** A bordered box inside a bordered box is almost always wrong; a divider line does the job.
 - **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you. No \`position: fixed\`, no \`100vw\`/\`100vh\`, no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
+
+- **In a canvas, extra width should make the rows SHORTER, not the card wider.** Measured across
+  one wave, height at 320 divided by height at 720: the five inline cards shrink 1.26–1.52x, and
+  the six canvases shrink **1.02–1.18x** — one is 1100px tall at 320 and still 1076px at 720. It
+  is not for want of the technique; 8 of those 9 canvases carry a container query or an intrinsic
+  grid. They spend it *inside* a row — a stat strip, a chip group — and never on the row itself.
+  The shape that costs the most is a three-band row: a name, a right-aligned number, then a
+  control on its own full-width line, so at 720 the name and its number sit 1100px apart with a
+  rail between them. At that width the three fit on ONE line:
+
+      <div className="grid gap-2 @[32rem]:grid-cols-[1fr_12rem_auto] @[32rem]:items-center">
+        <span className="min-w-0 truncate">{name}</span>
+        <input type="range" … />
+        <span className="tabular-nums text-right">{value}</span>
+      </div>
+
+  The reader drags a canvas panel between 320 and 720 — that drag should buy them less scrolling.
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **If you take the focus ring off, put something back.** \`outline-none\` on a borderless input

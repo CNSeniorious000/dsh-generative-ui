@@ -23,8 +23,16 @@ wave = json.loads(snap.read_text()) if snap.exists() else json.loads((ROOT / "wa
 
 ROW = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\|)")
 rows = []
+skipped = []
 for f in sorted(d.glob("*.txt")):
     head = f.read_text().splitlines()[0] if f.read_text().strip() else ""
+    # A run that never reached the model has no verdict in it, and every field below reads as a
+    # confident zero: `skill=no card=no md=0`. Measured on wave 2 — 46 of its 72 files said
+    # `stale  src/ is newer than lib/`, and all 46 were scored as the model declining to build a
+    # card. The rates were computed against a denominator two thirds of which was the harness.
+    # `skill=` is eval.sh's one success shape (run-wave.py caches on the same test).
+    if not head.startswith("skill="):
+        skipped.append(f"{f.stem} ({head.split()[0] if head else 'empty'})"); continue
     m = dict(re.findall(r"(\w+)=(\S+)", head))
     reply = m.get("reply", "")
     text = pathlib.Path(reply).read_text() if reply and pathlib.Path(reply).exists() else ""
@@ -39,6 +47,11 @@ for f in sorted(d.glob("*.txt")):
     })
 
 n = len(rows)
+# Print what was excluded, by name. Every gate in this project that ever lied did it by omission,
+# and a count can only be believed, where a list can be checked at a glance.
+if skipped:
+    print(f"EXCLUDED {len(skipped)} of {len(skipped)+n} runs (no verdict — the harness, not the model):")
+    for x in skipped: print(f"    {x}")
 if not n: print("no runs yet"); sys.exit()
 card = sum(r["card"] for r in rows); skill = sum(r["skill"] for r in rows)
 # A reply with six or more list/table rows is a card the model wrote in markdown. Six is where
