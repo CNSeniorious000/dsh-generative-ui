@@ -58,6 +58,7 @@
     "loads": "zsh scripts/loads.sh",
     "smoke": "bun scripts/smoke.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run paint && bun run build && bun run smoke && bun run loads",
+    "check:ci": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run paint && bun run build && bun run smoke",
     "lint": "oxlint",
     "fmt": "oxfmt",
     "gen:standalone": "bun scripts/gen-standalone.ts",

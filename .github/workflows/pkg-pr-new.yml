@@ -18,8 +18,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       # `prepare` already built lib/ during install; this is the gate that the preview is worth publishing.
-      - run: bun run lint
-      - run: bun run typecheck
-      - run: bun run smoke
+      # Everything `check` runs except `loads`, which needs a real dsh binary.
+      - run: bun run check:ci
       # Docs forbid bunx/npx/dlx here: pkg-pr-new must run from the lockfile.
       - run: bun run pkg-pr-new publish --bun --packageManager=bun --commentWithSha

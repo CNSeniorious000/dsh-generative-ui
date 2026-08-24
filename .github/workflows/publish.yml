@@ -44,10 +44,9 @@ jobs:
           package-manager-cache: false
 
       - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run typecheck
       # The bundle is what ships, and a factory that throws on load fails the whole plugin silently.
-      - run: bun run smoke
+      # This is everything `check` runs except `loads`, which needs a real dsh binary.
+      - run: bun run check:ci
 
       - name: Bump package version
         id: version
