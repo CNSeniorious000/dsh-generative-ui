@@ -246,6 +246,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   On the container, not the spinner — the element has to be in the DOM BEFORE the content changes
   for the change to be announced at all.
 
+  **This is the one rule whose effect you cannot see.** A missing focus ring is visible the moment
+  you tab; an unlabelled icon reads wrong the moment you look. A card with no live region looks
+  exactly like one that has it, in every state, so the only way it gets written is on purpose.
+  Measured: **8 of 23** cards that fetch anything announce the result, against 88-94% for every
+  other rule in this section.
+
   **And when it fails, say so where the results would have been.** \`} catch {}\` around a
   \`streamText\` or a \`bash\`, then \`setLoading(false)\`: the spinner stops, the card is empty, and
   nothing tells the reader whether it failed or simply found nothing. **15 of 378 corpus cards do
