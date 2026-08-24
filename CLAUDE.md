@@ -8833,6 +8833,47 @@ corpus cards and 30 screens, and the 2048 board defect was found by all five ind
 verdict from it enters as a hypothesis, and the three that failed each took one measurement to
 fail.
 
+### bytes=0 is an upstream diagnosis, not a slow one (2026-08-24)
+
+Three batches in a row came back `timeout after 900s`, and the `bytes=` field added an hour earlier
+answered the first question immediately: **all of them zero.** Not a slow model under load — nothing
+at all, for fifteen minutes, and a single run with the machine otherwise idle timed out the same way
+on `今天星期几`, a fixture that normally answers in seconds.
+
+The instinct at that point is to suspect the rules edited that afternoon. The transcripts say
+otherwise, and the test is one command:
+
+```sh
+cd ~/.dsh-eval/sessions
+list=$(ls -td ./*/session-*)   # `./` is required — these names start with `--`
+zstd -dc "$(echo "$list" | head -1)/session.jsonl.zstd" | grep -oE '"type":"[a-z/-]+"' | sort | uniq -c
+```
+
+| | `assistant/chunk` |
+| --- | --- |
+| a session from 13:55 | **12** |
+| a session from 14:56 | **0** |
+
+The failing sessions write `request/header` and `request/context` — provider and model both
+correct — and then stop. The request went out and nothing came back. Evals run on `litellm-24000`'s
+`macaron-v1-tall`, which is deliberately the **no-fallback** chain, so an upstream stall arrives as
+silence rather than as a degraded answer, and 900 seconds of silence is indistinguishable from a
+rule the model declined to follow.
+
+The cause is almost certainly mine: I had a dozen headless runs in flight for a stretch, and this
+model family is recorded elsewhere as intolerant of that. What is new is the **discriminator** —
+`assistant/chunk` present or absent separates "the model is slow" from "the upstream is gone", which
+is exactly the pair this file has repeatedly failed to tell apart.
+
+Two dead ends, both tried: writing a probe against the gateway is useless unless you have the key,
+which lives in `~/.dsh/.credentials.yaml` rather than in the environment (`settings.yaml` only names
+`apiKeyEnv`), and a wrong regex there returns 401 and proves nothing. And `/health/liveliness`
+answers 200 throughout — the gateway is up, the model behind it is not.
+
+Same lesson as every measurement artefact in this file, in a new costume: **verify the subject ran
+before believing what the metric says about it.** Here the subject is the upstream, the metric is a
+timeout, and the byte count is what made the difference visible in one line.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
