@@ -3279,7 +3279,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 69 of 101 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 78 of 112 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6891,7 +6891,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    69 of 101 carry three or more accessibility signals (0→5 1→5 2→22 3→48 4→21)
+    78 of 112 carry three or more accessibility signals (0→6 1→5 2→23 3→50 4→28)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -8000,4 +8000,43 @@ The actionable half is narrow and worth stating: **when a screen's residue is sm
 behind it is at 100% on eligible runs, stop rewording.** The next lever is not the skill's text —
 it is whatever decides that a card gets built without reading it, and this file has already spent
 two experiments establishing that the catalog description is not that lever.
+
+### The lever was in the other layer: 62% to 11 of 11 (2026-08-24)
+
+The previous section concluded that a screen's residue is not the rule failing but the 30% of turns
+that never read it, and that the next lever is whatever decides that — not the skill's text. That
+lever turned out to be one sentence in the **resident** layer.
+
+`## Load the skill before you explore` described the skill entirely in terms of *whether*: "whether
+the answer wants one at all, whether it belongs inline or in a canvas, and — for a request with
+several readings — how to ask with an interface rather than guess." Every claim is about the
+decision. A run that has already decided to build has, by that description, nothing left to load.
+
+Added: **once you have decided to build, it is the only place the rules for writing the card live**
+— naming the focus ring, the slider label, what a selected option announces, how a delete is undone
+— with the measured consequence beside it.
+
+Same prompt, before and after:
+
+| | loaded the skill |
+| --- | --- |
+| before | 8 of 13 (62%) |
+| after | **11 of 11** |
+
+Eleven for eleven against a 62% base rate is 0.5% by chance. And the cards: **11 of 11 clean under
+all 30 screens, 11 of 11 paint.** The residue on this prompt went to zero — not because a rule was
+reworded, but because the runs that were skipping the rules stopped skipping them.
+
+Three things worth keeping:
+
+- **The two layers had drifted apart in a way neither test could see.** The skill accumulated a
+  page of writing rules all day; the resident layer still advertised it as a decision aid. Both
+  were internally correct, and `test/capabilities.test.ts`-style checks confirm each names what it
+  should — nothing checks that one describes the other accurately.
+- **This is the experiment §4.5 retired, run at the other end.** That section changed the *catalog
+  description* and moved nothing, concluding a description cannot route a request the model has
+  already classified. True — and the fix was not to describe the skill better to a classifier, but
+  to give a model that has already classified a reason the skill still applies.
+- The honest limit: one prompt, one card type, 11 runs. Whether it generalises is the next thing
+  to measure, and the tool list now makes that cheap to check on any prompt.
 
