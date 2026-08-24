@@ -1424,8 +1424,22 @@ instruction to do unnecessary work.**
   `lib/client.js` separately** (a prompt change invalidates the run, a render change only means
   re-shoot), and **never cache a result whose text says the process died**.
 
-  Broken a fourth and fifth time since, so it is now a mechanism rather than a rule to remember:
-  **`bun run build` refuses while a wave is running** (`--force` to override). Both later breaks
+  Broken a fourth, fifth and SIXTH time since, and the escalation is worth following because each
+  fix was correct and each was too shallow. First: **`bun run build` refuses while a wave runs**
+  (`--force` to override) — which stops the rebuild but not the EDIT, and `eval.sh`'s mtime check
+  then calls every in-flight run stale. Wave 5 lost 27 of 72 that way while `$dsh/web` was being
+  written in another window, with the build guard working perfectly the whole time. So the real
+  fix is one level down: **a wave now FREEZES the plugin into its own directory** (`waves/wNNN/
+  plugin`) and repoints each eval home's symlink at it, restoring them in a `finally`. `src/` is
+  then free to move — the thing the wave reads is a copy nothing writes to. `eval.sh` recognises
+  such a link and skips both mtime checks (a frozen copy cannot go stale) while still refusing a
+  link to any OTHER checkout, which is the failure that guard was written for.
+
+  The general shape: when a guard keeps firing correctly and work keeps being lost anyway, the
+  guard is on the wrong noun. Guarding the ACTION (building) needed a list of every way to reach
+  the artefact; guarding the ARTEFACT (what the run reads) needed one copy.
+
+  Also still true: **`bun run build` refuses while a wave is running** (`--force` to override). Both later breaks
   were the same shape — an unrelated edit, a reflexive rebuild, and a wave whose verdicts mix two
   prompts. Note the second-order effect the first time you meet it: with the build refused, `lib/`
   stays at whatever it was, so a *test* failure or a smoke error right after an edit may be
@@ -1483,6 +1497,30 @@ styled against a design language nobody measured. The host publishes the answer;
   heading is **1 of 378 cards (0.3%)**. The corpus is Macaron production, where the skill is always
   loaded — the population where the rule fires is the one the corpus does not contain. Do not read
   a low corpus rate as "the rule does nothing" without asking which environment the corpus samples.
+
+### 6.855 The host-matching rules, measured after
+
+The three rules in 6.85 landed together and wave 5 is the after-measurement — 45 verdicts, the
+same corpus questions, the same three models:
+
+| wave | `font-medium` | `font-semibold` | `font-bold` | semibold share |
+|------|---------------|-----------------|-------------|----------------|
+| w000 | 33 | 26 | 0 | 44% |
+| w002 | 67 | 54 | 3 | 44% |
+| w003 | 117 | 80 | 2 | 40% |
+| w004 | 102 | 118 | 2 | 53% |
+| **w005** | **76** | **0** | **0** | **0%** |
+
+Over the same 45 cards: AI-slop icons rendered **0**, wrappers painted `bg-base` with a radius
+**0**. So all three went from a stable 40-53% (or a known-present defect) to absent — which is
+what a rule looks like when the model simply did not know the constraint, as opposed to one it
+keeps breaking under pressure. Worth remembering which kind this was: the earlier design rules
+that needed eight rewrites were fighting a habit; these three were filling a gap.
+
+Two process notes from the same wave. **27 of 72 runs were `stale`** because `src/` was edited
+mid-wave (again — see 6.8), so the measurement is 45 verdicts and not 72. And **40 runs were kept
+that the old guard would have discarded**: the split stale check reported them as
+`note: src/client/ …`, a render change that leaves the verdict standing.
 
 ### 6.86 Errors that reach only the reader teach the model nothing
 
