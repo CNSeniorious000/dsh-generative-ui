@@ -8045,12 +8045,14 @@ Three things worth keeping:
 The 62% → 11/11 result was one prompt, so it was re-run on two others — a todo list (which had
 skipped the skill in 3 of its 5 earlier runs) and the chmod calculator:
 
-    todo   skill=yes, skill=yes, skill=yes
-    chmod  skill=yes, skill=yes
+    todo   skill=yes ×4
+    chmod  skill=yes ×2   (a third run crashed upstream — see below)
 
-**5 of 5 across two more prompts**, and the cards are what the skill promises: both todo cards
-implement undo (the rule measured at 0/2 before it was shown as code), both chmod cards carry
-selection state on their preset rows, and all four are clean under every screen.
+**6 of 6 across two more prompts**, so the running total is **17 of 17 eligible runs** since the
+edit, against a 62% base rate on the first prompt and 2-of-5 on the second. The cards are what the
+skill promises: all four todo cards implement undo (the rule that was 0 of 2 before it was shown as
+code — one card mentions it seventeen times), both chmod cards carry selection state on their preset
+rows, and every one is clean under all thirty screens.
 
 The boundary was re-checked in the same batch, because a stronger *load the skill* push is exactly
 the kind of edit that could pull a one-line answer toward a card. Both hard negatives stayed prose
