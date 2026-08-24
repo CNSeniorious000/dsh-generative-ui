@@ -51,7 +51,15 @@ def run(job):
     return tag, (p.stdout.strip().splitlines() or ["(empty)"])[0][:90]
 
 jobs = [(i, m, s) for i in range(len(wave)) for m in MODELS for s in range(SAMPLES)]
-print(f"wave {WAVE}: {len(jobs)} runs", flush=True)
+# Fingerprint the halves separately. `lib/index.js` carries the prompt and the skill and is what
+# decides whether a card is attempted at all — a change there mid-wave invalidates the run. A
+# change in `lib/client.js` only alters how a card RENDERS, so the runs stay valid and the
+# screenshots have to be retaken. `bun test` rebuilds both, so this moves more often than expected.
+def fp():
+    import hashlib
+    return {f: hashlib.md5((REPO / "lib" / f).read_bytes()).hexdigest()[:8] for f in ("index.js", "client.js")}
+before = fp()
+print(f"wave {WAVE}: {len(jobs)} runs  lib={before}", flush=True)
 # One budget per UPSTREAM, not one for the wave. `macaron-v1-*` share a backend that stalls above
 # three concurrent requests — and stalling arrives as 900 seconds of silence, not an error — while
 # `glm-5.2` is a different backend behind the same gateway and is not bound by that. A single pool
@@ -64,4 +72,9 @@ def gated(job):
 with cf.ThreadPoolExecutor(max_workers=6) as ex:
     for tag, line in ex.map(gated, jobs):
         print(f"  {tag}: {line}", flush=True)
+after = fp()
+if after["index.js"] != before["index.js"]:
+    print(f"CONTAMINATED: lib/index.js changed mid-wave ({before['index.js']} -> {after['index.js']}) — the prompt moved under the run", flush=True)
+elif after["client.js"] != before["client.js"]:
+    print(f"note: lib/client.js changed mid-wave ({before['client.js']} -> {after['client.js']}) — verdicts stand, RE-SHOOT the screenshots", flush=True)
 print("WAVE DONE", WAVE, flush=True)

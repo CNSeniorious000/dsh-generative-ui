@@ -201,6 +201,16 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   classes. Inside a block the same \`gap\` separates its rows; a \`mb-4\` on one child while its
   siblings rely on the gap is what produces one odd space and eleven equal ones.
 
+- **A collapse whose rows all start open is decoration, and a filter that starts at "everything"
+  has not filtered.** Measured on two generated cards, two models, two weeks apart, both with the
+  mechanism written correctly: a symptom card with one-panel-at-a-time \`aria-expanded\` shipped all
+  six panels open at 3369px, and a 41-question study canvas — which also built a topic filter, a
+  to-learn/mastered toggle AND a search box — rendered every question expanded with the filter on
+  "All", repeating its two buttons 82 times down **12000px**. The model knew the list needed
+  narrowing in both cases; what it did not do was choose the initial state. If the list is longer
+  than a screen, the first render shows labels and the filter starts somewhere narrower than
+  everything.
+
 - **A list of options collapses the prose, not the facts — and folding the wrong half is the
   common way to end up with a card nobody can scan.** Measured on a real card recommending six
   ways to manage a symptom: each entry kept three lines of description permanently on screen and
@@ -223,6 +233,14 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   the column beneath them, not their own.
 
 - **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-base\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
+
+  **A thing you can tap needs more than the divider colour.** The rule above is about separating a
+  block from the surface below it, and \`border-line\` — 4% black — is right for that. It is not
+  enough for a control sitting on a surface that already has the same background: measured on a
+  real card, four tappable option boxes drawn with \`border-line\` on a \`bg-layer\` parent read
+  clearly on dark and were nearly invisible on light, where every layer is \`#fff\` and 4% black is
+  the only thing left. A tappable thing takes \`bg-layer-2\` or \`border-line-2\`, and the hairline
+  stays for dividers.
 
   **A control you have FILLED is the opposite case, and the two get confused.** The rule above is
   about separating a surface from the surface under it, where both tokens are deliberately faint —

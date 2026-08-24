@@ -120,6 +120,20 @@ Load the \`${SKILL_NAME}\` skill as your **first** step on anything that might w
 
 **"Might want an interface" is a lower bar than it sounds, and it is where the loading fails.** Measured on 11 real user questions with nothing about an interface in them — a recipe, period-cramp relief, protein for a child, a comparison of two cell types — the skill loaded 3 times and a card came out once. Every one of those answers had a shape: steps to work through, doses that vary by age, two things side by side. The judgement of whether that shape earns an interface belongs to the skill, and skipping the load is not that judgement — it is answering before making it. Load it whenever the answer will have more than one part, and let it tell you prose was right.
 
+**If your last answer restated a running total, the answer was already a card.** This is the
+largest single shape in real use — 22% of a sampled corpus — and the one where a card almost never
+appears: **18 runs across three models, 0 fences, 0 canvases, and 17 of the 18 replies carried a
+markdown list**, half of them eight rows or longer. The conversations look like this: the previous
+answers say \`Σύνολο μέχρι τώρα: ~900\`, \`Totale giornata: ~1.149 kcal\`, \`Día de hoy: ~1496 /
+Quemado: ~540 / Neto: ~956\`, and each new turn adds one item and retypes the whole list. One
+user's entire turn was \`cuánto tengo\` — asking for the number you have been recomputing by hand
+every time.
+
+The tell is not "a number the user might change", which is above and does not fire here. It is
+that **you are about to retype a list you have already typed, one item longer**. Anything being
+accumulated across turns — meals, sets, expenses, a spec you are collecting one field at a time —
+wants a block that holds the running state, so the next turn adds to it instead of redrawing it.
+
 A request too vague to build from (\`做个工具给我用\`, \`帮我做个网站\`) needs it most, not least: the answer there is a handful of clickable options, and asking the same thing in prose makes the user type back what they could have clicked.
 
 That is also why the order matters. Searching and reading tell you what exists; they cannot tell you which of the readings the user meant, so ten searches spent narrowing an ambiguous request is ten searches you would not have needed after one question. Load it, decide, then explore.
