@@ -7665,6 +7665,52 @@ bare filename — a strict filename match reported eight files that are all docu
 that fires on correct prose is one people learn to read past. That is the same calibration the rate
 audit needed when it flagged a sentence counting a syntax form rather than a screen hit.
 
+### A card the paint check cannot reach, and a rule that named its own counter-examples (2026-08-24)
+
+A reference card built on a library row — a `vaul` drawer with `container={hostEl}`, kept on the
+older branch as `filter-list` — was ported and then reverted, and the reason is a limit of the paint
+check worth writing down.
+
+`paint-cards.ts` renders with `react-dom/server`, and **vaul touches the DOM at import time**
+(`document.getElementsByTagName is not a function`). Installing it does not help; the card cannot
+be server-rendered at all. Nor can it be stubbed: a stubbed drawer renders nothing, so the check
+would start *passing* a card whose drawer never opens — the same trade already recorded for
+recharts, where an honest skip beats a false negative.
+
+Which leaves the guard added this morning doing its job in an inconvenient direction. A skipped
+reference card is now a hard failure, so a card like this cannot live in `test/cards` while that
+gate stands. That is the correct order of preference — a silent skip is how `metro` stopped being
+checked for hours — but it means the reference set is bounded by what a server render can reach.
+
+**The card itself is fine.** `mount-card.sh` runs it in a real browser: 87 nodes, the drawer opens,
+selecting 研发 filters ten items to three, zero errors, clean under all 30 screens. The check that
+could not see it is the harness, not the card, and this is exactly the division the file draws
+between the two — `paint-cards.ts` is 378 cards in two seconds without a browser, and the browser
+is for the cases it cannot reach.
+
+### And the removal of the invented names cost nothing
+
+The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
+plausible-sounding names that do not resolve. `test/capabilities.test.ts`, written an hour later to
+assert the prompts name no capability that does not exist, **failed on my own rule** — and it is the
+same defect the file records at length: a rule that names its own counter-examples hands the model
+a pattern to match — the phrasing rule recorded above went from every run wrong to every run right
+only once its is-not pair was removed.
+
+Removed and measured on the prompt most likely to pull toward inventing a storage module
+(`做个笔记本，能记点东西，刷新还在`): both cards import `$dsh/state`, neither invents anything. The
+sentence now says only that a sixth does not exist, without supplying three candidate names for it.
+
+One of those two cards did fire `VIEWPORT-UNITS`, on a **hand-rolled toast**:
+
+    <div aria-live="polite" style={{ position: "fixed", bottom: 20, left: "50%", … }}>
+
+`position: fixed` leaves the card's subtree entirely and floats over the whole app — the failure the
+"you are a component on someone else's page" rule exists for, arriving through the one case the
+`sonner` row covers. The row named the trap *inside* sonner (`toast()` without `<Toaster />`) and
+never said why to reach for it at all. It does now, with the measured reason: a hand-written toast
+is almost always `position: fixed`.
+
 ### The library rows, tested where they should not fire
 
 `做个番茄钟，倒计时要看着舒服，结束时提示一下` names a counter and a confirmation without naming a
