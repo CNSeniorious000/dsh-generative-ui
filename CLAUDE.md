@@ -1788,7 +1788,9 @@ version added this morning would have caught them too, but only because `QUOTA` 
 seen once; the transcript-absence test added since covers the ones that have not been.
 
 `scripts/run-fixtures.sh` runs the table concurrently — serially it outlives a tool timeout — and
-prints `K` for a canvas so the shape is never scored as a miss.
+prints `K` for a canvas so the shape is never scored as a miss. (Since 2026-08-24 a lowercase cell
+— `k` or a lowercase fence count — marks a run that never loaded the skill, so a grid used to
+measure a skill rule shows which cells were even eligible.)
 
 ### Every checker, verified against a known-bad input (2026-08-22)
 

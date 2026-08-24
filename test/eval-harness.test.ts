@@ -27,6 +27,14 @@ test("the reply path is printed, so a caller can read the card", () => {
   expect(script).toContain("reply=$out");
 });
 
+// A rule in the SKILL can only be measured on a run that loaded it. Three conclusions were written
+// from runs that never called `skill` — the tool list carried it and was read past every time, so
+// it is now the first word on the line.
+test("whether the skill loaded is reported, not left in the tool list", () => {
+  expect(script).toContain("skill=$skill");
+  expect(script).toMatch(/skill=\$\(.*skillx/);
+});
+
 // The text assertions above check the shape; this checks the behaviour, because a script can
 // contain `exit 3` and still never reach it. One second is enough — the run is killed before the
 // model answers, which is exactly the case being tested.

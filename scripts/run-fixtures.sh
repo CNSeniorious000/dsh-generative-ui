@@ -32,7 +32,11 @@ while IFS= read -r p; do
         crash*) out="$out C" ;;
         *) f=$(printf %s "$r" | grep -o 'fence=[0-9]*' | cut -d= -f2)
            c=$(printf %s "$r" | grep -o 'canvas=[0-9]*' | cut -d= -f2)
-           if [ "${c:-0}" != "0" ]; then out="$out K"; else out="$out $f"; fi ;;
+           # A cell for a run that never loaded the skill says nothing about any rule living in
+           # it — lowercase marks that, so a grid used to measure a skill rule can be read for
+           # which cells are even eligible.
+           case "$r" in skill=no*) k=k; one=$(printf %s "$f" | tr '[:upper:]' '[:lower:]');; *) k=K; one=$f;; esac
+           if [ "${c:-0}" != "0" ]; then out="$out $k"; else out="$out $one"; fi ;;
       esac
     done
     printf '%-46s %s\n' "$(printf %s "$p" | cut -c1-44)" "$out" > "$tmp/$(printf %02d "$i")"

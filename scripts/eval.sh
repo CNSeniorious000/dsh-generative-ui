@@ -59,4 +59,10 @@ if ! zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null | grep -qE '"kind" *: *"com
   echo "crash  $(head -c 120 "$out" | tr '\n' ' ')"
   exit 2
 fi
-echo "fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out"
+# A rule that lives in the SKILL can only be measured on a run that loaded it, and a run that did
+# not is not evidence about the rule — it is evidence about the trigger layer. The tool list has
+# always carried this and it is easy to read past, so say it in one word: `skill=no` is a reason to
+# discard the run from a skill-rule measurement, not a result. Three separate conclusions were
+# written from runs that never read the rule they were testing before this line existed.
+skill=$(printf %s "$calls" | grep -q 'skillx' && echo yes || echo no)
+echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out"
