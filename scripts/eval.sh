@@ -11,9 +11,19 @@ d=$(mktemp -d)
 # conclusions was lost to it once. Exit 4 rather than measuring the wrong tree.
 linked=$(readlink "${DSH_HOME:-$HOME/.dsh}/profiles/headless/node_modules/dsh-generative-ui" 2>/dev/null || true)
 here=$(cd "$(dirname "$0")/.." && pwd -P)
-if [ -n "$linked" ] && [ "$(cd "$linked" 2>/dev/null && pwd -P)" != "$here" ]; then
-  echo "stale  the headless profile loads $linked, not $here" >&2; exit 4
-fi
+# A wave FREEZES the plugin into its own directory and points the homes there, so that a `src/`
+# edit in another window cannot move the prompt under jobs already running — five waves were lost
+# before that existed. Such a link is this checkout, deliberately pinned, not a different one, and
+# the two staleness checks below are about a tree that can still change. A frozen copy cannot.
+case "$linked" in
+  */waves/w[0-9][0-9][0-9]/plugin)
+    exec_frozen=yes ;;
+  *)
+    exec_frozen=no
+    if [ -n "$linked" ] && [ "$(cd "$linked" 2>/dev/null && pwd -P)" != "$here" ]; then
+      echo "stale  the headless profile loads $linked, not $here" >&2; exit 4
+    fi ;;
+esac
 # And it must be built from the current source: `lib/` older than `src/` means the last edit is
 # not in what dsh will read. Same failure as the symlink, one step further along — every prompt
 # A/B measures the previous prompt, and the numbers look exactly like a rule that did nothing.
@@ -28,13 +38,13 @@ stale_half() {
   [ -n "$(find "$1" \( -name '*.ts' -o -name '*.tsx' \) -newer "$2" 2>/dev/null | head -1)" ]
 }
 # `src/client/` is excluded from the node half by pruning it, so an edit there cannot fail this.
-if [ -n "$(find "$here/src" -path "$here/src/client" -prune -o \( -name '*.ts' -o -name '*.tsx' \) -newer "$here/lib/index.js" -print 2>/dev/null | head -1)" ]; then
+if [ "$exec_frozen" = no ] && [ -n "$(find "$here/src" -path "$here/src/client" -prune -o \( -name '*.ts' -o -name '*.tsx' \) -newer "$here/lib/index.js" -print 2>/dev/null | head -1)" ]; then
   echo "stale  src/ (node half) is newer than lib/index.js — run \`bun run build\`" >&2
   exit 4
 fi
 # The client half only decides how a card is rendered, so a stale one is a warning, not a verdict:
 # the run's `skill=`/`fence=`/`canvas=` numbers stand and only the screenshots need retaking.
-if stale_half "$here/src/client" "$here/lib/client.js"; then
+if [ "$exec_frozen" = no ] && stale_half "$here/src/client" "$here/lib/client.js"; then
   echo "note: src/client/ is newer than lib/client.js — verdicts stand, RE-SHOOT the screenshots" >&2
 fi
 # The gateway credential is the third way to measure nothing and not be told. The provider block

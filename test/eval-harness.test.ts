@@ -104,6 +104,24 @@ test("a build older than the source is refused", () => {
 // a card RENDERS — were scanned against `lib/index.js`, the half that carries the prompt and the
 // skill the eval is actually measuring. A render change means re-shoot the screenshots; it is not
 // a reason to throw the verdicts away.
+// Five waves were lost to the same thing: an edit to `src/` in another window while jobs were in
+// flight. The `bun run build` guard stops the rebuild but cannot stop the edit, and the mtime
+// check then calls every run stale — wave 5 lost 27 of 72 that way. So a wave now freezes the
+// plugin into its own directory and points the eval homes there; a frozen copy cannot go stale,
+// and the two mtime checks are about a tree that can still change.
+test("a run against a frozen wave snapshot skips the staleness checks", () => {
+  expect(script).toMatch(/\*\/waves\/w\[0-9\]\[0-9\]\[0-9\]\/plugin\)/);
+  // Both checks must be gated, not just one: the node half is what makes a verdict void, and the
+  // client half is what makes a screenshot void — a snapshot invalidates neither.
+  expect([...script.matchAll(/\$exec_frozen" = no/g)].length).toBe(2);
+});
+
+// …and the pin must not become a way to measure the wrong tree: a link to any OTHER checkout is
+// still refused, which is the failure that cost an afternoon of A/Bs before this guard existed.
+test("a link somewhere other than a wave snapshot is still refused", () => {
+  expect(script).toContain("the headless profile loads");
+});
+
 test("a stale client half is a note, not a refusal", () => {
   expect(script).toContain("RE-SHOOT the screenshots");
   // The node-half check must not see `src/client/` at all, or the note is unreachable.

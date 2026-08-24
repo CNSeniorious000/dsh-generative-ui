@@ -14,7 +14,7 @@ false memory of its own output is not what production does either.
 
 Usage: uv run run-wave.py <wave-index> [samples]
 """
-import concurrent.futures as cf, hashlib, json, os, pathlib, subprocess, sys
+import concurrent.futures as cf, hashlib, json, os, pathlib, shutil, subprocess, sys
 
 ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", "/tmp/genui-loop"))
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -86,7 +86,27 @@ for probe_model in MODELS:
     if probe.returncode != 0:
         line = ((probe.stdout + probe.stderr).strip().splitlines() or [f"eval.sh exited {probe.returncode}"])[0]
         sys.exit(f"wave {WAVE} refused to start — {probe_model}: {line[:160]}")
-print(f"wave {WAVE}: {len(jobs)} runs  lib={before}", flush=True)
+# FREEZE what the wave reads. Each eval home reaches the plugin through a symlink into this
+# working copy, so every job re-reads `lib/` as it starts — and an edit to `src/` plus any rebuild
+# lands under jobs already in flight. That has now cost five waves: the `bun run build` guard stops
+# the rebuild but cannot stop the EDIT, and `eval.sh`'s mtime check then calls the run stale. This
+# wave lost 27 of 72 that way while `$dsh/web` was being written in another window.
+#
+# So the wave gets its own copy and points the homes at it: `src/` is then free to move, the
+# fingerprint below cannot change under the run, and the numbers are about one prompt. Restored in
+# a `finally` — a wave that dies mid-flight must not leave the homes pointing into /tmp.
+snapshot = ROOT / "waves" / f"w{WAVE:03d}" / "plugin"
+if snapshot.exists(): shutil.rmtree(snapshot)
+snapshot.mkdir(parents=True)
+for item in ("lib", "types", "package.json"):
+    src = REPO / item
+    (shutil.copytree if src.is_dir() else shutil.copy2)(src, snapshot / item)
+LINK = "profiles/headless/node_modules/dsh-generative-ui"
+homes = [pathlib.Path(os.path.expanduser(f"~/.dsh-eval-{m}")) / LINK for m in MODELS]
+restore = [(h, os.readlink(h)) for h in homes if h.is_symlink()]
+for h, _ in restore:
+    h.unlink(); h.symlink_to(snapshot)
+print(f"wave {WAVE}: {len(jobs)} runs  lib={before}  frozen at {snapshot}", flush=True)
 # One budget per UPSTREAM, not one for the wave. `macaron-v1-*` share a backend that stalls above
 # three concurrent requests — and stalling arrives as 900 seconds of silence, not an error — while
 # `glm-5.2` is a different backend behind the same gateway and is not bound by that. A single pool
@@ -96,9 +116,14 @@ GATES = {"macaron": threading.Semaphore(3), "glm": threading.Semaphore(3)}
 def gated(job):
     g = GATES["glm" if job[1].startswith("glm") else "macaron"]
     with g: return run(job)
-with cf.ThreadPoolExecutor(max_workers=6) as ex:
-    for tag, line in ex.map(gated, jobs):
-        print(f"  {tag}: {line}", flush=True)
+try:
+    with cf.ThreadPoolExecutor(max_workers=6) as ex:
+        for tag, line in ex.map(gated, jobs):
+            print(f"  {tag}: {line}", flush=True)
+finally:
+    for h, target in restore:
+        if h.is_symlink(): h.unlink()
+        h.symlink_to(target)
 after = fp()
 if after["index.js"] != before["index.js"]:
     print(f"CONTAMINATED: lib/index.js changed mid-wave ({before['index.js']} -> {after['index.js']}) — the prompt moved under the run", flush=True)
