@@ -10,7 +10,8 @@ the check that catches that, and it found exactly that on a reference card.
 
 Each card is judged on six images (320 / 440 / 720 in both themes) plus its TSX, on four axes:
 cognitive load, alignment and grid, colour and borders, and whether the layout responds at all.
-Verdicts cache by md5(model + card + source), so a rerun costs nothing.
+Verdicts cache by md5(model + card + source + the image bytes), so a rerun costs nothing and a
+re-shoot after a rendering fix is correctly a cache miss.
 
 Usage, with the shots already taken by `scripts/shot-card.mjs`:
 
@@ -68,16 +69,21 @@ def b64(p): return base64.b64encode(p.read_bytes()).decode()
 def content_for(card):
     parts = [{"type": "text", "text": RUBRIC + f"\n\n卡片：{card}"}]
     n = 0
+    # The verdict is about the IMAGES, so the cache key has to be. Keyed on source alone, a config
+    # fix that changed every card's rendering (a colour name was shadowing `text-base`, so titles
+    # painted white on white) replayed every stale verdict at full confidence.
+    shots = hashlib.md5()
     for w in WIDTHS:
         for theme in ("light", "dark"):
             f = SHOTS / f"{shot_stem(card)}.{theme}.{w}.png"
             if not f.exists(): continue
             parts.append({"type": "text", "text": f"\n{w}px {'浅色' if theme=='light' else '深色'}："})
             parts.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64(f)}"}})
+            shots.update(f.read_bytes())
             n += 1
     src = (CARDS / f"{card}.tsx").read_text()
     parts.append({"type": "text", "text": f"\n源码：\n```tsx\n{src}\n```"})
-    return parts, n, src
+    return parts, n, src + shots.hexdigest()  # third value is the CACHE KEY material, not the source
 
 
 async def judge(c, model, card, parts, fp):
@@ -109,7 +115,7 @@ async def main():
         tasks = []
         skipped = []
         for card in cards:
-            parts, n, src = content_for(card)
+            parts, n, keymat = content_for(card)
             # A card judged on missing or blank images is a verdict about the harness. Refuse it
             # loudly rather than letting it quietly narrow the denominator — a dead harness port
             # and a card that renders nothing produce the same 40px image.
@@ -119,7 +125,7 @@ async def main():
                     if (SHOTS / f"{shot_stem(card)}.light.{w}.png").stat().st_size < 5000]
             if tiny:
                 skipped.append(f"{card} (blank at {tiny})"); continue
-            fp = hashlib.md5((src + str(n)).encode()).hexdigest()
+            fp = hashlib.md5((keymat + str(n)).encode()).hexdigest()
             print(f"# {card}: {n} images", flush=True)
             tasks += [one(card, m, parts, fp) for m in MODELS]
         if skipped:
