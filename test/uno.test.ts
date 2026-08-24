@@ -78,6 +78,15 @@ test("form controls are normalised, and only inside the scope", async () => {
   expect(css).not.toMatch(/(^|[};]\s*)(button|input|select|textarea)\s*[,{]/m);
 });
 
+// `w-full` is `width: 100%`, which under the UA default counts padding and border as EXTRA. Every
+// card in wave 2 with a text field sat 10px past its own right edge at 320, 440 and 720 alike —
+// same at every width, which is what says it is not a breakpoint bug.
+test("box-sizing is border-box inside the scope, and not outside it", async () => {
+  const { css } = await generate(["w-full"]);
+  expect(css).toMatch(/\.ui4a-root[^{]*\*[^{]*\{[^}]*box-sizing:\s*border-box/);
+  expect(css).not.toMatch(/(^|[};])\s*\*[^{]*\{[^}]*box-sizing/m);
+});
+
 // UnoCSS merges selectors that share a declaration, and Chromium drops any rule whose selector
 // list contains a pseudo-element it does not know — so one `::-moz-range-thumb` takes the
 // `::-webkit-slider-thumb` half down with it. Measured on a real card: 75 of 87 rules survived

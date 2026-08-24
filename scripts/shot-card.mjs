@@ -74,6 +74,20 @@ for (const width of widths) {
     }
     return { x: 0, y: 0, width: Math.ceil(host.getBoundingClientRect().width), height: Math.max(40, Math.ceil(bottom)) };
   });
+  // Content wider than the card is the one defect a screenshot shows but a human reading the
+  // screenshot cannot name: the clip is taken at the host width, so the overflowing part is simply
+  // absent, and an absent column looks like a design choice. Measure it instead.
+  const over = await p.evaluate(() => {
+    const host = document.getElementById("shot-host");
+    const right = host.getBoundingClientRect().right;
+    const worst = [];
+    for (const el of host.querySelectorAll("*")) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && r.right > right + 1) worst.push({ px: Math.round(r.right - right), tag: el.tagName.toLowerCase(), cls: (el.className || "").toString().slice(0, 70) });
+    }
+    return worst.sort((a, b) => b.px - a.px)[0] || null;
+  });
+  if (over) console.log(`OVERFLOW ${width} +${over.px}px ${over.tag}.${over.cls}`);
   if (errs.length) console.log(`pageerror ${width}:`, errs[0]);
   await p.screenshot({ path: `${prefix}.${width}.png`, clip: box });
   console.log(`saved ${prefix}.${width}.png  ${box.width}x${box.height}`);

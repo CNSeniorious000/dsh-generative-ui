@@ -24,12 +24,19 @@ export const unoConfig = (scope: string): UserConfig => ({
   // `buttonface`. The card looked right in light and broken in dark, which is the failure this
   // whole colour system exists to prevent.
   //
-  // So: the same normalisation, scoped to our root. Only the properties whose UA default is a
-  // fixed colour or an inherited-font break — not margins, not box-sizing, which cards set
-  // themselves through utilities and which would surprise anyone reading the class list.
+  // So: the same normalisation, scoped to our root.
+  //
+  // `box-sizing: border-box` is in here for the same reason, and I left it out at first on the
+  // theory that cards set their own sizing. They cannot: `w-full` is `width: 100%`, and under the
+  // UA's `content-box` that 100% is the content alone, so every `<input className="w-full px-3
+  // border">` is padding-plus-border wider than its parent. Measured on wave 2 — every card with a
+  // text field overflowed its own edge by 10px at 320, 440 AND 720, which is the tell that it was
+  // never a breakpoint problem. The clip in a screenshot is taken at the card width, so the
+  // overflowing strip is not cut off, it is absent.
   preflights: [
     {
-      getCSS: () => `${scope} button, ${scope} input, ${scope} select, ${scope} textarea {
+      getCSS: () => `${scope} *, ${scope} *::before, ${scope} *::after { box-sizing: border-box; }
+      ${scope} button, ${scope} input, ${scope} select, ${scope} textarea {
         background: transparent; color: inherit; font: inherit; border: 0 solid; cursor: pointer;
       }
       ${scope} input, ${scope} select, ${scope} textarea { cursor: auto; }`,
