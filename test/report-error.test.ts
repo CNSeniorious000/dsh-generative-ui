@@ -74,6 +74,13 @@ test("the message is in English, like the prompt and the skill", () => {
   expect(reportBody("boom", "compile")).not.toMatch(/[\u4e00-\u9fff]/);
 });
 
+// The belt to the test above's braces. An English interruption with no language instruction is
+// WORSE than a Chinese one: it silently pulls a Spanish conversation into English for the rest of
+// the turn. The English-ness above is only safe because this sentence is here.
+test("the message tells the model to answer in the user's language", () => {
+  expect(reportBody("boom", "compile")).toContain("language the user has been writing in");
+});
+
 // A host with no chat channel is not an error; it is a headless or embedded surface.
 test("no channel is a no-op, not a throw", () => {
   expect(() => reportCardError(undefined, "boom", "compile")).not.toThrow();
