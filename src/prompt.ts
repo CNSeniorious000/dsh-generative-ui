@@ -152,4 +152,10 @@ Data visualisation is the one exception — a chart's series need their own hues
       @container (min-width: 30rem) { .row { grid-template-columns: 1fr 1fr; } }
     \`}</style>
 
-Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.`;
+Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.
+
+**A \`flex: 1\` item does not shrink below its content, and the thing beside it is what disappears.** Flex items default to \`min-width: auto\`, so a row of \`<div style={ { flex: 1 } }>long text</div>\` plus a button pushes the button clean out of the card at 320px — not wrapped, not clipped, gone. Measured: **77 of the 109 corpus cards with a \`flex: 1\` text or input row omit the fix**, and it is one property:
+
+    <div style={ { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }>
+
+\`minWidth: 0\` is what lets it shrink; the other three are what it does with the space it lost.`;

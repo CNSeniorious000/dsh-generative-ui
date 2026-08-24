@@ -8874,6 +8874,44 @@ Same lesson as every measurement artefact in this file, in a new costume: **veri
 before believing what the metric says about it.** Here the subject is the upstream, the metric is a
 timeout, and the byte count is what made the difference visible in one line.
 
+### The one panel finding that survived, and two A/Bs that measured nothing (2026-08-24)
+
+Three of the five models, on three different cards, pointed at the same missing property:
+`min-width: 0` on a `flex: 1` item. It is the one panel finding outside the four recurring themes
+that survived checking, and the failure is worse than it sounds.
+
+A flex item defaults to `min-width: auto` — it will not shrink below its content. So a row of
+`<div style={{ flex: 1 }}>long text</div>` beside a button does not wrap and does not clip at
+320px: **the button is pushed out of the card entirely and is not there.** Rendered A/B:
+
+| | at 320px |
+| --- | --- |
+| `flex: 1` | text overflows, the 选它 button is **gone** |
+| `flex: 1, minWidth: 0` | text ellipsises, button in place |
+
+**77 of the 109 corpus cards with a `flex: 1` text or input row omit it**, and the fix is one
+property. Now a rule in the resident layer, stated as the line to type.
+
+**No screen**, and the reason is the fifth instance of a pattern this file already names. The
+obvious predicate — a `flex: 1` style object with no `minWidth`, no `overflow` and no `width` —
+reports 97 of 378, and reading the hits kills it: most are buttons, `flex: "1 1 7rem"` (a basis
+changes the behaviour), or `flexDirection: "column"` where the axis does not apply. Separating a
+row that will overflow from one that cannot needs to know whether the element holds long text, and
+no text predicate does that reliably.
+
+Two failed reproductions before the A/B worked, both worth recording because each looked like
+evidence that the property does nothing:
+
+- **`<input>` gets its intrinsic width from `size` (20 characters), not from its placeholder.** So
+  two inputs, one with the fix and one without, shrink to the same floor and the screenshot shows
+  no difference at all.
+- **`overflow: hidden` already suppresses `min-width: auto`.** My second attempt put the fix and
+  the trigger on the same element, so the "before" row was not a before.
+
+Both produced a clean, symmetric screenshot that read as "this property is a no-op". **A negative
+A/B needs its trigger verified as much as a positive one does** — and here the instrument said the
+panel was wrong twice before it said the panel was right.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
