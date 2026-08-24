@@ -25,6 +25,10 @@ while IFS= read -r p; do
     for _ in $(seq 1 "$runs"); do
       r=$(./scripts/eval.sh "$p" $seed 2>&1)
       case "$r" in
+        # A stale plugin makes every cell in the grid a measurement of the PREVIOUS prompt, and
+        # the numbers look exactly like a rule that did nothing. Abort the whole run rather than
+        # recording it: `*)` below would find no `fence=` and quietly print a blank cell.
+        stale*) echo "$r" >&2; kill 0; exit 4 ;;
         crash*) out="$out C" ;;
         *) f=$(printf %s "$r" | grep -o 'fence=[0-9]*' | cut -d= -f2)
            c=$(printf %s "$r" | grep -o 'canvas=[0-9]*' | cut -d= -f2)

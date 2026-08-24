@@ -14,6 +14,13 @@ here=$(cd "$(dirname "$0")/.." && pwd -P)
 if [ -n "$linked" ] && [ "$(cd "$linked" 2>/dev/null && pwd -P)" != "$here" ]; then
   echo "stale  the headless profile loads $linked, not $here" >&2; exit 4
 fi
+# And it must be built from the current source: `lib/` older than `src/` means the last edit is
+# not in what dsh will read. Same failure as the symlink, one step further along — every prompt
+# A/B measures the previous prompt, and the numbers look exactly like a rule that did nothing.
+if [ -n "$(find "$here/src" -newer "$here/lib/index.js" -name '*.ts' -o -newer "$here/lib/index.js" -name '*.tsx' 2>/dev/null | head -1)" ]; then
+  echo "stale  src/ is newer than lib/ — run \`bun run build\`" >&2
+  exit 4
+fi
 # `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
 # A seed may need more than files — `git 历史` wants commits, and a checked-in `.git` would
