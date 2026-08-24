@@ -7453,6 +7453,35 @@ construct**, which is the better outcome and the one no screen can observe — t
 recorded earlier when `UNREACHABLE-CONTROL`'s residue was answered with `<button>` rather than with
 `tabIndex`.
 
+### A reference card stopped being checked and the gate said ok (2026-08-24)
+
+`bun run paint` reported *ok — every card renders something (1 skipped: $dsh ×1)*, and the skip was
+`metro.ui4a.tsx`, a reference card.
+
+`stub-unresolvable.ts` matched `$dsh/(ai|fs|exec|chat)` — a hand-written list, correct when it was
+written and one capability short the moment `$dsh/state` landed. The card importing it fell into
+the `Cannot find module` branch and was counted as **skipped**, which is the same word the check
+prints for a card importing recharts. So a reference card stopped being rendered by the gate that
+exists to prove reference cards render, and the report said `ok`.
+
+Both halves of that are the failure. A skip is the honest answer for a dependency this process
+genuinely cannot resolve; it is the *wrong* answer for a capability the repo generates a stub for,
+and nothing distinguished them because the list did not know about the stub.
+
+Fixed by reading `types/standalone/` instead — the generator writes one `.js` per group, so the
+directory is the list, and a capability added to `bind()` cannot be missed by this file without
+also being missed by the generator. Reference set went **1 skipped → 0**; the corpus is unchanged
+at 6 failures. An invented group still fails to resolve, verified, so the fix does not paper over
+`INVENTED-CAPABILITY`'s defect.
+
+That is the **sixth** duplicated-fact instance, and it fits the pattern the record already names:
+every one has been in a *measurement* tool rather than in the product — the mutation mutator, the
+platform list, the `EMPTY_RESULT` table, the specifier regex, `render-cards.ts`'s stubs, and now
+this. Worth adding one observation to that entry: the cost here was not a wrong number but a
+**silently narrowed denominator**, which is the failure mode `smoke.ts`'s "4 of 6 effects" line was
+corrected for on the same principle. A gate that quietly stops looking at something reports the
+same word as a gate that looked and was satisfied.
+
 ### The card that fixed the rule broke on something else
 
 The third run's card is clean under all 25 screens and **does not compile**:
