@@ -33,6 +33,24 @@ test("the closed-set sentence counts the capabilities that exist", () => {
   expect(inlinePrompt(false)).not.toContain("`exec`");
 });
 
+// The number and the list have to agree, and they did not: the list used to be built by
+// SUBTRACTING from a string — `EVERY_CAPABILITY.replace(", \`exec\`", "")` — with a different
+// escaping than the string it searched. It matched nothing, which `replace` reports by returning
+// the input unchanged, so the sentence said "five" and then named six, `exec` among them, on a
+// host where that import does not resolve. Count what the sentence actually lists rather than
+// trusting either half, and the two cannot drift again.
+test("the closed-set sentence lists exactly as many capabilities as it claims", () => {
+  const WORDS: Record<string, number> = { four: 4, five: 5, six: 6, seven: 7 };
+  for (const allowExec of [false, true]) {
+    const sentence = /These (\w+) are the whole set — ([^—]+) —/.exec(inlinePrompt(allowExec));
+    expect(sentence).not.toBeNull();
+    const claimed = WORDS[sentence![1]];
+    const listed = [...sentence![2].matchAll(/`(\w+)`/g)].map((m) => m[1]);
+    expect(listed.length).toBe(claimed);
+    expect(listed.includes("exec")).toBe(allowExec);
+  }
+});
+
 test("turning it on restores both halves", () => {
   expect(inlinePrompt(true)).toContain("$dsh/exec");
   expect(skillBody(undefined, undefined, true)).toContain("## Running a command");

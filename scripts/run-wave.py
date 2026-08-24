@@ -18,7 +18,35 @@ import concurrent.futures as cf, hashlib, json, os, pathlib, shutil, subprocess,
 
 ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", "/tmp/genui-loop"))
 REPO = pathlib.Path(__file__).resolve().parent.parent
-MODELS = ["macaron-v1-venti", "macaron-v1-coding-venti", "glm-5.2"]
+# WHICH MODELS A WAVE SAMPLES.
+#
+# The first three are what dsh actually runs, so a rule is worth shipping when it holds on them.
+# The other four are here for two reasons, and the second one matters more:
+#
+# 1. Throughput. `macaron-v1-*` share a backend capped at 3 concurrent, so a wave whose work is
+#    mostly theirs runs 3-wide no matter how many workers exist — wave 5's retry was 27 macaron
+#    jobs taking ~25 minutes with glm's three slots idle the whole time. Different upstreams fill
+#    those slots instead of queueing behind a limit that is not theirs.
+# 2. Evidence. A prompt rule that only holds on three models from two families is a rule about
+#    those families. `font-semibold` going to zero is worth much more when it does so on Gemini,
+#    Grok, GPT and Claude too — and a rule that holds on six models and fails on the seventh has
+#    told you something specific, which one that holds on three cannot.
+#
+# Each needs its own eval home (`scripts/eval-home.sh <model>`), because a home carries exactly
+# one default model and they must not share a settings.yaml.
+MODELS = [
+    "macaron-v1-venti", "macaron-v1-coding-venti", "glm-5.2",
+    "gemini-3.7-flash", "grok-4.6", "gpt-5.6-terra", "claude-sonnet-5",
+]
+
+# Which upstream a model queues behind; models sharing one share its concurrency budget.
+def upstream_of(model):
+    if model.startswith("macaron-v1"): return "macaron"
+    if model.startswith("glm"): return "glm"
+    if model.startswith("gemini"): return "gemini"
+    if model.startswith("grok"): return "grok"
+    if model.startswith("gpt"): return "gpt"
+    return "anthropic"
 WAVE = int(sys.argv[1])
 SAMPLES = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 
@@ -112,12 +140,18 @@ print(f"wave {WAVE}: {len(jobs)} runs  lib={before}  frozen at {snapshot}", flus
 # `glm-5.2` is a different backend behind the same gateway and is not bound by that. A single pool
 # of 3 would leave glm idle two thirds of the time for no reason.
 import threading
-GATES = {"macaron": threading.Semaphore(3), "glm": threading.Semaphore(3)}
+# One budget per UPSTREAM, keyed by `upstream_of`. `macaron-v1-*` share a backend that stalls
+# above three concurrent — and stalling arrives as 900 seconds of silence, not an error — while
+# every other family is a different backend behind the same gateway and is not bound by that.
+# A single shared pool would make the slowest upstream's limit everyone's: measured, wave 5's
+# retry was 27 macaron jobs running 3-wide for ~25 minutes with every other slot idle.
+GATES = {u: threading.Semaphore(3) for u in {upstream_of(m) for m in MODELS}}
 def gated(job):
-    g = GATES["glm" if job[1].startswith("glm") else "macaron"]
-    with g: return run(job)
+    with GATES[upstream_of(job[1])]: return run(job)
 try:
-    with cf.ThreadPoolExecutor(max_workers=6) as ex:
+    # Enough workers for every upstream to hold its full budget at once; the semaphores,
+    # not the pool, are what keeps any one backend from being overrun.
+    with cf.ThreadPoolExecutor(max_workers=3 * len(GATES)) as ex:
         for tag, line in ex.map(gated, jobs):
             print(f"  {tag}: {line}", flush=True)
 finally:
