@@ -182,6 +182,15 @@ This one runs *opposite* in the two places, and getting it backwards is the most
 
 - **Canvas fills its panel.** It already has a frame and a title bar around it. So take the whole space — \`height: 100%\`, your own padding, backgrounds bleeding to the edges — and do **not** wrap yourself in one more rounded, bordered, tinted box. A card inside the panel is a frame inside a frame.
 - **Inline is the card.** It sits between paragraphs, so one bounded box is what tells the reader where it starts and stops.
+- **But \`bg-base\` is the page's own colour, so a wrapper painted with it is not a box.** Measured
+  from the token table: \`bg-base\` is \`#fff\` on light and \`#151517\` on dark — the same value the
+  transcript behind the card is painted with, on both grounds. A root \`<div>\` with
+  \`background: var(--dsw-alias-bg-base); padding: 16px; border-radius: 12px\` therefore draws
+  nothing a reader can see: what is left is an invisible 16px inset and a rounded corner nobody
+  can find, while the \`bg-layer-1\` blocks inside it read as the real frame — a frame inside an
+  invisible frame. If you want the inline card to be bounded, bound it with \`bg-layer\` **plus**
+  \`border-line\` (see the both-spellings rule below). If you don't, drop the wrapper's background
+  and radius entirely rather than painting it the colour of the page.
 
 Either way, don't restage the header. The panel already names the canvas, so a heading repeating that name is the second copy of it; a small-caps kicker above the heading plus a subtitle under it is three lines of chrome before anything happens. **And on Chinese text an uppercase kicker is decoration that does not even render**: measured, 15 of the 19 kickers in 378 real cards set \`textTransform: "uppercase"\` over CJK, where it does nothing at all — the letter-spacing survives and the transform is a no-op, so what is left is a small grey line the layout did not need. One heading at most, often none. A chip in the top right has to be something the user actually tracks, not decoration to balance the layout.
 
@@ -650,6 +659,21 @@ it first.
 Two limits worth designing around. Commands are killed after **15 seconds**, so nothing that
 watches, serves, or waits. And the card is on the user's page — a command runs while they
 look at a spinner, so keep it to one round trip per interaction rather than one per row.
+
+**A timeout is not an empty result, and the two arrive as the same value.** A killed command
+resolves — 200, \`stdout: ""\`, \`timedOut: true\` — so \`bash()\` does not throw and a card that
+renders \`stdout\` shows the reader **"no matches"** for a search that never finished. Check
+\`timedOut\` before you report emptiness. Measured on a real card: a workspace search that
+reported no matches for \`*.ts\` under a directory holding 5,327 of them.
+
+**And in \`find\`, exclude by pruning, not by filtering.** \`-not -path '*/node_modules/*'\` is a
+predicate: \`find\` still descends into every excluded directory and stats every file inside
+before discarding it. \`-prune\` stops the walk. Same tree, same 5,327 results, measured:
+
+    find . -type f -not -path '*/node_modules/*' …          # 55-65s -> killed at 15s, 0 rows
+    find . \\( -name node_modules -o -name .git \\) -prune -o -type f … -print   # 6.3s, 5327 rows
+
+The filtering spelling is the one that reads more naturally and it is the one that times out.
 
 ## Reading and writing workspace files
 
