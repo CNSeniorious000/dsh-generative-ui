@@ -257,6 +257,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   </div>
   \`\`\`
 
+  **The tell is the ternary you are about to write.** Measured across 378 cards: 95 of the 114 that
+  get this wrong express the selection as \`background: picked === x ? … : …\` — one shape, whatever
+  the array is called (\`PRESETS\`, \`options\`, \`ranges\`, \`STYLES\`, \`MODES\` all appear). If you are
+  writing a conditional \`background\` inside a \`.map\` over choices, the attribute belongs on the
+  same element, and it is the same condition you already typed.
+
   **The row of presets is where this gets dropped.** Measured: three cards answering the same \`chmod\` question, months apart, each wrote \`aria-pressed\` on its permission-bit grid and then nothing at all on the preset row twenty lines below — 755, 644, 700 shown as pills, the active one differing only by \`background\`. \`PRESETS.map\` is the commonest shape this fires on across 378 cards. A grid of toggles looks like state and a preset row looks like decoration; they are the same widget, and the one that looks like decoration is the one that gets it wrong.
 
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
