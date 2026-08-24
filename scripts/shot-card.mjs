@@ -72,6 +72,11 @@ for (const width of widths) {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) bottom = Math.max(bottom, r.bottom);
     }
+    // Clip to the host's full width, and separately report how much of it the card declined to
+    // use. A card with `max-w-[34rem]` inside a 720px host paints 544px and leaves 176px of the
+    // page background — but the clip is the host, so the shot has no visible edge and the waste
+    // is invisible to anyone reading it. Four judges caught this from the SOURCE while I read the
+    // screenshot and saw a full-bleed form.
     return { x: 0, y: 0, width: Math.ceil(host.getBoundingClientRect().width), height: Math.max(40, Math.ceil(bottom)) };
   });
   // Content wider than the card is the one defect a screenshot shows but a human reading the
@@ -87,6 +92,17 @@ for (const width of widths) {
     }
     return worst.sort((a, b) => b.px - a.px)[0] || null;
   });
+  const unused = await p.evaluate(() => {
+    const host = document.getElementById("shot-host");
+    const hw = host.getBoundingClientRect().width;
+    let right = 0;
+    for (const el of host.querySelectorAll("*")) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) right = Math.max(right, r.right);
+    }
+    return Math.round(hw - Math.min(right, hw));
+  });
+  if (unused > 24) console.log(`UNUSED ${width} ${unused}px of ${width} never painted`);
   if (over) console.log(`OVERFLOW ${width} +${over.px}px ${over.tag}.${over.cls}`);
   // The other half of the same squeeze. `min-width: auto` makes a sibling overflow; `shrink`
   // makes the element itself collapse, and a button crushed to a coloured lozenge with its label
