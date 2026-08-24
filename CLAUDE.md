@@ -1328,6 +1328,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `mount-card.sh` | mounts in Chromium and reports the a11y tree and `localStorage` |
 | `render-cards.ts` | the browser render sweep (`render-check.md` says why compiling is not painting) |
 | `judge-cards.py` | five vision models grade the screenshots — see §6.6 |
+| `judge-delta.py` | pairs those verdicts before/after a change, per card — the panel's own spread is ~2.0, so only a paired read says anything |
 | **maintenance** | |
 | `mutation-audit.sh` / `invert-ifs.mjs` | inverts one condition at a time; names what no test constrains |
 | `check-exports.ts` | a package's real exports, through the same esm.sh URL the runtime resolves |
