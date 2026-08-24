@@ -7829,7 +7829,11 @@ Same prompt, same three-word ask, nothing about undo in it:
 | | undo offered |
 | --- | --- |
 | as a consequence | **0 of 5** |
-| as code | **2 of 2** so far |
+| as code | **2 of 3** |
+
+The third run never loaded the skill at all (`tools=[bashx45]`, forty-five bash calls and no
+`skill`), so the rule was not read rather than not applied — the distinction §4.5 draws, and the
+reason the tool list is printed beside the count. Two of the two runs that read it followed it.
 
 And written the taught way exactly — `const [undo, setUndo] = useState<Todo | null>(null)`, the
 removed row captured before the filter, a 撤销 button that puts it back. Both cards clean under all
