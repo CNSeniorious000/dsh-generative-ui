@@ -409,7 +409,13 @@ use whichever the surrounding code already uses.
 with \`{stdout, stderr, exitCode, truncated, timedOut}\`. It runs under the session's own sandbox
 mode, so it opens nothing your own bash tool has not already opened.
 
-**Fetch the first screen from a \`useEffect(…, [])\`.** That is the whole shape — a loading flag, an effect that runs the command once, \`setLoading(false)\` in a \`finally\`. Defining the loader and never calling it renders your skeleton forever.
+**Fetch the first screen from a \`useEffect(…, [])\`.** Defining the loader and never calling it renders your skeleton forever — measured, on a card whose \`load\` appeared exactly once in the file, at its own definition. It compiled, it painted, and a browser showed \`加载中…\` before a click, after a click, and after a remount. The whole shape:
+
+\`\`\`tsx
+const [loading, setLoading] = useState(true)
+const load = async (p: string) => { try { setRows(await readdir(p)) } finally { setLoading(false) } }
+useEffect(() => { void load(path) }, [path])   // ← the line that is missing when a card hangs
+\`\`\`
 
 **A card that re-runs a command needs \`signal\`.** Polling on a timer, or running one per
 keystroke, stacks a second command on top of a slow first — and the panel then paints whichever
