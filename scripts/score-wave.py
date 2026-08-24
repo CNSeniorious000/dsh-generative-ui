@@ -22,6 +22,16 @@ snap = d / "wave.json"
 wave = json.loads(snap.read_text()) if snap.exists() else json.loads((ROOT / "waves.json").read_text())[W]
 
 ROW = re.compile(r"^\s*(?:[-*+]\s|\d+[.)]\s|\|)")
+# A run of PARALLEL ITEMS, each with its own explanation, is a card written in markdown — the
+# shape is the tell, not the row count. `md >= 6` was the old threshold and it missed two thirds
+# of them: measured on wave 7, six replies had this shape and only two reached six rows. Three
+# books with a paragraph each, or one date span broken into years / weeks / hours, is four rows
+# and unmistakably a list. Both spellings count: bulleted `- **Label:** …`, and bare `**Label**`
+# followed by its own prose.
+LABELLED_ROW = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+\*\*", re.M)
+LABELLED_RUN = re.compile(r"\*\*[^*]{2,40}\*\*[^\n]{20,}")
+def is_list_shape(text: str) -> bool:
+    return len(LABELLED_ROW.findall(text)) >= 3 or len(LABELLED_RUN.findall(text)) >= 3
 rows = []
 skipped = []
 for f in sorted(d.glob("*.txt")):
@@ -42,6 +52,7 @@ for f in sorted(d.glob("*.txt")):
         "skill": m.get("skill") == "yes",
         "card": (m.get("fence", "0") != "0") or (m.get("canvas", "0") != "0"),
         "md": sum(1 for line in text.splitlines() if ROW.match(line)),
+        "listish": is_list_shape(text),
         "bytes": int(m.get("bytes", 0) or 0),
         "fam": wave[int(idx)]["fam"] if int(idx) < len(wave) else "?",
     })
@@ -56,12 +67,21 @@ if not n: print("no runs yet"); sys.exit()
 card = sum(r["card"] for r in rows); skill = sum(r["skill"] for r in rows)
 # A reply with six or more list/table rows is a card the model wrote in markdown. Six is where
 # the skill's own long-list rule draws the line, so the two numbers are about the same thing.
-mdcard = sum(1 for r in rows if not r["card"] and r["md"] >= 6)
-print(f"wave {W}: {n} runs  skill {skill} ({skill/n:.0%})  cards {card} ({card/n:.0%})  markdown-tables-instead {mdcard} ({mdcard/n:.0%})")
+# Split by whether the run loaded the skill. The rule that decides list-shape-means-card lives
+# IN the skill, so a run that never read it is evidence about the trigger layer, not about the
+# rule — exactly the distinction the `skill=` field was added for. Measured on wave 7: 9 replies
+# had the shape, and 3 of them came from runs that never loaded the skill. Reporting one number
+# overstates the rule's failure rate by half.
+mdcard = sum(1 for r in rows if not r["card"] and r["listish"] and r["skill"])
+mdcard_noskill = sum(1 for r in rows if not r["card"] and r["listish"] and not r["skill"])
+withskill = sum(1 for r in rows if r["skill"])
+print(f"wave {W}: {n} runs  skill {skill} ({skill/n:.0%})  cards {card} ({card/n:.0%})  "
+      f"list-shape-instead {mdcard} of {withskill} that loaded the skill ({mdcard/withskill:.0%})"
+      + (f"  [+{mdcard_noskill} more from runs that never loaded it]" if mdcard_noskill else ""))
 for key in ("model", "fam"):
     agg = collections.defaultdict(lambda: [0, 0, 0, 0])
     for r in rows:
-        a = agg[r[key]]; a[0] += 1; a[1] += r["skill"]; a[2] += r["card"]; a[3] += (not r["card"] and r["md"] >= 6)
+        a = agg[r[key]]; a[0] += 1; a[1] += r["skill"]; a[2] += r["card"]; a[3] += (not r["card"] and r["listish"])
     print(f"  by {key}:")
     for k, (t, s, c, mc) in sorted(agg.items(), key=lambda kv: -kv[1][2]):
         print(f"    {k:<26} n={t:<3} skill={s:<3} card={c:<3} md-instead={mc}")
@@ -72,7 +92,7 @@ short = sorted({r["i"] for r in rows if r["card"] and len(wave[r["i"]]["q"].repl
 if short:
     print("  very short turns that still produced a card — check these are not over-firing:")
     for i in short: print(f"    [{wave[i]['fam']}] {wave[i]['q'].replace('用户：','')[:70]}")
-missed = sorted({r["i"] for r in rows if not r["card"] and r["md"] >= 6})
+missed = sorted({r["i"] for r in rows if not r["card"] and r["listish"]})
 if missed:
     print("  turns answered as a markdown table by at least one run:")
     for i in missed: print(f"    [{wave[i]['fam']}] {wave[i]['q'].replace('用户：','')[:78]}")
