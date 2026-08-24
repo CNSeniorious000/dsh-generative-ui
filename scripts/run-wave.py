@@ -65,6 +65,27 @@ def fp():
     import hashlib
     return {f: hashlib.md5((REPO / "lib" / f).read_bytes()).hexdigest()[:8] for f in ("index.js", "client.js")}
 before = fp()
+# `eval.sh`'s guards (stale build, wrong symlink, missing credential) exit 4 in milliseconds, and
+# a wave that hits one does not fail — it "completes". Measured: waves 5 through 9 reported
+# `WAVE DONE ... 72 runs` across four seconds, 360 files all reading `stale  src/ is newer than
+# lib/`, and the reflection that followed was written about them. So ask the guards ONCE, before
+# spending anything: a wave with nothing to measure should refuse to start, not finish instantly.
+# A REAL run, not a stubbed one. The guards above are static checks and a stub would clear them
+# while telling us nothing about the credential's VALUE: a key that is set but rejected produces
+# `AUTH: 401` on every job, 72 times, and the wave still reports DONE. Measured — that is how the
+# second attempt at wave 5 was lost, minutes after the stale-build guard had just been added for
+# the first. One cheap turn up front is the only thing that distinguishes a working key.
+# One probe PER MODEL HOME, because that is the thing being checked. The first version ran a
+# single probe under the default `DSH_HOME`, whose model is neither of the three — it failed on
+# an unrelated upstream 400 and refused a wave that would have run fine. Each home carries its
+# own settings.yaml and its own credential, so only its own turn can clear it.
+for probe_model in MODELS:
+    probe = subprocess.run(["bash", str(REPO / "scripts" / "eval.sh"), "hi"], cwd=REPO,
+                           env={**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{probe_model}"), "EVAL_TIMEOUT": "180"},
+                           capture_output=True, text=True)
+    if probe.returncode != 0:
+        line = ((probe.stdout + probe.stderr).strip().splitlines() or [f"eval.sh exited {probe.returncode}"])[0]
+        sys.exit(f"wave {WAVE} refused to start — {probe_model}: {line[:160]}")
 print(f"wave {WAVE}: {len(jobs)} runs  lib={before}", flush=True)
 # One budget per UPSTREAM, not one for the wave. `macaron-v1-*` share a backend that stalls above
 # three concurrent requests — and stalling arrives as 900 seconds of silence, not an error — while
