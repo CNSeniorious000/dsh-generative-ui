@@ -7875,6 +7875,43 @@ record measures at 0% → 86%. **A detector for "has code" that only knows one s
 same shape as the four over-reporting detectors already listed. Fixed to accept both, and the
 remaining 44 are what the reading above describes.
 
+### Code was not the answer twice: a rule that grew too long (2026-08-24)
+
+The delete rule went 0/5 → 2/2 when the remedy became copyable code, and the obvious generalisation
+— *show the fix as code and it lands* — was tested immediately on the one rule still missing.
+`SELECTION-WITHOUT-STATE`'s residue in today's cards is 5, three of them the className spelling, so
+the className sentence was rewritten as the line with the attribute already on it:
+
+    <button className={`btn${picked === x ? " active" : ""}`} aria-pressed={picked === x}>
+
+Same prompt as before, three runs, four cards: **0 of 4.** Every one writes
+`className={`fp-btn${size === s ? " active" : ""}`}` — character for character the left half of the
+line above — without the attribute.
+
+So the generalisation is wrong, or at least incomplete. Showing the fix as code is not sufficient,
+and the honest question is what else differs between the two rules:
+
+| | delete | selection |
+| --- | --- | --- |
+| length of the rule | **667 chars** | **2277 chars** |
+| bold sub-rules inside it | 0 | 3 |
+| code blocks inside it | 1 | 2 |
+| result | 2/2 | 0/4 |
+
+The selection rule accumulated three separate findings today — the conditional-background tell, the
+preset row, the className spelling — each added because the previous one left a residue, and each
+one correct. Together they are three and a half times the length of a rule that works.
+
+This file already records the shape: **tidying the expression rule into a bulleted list cost it half
+its rate**, on the same content, and was reverted. That was structure changing behaviour with the
+words unchanged. This looks like the same thing from the other direction — a rule growing by
+accretion until the thing at the top is no longer what gets applied.
+
+Recorded rather than acted on. Cutting the rule down means choosing which measured finding to drop,
+and every one of the three was added because it fixed something. The next experiment worth running
+is not another rewording but a **split**: the same content as two short rules in different places,
+against this one long one — which is a real A/B and not a third guess at the wording.
+
 ### And the removal of the invented names cost nothing
 
 The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
