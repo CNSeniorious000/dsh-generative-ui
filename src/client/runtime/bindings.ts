@@ -13,6 +13,7 @@ import { moduleUrl, registerModules, registryImports } from "./registry.ts";
 import { AI_STREAM_PATH, EXEC_PATH, FS_PATH } from "../../contract-assets.ts";
 import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
+import { usePersistedState } from "./state.ts";
 
 /** What the plugin's client half lends to generated code. Registered once, at apply. */
 export type Ui4aHost = {
@@ -128,7 +129,14 @@ export function bind() {
     },
   };
 
-  return { chat, ai, fs, exec };
+  // No host behind this one — `localStorage` and React are both already in the page. It exists
+  // because the model reaches for it unprompted: five of six habit-tracker runs wrote
+  // `import { usePersistedState } from "$dsh/state"` against a module that did not exist, and a
+  // reworded denial in the skill did not stop it. An unresolvable specifier takes the whole module
+  // with it, so the card renders blank.
+  const state = { usePersistedState };
+
+  return { chat, ai, fs, exec, state };
 }
 
 /** Talks to the fs route, carrying the workspace and the session whose policy applies. */

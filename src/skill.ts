@@ -10,7 +10,7 @@
  * The catalog carries `name` and `description` **only** — not `whenToUse`, not the body — so the
  * description is the entire routing signal and has to name the trigger, not summarise the content.
  */
-import { CANVAS_DIR, CANVAS_SUFFIX, CAPABILITY_PREFIX, FENCE_LANG } from "./contract.ts";
+import { CANVAS_DIR, CANVAS_SUFFIX, CAPABILITY_PREFIX, FENCE_LANG, capabilityModule } from "./contract.ts";
 
 /** The checker, from pkg.pr.new: @genui/cli is a private workspace package and not on npm. */
 const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main";
@@ -92,7 +92,14 @@ Two things follow from the lifetime difference:
 
 - An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
 - A **canvas** stays interactive. It does not "complete"; it just sits there working.
-- A **canvas outlives the reply that made it**, so data the user puts into it — entries, notes, cards — must survive a reload on its own. There is no persistence hook here yet, so reach for \`localStorage\` under a key named after the canvas. Plain \`useState\` is a bug you cannot see while building: the ledger looks right until the tab reloads and every row is gone.
+- A **canvas outlives the reply that made it**, so data the user puts into it — entries, notes, cards — must survive a reload on its own. Reach for \`usePersistedState\` from \`${capabilityModule("state")}\` — \`useState\`'s signature including a lazy initialiser, with the value kept in \`localStorage\` under a namespaced key, and the read and write already wrapped:
+
+  \`\`\`tsx
+  import { usePersistedState } from "${capabilityModule("state")}"
+  const [entries, setEntries] = usePersistedState<Entry[]>("expense-ledger", [])
+  \`\`\`
+
+  **Name the key after this canvas, not after the data.** \`"ledger"\`, \`"todos"\`, \`"settings"\` are what every card reaches for, and two cards sharing a key share the rows. Plain \`useState\` is a bug you cannot see while building: the ledger looks right until the tab reloads and every row is gone.
   **And a reload is not the common case — your own next edit is.** Every revision replaces the
   whole file, so the canvas remounts and anything held only in \`useState\` is gone; change one word
   in a label and the user's half-typed row goes with it. Persist what they typed, not just what
@@ -102,11 +109,11 @@ Two things follow from the lifetime difference:
   stacks up, but the elapsed value is gone. Store the *start timestamp* rather than the elapsed
   count, so the display is derived and survives a remount by arithmetic.
 
-  **And \`localStorage\` can throw.** A quota that is full, or storage disabled entirely, and
-  \`setItem\` raises — from inside an effect, where it reaches the error boundary and takes the
-  whole card down over a saved preference. Persistence went from 1 corpus card to 20 fresh ones
-  once this section asked for it, and **10 of those 29 writes are bare**. One \`try\` around the
-  write, and none around the read: failing to save a preference is not worth losing the card.
+  **Reaching for \`localStorage\` by hand is where this goes wrong.** A full quota, or storage
+  disabled entirely, and \`setItem\` raises — from inside an effect, where it reaches the error
+  boundary and takes the whole card down over a saved preference. Persistence went from 1 corpus
+  card to 20 fresh ones once this section asked for it, and **10 of those 29 writes were bare**.
+  \`usePersistedState\` has the \`try\` on both sides; use it and the question does not arise.
 
 ## Ask with an interface when the request is underspecified
 

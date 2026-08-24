@@ -46,16 +46,28 @@ const EMPTY_RESULT: Record<string, string> = {
 // `streamText` returns an async ITERABLE rather than a promise, so it is correctly absent.
 const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash"]);
 
+/**
+ * Groups that need no harness, and therefore ship their real implementation rather than a stub.
+ *
+ * `$dsh/state` is `localStorage` and React, both present outside dsh. Stubbing it would remove
+ * working behaviour instead of standing in for missing behaviour — and it would break outright:
+ * `usePersistedState` is a hook, so a stub returning `undefined` both crashes the destructuring
+ * and changes the hook count on every render after it.
+ */
+const SELF_SUFFICIENT = new Set(["state"]);
+
 const groups = bind() as Record<string, Record<string, unknown>>;
 const imports: Record<string, string> = {};
+/** Members of self-sufficient groups are never stubbed, so the stub gates below skip them. */
+const stubbed = Object.entries(groups).filter(([group]) => !SELF_SUFFICIENT.has(group));
 
 // A member added to `bindings.ts` and not to `EMPTY_RESULT` gets a stub returning `undefined`,
 // which is correct for a void member and a crash for every other — `bash` shipped that way and
 // made `.exitCode` throw on every exported page. There is no way to tell the two apart from the
 // binding alone, so the choice has to be stated here rather than defaulted.
 const VOID_MEMBERS = new Set(["sendMessage", "writeFile"]);
-const unlisted = Object.values(groups).flatMap((members) => Object.keys(members)).filter((name) => EMPTY_RESULT[name] === undefined && !VOID_MEMBERS.has(name));
-const notAsync = Object.values(groups).flatMap((members) => Object.keys(members)).filter((name) => !ASYNC.has(name) && !VOID_MEMBERS.has(name) && name !== "streamText");
+const unlisted = stubbed.map(([, members]) => members).flatMap((members) => Object.keys(members)).filter((name) => EMPTY_RESULT[name] === undefined && !VOID_MEMBERS.has(name));
+const notAsync = stubbed.map(([, members]) => members).flatMap((members) => Object.keys(members)).filter((name) => !ASYNC.has(name) && !VOID_MEMBERS.has(name) && name !== "streamText");
 if (notAsync.length > 0) {
   console.error(`gen-standalone: ${notAsync.join(", ")} is neither async nor void — add to ASYNC, or to VOID_MEMBERS if it returns nothing`);
   process.exit(1);
@@ -67,6 +79,12 @@ if (unlisted.length > 0) {
 
 for (const [group, members] of Object.entries(groups)) {
   const specifier = capabilityModule(group);
+  if (SELF_SUFFICIENT.has(group)) {
+    const built = await Bun.build({ entrypoints: [resolve(import.meta.dir, `../src/client/runtime/${group}.ts`)], target: "browser", external: ["react"] });
+    await writeFile(resolve(out, `${group}.js`), await built.outputs[0].text());
+    imports[specifier] = `./${group}.js`;
+    continue;
+  }
   const body = Object.keys(members).map((name) => {
     const warn = `  console.warn(${JSON.stringify(`[${specifier}] ${name}() did nothing: this page is not running inside dsh, so there is no harness to reach.`)}, ...args);`;
     const result = EMPTY_RESULT[name];
@@ -85,4 +103,4 @@ for (const [group, members] of Object.entries(groups)) {
 }
 
 await writeFile(resolve(out, "importmap.json"), `${JSON.stringify({ imports }, null, 2)}\n`);
-console.log(`wrote ${Object.keys(imports).length} stubs for ${CAPABILITY_PREFIX}/* → types/standalone/`);
+console.log(`wrote ${Object.keys(imports).length - SELF_SUFFICIENT.size} stubs and ${SELF_SUFFICIENT.size} real module(s) for ${CAPABILITY_PREFIX}/* → types/standalone/`);

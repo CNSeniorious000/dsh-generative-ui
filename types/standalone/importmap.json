@@ -3,6 +3,7 @@
     "$dsh/chat": "./chat.js",
     "$dsh/ai": "./ai.js",
     "$dsh/fs": "./fs.js",
-    "$dsh/exec": "./exec.js"
+    "$dsh/exec": "./exec.js",
+    "$dsh/state": "./state.js"
   }
 }

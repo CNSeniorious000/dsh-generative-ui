@@ -26,6 +26,7 @@ type Declared = {
   ai: { streamText: typeof Ai.streamText };
   fs: { readFile: typeof Fs.readFile; readdir: typeof Fs.readdir; readBytes: typeof Fs.readBytes; writeFile: typeof Fs.writeFile };
   exec: { bash: typeof Exec.bash };
+  state: { usePersistedState: <T>(key: string, initial: T | (() => T)) => [T, import("react").Dispatch<import("react").SetStateAction<T>>] };
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one

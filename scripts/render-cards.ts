@@ -14,7 +14,9 @@ import { mergeFallbackImports } from "partial-react/import-map";
 import { cardsIn } from "./tsx-node.ts";
 
 /** Every $dsh group, whose generated stubs are concatenated into the one shim module. */
-const SHIM_GROUPS = ["chat", "ai", "fs", "exec"];
+// Every group `gen-standalone.ts` writes, including the self-sufficient ones — `state.js` is the
+// real `usePersistedState`, not a stub, so a card that persists behaves here as it does in dsh.
+const SHIM_GROUPS = ["chat", "ai", "fs", "exec", "state"];
 
 // `test/cards`, like its siblings. The old default was `.research/cards`, which has not existed
 // for some time — running with no argument failed inside a readdir rather than saying so.
@@ -89,8 +91,8 @@ window.__src = {};
           ...SHIM_GROUPS.map((group) => readFileSync(resolve(import.meta.dir, `../types/standalone/${group}.js`), "utf8").replaceAll(/^export default .*$/gm, "")),
           // `$ui4a/*` is the pre-rename prefix. Nothing resolves it in production — that is the
           // point of the rename — but 22 corpus cards were written against it, and leaving them
-          // to fail here would report a build-lag artefact as a broken card.
-          "export const usePersistedState = (k, v) => [v, () => {}];",
+          // to fail here would report a build-lag artefact as a broken card. `usePersistedState`
+          // used to be stubbed here too; it now arrives from `state.js` above, for real.
           "export default {};",
         ].join("\n"),
         { headers: { "content-type": "text/javascript" } },
