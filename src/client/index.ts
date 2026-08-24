@@ -127,11 +127,23 @@ export function apply(ctx: ClientContext): void {
       };
     }, "dsh-generative-ui: $dsh host");
   });
+  // A card that fails to compile used to be a red panel the reader saw and the model never did.
+  // `onError` fires only for a failure that survived settling and retries, so this is the real
+  // ones — see `report-error.ts` for why it is once per message and why it says it is automatic.
+  const sendToModel = (text: string) => {
+    const id = currentSession();
+    const session = id === undefined ? undefined : ctx.sessions.scope(id);
+    if (session === undefined) return;
+    session.inject(["conversation"], (addressed) => {
+      void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] card error report failed", error));
+    });
+  };
+
   // Mounted inside the effect, not beside it: `mountCanvasHost` reaches for MutationObserver
   // straight away, and doing that during registration is exactly what smoke rejects.
   let showCanvas: ((id: string) => void) | null = null;
   ctx.effect(() => {
-    const host = mountCanvasHost({ calls, cwd, sessionId });
+    const host = mountCanvasHost({ calls, cwd, sessionId, onCardError: (message, phase) => reportCardError(sendToModel, message, phase) });
     showCanvas = host.show;
     return () => {
       showCanvas = null;
@@ -164,17 +176,6 @@ export function apply(ctx: ClientContext): void {
       };
     }, "dsh-generative-ui: canvas links open the panel");
   });
-  // A card that fails to compile used to be a red panel the reader saw and the model never did.
-  // `onError` fires only for a failure that survived settling and retries, so this is the real
-  // ones — see `report-error.ts` for why it is once per message and why it says it is automatic.
-  const sendToModel = (text: string) => {
-    const id = currentSession();
-    const session = id === undefined ? undefined : ctx.sessions.scope(id);
-    if (session === undefined) return;
-    session.inject(["conversation"], (addressed) => {
-      void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] card error report failed", error));
-    });
-  };
   ctx.effect(
     () =>
       claimInlineFences({

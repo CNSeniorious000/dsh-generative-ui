@@ -19,6 +19,11 @@ export type CanvasHostOptions = {
   cwd: () => string | undefined;
   /** Identity of the current session; dismissals are remembered against it. */
   sessionId: () => string;
+  /**
+   * Where a canvas's compile failure goes. Optional because a host may have no chat channel;
+   * absent, the error is still painted for the reader and simply reaches nobody else.
+   */
+  onCardError?: (message: string, phase: string) => void;
 };
 
 const EMPTY: ReadonlySet<string> = new Set();
@@ -47,7 +52,7 @@ export const paintSignature = (canvases: readonly Canvas[], offerable: readonly 
 
 export const OPAQUE_WRITE = /"(?:code|command)"\s*:[\s\S]*canvases/;
 
-export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
+export function mountCanvasHost({ calls, cwd, sessionId, onCardError }: CanvasHostOptions): { dispose: () => void; show: (id: string) => void } {
   /**
    * Canvas bodies re-read from disk, for the ones a patch left stale.
    *
@@ -212,6 +217,7 @@ export function mountCanvasHost({ calls, cwd, sessionId }: CanvasHostOptions): {
               offerable,
               cwd: cwd(),
               onOpen: show,
+              onCardError,
               onWidth: column.setWidth,
               onClose: () => {
                 const hiding = dismissed.get(session) ?? new Set<string>();
