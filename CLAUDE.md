@@ -1189,6 +1189,20 @@ fails if a script compiles a whole card without `compileSettled`.
 **When a checker and reality disagree, suspect the checker.** An hour went into bisecting a card
 that was never broken.
 
+**The screenshot pipeline can only measure a card whose content is in its source**, and that
+fraction is falling because the skill is working. Wave 2 was 100% literal data; wave 3 is 5 of 11,
+the rest reaching for `usePersistedState` or `$dsh/ai` as the skill asks. A persisted card's shot
+is its genuine first-run screen, which is fair. A streaming card's is not: `surface-harness.ts`
+now forwards `$dsh/ai` to a real model (501, never a canned success, when no key is configured),
+but the shot is taken a second after mount and glm-5.2 spent **7432 reasoning characters before
+its first content token**, so the picture is the loading state. Two settle heuristics were tried
+and both reported success on the spinner — three equal heights (the loading panel is the same
+height as the list that replaces it) and height+text-length (nothing had started, so stillness
+before and stillness after are identical samples). `judge-cards.py` therefore skips any card
+importing `$dsh/ai`, by name. Canned data is worse than exclusion, not better: these cards feed
+the stream to a `partial-json` parser against a schema their own prompt declares, so a generic
+`{items:[…]}` fills one field per row and photographs as a layout defect.
+
 The layers, and what each can see:
 
 | | catches | cost |
