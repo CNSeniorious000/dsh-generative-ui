@@ -7743,6 +7743,30 @@ answer and the correct amount of work. The 418 reply is a paragraph about RFC 23
 Worth doing after any day of rule additions, and worth doing *last*: the positives are checked
 continuously by the screens and the paint check, and the negatives are checked by nothing at all.
 
+### Two correct guards, one false failure (2026-08-24)
+
+`eval.sh` grew two guards today: exit 4 when the profile symlink points at another checkout or when
+`lib/` is older than `src/`, and exit 3 when a run exceeds `EVAL_TIMEOUT`. Both are right, and
+together they broke a test.
+
+`test/eval-harness.test.ts` drives a real one-second run and asserts exit 3. It got **4** — the
+staleness guard fired first, because `src/` was newer than `lib/`. Nothing had been edited: a
+`git checkout` and a restored `cp` backup during mutation testing bumped two mtimes, which is all
+that predicate can see.
+
+So the test was measuring **which guard ran first**, not the thing it names, and it failed on a tree
+with no uncommitted changes. Fixed by building inside the test before the run.
+
+The general shape, which is new here: **an ordered set of guards makes every test of the later ones
+depend on the earlier ones passing.** The staleness check is deliberately cheap and deliberately
+first — it exists because a stale build produces plausible numbers — and that ordering is exactly
+what makes it stand between any other assertion and the behaviour it wants to reach.
+
+Worth pairing with the mtime observation, because the predicate is weaker than it reads: *`src/` is
+newer than `lib/`* is not *`src/` has changed*. It is the right trade for its job (a false alarm
+costs one `bun run build`, a missed stale build costs an afternoon of measurements), but anything
+that depends on it has to either build first or not depend on it.
+
 ### And the removal of the invented names cost nothing
 
 The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
