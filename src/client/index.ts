@@ -20,7 +20,7 @@ import { mountCanvasHost } from "./canvas/index.ts";
 import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
 import { canvasIdOf } from "../contract.ts";
 
-export const inject = ["slots", "sessions"];
+export const inject = ["sessions"];
 
 /** Re-exported so `bun run smoke` can build the synthesized blob modules and parse them. */
 export { localImports };
