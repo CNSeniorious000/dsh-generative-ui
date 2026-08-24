@@ -237,6 +237,33 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
       <input type="range" aria-label="音量" min={0} max={100} value={v} onChange={…} />
 
+  **And a bare \`<input type="range">\` is the loudest thing on the card.** The browser paints its
+  own track in the OS accent — a thick, fully saturated blue that ignores your theme, is identical
+  on light and dark, and outshouts the number beside it. **43 of the 52 corpus cards with a slider
+  ship it untouched**, including all three reference cards. \`accent-color\` does not fix it: measured
+  side by side, it swaps one blue band for another. The track is a pseudo-element, so only a
+  \`className\` in your \`<style>\` block can reach it:
+
+      .s { flex: 1; appearance: none; -webkit-appearance: none; background: transparent; }
+      .s::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--dsw-alias-border-l2); }
+      .s::-webkit-slider-thumb {
+        appearance: none; -webkit-appearance: none; margin-top: -5px;
+        width: 14px; height: 14px; border-radius: 50%;
+        background: var(--dsw-alias-label-primary);   /* contrasts the TRACK, so it inverts with the theme */
+      }
+      .s:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+
+  Then decide what the control means, because the three shapes are not interchangeable and you can
+  tell them apart from what the number is:
+
+  - **Picking a value** (speed, font size, a threshold) — plain track, thumb marks *where you are*.
+    Filling the left half would claim the value accumulates, and 120ms is not an amount of anything.
+  - **An adjustable amount** (budget, volume, progress you can scrub) — fill the left of the track,
+    because its length IS the quantity. \`background: linear-gradient(to right, var(--dsw-alias-state-business-primary) var(--p), var(--dsw-alias-border-l2) var(--p))\`.
+  - **An amount they cannot change** — fill only, and then it is not a slider at all. Two nested
+    \`<div>\`s render identically and announce honestly; a \`readOnly\` range still says "slider" to a
+    screen reader and invites a drag that does nothing.
+
 - **And when the content arrives on its own, say so where it lands.** A card that fetches shows a
   spinner becoming a list; someone using a screen reader gets nothing — focus has not moved, and
   the new content is silent below it. **0 of 64 corpus cards that fetch anything announce their
