@@ -21,6 +21,17 @@ if [ -n "$(find "$here/src" -newer "$here/lib/index.js" -name '*.ts' -o -newer "
   echo "stale  src/ is newer than lib/ — run \`bun run build\`" >&2
   exit 4
 fi
+# The gateway credential is the third way to measure nothing and not be told. The provider block
+# in each eval home reads its key from `apiKeyEnv`, and with that variable unset dsh starts, opens
+# a session, and sits there: the process is alive, the connection is open, nothing ever comes back
+# and no error is printed. Measured — a whole wave of 72 runs spent its budget this way, five
+# workers busy for minutes with zero session files written, which reads exactly like the upstream
+# stalling. Same class as the two guards above, so the same treatment: refuse rather than measure.
+keyenv=$(grep -oE 'apiKeyEnv: *[A-Z0-9_]+' "${DSH_HOME:-$HOME/.dsh}/settings.yaml" 2>/dev/null | head -1 | awk '{print $2}')
+if [ -n "$keyenv" ] && [ -z "${!keyenv:-}" ]; then
+  echo "nocreds  \$$keyenv is unset — dsh would open a session and hang with no error" >&2
+  exit 4
+fi
 # `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
 # A seed may need more than files — `git 历史` wants commits, and a checked-in `.git` would

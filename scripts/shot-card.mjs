@@ -152,6 +152,13 @@ for (const width of widths) {
     return { px: Math.round(best), who };
   });
   if (flush.px < 4) console.log(`FLUSH ${width} ${flush.px}px from the host edge — ${flush.who}`);
+  if (process.env.PROBE_TRUNC) {
+    const t = await p.evaluate(() => [...document.querySelectorAll(".truncate")].map((e) => ({
+      t: (e.textContent || "").trim().slice(0, 24), box: Math.round(e.getBoundingClientRect().width), want: e.scrollWidth,
+      parent: Math.round(e.parentElement.getBoundingClientRect().width),
+    })).filter((x) => x.want > x.box + 1));
+    if (t.length) console.log(`TRUNC ${width} ` + JSON.stringify(t));
+  }
   if (errs.length) console.log(`pageerror ${width}:`, errs[0]);
   await p.screenshot({ path: `${prefix}.${width}.png`, clip: box });
   console.log(`saved ${prefix}.${width}.png  ${box.width}x${box.height}`);
