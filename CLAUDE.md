@@ -1018,6 +1018,23 @@ recognising before trusting any number in this project.
 | a card truncated with 800px to spare | the ellipsis is in the DATA | `scrollWidth > box`, not the pixels |
 | 4 of 6 sliders forgot their fill | all four are "pick a value", which must NOT fill | read what the number means |
 
+**A sixth class, found by reading 29 cards' screenshots in one sitting: the pixels are real and
+the intent is inferred.** Five times in a day I read a defect off a shot that did not survive one
+look at the source — and the fifth time I nearly rewrote a working probe to match the misreading:
+
+| what the shot showed | what it was |
+| --- | --- |
+| a filled form with a disabled button | four `placeholder="30"` on empty fields |
+| five cards celebrating going over a limit | the user is eating UP TO a target — green was right |
+| `truncate` firing with 800px to spare | the ellipsis is a literal in the data |
+| a pending row logged as `0` | `value=""` with `placeholder="0"` — the total was correct |
+| 1100px of wasted width | a justified header reaching 704 of 720 |
+
+A CSS ellipsis and a typed one are the same pixels; a placeholder and a value are the same pixels;
+correct green and wrong green are the same pixels. **When a shot suggests a defect whose evidence
+is what the pixels IMPLY rather than what they ARE, the source or a DOM probe settles it in a
+minute** — and a probe's silence is often the correct answer to the question it asks, not a gap.
+
 Four properties they share: **the failure and the interesting result are identical at the metric**,
 so repetition does not help; **the wrong answer is the alarming one**, which is the direction that
 gets written up; **a check written for one has a blind spot for the next**; and **the tell is never
@@ -1264,6 +1281,35 @@ tell that it was never a breakpoint bug), and the colour named `base` was shadow
 (§3.7). Both times my first instinct was to write a prompt rule teaching the model to work around
 it. A defect that reproduces identically at 320, 440 and 720 is nearly always infrastructure;
 check the config before spending prompt budget on it.
+
+**Reading all 29 wave-2 cards myself found what five vision judges did not: a contrast failure.**
+20 of 29 write `bg-accent text-white` — the primary button, every badge. Measured on the live
+harness in both themes, that is **2.66:1 in dark**, against 4.5 for the 10px text it is usually
+applied to. No judge mentioned it in 117 verdicts; they grade composition, and contrast is
+arithmetic on two computed colours. It is also invisible to all four probes.
+
+The cause is structural, and the host had already solved it: `accent` flips WITH the theme (dark
+gets the *lighter* blue), so any foreground that also flips with the theme moves the same
+direction and the gap closes. `--dsw-alias-label-primary-foreground` flips against it — 4.23
+light / 7.11 dark — and a tinted ground (`state-business-tertiary` + `label-primary`) does better
+still at 16.04 / 9.79. `test/probes/badge-contrast.ui4a.tsx` renders all four spellings side by
+side so the claim is checkable by eye.
+
+**I found that only after reading the token table instead of my own notes.** The authority is
+`@deepseek-ai/dsh-client-ui-theme/lib/styles/` — `design-platform.css` carries **162 colour
+aliases** (`body` = light, `body[data-ds-dark-theme]` = dark, over a static scale), and the **30-step
+type scale is in `gradient-shadow-text.css`**, a filename that says nothing about it. `uno-config.ts`
+maps **12 of the 162**. Whole groups are unreachable from a card: the host's own button recipes
+(15), the secondary and tertiary steps of every status colour (7), `label-tertiary`/`caption`
+(7), `markdown-*` prose styling (8). Checked the harness fixture against that table: the 162 agree
+exactly, so every contrast figure here stands, and none of the five sheets styles a bare element
+— which is why a harness screenshot is faithful on colour and type. **Before reasoning about a
+design system, read its table**; I spent an hour computing against 13 values transcribed from
+memory and was one edit from inventing a name for a token the host already publishes.
+
+One more, from the same read: Wind4's line-height for `text-sm`/`text-xs` is **2px tighter** than
+the host's own (20 vs 22, 16 vs 18), and those two sizes are **74% of all font-size uses** in
+wave 2. Fixable in `theme.font.*`, no prompt rule needed.
 
 One in four is the hit rate a first-pass regex gets here, for the same reason: a criticism is
 generated from a principle, and the principle assumes a context. Still worth its cost — the one
