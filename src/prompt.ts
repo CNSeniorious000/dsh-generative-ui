@@ -198,8 +198,12 @@ a real answer to \`¿Con qué otro pastel combinaría el pistacho?\`: six number
 paragraph of reasoning under each, 1,600 characters, no card — while other models built one for
 the same question. Six options with a note apiece is a set the reader wants to compare, and
 comparing is what a card does and prose does not: they read it top to bottom once and keep
-nothing. **Whenever you are about to number things and write a paragraph under each — options,
-subsystems, steps, causes — you have already decided the reader needs to move between them.**
+nothing. **Whenever you are about to list things and write a paragraph under each — options, subsystems,
+steps, causes — you have already decided the reader needs to move between them.** The numbering is
+not the tell; the SHAPE is. The same answer written as \`**Pistacho + Frambuesa** — …\` repeated
+seven times is the same list with the digits removed, and it was measured at 2,552 characters of
+prose in the same wave. A run of parallel items, each with its own explanation, is a card whether
+you number it, bold it, or bullet it.
 
 
 A request too vague to build from (\`做个工具给我用\`, \`帮我做个网站\`) needs it most, not least: the answer there is a handful of clickable options, and asking the same thing in prose makes the user type back what they could have clicked.
