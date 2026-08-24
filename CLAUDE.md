@@ -312,6 +312,20 @@ screens that used to read `background:` out of a style object are blind to class
 replaced (`HARDCODED-COLOUR-CLASS`, `BRAND-PRIMARY-FILL-CLASS`); a probe confirmed the old pair
 fired on neither `bg-[#fff]` nor a fixed-palette ramp.
 
+**In light theme the three background tokens are all pure white.** Measured on the real harness
+at 440, computed values:
+
+    light   base #ffffff   layer #ffffff   layer-2 #ffffff
+    dark    base #151517   layer #232324   layer-2 #2c2c2e
+
+So a card that separates a nested panel from its parent with a background token has *no*
+separation in light and looks right in dark — the host's light theme separates with borders and
+its dark theme with fills. Three of the five judges found this independently on wave 2 and read it
+as a card defect ("`bg-layer-2` melts into the card"); it is not, and the model cannot know it.
+Anything nested needs `border border-line` to read as nested. `bg-layer-2` stays correct for a
+HOLE (an input, a well) because the border there carries the shape anyway — which is also why the
+"an input is a hole in a surface" rule has been landing: the border was doing the work all along.
+
 Data visualization is the stated exception — chart series need their own hues to be distinguishable — and **a thing's own identity is the same case**, which the wording did not originally cover. Measured 2026-08-23 on the three cards in `test/cards`: 12-22 token uses each, and the 24 literal hexes are all `TILE_COLORS` in 2048 (the game's own palette) and the black and white of piano keys. `metro` has zero. So the rule holds where it should: chrome takes tokens, the subject keeps its colours.
 
 ## 4. Known traps
