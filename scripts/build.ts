@@ -1,5 +1,20 @@
 import { resolve } from "node:path";
 
+// A wave measures `lib/`, so rebuilding while one runs changes the prompt under jobs that are
+// already in flight: they come back `stale` (the eval guard catches those) or, worse, they come
+// back with a VERDICT produced by a different prompt than the one the wave reported. That has
+// happened four times, and every time it was the same shape — an unrelated edit, a reflexive
+// `bun run build`, and a wave whose numbers mix two prompts. Remembering not to do it has not
+// worked, so the build refuses instead. `WAVE_ROOT` env var or `--force` to override.
+if (!Bun.argv.includes("--force")) {
+  const ps = Bun.spawnSync(["pgrep", "-f", "run-wave.py"]);
+  if (ps.exitCode === 0 && new TextDecoder().decode(ps.stdout).trim() !== "") {
+    console.error("refusing to build: a wave is running, and rebuilding moves the prompt under jobs already in flight.");
+    console.error("  wait for it, or `bun run build --force` if you know this wave is already void.");
+    process.exit(1);
+  }
+}
+
 // The panel stylesheet is a real .css file (editors, linters and formatters understand it)
 // but reaches the browser as a string the plugin injects itself, because a client bundle is
 // one JS factory with no stylesheet channel of its own.
