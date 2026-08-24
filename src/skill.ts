@@ -110,11 +110,21 @@ Two things follow from the lifetime difference:
   in a label and the user's half-typed row goes with it. Persist what they typed, not just what
   they saved.
 
-  **Persisting makes deletion permanent, so a delete needs a way back.** This is the cost of the
-  rule above: before, a row removed by mistake came back on reload because nothing was saved;
-  now it is gone for good. Measured on cards written under this rule — 8 persist a list the user
-  built, and only 2 ask anything before removing a row. A confirm step or an undo, either is
-  enough; a single unguarded click on a persisted row is the one irreversible thing a card can do.
+  **If you write \`setRows(prev => prev.filter(r => r.id !== id))\` behind a button, keep the row.**
+  Persisting is what makes that line permanent — before it, a mistaken delete came back on reload.
+  Hold the removed row and offer it back:
+
+  \`\`\`tsx
+  const [undo, setUndo] = React.useState<Row | null>(null)
+  const remove = (id: string) => {
+    setUndo(rows.find((r) => r.id === id) ?? null)
+    setRows((prev) => prev.filter((r) => r.id !== id))
+  }
+  { undo && <button onClick={() => { setRows((p) => [...p, undo]); setUndo(null) }}>撤销删除</button> }
+  \`\`\`
+
+  A confirm step does the same job. Measured: 13 cards persist a list the user built and 2 offer
+  either.
 
   **A running clock is state too**, and the least obvious kind: a stopwatch or a timer mid-count
   reads 0 again after one edit. Measured — the interval itself is cleaned up correctly, nothing
