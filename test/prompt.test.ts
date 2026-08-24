@@ -25,7 +25,7 @@ const RULES = [
   ["px inside a style object", "is JavaScript, not CSS"],
   ["an arrow after &&", "chain into an arrow function"],
   ["empty is not undefined", "not a guard against empty"],
-  ["no literal colours", "Never write literal colors"],
+  ["no literal colours", "**Never write a literal colour**"],
   ["a non-zero exit resolves", "do not catch it"],
   // Shown as code, not described. The adherence count found rules stated in prose landing at
   // 0-7% while the same rule as two lines landed — so the code block IS the rule here, and a
@@ -135,12 +135,17 @@ test("the body assembles whether or not the maps exist", () => {
  * card doing this right look like?".
  */
 const RULE_FOR_SCREEN: Record<string, string | string[]> = {
-  "BRAND-PRIMARY-FILL": "as a background",
-  "COMMA-IN-STYLE": "Merge styles with a spread, never a comma",
+  "BRAND-PRIMARY-FILL": "there is no `bg-brand`, deliberately",
+  "COMMA-IN-STYLE": "is a spread and never a comma",
   "DESTRUCTURED-HOOK": "Only `useState` returns a pair",
-  "DUPLICATE-STYLE-KEY": "written twice keeps only the last one",
+  "DUPLICATE-STYLE-KEY": "A key written twice keeps the last one",
   "GLOB-IN-JSX": "brace in JSX text is an expression",
-  "HARDCODED-BACKGROUND": "Never write literal colors",
+  "HARDCODED-BACKGROUND": "**Never write a literal colour**",
+  // The class spelling of the same two defects. Pinned to the sentence that names Tailwind's own
+  // palette specifically: "no literal colours" alone does not tell the model that `bg-slate-800`
+  // counts, and it is the likelier reach of the two.
+  "HARDCODED-COLOUR-CLASS": "never reach for Tailwind's own palette",
+  "BRAND-PRIMARY-FILL-CLASS": "there is no `bg-brand`, deliberately",
   "JSX-SUBSCRIPT": "Subscript it into a capitalised local first",
   "MISSING-REACT-IMPORT": "Import every name you write",
   "MODULE-SCOPE-HOOK": ["Declare every hook", "a hook called outside a component"],
@@ -156,7 +161,7 @@ const RULE_FOR_SCREEN: Record<string, string | string[]> = {
   "TRANSITION-WITHOUT-TRANSFORM": "transition that names `transform`",
   "UNANNOUNCED-ASYNC-RESULT": ["announce it where it lands", "say so where it lands"],
   "SWALLOWED-CAPABILITY-FAILURE": "say so where the results would have been",
-  "UNQUOTED-CSS-UNIT": "A `style` object is JavaScript, not CSS",
+  "UNQUOTED-CSS-UNIT": "It is JavaScript, not CSS",
   "REGEX-IN-JSX-TEXT": "A brace in JSX text is an expression",
   // Two constructs, two phrases. `UNLABELLED-CONTROL` screens sliders AND `<select>`, and mapping
   // it to one phrase let the select case sit screened-but-unruled for a day: the check passed

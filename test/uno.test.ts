@@ -62,3 +62,18 @@ test("every colour name maps to a host token, and brand is not among them", asyn
   expect(referenced.filter((t) => !HOST_TOKENS.has(t))).toEqual([]);
   expect(css).not.toContain("brand-primary");
 });
+
+// Dropping presetWind4's reset leaves form controls with the UA's own chrome, whose colours are
+// fixed rather than theme-aware: measured in a real browser, two unselected `<button>`s came out
+// light grey with black text on a dark card. The replacement must normalise them and must stay
+// inside the scope, because the host has buttons of its own.
+test("form controls are normalised, and only inside the scope", async () => {
+  const { css } = await generate(["grid"]);
+  expect(css).toContain(".genui-root button");
+  const control = css.slice(css.indexOf(".genui-root button"));
+  expect(control).toContain("background: transparent");
+  expect(control).toContain("font: inherit");
+  // Nothing may address a bare element globally — `button {` with no scope in front of it would
+  // restyle every button in the shell.
+  expect(css).not.toMatch(/(^|[};]\s*)(button|input|select|textarea)\s*[,{]/m);
+});

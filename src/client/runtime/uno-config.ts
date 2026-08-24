@@ -17,6 +17,24 @@ import type { UserConfig } from "@unocss/core";
  */
 export const unoConfig = (scope: string): UserConfig => ({
   presets: [presetWind4({ important: scope, preflights: { reset: false } })],
+  // The reset above is dropped because it targets `*` and would land on the HOST's DOM. But
+  // dropping it leaves form controls carrying the browser's own chrome, and that is not
+  // theme-aware: measured on a card in dark mode, two unselected `<button>`s rendered as light
+  // grey blocks with black text, because a button with no background class falls back to the UA's
+  // `buttonface`. The card looked right in light and broken in dark, which is the failure this
+  // whole colour system exists to prevent.
+  //
+  // So: the same normalisation, scoped to our root. Only the properties whose UA default is a
+  // fixed colour or an inherited-font break — not margins, not box-sizing, which cards set
+  // themselves through utilities and which would surprise anyone reading the class list.
+  preflights: [
+    {
+      getCSS: () => `${scope} button, ${scope} input, ${scope} select, ${scope} textarea {
+        background: transparent; color: inherit; font: inherit; border: 0 solid; cursor: pointer;
+      }
+      ${scope} input, ${scope} select, ${scope} textarea { cursor: auto; }`,
+    },
+  ],
   theme: {
     colors: {
       // The host's 12 semantic tokens, under names short enough to write in a class.

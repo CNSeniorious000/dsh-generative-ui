@@ -109,6 +109,8 @@ const CONTROLS = {
   "toast-without-toaster.tsx": "TOAST-WITHOUT-TOASTER",
   "named-numberflow-import.tsx": "NAMED-NUMBERFLOW-IMPORT",
   "invented-capability.tsx": "INVENTED-CAPABILITY",
+  "hardcoded-colour-class.tsx": "HARDCODED-COLOUR-CLASS",
+  "brand-primary-fill-class.tsx": "BRAND-PRIMARY-FILL-CLASS",
 } as const;
 if (process.argv[2] === undefined) {
   for (const [name, want] of Object.entries(CONTROLS)) {

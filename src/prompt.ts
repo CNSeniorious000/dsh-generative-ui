@@ -36,12 +36,18 @@ export default function Answer() {
 
 - **Import every name you write, \`Fragment\` included.** \`<Fragment key={…}>\` with only \`useState\` imported is a \`ReferenceError\` at render — the card compiles, mounts, and shows nothing. \`<>…</>\` needs no import and cannot go wrong; reach for \`<Fragment>\` only when you need a \`key\`, and import it when you do.
 - **A brace in JSX text is an expression, so quote anything that has braces of its own.** \`<code>^\\w+@\\w+\\.\\w{2,}$</code>\` does not compile: \`{2,}\` is read as JavaScript. Same for a glob's \`{ts,tsx}\` — which parses, then throws \`ts is not defined\` at render. Write it as a string in braces (\`{"^\\\\w+@\\\\w+\\\\.\\\\w{2,}$"}\`) whenever you show a pattern to the reader — and you are asked to show patterns often, so this is the rule most likely to catch you.
-- **A \`style\` object is JavaScript, not CSS.** \`fontSize: 11px\` is a syntax error there; it is \`fontSize: 11\` (numbers get \`px\` automatically) or \`fontSize: "11px"\`. Bare units are only legal inside a \`<style>\` block, and switching between the two mid-card is how it happens.
-- **Merge styles with a spread, never a comma.** \`style={labelStyle, { marginTop: 14 } }\` is a comma expression: \`labelStyle\` is evaluated, thrown away, and only the object after the comma is applied — the element silently loses every style the named object carried. It is \`style={ { ...labelStyle, marginTop: 14 } }\`.
-- **A style key written twice keeps only the last one.** \`style={ { padding: 4, borderRadius: 8, gap: 6, padding: "8px 12px" } }\` is not merged — the second wins and the first is discarded silently, which is how a card ends up ignoring the spacing you carefully set at the top of the object. Long style objects are where this happens; read the whole object before adding to it.
+- **The \`style\` prop is for a value you compute, and its traps all come from letting it grow.**
+  It is JavaScript, not CSS — \`fontSize: 11px\` is a syntax error, it is \`fontSize: 11\`. Merging
+  is a spread and never a comma (\`style={a, {…} }\` evaluates \`a\`, throws it away, and silently
+  applies only the second object). A key written twice keeps the last one, so \`{ padding: 4, …,
+  padding: "8px 12px" }\` discards the spacing you set at the top and nothing warns you. All three
+  are diseases of a long style object, and the cure is that a style object should now hold one or
+  two runtime values — a percentage from state, a transform from a measurement — with everything
+  static in \`className\`, where a repeated utility is just a repeated word:
 
     style={ { padding: 4, gap: 6, padding: "8px 12px" } }   // padding: 4 is gone, silently
-    style={ { padding: "8px 12px", gap: 6 } }               // one key, one value
+    <div className="p-3 gap-1.5" style={ { width: \`\${pct}%\` } } />   // static in class, computed in style
+
 - **Only \`useState\` returns a pair.** \`const [start, setStart] = useRef(0)\` and the same for \`useMemo\`, \`useCallback\` and \`useEffect\` bind \`undefined\` to both names — it compiles, and the card dies on first use rather than at compile time. A ref is \`const start = useRef(0)\` and you read \`start.current\`.
 
     const [start, setStart] = useRef(0)   // both undefined; dies on first use
@@ -120,68 +126,112 @@ That is also why the order matters. Searching and reading tell you what exists; 
 
 ## Colors
 
-Your UI renders inside this app, which has light and dark themes and switches between them at runtime. **Never write literal colors** — a white card is unreadable the moment the user is in dark mode. Use these CSS variables, which resolve to whichever theme is active:
+Your UI renders inside this app, which has light and dark themes and switches between them at
+runtime, and it is styled with **UnoCSS utility classes** (Tailwind v4 syntax) generated in the
+browser from the classes you write. So \`className\`, not a \`style\` object and not a \`<style>\`
+block — the classes below are the app's own semantic colours, and they follow the theme:
 
-| Variable | Use |
+| Class | Use |
 | --- | --- |
-| \`--dsw-alias-bg-base\` | the surface you sit on |
-| \`--dsw-alias-bg-layer-1\` | a card or raised block |
-| \`--dsw-alias-bg-layer-2\` | a block raised above that |
-| \`--dsw-alias-border-l1\` | hairline borders and dividers |
-| \`--dsw-alias-border-l2\` | a stronger border |
-| \`--dsw-alias-label-primary\` | body and heading text |
-| \`--dsw-alias-label-secondary\` | captions, units, muted text |
-| \`--dsw-alias-state-business-primary\` | the one accent — selection, the active state, a filled button |
-| \`--dsw-alias-interactive-bg-hover\` | hover background |
-| \`--dsw-alias-state-error-primary\` | errors, destructive states |
-| \`--dsw-alias-state-success-primary\` | success, positive deltas |
-| \`--dsw-alias-state-warn-primary\` | warnings |
+| \`bg-base\` | the surface you sit on |
+| \`bg-layer\` | a card or raised block |
+| \`bg-layer-2\` | a block raised above that |
+| \`border-line\` | hairline borders and dividers |
+| \`border-line-2\` | a stronger border |
+| \`text-label\` | body and heading text |
+| \`text-muted\` | captions, units, muted text |
+| \`bg-accent\` / \`text-accent\` | the one accent — selection, the active state, a filled button |
+| \`hover:bg-hover\` | hover background |
+| \`text-danger\` / \`bg-danger\` | errors, destructive states |
+| \`text-success\` | success, positive deltas |
+| \`text-warn\` | warnings |
 
-So \`background: "var(--dsw-alias-bg-layer-1)"\`, not \`background: "#fff"\`.
+Every colour utility takes them: \`bg-\`, \`text-\`, \`border-\`, \`ring-\`, \`divide-\`, \`from-\`.
+**Never write a literal colour** — a white card is unreadable the moment the user is in dark
+mode — and never reach for Tailwind's own palette (\`bg-slate-800\`, \`text-gray-500\`), which is
+fixed to one theme. The list above is all of them; there is no \`bg-brand\`, deliberately.
 
-**The three \`bg-*\` layers are all pure white in the light theme** — only the dark theme separates them by value. So a raised block that relies on \`bg-layer-1\` alone to stand out is invisible on light: give it \`--dsw-alias-border-l1\` too, and let the background do the work only on dark.
+**The three background layers are all pure white in the light theme** — only dark separates them
+by value. So a raised block that relies on \`bg-layer\` alone to stand out is invisible on light:
 
-**Do not use \`--dsw-alias-brand-primary\` as a background.** Despite the name it is a *foreground* colour — it equals the body text colour in both themes (near-white on dark, near-black on light), so a tile filled with it and white text on top is a white square on dark with invisible writing. Measured: **50 of 378 real cards fill with it and 12 pair it with a light foreground**, which makes this the most-broken rule in this section — the name is the trap, and reading it again does not help. The two lines, so there is nothing to convert: \`background: "var(--dsw-alias-state-business-primary)", color: "#fff"\` for a filled button, and \`color: "var(--dsw-alias-brand-primary)"\` — no background — where you wanted emphasis.
+    <div className="bg-layer border border-line rounded-lg p-3">
+
+Everything that is not a colour is also a class: \`grid gap-4\`, \`flex items-center\`, \`text-sm\`,
+\`font-medium\`, \`rounded-lg\`, \`p-3\`. The variants are where this pays — a state and the style it
+produces are one token, so they cannot drift apart:
+
+    <button role="radio" aria-checked={id === picked}
+      className="border border-line rounded-md px-3 py-1.5 aria-checked:bg-accent aria-checked:text-white aria-checked:border-transparent">
+
+**Reach for an arbitrary value rather than abandoning the system.** Anything the utilities do not
+name goes in brackets — \`w-[3.5rem]\`, \`grid-cols-[auto_1fr]\`, \`bg-[var(--dsw-alias-bg-base)]\`,
+and pseudo-elements too: \`[&::-webkit-slider-thumb]:w-3.5\`. A \`style\` object is for one thing
+only, a value computed at runtime that no class can hold (a percentage width from state, a
+transform from a measurement).
 
 Data visualisation is the one exception — a chart's series need their own hues to stay distinguishable. Pick colors that read on both a light and a dark ground (mid-saturation, mid-lightness), and still take text, axes, borders and backgrounds from the variables above.
 
 ## Width
 
-**You do not know how wide you will be, and the viewport cannot tell you.** The same block renders in a narrow chat column and in a side panel the reader drags between 320 and 720 pixels — \`100vw\` is the whole window in both, and a media query answers a question nobody asked. Your root is already a query container, so size against *it* with a \`<style>\` block:
+**You do not know how wide you will be, and the viewport cannot tell you.** The same block renders
+in a narrow chat column and in a side panel the reader drags between 320 and 720 pixels —
+\`100vw\` is the whole window in both, and a media query answers a question nobody asked. Your root
+is already a query container, so the breakpoint prefix to reach for is the **container** one,
+written \`@[30rem]:\`:
 
-    <style>{\`
-      .row { display: grid; gap: 12px; }
-      @container (min-width: 30rem) { .row { grid-template-columns: 1fr 1fr; } }
+    <div className="grid grid-cols-1 gap-3 @[30rem]:grid-cols-2">
 
-**Reflowing text is not a responsive layout, and it is what you ship when you write no query at
-all.** A card with no \`@container\` rule still "works" at every width — the text simply wraps — so
-nothing looks broken while you write it, and the failure only shows in a screenshot. Measured on
-one card at 320 / 440 / 720: a two-column ingredient grid kept both columns at 320, where every
-label broke onto a second line, and kept them at 720, where the right third of the card was empty.
-Any multi-column grid needs the query that collapses it to one column; anything with a fixed width
-beside a flexible one needs the query that lets it take the extra space.
+**Reflowing text is not a responsive layout, and it is what you ship when you write no prefix at
+all.** A card with no breakpoint still "works" at every width — the text simply wraps — so nothing
+looks broken while you write it, and the failure only shows in a screenshot. Measured on one card
+at 320 / 440 / 720: a two-column ingredient grid kept both columns at 320, where every label broke
+onto a second line, and kept them at 720, where the right third of the card was empty. Any
+multi-column grid starts at \`grid-cols-1\` and earns its extra columns with a prefix; anything
+with a fixed width beside a flexible one needs the prefix that lets it take the extra space.
 
-**And with \`overflow: hidden\` on the wrapper it does not even wrap — it disappears.** A
+**And with \`overflow-hidden\` on the wrapper it does not even wrap — it disappears.** A
 three-column comparison table on that same card was clipped at 320: the header read \`PROC…\`, a
 cell read \`Sin orgánul\`, and the text that did not fit was simply gone, with no scrollbar and
-nothing to indicate anything was missing. \`overflow: hidden\` is what you reach for to keep a
+nothing to indicate anything was missing. \`overflow-hidden\` is what you reach for to keep a
 border radius from being cut by a child, and it silently turns "too narrow" into "content lost".
-If a table cannot collapse to one column, it wants \`overflow-x: auto\` on its own wrapper, never
-\`hidden\`.
-    \`}</style>
+If a table cannot collapse to one column, it wants \`overflow-x-auto\` on its own wrapper, never
+\`overflow-hidden\`.
 
-Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row of buttons, or a label beside its input, can flip early (around 24rem); a grid of content cards needs far more room, so give two columns 30rem and three 48rem. Inline \`style\` cannot express a breakpoint at all, which is the one thing a \`<style>\` block is for — colours and one-off layout stay inline.
+**Extra width is not automatically a second column.** Three label/number pairs shot at 720 across
+three columns put \`Mild 1h\` beside \`Moderate 4h\` with nothing marking where one pair ended;
+across two, it left a hole and stretched each pair to half the card, so a label and its number sat
+a screen apart. A short list wants \`max-w-[28rem]\` and stays one column — what wide space buys
+there is keeping related things NEAR each other, not spreading them. Columns pay when there are
+enough items that a single column would scroll, or when each item is a block rather than a line.
 
-**A \`flex: 1\` item does not shrink below its content, and the thing beside it is what disappears.** Flex items default to \`min-width: auto\`, so a row of \`<div style={ { flex: 1 } }>long text</div>\` plus a button pushes the button clean out of the card at 320px — not wrapped, not clipped, gone. Measured: **77 of the 109 corpus cards with a \`flex: 1\` text or input row omit the fix**, and it is one property:
+Start with the narrow layout and widen it — one comfortable column beats two cramped ones. A row
+of buttons, or a label beside its input, can flip early (\`@[24rem]:\`); a grid of content cards
+needs far more room, so give two columns \`@[30rem]:\` and three \`@[48rem]:\`.
 
-    <div style={ { flex: 1, minWidth: 0 } }>{text}</div>
+**A \`flex-1\` item does not shrink below its content, and the thing beside it is what
+disappears.** Flex items default to \`min-width: auto\`, so a row of \`<div className="flex-1">long
+text</div>\` plus a button pushes the button clean out of the card at 320px — not wrapped, not
+clipped, gone. Measured: **77 of the 109 corpus cards with a flexible text or input row omit the
+fix**, and it is one class:
 
-That alone lets the text **wrap** and keeps the button in place, which is the outcome you want: everything is still readable. Do not reach for \`overflow: hidden\` + \`textOverflow: "ellipsis"\` as a reflex — that trades a button the reader cannot see for content they cannot see, and it is only right when the row must stay exactly one line tall (a table, a list of equal-height rows). If even wrapping is too cramped, \`flexWrap: "wrap"\` on the row with \`flex: "1 1 12rem"\` on the text drops the button to its own line instead.
+    <div className="flex-1 min-w-0">{text}</div>
 
-**Aligning repeated rows with a fixed \`minWidth\` breaks on the longest label, not on the average one.** Three rows whose labels are \`工作时长\` / \`休息时长\` / \`长休息时长\` under \`minWidth: 60\` measure 60, 60 and **64.5** — so the third row's controls all shift right by 4.5px and the columns stop lining up. It is invisible at a glance and obvious at 4× zoom, which is why it survives review. A grid aligns every row against the same track by construction:
+That alone lets the text **wrap** and keeps the button in place, which is the outcome you want:
+everything is still readable. Do not reach for \`truncate\` as a reflex — that trades a button the
+reader cannot see for content they cannot see, and it is only right when the row must stay exactly
+one line tall (a table, a list of equal-height rows). If even wrapping is too cramped,
+\`flex-wrap\` on the row with \`basis-48\` on the text drops the button to its own line instead.
 
-    <div style={ { display: "grid", gridTemplateColumns: "auto 32px 3rem 32px auto", gap: 8, alignItems: "center" } }>
+**Aligning repeated rows by giving each label a width breaks on the longest label, not on the
+average one.** Three rows whose labels are \`工作时长\` / \`休息时长\` / \`长休息时长\` under a
+\`min-w-[60px]\` measure 60, 60 and **64.5** — so the third row's controls all shift right by 4.5px
+and the columns stop lining up. It is invisible at a glance and obvious at 4× zoom, which is why
+it survives review. A grid aligns every row against the same track by construction:
+
+    <div className="grid grid-cols-[auto_2rem_3rem_2rem_auto] gap-2 items-center">
 
 One value that fits your longest label today is a value that stops fitting when a label changes.
 
-**And a number column wants \`textAlign: "right"\`, not \`center\`.** \`fontVariantNumeric: "tabular-nums"\` makes every digit the same width so figures stack — and centring throws that away, because \`5\` and \`25\` then sit at different right edges. The two belong together: tabular figures, right-aligned, in a fixed track.`;
+**And a number column wants \`text-right\`, not \`text-center\`.** \`tabular-nums\` makes every digit
+the same width so figures stack — and centring throws that away, because \`5\` and \`25\` then sit at
+different right edges. The two belong together: \`text-right tabular-nums\`, in a fixed track.`;

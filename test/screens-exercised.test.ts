@@ -18,6 +18,10 @@ const CONSTRUCTS: Record<string, RegExp> = {
   "DUPLICATE-STYLE-KEY": /style=\{/,
   "GLOB-IN-JSX": /<code>/,
   "HARDCODED-BACKGROUND": /background/,
+  // Read a colour utility, not a `background:` declaration — the whole point of the two class
+  // screens is that a card written this way has no style object for the older ones to read.
+  "HARDCODED-COLOUR-CLASS": /className="[^"]*\b(?:bg|text|border)-/,
+  "BRAND-PRIMARY-FILL-CLASS": /className="[^"]*\bbg-/,
   "JSX-SUBSCRIPT": /\[\w+\]/,
   "MISSING-REACT-IMPORT": /Fragment|Suspense|memo/,
   "MODULE-SCOPE-HOOK": /useState/,

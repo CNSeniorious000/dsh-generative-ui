@@ -38,6 +38,8 @@ const PAIRS: Record<string, [string, string] | [string, string][]> = {
   "UNGUARDED-LAST-INDEX": [`import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows[0].name;`, `import { bash } from "$dsh/exec";\nconst [rows, setRows] = useState([]);\nconst x = rows.length > 0 ? rows[0].name : "";`],
   "VIEWPORT-UNITS": [`const s = { width: "100vw" }`, `const s = { width: "100%" }`],
   "HARDCODED-BACKGROUND": [`const s = { background: "#fff" }`, `const s = { background: "var(--dsw-alias-bg-base)" }`],
+  "HARDCODED-COLOUR-CLASS": [`<div className="bg-slate-800" />`, `<div className="bg-layer" />`],
+  "BRAND-PRIMARY-FILL-CLASS": [`<div className="bg-[var(--dsw-alias-brand-primary)]" />`, `<div className="text-[var(--dsw-alias-brand-primary)]" />`],
   "BRAND-PRIMARY-FILL": [`<div style={{ background: "var(--dsw-alias-brand-primary)", color: "#fff" }} />`, `<div style={{ color: "var(--dsw-alias-brand-primary)" }} />`],
   "UNREACHABLE-CONTROL": ["<div onClick={f} />", "<div role='button' tabIndex={0} onClick={f} onKeyDown={g} />"],
   "UNSTOPPABLE-MOTION": ["@keyframes slide { from { transform: translateX(40px) } }", "@keyframes slide { from { transform: translateX(40px) } }\n@media (prefers-reduced-motion: reduce) { .panel { animation: none } }"],

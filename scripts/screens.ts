@@ -424,6 +424,20 @@ export const SCREENS = {
   //
   // The split is clean and worth stating: **every corpus hit is an ordinary surface (5 of 5) and
   // every fresh hit is a knob (3 of 3)**, so the exemption costs nothing and the residue is real.
+  // The same defect in the class syntax, where the old regexes are blind: a colour utility whose
+  // value is a literal (`bg-[#fff]`, `text-[rgb(…)]`) or one of Tailwind's own fixed-palette
+  // ramps (`bg-slate-800`), both of which pin the card to one theme. Measured on a probe: the two
+  // screens below fired on NEITHER, because they read `background:` in a style object and a card
+  // written with classes has none. `border-l1`/`border-l2` are ours and must not be caught, so
+  // the ramp list is explicit rather than a `-\d00` pattern.
+  "HARDCODED-COLOUR-CLASS": (src: string) => {
+    const RAMPS = "slate|gray|grey|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
+    return new RegExp(String.raw`\b(?:bg|text|border|ring|divide|from|to|via)-\[(?:#|rgb|hsl|oklch)`, "i").test(src) || new RegExp(String.raw`\b(?:bg|text|border|ring|divide|from|to|via)-(?:${RAMPS})-\d{2,3}\b`).test(src);
+  },
+  // `brand-primary` has no short class on purpose, so reaching it at all means an arbitrary value
+  // — and as a FILL it is the foreground colour, which is the defect. Same rule as
+  // `BRAND-PRIMARY-FILL` below, in the spelling a card can still write it.
+  "BRAND-PRIMARY-FILL-CLASS": (src: string) => /\bbg-\[var\(--dsw-alias-brand-primary\)\]/.test(src),
   "HARDCODED-BACKGROUND": (src: string) =>
     [...src.matchAll(/background(?:Color)?\s*:\s*((?:[^,;{}]|\{[^{}]*\})*)/gi)].some(
       (match) => /#(?:fff|ffffff|fafafa|f8fafc|f9fafb|fefefe)\b/i.test(match[1]) && !/::(?:-webkit-slider-thumb|-moz-range-thumb|-webkit-slider-runnable-track|-moz-range-track)|\b(?:knob|thumb|handle)\b/i.test(src.slice(Math.max(0, match.index - 160), match.index)),
