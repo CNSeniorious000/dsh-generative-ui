@@ -90,8 +90,30 @@ verbatim, the reply rendered as a card (a11y tree showed `heading` + `paragraph`
 block), and the canvas launcher was still in the corner. So under `minimal` the model does not know
 the format exists, but a user who dictates one still gets a rendered card.
 
-Nothing to fix here: this is what the preset is for. Worth knowing before debugging a report that
-"the plugin does nothing" — ask which 模式 the session was on first.
+**Putting it back is a preset copy, not a prompt change.** The instinct is to write the triggers
+into `SKILL_DESCRIPTION` so the model loads the skill itself — but under `minimal` there is no
+`skill` TOOL to call, so no description reaches anything. Both blocks have to be lifted, and both
+live in the composition. Measured end to end:
+
+    cp -R <dsh>/config/agent-presets/minimal ~/.dsh/.agent-presets/minimal-ui4a
+    # in agent.cordis.yml: delete `complete: true`, append two rows —
+    - id: skill-filesystem
+      name: '@deepseek-ai/dsh-skill-filesystem'
+    - id: tool-skill
+      name: '@deepseek-ai/dsh-tool-skill'
+
+`$DSH_HOME/.agent-presets` is the user root (`includeUserRoot` defaults true) and does not exist
+until the first local preset is written. The new entry appeared in the composer's preset menu on
+the next `dsh web`, and a session on it answered `帮我算下等额本息月供` with **a card**: the
+transcript shows `上下文注入 · skill-catalog` and `Skill · generative-ui`, the input was **29.1K
+tokens** where plain `minimal` would be a few hundred, and the reply rendered a mortgage panel with
+the right figure (4,890.17), three stat blocks and three live inputs.
+
+dsh ships a `创造模式` preset whose whole purpose is authoring these, which is the supported path
+for a user; the copy above is the same thing done by hand.
+
+Nothing to fix in the plugin: `minimal` is doing exactly what it says. Worth knowing before
+debugging a report that "the plugin does nothing" — ask which 模式 the session was on first.
 
 ### 2.4 Slots you may touch and slots you may not
 

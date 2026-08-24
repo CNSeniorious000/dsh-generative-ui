@@ -100,13 +100,21 @@ out=$(mktemp)
 # times in one session, including on two runs whose replies opened with a ui4a fence. Poll briefly
 # for the file rather than sleeping: it is usually there within a second, and a run that genuinely
 # never reached a model still falls through after the deadline.
-sess=""
-for _ in $(seq 40); do
-  sess=$(ls -td "${DSH_HOME:-$HOME/.dsh}/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
-  [ -n "$sess" ] && [ -s "$sess/session.jsonl.zstd" ] && break
-  sess=""
-  sleep 0.25
-done
+# The transcript is written when the session CLOSES, not as it goes: measured, a session directory
+# appeared at 22:58 and its `session.jsonl.zstd` landed at 23:06 — eight minutes later, the moment
+# dsh exited. A lookup right after the process returns therefore finds a directory with nothing in
+# it, and every earlier version of this reported `crash/nosession` on runs whose reply was a
+# complete ui4a card. So: find the directory (it is there from the start), then wait for the file.
+# 30s is generous for a flush that normally takes under a second, and a run that never reached a
+# model has no directory at all and falls through immediately.
+sess=$(ls -td "${DSH_HOME:-$HOME/.dsh}/sessions/"*"$(basename "$d")--"/session-* 2>/dev/null | head -1)
+if [ -n "$sess" ]; then
+  for _ in $(seq 120); do
+    [ -s "$sess/session.jsonl.zstd" ] && break
+    sleep 0.25
+  done
+  [ -s "$sess/session.jsonl.zstd" ] || sess=""
+fi
 # `name` sits inside `data`, well past the first `}` — grep the whole record, take the last name.
 calls=$(zstd -dc "$sess/session.jsonl.zstd" 2>/dev/null \
   | grep -o '"type":"tool/call".*' | grep -o '"name":"[a-z_]*"' | cut -d\" -f4 \
