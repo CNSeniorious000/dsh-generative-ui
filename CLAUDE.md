@@ -7630,6 +7630,41 @@ with a full `role="tablist"` / `role="tab"` / `aria-selected` set) and fires on 
 cards that write the attribute on their bit grid and not on their preset row — already verified by
 hand as true positives.
 
+### Five undocumented scripts, and the export prober re-run (2026-08-24)
+
+CLAUDE.md calls itself the design doc, and the honest test of that is whether a reader can find the
+tools from it. Five scripts were absent — including one ported an hour earlier and one this session
+had spent an hour rebuilding from scratch without noticing it existed.
+
+| script | what it is for |
+| --- | --- |
+| `scripts/check-exports.ts` | prints a package's real exports, in a browser, through the same esm.sh URLs the runtime resolves |
+| `scripts/extract-fences.py` | pulls every `ui4a/tsx` fence out of a reply as a `.tsx` file |
+| `scripts/render-check.md` | the note explaining why compiling is not painting |
+| `scripts/flaky-dep-new.html` and `scripts/flaky-dep-old.html` | the two pages `flaky-dep-server.py` serves — the fixed retry and the pre-fix one |
+
+`check-exports.ts` earns its place by the failure that produced it: the skill told the model to
+write `<NumberFlow value={n} />` without saying it is a **default** export, so `import { NumberFlow }`
+is `undefined` and a blank card — the exact failure the skill's own *look the name up first* rule
+warns about. Re-run today against all four library rows:
+
+    sonner              Toaster, toast, useSonner            default: no
+    vaul                Drawer, Portal, Content, Overlay…    default: no
+    @headlessui/react   Field, Label, Switch, Combobox…      default: no
+    @number-flow/react  NumberFlowElement, NumberFlowGroup…  default: YES, named NumberFlow: NO
+
+All four rows correct, and `NAMED-NUMBERFLOW-IMPORT` is screening a real thing. The first attempt at
+the fourth package reported `Failed to fetch` and — per the cached-rejection finding — retrying in
+the same page could never recover; a **fresh tab** returned the full list. `curl -s https://esm.sh/<pkg>`
+answers the default-vs-named half without a browser at all, which is what the script's own comment
+recommends and what confirmed it here.
+
+`test/docs.test.ts` now fails when a script is undocumented. It matches on the **basename**, because
+the record cites most tools as `bun run cross-tab` or `scripts/flaky-dep-server.py` rather than by
+bare filename — a strict filename match reported eight files that are all documented, and a check
+that fires on correct prose is one people learn to read past. That is the same calibration the rate
+audit needed when it flagged a sentence counting a syntax form rather than a screen hit.
+
 ### The library rows, tested where they should not fire
 
 `做个番茄钟，倒计时要看着舒服，结束时提示一下` names a counter and a confirmation without naming a
