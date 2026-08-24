@@ -77,3 +77,20 @@ test("form controls are normalised, and only inside the scope", async () => {
   // restyle every button in the shell.
   expect(css).not.toMatch(/(^|[};]\s*)(button|input|select|textarea)\s*[,{]/m);
 });
+
+// UnoCSS merges selectors that share a declaration, and Chromium drops any rule whose selector
+// list contains a pseudo-element it does not know — so one `::-moz-range-thumb` takes the
+// `::-webkit-slider-thumb` half down with it. Measured on a real card: 75 of 87 rules survived
+// parsing and the slider computed to `height: 0px`. Order is irrelevant; either vendor first
+// poisons the list.
+test("a merged vendor rule is split so Chromium keeps the half it understands", async () => {
+  const { css } = await generate(["[&::-moz-range-thumb]:h-3.5", "[&::-webkit-slider-thumb]:h-3.5"]);
+  const merged = /::-moz-range-thumb[^{]*,[^{]*::-webkit-slider-thumb\s*\{/.test(css);
+  expect(merged).toBe(true); // this is what UnoCSS produces, and what the runtime must fix
+  const { splitVendorRules } = await import("../src/client/runtime/uno.ts");
+  const fixed = splitVendorRules(css);
+  expect(/::-moz-[^{]*,[^{]*::-webkit-/.test(fixed)).toBe(false);
+  // Both halves survive, each in its own rule.
+  expect(fixed).toContain("::-webkit-slider-thumb{");
+  expect(fixed).toContain("::-moz-range-thumb{");
+});

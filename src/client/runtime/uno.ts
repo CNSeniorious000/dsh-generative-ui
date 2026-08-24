@@ -51,11 +51,37 @@ export async function ensureUnoStyles(code: string, streaming = false): Promise<
   sheet ??= createSheet();
   if (streaming) {
     const { css } = await uno.generate(fresh, { preflights: false });
-    sheet.textContent += css;
+    sheet.textContent += splitVendorRules(css);
     return;
   }
   const { css } = await uno.generate(tokens, { preflights: true });
-  sheet.textContent = css;
+  sheet.textContent = splitVendorRules(css);
+}
+
+/**
+ * Split a rule whose selector list mixes vendor pseudo-elements into one rule per vendor.
+ *
+ * UnoCSS merges selectors that share a declaration, so a card styling a slider for both engines
+ * gets `…::-moz-range-thumb, …::-webkit-slider-thumb { height: … }` as ONE rule — and Chromium
+ * drops the whole rule because it does not recognise the `-moz-` half. Measured: the browser
+ * parsed 75 of the 87 rules in a real card's sheet, the slider came out `height: 0px`, and the
+ * card shipped three invisible controls. Order does not matter and neither does which vendor is
+ * first; one unknown pseudo-element poisons the list.
+ *
+ * The model is doing the right thing by writing both prefixes, so the fix belongs here.
+ */
+export function splitVendorRules(css: string): string {
+  return css.replaceAll(/(^|\})\s*([^{}]*::-moz-[^{}]*)\{([^}]*)\}/g, (whole, lead: string, selectors: string, body: string) => {
+    const parts = selectors
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length < 2) return whole;
+    const moz = parts.filter((s) => s.includes("::-moz-"));
+    const rest = parts.filter((s) => !s.includes("::-moz-"));
+    if (moz.length === 0 || rest.length === 0) return whole;
+    return `${lead}\n${rest.join(",\n")}{${body}}\n${moz.join(",\n")}{${body}}`;
+  });
 }
 
 /**

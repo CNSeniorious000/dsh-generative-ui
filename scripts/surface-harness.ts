@@ -39,7 +39,12 @@ const cardPath = process.argv[3];
 // Re-export every name the UMD build defines rather than hand-listing them: the consumer is
 // partial-react, not our own code, and a hand-list cost three rounds of "does not provide an
 // export named X" — createContext, useLayoutEffect, Component, one at a time.
-const reactKeys = [...readFileSync("node_modules/react/umd/react.development.js", "utf8").matchAll(/exports\.(\w+)\s*=/g)].map((m) => m[1]).filter((name) => /^[A-Za-z_$][\w$]*$/.test(name) && name !== "default");
+// Resolved against THIS FILE, not the cwd: the harness is started from wherever the caller
+// happens to be (a wave runner in /tmp, a shell in the repo), and a relative `node_modules` makes
+// it die with ENOENT in a background log nobody is reading — the visible symptom is a wave that
+// reports zero screenshots and no error. `shot-card.mjs` carries the same fix for the same reason.
+const REPO_ROOT = new URL("..", import.meta.url).pathname;
+const reactKeys = [...readFileSync(`${REPO_ROOT}node_modules/react/umd/react.development.js`, "utf8").matchAll(/exports\.(\w+)\s*=/g)].map((m) => m[1]).filter((name) => /^[A-Za-z_$][\w$]*$/.test(name) && name !== "default");
 
 // The bundle resolves react through aliases onto the UMD globals rather than leaving them
 // external: with no document import map (see below) a bare `import "react"` inside the bundle
@@ -115,8 +120,8 @@ const themeVars = Object.entries(JSON.parse(readFileSync(new URL(`../test/fixtur
 Bun.serve({
   port,
   routes: {
-    "/umd/react.js": () => file("node_modules/react/umd/react.development.js"),
-    "/umd/react-dom.js": () => file("node_modules/react-dom/umd/react-dom.development.js"),
+    "/umd/react.js": () => file(`${REPO_ROOT}node_modules/react/umd/react.development.js`),
+    "/umd/react-dom.js": () => file(`${REPO_ROOT}node_modules/react-dom/umd/react-dom.development.js`),
     "/m/react.js": () => js(["const R = globalThis.React;", "export default R;", ...reactKeys.map((k) => `export const ${k} = R[${JSON.stringify(k)}];`)].join("\n")),
     "/m/jsx-runtime.js": () => js("const R = globalThis.React;\nexport const Fragment = R.Fragment;\nexport const jsx = (t, p, k) => R.createElement(t, k === undefined ? p : { ...p, key: k });\nexport const jsxs = jsx;\nexport const jsxDEV = jsx;"),
     "/m/react-dom.js": () => js("const D = globalThis.ReactDOM;\nexport default D;\nexport const { flushSync, createPortal } = D;"),
@@ -126,7 +131,7 @@ Bun.serve({
     "/surface.js": () => js(bundle),
     "/card": () => (cardPath === undefined ? new Response("no card", { status: 404 }) : new Response(readFileSync(cardPath, "utf8"), { headers: { "content-type": "text/plain" } })),
     "/icons": () => new Response(JSON.stringify(lucideNames), { headers: { "content-type": "application/json" } }),
-    [WASM_PATH]: () => new Response(readFileSync("node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm"), { headers: { "content-type": "application/wasm" } }),
+    [WASM_PATH]: () => new Response(readFileSync(`${REPO_ROOT}node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm`), { headers: { "content-type": "application/wasm" } }),
     "/": () =>
       new Response(
         `<!doctype html><meta charset=utf8>
