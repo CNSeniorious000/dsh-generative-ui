@@ -162,3 +162,18 @@ Chosen to exercise specific screens rather than to sample typical use: the media
 `UNSTOPPABLE-MOTION`, the live grep for `UNGUARDED-ASYNC-HANDLER`, the regex tester for
 `GLOB-IN-JSX`. **A prompt set built to trip the checks is the one that tells you whether the
 rules work**; a representative sample mostly re-measures how often the defect occurs.
+
+## Measuring a skill rule, 2026-08-24
+
+**A rule that lives in `src/skill.ts` can only be measured on a run that loaded the skill.** About
+three runs in ten do not, and such a run is not a miss — it is a sample that could not have tested
+the rule. The failure is one-sided: a void sample always looks like a defect, never like a success,
+so an unfiltered rate is biased downward every time.
+
+`eval.sh` prints `skill=yes|no` as the first field for this reason, and `run-fixtures.sh` prints a
+lowercase cell (`k`, or a lowercase fence count) for an ineligible run. Discard those cells before
+computing a rate on any rule from the skill; rules from `src/prompt.ts` are unaffected, since the
+resident layer is delivered on every turn.
+
+Three conclusions were written from unfiltered rates before this was noticed, and all three were
+wrong in the same direction — see CLAUDE.md, "Every miss was a run that never read the rule".
