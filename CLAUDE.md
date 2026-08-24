@@ -8803,6 +8803,36 @@ artefact (720 single-column, on a set with nothing to put in columns), and this 
 mismatch. A judge panel is a source of hypotheses, not verdicts — the same standing every regex in
 this file gets.
 
+### One of the panel's four themes survived checking (2026-08-24)
+
+The panel's fourth recurring theme — "深色版像是浅色直接反转，没单独调过" — rests on a premise
+that is false for this plugin, and checking it is one grep. **Not one of the nine cards contains
+`prefers-color-scheme`**, and that is correct rather than the defect: a card never sees the theme.
+The host swaps the values behind `--dsw-alias-*`, so a card that references tokens is themed
+automatically and a card that branches on the scheme itself would be fighting the design system.
+
+The models are looking at two screenshots that differ and inferring two palettes where there is one
+set of references. The one thing worth checking in the area — hardcoded colour — comes back clean:
+2048's 14 literals are all `#fff`, none of them on a `background` (white text on a filled block,
+correct on both grounds), and piano's are the physical black and white of keys, which the token rule
+names as its standing exception.
+
+That completes the panel's four recurring criticisms:
+
+| theme | cards | verdict |
+| --- | --- | --- |
+| the slider is unstyled | 3 of 3 with one | **right** — 43 of 52 corpus cards, no rule existed |
+| border + background is redundant | 7 of 9 | wrong for these tokens — light needs both |
+| 720 is a dead single column | 9 of 9 | sampling — the set had nothing to put in columns |
+| dark is light inverted | 3 of 9 | false premise — cards reference tokens, not palettes |
+
+**One of four.** Which is roughly the hit rate this file already records for a first-pass regex, and
+the reason is the same: a criticism is generated from a principle, and the principle assumes a
+context. The panel is still worth its cost — the one that was right had gone unnoticed through 378
+corpus cards and 30 screens, and the 2048 board defect was found by all five independently. But a
+verdict from it enters as a hypothesis, and the three that failed each took one measurement to
+fail.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
