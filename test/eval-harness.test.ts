@@ -57,7 +57,11 @@ test.skipIf(!hasDsh)("a run that exceeds EVAL_TIMEOUT reports timeout and exits 
     env: { ...process.env, EVAL_TIMEOUT: "1" },
   });
   expect(proc.exitCode).toBe(3);
+  // `toStartWith`, not `toContain`: an earlier version let SIGALRM kill the subshell, and the
+  // shell announces that — `95054 Alarm clock: 14  perl -e …` arrives ahead of the verdict, so
+  // anything reading the first line of a batch gets a job-control message instead of `timeout`.
   expect(new TextDecoder().decode(proc.stdout)).toStartWith("timeout");
+  expect(new TextDecoder().decode(proc.stderr)).not.toContain("Alarm clock");
 }, 120_000);
 
 // The failure that cost an afternoon: the profile's plugin was a symlink to a *different* checkout,

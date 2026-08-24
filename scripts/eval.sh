@@ -31,8 +31,15 @@ fi
 # The transcript goes OUTSIDE the workspace. Written as `$d/o.txt` it is a file the model can
 # see and edit, and one run in six wrote its card into the very file that measures it.
 out=$(mktemp)
-# macOS has no timeout(1). `exec` makes the alarm land on the child rather than on a wrapper.
-( cd "$d" && perl -e 'alarm shift; exec @ARGV' "${EVAL_TIMEOUT:-900}" dsh --profile headless "$prompt" > "$out" 2>&1 )
+# macOS has no timeout(1), so perl carries the alarm. It reports the timeout as an exit code
+# rather than dying of the signal: the earlier `exec` form let SIGALRM kill the subshell, and the
+# SHELL announces that — `95054 Alarm clock: 14  perl -e …` lands on this script's stderr AHEAD of
+# the verdict, so a caller reading the first line gets a job-control message instead of `timeout`.
+# Redirecting the subshell does not help; the message comes from the parent. Forking and exiting
+# 142 by hand is what keeps the line clean, and the SIGTERM is what stops a timed-out `dsh`
+# outliving the run that gave up on it.
+( cd "$d" && perl -e '$SIG{ALRM} = sub { kill 15, $p; exit 142 }; alarm shift; $p = fork; if (!$p) { exec @ARGV } waitpid $p, 0; exit $? >> 8' \
+    "${EVAL_TIMEOUT:-900}" dsh --profile headless "$prompt" > "$out" 2>&1 )
 [ $? -eq 142 ] && { echo "timeout after ${EVAL_TIMEOUT:-900}s"; exit 3; }
 # Tool calls live in the session transcript, not the reply — the visualisation rule
 # ("this block, not a tool") is invisible without them.

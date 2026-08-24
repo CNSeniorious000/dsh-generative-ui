@@ -8393,6 +8393,37 @@ The general form is the one this file already states for prompts — *a prompt i
 — applied to the workspace: **a fixture is read by the model, and a fixture that looks generated
 gets answered as a fixture.** The model was right every time; the score was mine.
 
+### The shell announced the timeout before the script could (2026-08-24)
+
+A timed-out run reported the right verdict behind the wrong first line:
+
+    scripts/eval.sh: line 35: 95054 Alarm clock: 14   perl -e 'alarm shift; exec @ARGV' …
+    timeout after 900s
+
+The verdict is on line two. Anything reading the first line of a batch — which is how every result
+in this session was read — gets a job-control message.
+
+The cause is that `exec` made SIGALRM kill the subshell, and **the shell announces a child's death
+by signal**. Redirecting the subshell's stderr does not suppress it: the message comes from the
+parent, so `( … ) 2>/dev/null` changes nothing, which took a probe to establish rather than a guess.
+
+The fix is to stop dying of the signal. perl now handles ALRM itself, kills the child and exits 142,
+so bash sees an ordinary exit code and has nothing to report. Verified both ways: a timed-out run
+prints one clean line, and the `dsh` process is gone two seconds later rather than outliving the run
+that gave up on it — the `exec` form had no way to do that either, since the thing being killed was
+the wrapper.
+
+`test/eval-harness.test.ts` already asserted `toStartWith("timeout")`, which is exactly the
+assertion this breaks, so the bug was pinned before it was found — it just had never fired, because
+until today nothing timed out. **A test can be correct, specific, and dormant**; this one was
+written against a failure mode that took a day of long-running evals to produce.
+
+Two runs were lost to the ordering the same test warns about, in a new form: the staleness guard
+exits 4 before the timeout can fire, and it fires whenever `src/` is newer than `lib/`. With the
+profile symlink temporarily pointed at a baseline worktree — for an ablation — **every** eval in the
+branch tree exits 4, which is the guard doing its job and also makes the timeout untestable there.
+The check was run in the tree the symlink pointed at instead.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
