@@ -6,13 +6,21 @@
 // in a panel the reader drags, so `@container` queries mean the layout at 320 is a different
 // design from the layout at 720 — judging one of them judges a third of the card.
 //
-// Needs playwright, which this repo does not depend on — run it from a checkout that has one
-// (`macaron-genui-demo`). ego-browser's Page.captureScreenshot times out against this page.
+// Needs playwright, which this repo does not depend on. It resolves one from a sibling checkout
+// rather than requiring the caller to `cd` there first — three separate runs today failed with
+// MODULE_NOT_FOUND because the shot was fired from whatever directory the previous step left.
+// ego-browser's Page.captureScreenshot times out against this page, so playwright it is.
 //
 // Usage: node scripts/shot-card.mjs <port> <out-prefix> [widths]
 //   with `bun scripts/surface-harness.ts <port> <card.tsx>` already running (THEME=dark for the
 //   other ground). Writes <out-prefix>.<width>.png per width.
-import { chromium } from 'playwright'
+import { createRequire } from 'node:module'
+import { existsSync } from 'node:fs'
+const PLAYWRIGHT_HOSTS = ['../../macaron-genui-demo', '../../ui4a-playground', '../../genui-canvas']
+const host = PLAYWRIGHT_HOSTS.map((d) => new URL(`${d}/package.json`, import.meta.url))
+  .find((u) => existsSync(u))
+if (!host) throw new Error(`no sibling checkout with playwright: tried ${PLAYWRIGHT_HOSTS.join(', ')}`)
+const { chromium } = await createRequire(host)('playwright')
 const [port, prefix, widthArg = '320,440,720'] = process.argv.slice(2)
 const widths = widthArg.split(',').map(Number)
 const b = await chromium.launch()
