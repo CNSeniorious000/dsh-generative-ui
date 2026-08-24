@@ -34,13 +34,18 @@ test("the reply path is printed, so a caller can read the card", () => {
 // the three text assertions above deliberately overlap with this one: they hold everywhere.
 const hasDsh = Bun.spawnSync(["which", "dsh"]).exitCode === 0;
 
+// Build first, deliberately. The staleness guard exits 4 BEFORE the timeout can fire, and `src/`
+// goes "newer" than `lib/` for reasons that are not edits at all — a `git checkout` or a restored
+// backup bumps an mtime. Without this the test measures which guard ran first, which is not what
+// it is asking about, and it fails on a tree nobody has changed.
 test.skipIf(!hasDsh)("a run that exceeds EVAL_TIMEOUT reports timeout and exits 3", () => {
+  expect(Bun.spawnSync(["bun", "run", "build"]).exitCode).toBe(0);
   const proc = Bun.spawnSync(["bash", "scripts/eval.sh", "写一个非常复杂的看板应用"], {
     env: { ...process.env, EVAL_TIMEOUT: "1" },
   });
   expect(proc.exitCode).toBe(3);
   expect(new TextDecoder().decode(proc.stdout)).toStartWith("timeout");
-}, 60_000);
+}, 120_000);
 
 // The failure that cost an afternoon: the profile's plugin was a symlink to a *different* checkout,
 // so six prompt A/Bs in a row measured one unchanged prompt. Nothing about a stale build looks
