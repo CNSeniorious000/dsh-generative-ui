@@ -14,7 +14,7 @@ false memory of its own output is not what production does either.
 
 Usage: uv run run-wave.py <wave-index> [samples]
 """
-import concurrent.futures as cf, hashlib, json, os, pathlib, shutil, subprocess, sys
+import concurrent.futures as cf, hashlib, re, json, os, pathlib, shutil, subprocess, sys
 
 ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", "/tmp/genui-loop"))
 REPO = pathlib.Path(__file__).resolve().parent.parent
@@ -86,6 +86,14 @@ def run(job):
     p = subprocess.run(["./scripts/eval.sh", prompt_for(r)], cwd=REPO, env=env,
                        capture_output=True, text=True, timeout=1200)
     dest.write_text(p.stdout + p.stderr)
+    # `eval.sh` rescues the canvas sources out of the run's `mktemp -d`, but only as far as a
+    # sibling of the reply — still under /var/folders, still reclaimed. A canvas card's source is
+    # half the wave (wave 7: canvas=21, fence=22, and grok-4.6 wrote no fences at all), so without
+    # this every source-level statistic keeps covering the fence half only.
+    kept = re.search(r"canvases=(\S+)", p.stdout)
+    if kept and pathlib.Path(kept.group(1)).is_dir():
+        target = outdir / "canvases" / tag
+        if not target.exists(): shutil.copytree(kept.group(1), target)
     return tag, (p.stdout.strip().splitlines() or ["(empty)"])[0][:90]
 
 jobs = [(i, m, s) for i in range(len(wave)) for m in MODELS for s in range(SAMPLES)]
