@@ -3277,7 +3277,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 56 of 81 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 59 of 85 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    56 of 81 carry three or more accessibility signals (0→3 1→4 2→18 3→42 4→14)
+    59 of 85 carry three or more accessibility signals (0→4 1→4 2→18 3→43 4→16)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7554,6 +7554,53 @@ preset-row paragraph landed 3/3 on chmod, which says nothing about whether it ge
 does. And the general lesson from both: the four rules that landed this session all name **a shape
 visible in the code being written**, not a category of widget. `PRESETS` is a name; a conditional
 `background` inside a `.map` is something you can catch your own hand doing.
+
+### The className spelling, and a library row that correctly did not fire (2026-08-24)
+
+The conditional-`background` tell was reported 2/2 above. The third run of the same prompt landed
+after that was written, and it is **a miss** — so the rule is 2/3, and the miss is the more useful
+result, because of *how* it fails:
+
+    className={`fp-btn${size === s ? " active" : ""}`}
+
+No conditional `background` anywhere in the file. The card expresses selection entirely through an
+interpolated class name — the 8-of-114 variant in the shape table, and precisely the one the new
+sentence does not name. A rule keyed on a code shape misses the spellings of that shape it does not
+enumerate, which is the cost of the thing that makes it work: *recognisable while typing* and
+*complete* pull in opposite directions.
+
+Both spellings are named now. Two notes from writing it:
+
+- **`${` inside `skill.ts`'s template literal interpolated.** The className example contains a real
+  `${…}`, so it was evaluated rather than shown, and the substitution truncated the body — twelve
+  prompt assertions failed at once, on rules several sections away. That is the prompt test earning
+  its length exactly as its comment describes: nothing else in 460 tests would have noticed the
+  skill quietly losing four paragraphs. Escaped as `\\${`, verified present in the delivered string
+  rather than assumed.
+- Three of the day's four rule tests came back on the first run and this one needed a third. **A
+  two-sample result and a three-sample result are different claims**, and the file already says a
+  trigger rule has a rate rather than a verdict — the same is true of a construct rule, and 2/3 is
+  what this one has been measured at.
+
+### The library rows, tested where they should not fire
+
+`做个番茄钟，倒计时要看着舒服，结束时提示一下` names a counter and a confirmation without naming a
+library — 0/3 for all four rows. Reading the cards, that is correct three times over:
+
+- **`sonner`**: all three answer 结束时提示 with a system `Notification` and/or a `AudioContext`
+  beep. A pomodoro alert has to reach someone who is not looking at the tab, and an in-page toast
+  does not. Better than the hint.
+- **`@number-flow/react`**: a `mm:ss` countdown is a clock, not a running total. The row says
+  "a running total, score, or counter the user watches change", and a timer is none of them.
+
+What the same three runs *do* show is the ported `$dsh/state` landing unprompted — **2 of 3**, one
+of them with five `usePersistedState` calls, correct signature and namespaced keys. That module was
+declined on this base for months and implemented yesterday because five of six runs invented it.
+
+One true positive fell out: `UNGUARDED-NUMBER-INPUT` on the third card's duration field, where
+`Number("")` is `0`, so backspacing to retype snaps the pomodoro to zero minutes. Everything else
+about that field is right — labelled, `min`/`max` bounded — which is the pattern already recorded:
+rules land per-construct, and this is a construct with its own rule that this card missed.
 
 ### The card that fixed the rule broke on something else
 
