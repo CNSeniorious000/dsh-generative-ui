@@ -55,7 +55,7 @@
     "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "loads": "zsh scripts/loads.sh",
+    "loads": "sh scripts/loads.sh",
     "smoke": "bun scripts/smoke.ts",
     "check": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run paint && bun run build && bun run smoke && bun run loads",
     "check:ci": "bun run lint && bun run typecheck && bun run test && bun run test:shuffled && bun run audit && bun run replay && bun run cards && bun run paint && bun run build && bun run smoke",
@@ -69,7 +69,7 @@
     "cross-tab": "bun scripts/cross-tab.ts",
     "inject": "bun scripts/inject.ts",
     "hollow": "bun scripts/hollow.ts",
-    "test:shuffled": "zsh scripts/test-shuffled.sh"
+    "test:shuffled": "sh scripts/test-shuffled.sh"
   },
   "dependencies": {
     "@esm.sh/tsx": "^1.5.3",

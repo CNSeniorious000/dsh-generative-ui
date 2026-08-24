@@ -1,5 +1,8 @@
-#!/bin/zsh
+#!/bin/sh
 # Boot dsh once and fail if the plugin's prompt sections did not load.
+#
+# POSIX sh: the CI runner is ubuntu with no zsh, and `zsh scripts/…` there is exit 127 — a
+# "command not found" that reads as a failing check. `test-shuffled.sh` hit exactly that.
 #
 # The prompt is the plugin's whole contribution to a model's behaviour, and it can be complete,
 # well-formed, and pinned by two dozen assertions while `dsh` rejects it outright:
@@ -31,15 +34,15 @@ rm -rf "$d"
 # language is the one string no general knowledge would produce.
 back=$( (cd "$d2" && dsh --profile headless "你收到的卡片规则里，代码块的 info string 应该写什么？只答那个字符串。" ) 2>&1 )
 rm -rf "$d2"
-if ! print -r -- "$back" | grep -qF 'ui4a/tsx'; then
+if ! printf '%s\n' "$back" | grep -qF 'ui4a/tsx'; then
   echo "loads: FAILED — the sections parse but the model did not receive them"
-  print -r -- "$back" | head -3
+  printf '%s\n' "$back" | head -3
   exit 1
 fi
 
-if print -r -- "$out" | grep -qiE 'malformed prompt|failed to load|UNKNOWN:'; then
+if printf '%s\n' "$out" | grep -qiE 'malformed prompt|failed to load|UNKNOWN:'; then
   echo "loads: FAILED — dsh rejected a section"
-  print -r -- "$out" | grep -iE 'malformed prompt|failed to load|UNKNOWN:' | head -3
+  printf '%s\n' "$out" | grep -iE 'malformed prompt|failed to load|UNKNOWN:' | head -3
   exit 1
 fi
 echo "loads: ok — sections parsed, and the model quoted one back"
