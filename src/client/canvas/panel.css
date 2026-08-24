@@ -27,8 +27,14 @@
   padding: 0 8px 0 14px;
   height: 44px;
   flex: none;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
 }
+
+/* No hairline under either the title bar or the tab strip, and that is the host's own language,
+ * not a preference: measured on dsh web's conversation header (`wSkVaW_header`), the computed
+ * `border-bottom-color` is `rgba(0, 0, 0, 0)` on a transparent background with no box-shadow —
+ * it separates itself from the scroll area with 76px of height and nothing else. Two `border-l1`
+ * rules here put lines across a panel that sits inside that same frame, which reads as chrome the
+ * app does not otherwise have. */
 
 .dgu-title {
   font-size: var(--dsw-font-s-14-font-size);
@@ -72,7 +78,6 @@
   padding: 6px 8px;
   flex: none;
   overflow-x: auto;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
   scrollbar-width: none;
 }
 .dgu-tabs::-webkit-scrollbar {
