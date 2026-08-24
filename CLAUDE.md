@@ -1054,6 +1054,20 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
   markdown without ever reaching the decision the skill exists to make. A rule measured at 100% on
   a written prompt can be at 0% here simply because nothing loads it. Sample the corpus, not the
   test set, before believing a trigger number.
+- **A corpus turn is unintelligible without the turns before it, and so is the judgement about
+  it.** `nah bro that is from today` is a diet-log correction only because the previous ten turns
+  were adding up calories; `Yeah. What should Bailey eat?` looks like a nutrition question and is
+  the tail of a conversation about complimenting someone's sister. Sampling first turns to dodge
+  the problem measures a distribution no user is in — real turns arrive mid-conversation. The
+  warehouse carries `previous_ten_turns_summary` beside every row; both the labelling and the eval
+  have to use it, the latter as clearly-marked prior context rather than replayed as fake turns
+  the model would then believe it had said.
+- **`fence=0` has two causes and only one of them is a model getting it right.** Measured on a
+  calorie-log turn: six runs across three models each answered with a 7-to-9-line markdown table —
+  per-item numbers, a total, a range — and not one loaded the skill. That is not prose winning a
+  judgement; it is a card written in the wrong language. `scripts/score-wave.py` counts list and
+  table rows in the reply for exactly this reason, because every earlier eval here stopped at
+  `fence=0` and recorded it as "no UI wanted".
 
 ### 6.3 What the cards get wrong
 
@@ -1217,6 +1231,10 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `make-seed.sh` | a workspace a prompt can refer to (a repo with real history, files) |
 | `loads.sh` | boots dsh and asks for a string only this plugin could supply |
 | `pickup.sh` | resumes a session for a second turn |
+| `run-wave.py` | one wave of 12 corpus turns × 3 models × 2 samples, each with its real prior context; snapshots its own questions so a growing pool cannot change them mid-run |
+| `score-wave.py` | that wave's skill / card / **markdown-table-instead** rates, by model and by family |
+| `shoot-wave.sh` | every card the wave produced, at 320/440/720 in both themes |
+| `close-wave.sh` | score → shoot → judge, in order. Reading the screenshots is deliberately NOT in it |
 | **visual** | |
 | `surface-harness.ts` | serves one card on the real `GenUISurface`, with the real design tokens |
 | `shot-card.mjs` | screenshots it at 320/440/720, cropped to content, `THEME=dark` for the other |
