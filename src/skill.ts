@@ -184,6 +184,16 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 ## Layout
 
 - **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-base\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
+
+  **A control you have FILLED is the opposite case, and the two get confused.** The rule above is
+  about separating a surface from the surface under it, where both tokens are deliberately faint —
+  \`border-l1\` is 4% black. Once an element carries a real fill (a selected segment on
+  \`state-business-primary\`, a primary button), that fill separates it completely and a leftover
+  \`border-l2\` is a grey ring around a blue block, related to nothing. Drop it — but to
+  \`transparent\`, not to \`none\`, or the selected item loses a pixel of height and the row twitches
+  as the reader clicks along it:
+
+      border: selected ? "1px solid transparent" : "1px solid var(--dsw-alias-border-l2)"
 - **Keep nesting shallow.** A bordered box inside a bordered box is almost always wrong; a divider line does the job.
 - **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you. No \`position: fixed\`, no \`100vw\`/\`100vh\`, no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container, or design something that reads at any width. Content grids especially: one comfortable column beats two cramped ones.
