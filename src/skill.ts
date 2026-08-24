@@ -233,7 +233,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   **A clickable row is the case that survives this rule** — 13 of the 17 are a list row, a table
   cell, or a card, where wrapping each one in a \`<button>\` feels wrong. It is not: a \`<button>\`
   with \`display: block; width: 100%; text-align: left\` looks exactly like the row and is
-  reachable. If the row genuinely cannot be one — a virtualised list measuring its own height —
+  reachable. **\`textAlign: "left"\` is the part that gets dropped, and it is needed whatever the
+  display is.** A row laid out as \`display: flex\` (to push a trailing action right with
+  \`space-between\`) still inherits the button's centred text, so a short bold title sits visibly
+  off-centre above the longer line beneath it while everything else looks left-aligned — the two
+  cards where I hit this both had \`flexDirection: "column"\` on the text block, which declares the
+  axis and does nothing about the alignment. If the row genuinely cannot be one — a virtualised list measuring its own height —
   then \`role="button" tabIndex={0}\` and an \`onKeyDown\` for Enter and Space, all three, because
   any one alone leaves it half-reachable.
 

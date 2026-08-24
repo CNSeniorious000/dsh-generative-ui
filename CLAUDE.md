@@ -8939,6 +8939,31 @@ Both produced a clean, symmetric screenshot that read as "this property is a no-
 A/B needs its trigger verified as much as a positive one does** — and here the instrument said the
 panel was wrong twice before it said the panel was right.
 
+### A recipe is followed as a recipe (2026-08-24)
+
+The same defect turned up twice in one afternoon, on two unrelated cards, and both times the rule
+that covers it was already there. A `<button>` used as a list row centres its text — that is the
+browser default — so a short bold title sits visibly off-centre above the longer line beneath it,
+while the rest of the row looks left-aligned. Rendered A/B, the top edge of the two lines does not
+line up and it is obvious once you see it.
+
+The skill has said `display: block; width: 100%; text-align: left` since the clickable-row rule was
+written. Both offending cards used **`display: flex`** instead, because they wanted
+`justify-content: space-between` to push a trailing 选它 to the right — and `text-align` inherits
+regardless of the display, so the property they dropped is exactly the one that mattered. Worse,
+both had `flexDirection: "column"` on the text block, which declares a vertical axis and looks like
+it settles alignment while doing nothing about it.
+
+**47 of 53 corpus cards that use a `<button>` as a multi-line row reset it**, so this is a rule the
+model mostly knows. The rewrite names `textAlign` on its own and says it is needed whatever the
+display is, rather than burying it in a three-property block that reads as a `display: block` recipe.
+
+Worth recording as a shape rather than a defect: **a rule stated as a recipe is followed as a
+recipe.** The three properties were written together for one layout, and a card reaching for a
+different layout took none of them. The rules that have survived best in this file name a single
+property and the reason it is needed, which is why `minWidth: 0` and `aria-pressed` transfer to
+layouts they were never demonstrated on.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
