@@ -6,6 +6,14 @@
 set -u
 prompt=$1; seed=${2:-/dev/null}
 d=$(mktemp -d)
+# The profile loads whatever this symlink resolves to. When it is a different checkout, every
+# prompt A/B measures an unchanged prompt and reports plausible numbers — a whole afternoon of
+# conclusions was lost to it once. Exit 4 rather than measuring the wrong tree.
+linked=$(readlink "${DSH_HOME:-$HOME/.dsh}/profiles/headless/node_modules/dsh-generative-ui" 2>/dev/null || true)
+here=$(cd "$(dirname "$0")/.." && pwd -P)
+if [ -n "$linked" ] && [ "$(cd "$linked" 2>/dev/null && pwd -P)" != "$here" ]; then
+  echo "stale  the headless profile loads $linked, not $here" >&2; exit 4
+fi
 # `"$seed"/*` silently omits dotfiles, and a .env or .gitignore fixture is usually the point.
 [ -d "$seed" ] && cp -R "$seed"/. "$d"/
 # A seed may need more than files — `git 历史` wants commits, and a checked-in `.git` would
@@ -13,8 +21,12 @@ d=$(mktemp -d)
 [ -x "$d/setup.sh" ] && ( cd "$d" && ./setup.sh >/dev/null 2>&1 && rm -f setup.sh )
 # DSH_HOME can point at an isolated home with a different default model — used to keep
 # measuring when the primary account runs out of balance, and to compare models.
-( cd "$d" && dsh --profile headless "$prompt" > o.txt 2>&1 )
-out="$d/o.txt"
+# The transcript goes OUTSIDE the workspace. Written as `$d/o.txt` it is a file the model can
+# see and edit, and one run in six wrote its card into the very file that measures it.
+out=$(mktemp)
+# macOS has no timeout(1). `exec` makes the alarm land on the child rather than on a wrapper.
+( cd "$d" && perl -e 'alarm shift; exec @ARGV' "${EVAL_TIMEOUT:-900}" dsh --profile headless "$prompt" > "$out" 2>&1 )
+[ $? -eq 142 ] && { echo "timeout after ${EVAL_TIMEOUT:-900}s"; exit 3; }
 # Tool calls live in the session transcript, not the reply — the visualisation rule
 # ("this block, not a tool") is invisible without them.
 # The session dir is the workdir with slashes turned to dashes and wrapped in `--`, but the
