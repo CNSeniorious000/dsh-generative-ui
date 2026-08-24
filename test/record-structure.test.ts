@@ -2,19 +2,24 @@ import { expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 
 /**
- * `CLAUDE.md` is 5600 lines and every edit anchors on a phrase. A phrase that turns out not to be
- * unique — or that sits in the wrong section — drops a new section into the middle of an old one,
- * splitting an argument in half. That happened today and was found by reading, which does not
- * scale.
+ * `CLAUDE.md` is the design doc, and it once grew to 8,983 lines because every measurement was
+ * appended as its own dated section — 295 of them, 99% of the file, with the design doc itself
+ * buried in the first 10%. The raw record moved to `docs/measurements-log.md` and §6 keeps each
+ * lesson once.
  *
- * Dated sections are appended, so they should be in date order. This is a cheap structural check
- * for the failure mode that reading is worst at catching.
+ * So the check is now a ceiling rather than a floor: dated sections are for the handful of
+ * historical notes inside the design text, and a file drifting back toward a log will trip this
+ * long before anyone notices by reading. Order and uniqueness still matter for the ones that
+ * remain — an edit anchored on a phrase that is not unique drops a section into the middle of
+ * another and splits an argument in half, which is exactly what reading is worst at catching.
  */
 const record = readFileSync(`${import.meta.dir}/../CLAUDE.md`, "utf8");
 const sections = [...record.matchAll(/^### (.*?) \((\d{4}-\d{2}-\d{2})\)$/gm)].map((m) => ({ title: m[1], date: m[2] }));
 
-test("the record has dated sections to check", () => {
-  expect(sections.length).toBeGreaterThan(100);
+test("the record has not drifted back into a log", () => {
+  // 15 at the rewrite. The bound is loose on purpose — it is here to catch a return to
+  // append-a-section-per-session, not to police adding a historical note.
+  expect(sections.length).toBeLessThan(40);
 });
 
 test("dated sections are in date order", () => {
