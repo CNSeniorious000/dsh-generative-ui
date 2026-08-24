@@ -29,4 +29,12 @@ for c, b, a, n in sorted(pairs, key=lambda t: t[2] - t[1]):
     print(f"{c:58} {b:.2f} -> {a:.2f}  {a - b:+.2f}  (n={n})")
 d = [a - b for _, b, a, _ in pairs]
 up = sum(x > 0 for x in d)
-print(f"\n{len(pairs)} paired cards · mean {statistics.mean(d):+.2f} · {up} up, {len(d) - up} down or flat")
+mean = statistics.mean(d)
+# Paired removes the judges' ~2.0 between-card spread, but not their within-card noise, and the
+# per-card deltas here still scatter by more than a point. Say whether the mean clears its own
+# standard error before reading anything into it — at 7 cards this looked like +0.40 and at 18 it
+# was +0.25, which is what a number below 2 SE looks like while it is still moving.
+se = statistics.stdev(d) / len(d) ** 0.5 if len(d) > 1 else float("inf")
+verdict = "significant" if abs(mean) > 2 * se else "NOT significant — do not report this as an effect"
+print(f"\n{len(pairs)} paired cards · mean {mean:+.2f} ± {se:.2f} (SE) · {up} up, {len(d) - up} down or flat")
+print(f"{verdict}")
