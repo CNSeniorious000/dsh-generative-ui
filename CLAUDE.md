@@ -7256,3 +7256,32 @@ Every earlier number for these — the ones that said three rewordings moved not
 symlink pointing at a build from before the hints existed. **The detail in each row is the part
 that lands**: `sonner` was picked up twice and rendered its `Toaster` both times, which is exactly
 the failure the row exists to prevent.
+### A screen for a defect nobody has committed (2026-08-24)
+
+The five screens ported onto `origin/main` each carry the branch's five obligations — a negative
+control, a quiet-on-the-fix pair, a construct entry, a `RULE_FOR_SCREEN` phrase, and a `CONTROLS`
+mapping. `INVENTED-CAPABILITY` is the sixth, and it is the one worth writing down, because its
+rate is **0 of 378 corpus cards and 0 of 77 fresh ones**.
+
+Measured rather than assumed: every `$dsh/…` specifier in the whole corpus is one of the four that
+existed when those cards were written (`ai` 26, `fs` 20, `exec` 19, `chat` 9). The model has never
+invented one.
+
+So this is `JSX-SUBSCRIPT`'s case, not the React-import rule's, and the file already draws that
+line: a zero is evidence about the rule only once the screen is shown to answer correctly on a
+constructed case. It does — `test/cards-negative/invented-capability.tsx` fires it, and all three
+ways a specifier can appear (`from "x"`, a side-effect `import "x"`, and `import("x")`) are pinned,
+because the first version matched only `from`.
+
+What justifies keeping it is not a rate but the failure shape. An invented capability does not
+degrade into a missing function a card could guard: ESM resolves the graph before running anything,
+so the import fails, the card's own code never runs, and the reader gets a blank surface while the
+compile and every other screen report clean. That is the most expensive failure this project has,
+and it is the one a model reaches for exactly when a plausible-sounding module *ought* to exist —
+which is why `$dsh/state` was implemented rather than denied: five of six runs invented the same
+API, and a reworded denial did not stop it.
+
+The set is derived from `bind()`, not listed a second time in the screen. A group added to the
+implementation and missed by a hand-written list would make this screen flag a **working**
+capability, which is the failure mode this file spends most of its length on.
+
