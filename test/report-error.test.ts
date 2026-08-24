@@ -31,8 +31,18 @@ test("the same failure is sent once, not once per render", () => {
 // a person who said nothing, and burns the turn on that instead of on the fix.
 test("the message says it is automatic and that the user did not speak", () => {
   const body = reportBody("boom", "compile");
-  expect(body).toContain("[自动]");
-  expect(body).toContain("用户没有说话");
+  expect(body).toContain("[automatic]");
+  expect(body).toContain("nobody typed it");
+});
+
+// English, like every other word this plugin puts in front of the model. This is the only text it
+// injects into the conversation, and in Chinese it read as a different voice from the prompt and
+// the skill — and worse, a card has to be written in the language the USER wrote in, so a Chinese
+// interruption pushes the model toward the wrong language for the rest of the turn. The rule the
+// message itself carries ("answer in the language the user has been writing in") is the belt; this
+// is the braces.
+test("the message is in English, like the prompt and the skill", () => {
+  expect(reportBody("boom", "compile")).not.toMatch(/[\u4e00-\u9fff]/);
 });
 
 // A host with no chat channel is not an error; it is a headless or embedded surface.

@@ -30,9 +30,15 @@ export type ErrorReporter = (text: string) => void;
 /**
  * The message body. Kept short and factual: it is spent from the user's context window, and the
  * one thing the model needs is what failed and that nobody typed it.
+ *
+ * English, like the prompt and the skill it sits beside. This message is the only text this
+ * plugin puts into the conversation, and writing it in Chinese did two things: it read as a
+ * different voice from everything else the plugin says, and — because a card must be written in
+ * the language the USER wrote in — it pushed the model toward answering a Spanish or French
+ * speaker in the wrong language for the rest of the turn.
  */
 export const reportBody = (message: string, phase: string) =>
-  `[自动] 你刚生成的卡片没有渲染出来，${phase === "compile" ? "编译" : phase === "transform" ? "转换" : "渲染"}阶段报错：\n\n${message}\n\n这条是渲染器自动发的，用户没有说话。如果错误里已经写明了正确的用法（比如可用的导出名），直接改好重发卡片；如果不清楚，先查清楚再改。`;
+  `[automatic] The card you just wrote did not render. It failed at the ${phase} step:\n\n${message}\n\nThis was sent by the renderer, not by the user — nobody typed it, so do not apologise or address it as a request. If the error names the correct usage (the available exports, for instance), fix the card and send it again. If it does not, look it up before you change anything, and answer in the language the user has been writing in.`;
 
 export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string): void {
   if (send === undefined) return;
