@@ -73,6 +73,8 @@
   },
   "dependencies": {
     "@esm.sh/tsx": "^1.5.3",
+    "@unocss/core": "^66.8.1",
+    "@unocss/preset-wind4": "^66.8.1",
     "partial-react": "~0.0.6",
     "partial-tsx": "~0.0.3"
   },

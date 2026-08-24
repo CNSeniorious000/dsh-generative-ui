@@ -8,6 +8,7 @@ import { GenUIRenderer } from "partial-react";
 import { createBrowserTsxCompiler } from "./compiler.ts";
 import { mergeFallbackImports } from "partial-react/import-map";
 import { localImports } from "./bindings.ts";
+import { GENUI_ROOT_CLASS, ensureUnoStyles } from "./uno.ts";
 
 export type GenUISurfaceProps = {
   /** Full source when settled; the growing prefix while streaming. */
@@ -328,6 +329,11 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       });
     }
     retriesRef.current = 0;
+    // Generated classes exist only in the code that just arrived, so their CSS is produced here
+    // rather than at build time. Not awaited: the sheet is appended to `<head>` and applies to
+    // whatever is already mounted, so a card paints unstyled for at most a frame instead of
+    // holding up every delivery behind a generator that has to boot on the first call.
+    void ensureUnoStyles(code, streaming);
     if (!deliver(renderer, deliveryFor(code, deliveredRef.current, streaming))) return;
     // `deliveredRef` must follow every delivery, or a later streaming frame diffs against a
     // prefix this render already superseded.
@@ -343,5 +349,5 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   // both. Without `container-type` here a `@container` rule is inert rather than wrong
   // (measured: the guarded declaration simply never applies), which is the kind of failure
   // that reads as the model writing something bad.
-  return <div ref={hostRef} className={className} data-genui-root="" style={{ containerType: "inline-size" }} />;
+  return <div ref={hostRef} className={[GENUI_ROOT_CLASS, className].filter(Boolean).join(" ")} data-genui-root="" style={{ containerType: "inline-size" }} />;
 }
