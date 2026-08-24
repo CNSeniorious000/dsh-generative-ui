@@ -312,6 +312,16 @@ screens that used to read `background:` out of a style object are blind to class
 replaced (`HARDCODED-COLOUR-CLASS`, `BRAND-PRIMARY-FILL-CLASS`); a probe confirmed the old pair
 fired on neither `bg-[#fff]` nor a fixed-palette ramp.
 
+**A colour name that collides with a Wind4 utility wins, silently.** The map used to call the
+page ground `base`, so `text-base` — Wind4's *body font size*, and the commonest way a card writes
+body text — resolved to `color: var(--dsw-alias-bg-base)`, which is `#ffffff` in light. Measured
+live on a wave-2 card: `<h2 className="text-base font-semibold">` computed `color #ffffff`,
+`font-size 24px`, `opacity 1`, sitting on a white card. The title was present, laid out, and
+invisible; the shot showed an empty top row and **no probe could see it** — it does not overflow,
+it is not crushed, the text is in the DOM. 18 corpus cards wrote `text-base`. Renamed to `page`
+(8839ffb) with a test that every `text-<size>` still generates `font-size`. Any colour name added
+later has to clear the same bar.
+
 **In light theme the three background tokens are all pure white.** Measured on the real harness
 at 440, computed values:
 
@@ -1187,6 +1197,27 @@ Of their four recurring criticisms, **one survived checking**:
 | border + background is redundant | wrong for these tokens — light paints every layer `#fff` |
 | 720 is a dead single column | sampling — the set had nothing to put in columns |
 | dark is light inverted | false premise — cards reference tokens, not palettes |
+
+**Second run, wave 2** (24 cards, 117 scored verdicts, mean 5.45 sd 0.94). No ranking claim:
+the three generators land at 5.12–5.67 with SE ≈0.15, judge self-variance is ≈2.0, and 6 of the 8
+overflowing cards belong to the lowest-scoring family, so its mean is confounded with a defect
+that turned out to be mine. What the panel was worth was its *prose*:
+
+| theme | verdict |
+| --- | --- |
+| `bg-layer-2` melts into the card in light, fine in dark | **right, and not a card defect** — measured `#ffffff` for all three background tokens in light. Recorded in §3.7; the model cannot know it |
+| `max-w-[34rem]` wastes 180px at 720 | **right, and I could not see it** — four judges got it from the SOURCE while I read the same screenshot and saw a full-bleed form. The clip is taken at the host width, so unused width has no visible edge. `shot-card.mjs` now reports `UNUSED` |
+
+The general lesson is the one the second row states: a screenshot clipped at the host width cannot
+show overflow (the lost strip is absent, not cut) and cannot show unused width. Reading the images
+myself and having five models read them is not redundant — they fail differently.
+
+**Two of wave 2's three biggest defects were in my own config, not the model.** `box-sizing` was
+missing from the scoped preflight (every text field 10px past its own edge, at *every* width — the
+tell that it was never a breakpoint bug), and the colour named `base` was shadowing `text-base`
+(§3.7). Both times my first instinct was to write a prompt rule teaching the model to work around
+it. A defect that reproduces identically at 320, 440 and 720 is nearly always infrastructure;
+check the config before spending prompt budget on it.
 
 One in four is the hit rate a first-pass regex gets here, for the same reason: a criticism is
 generated from a principle, and the principle assumes a context. Still worth its cost — the one
