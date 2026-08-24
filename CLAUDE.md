@@ -1013,6 +1013,10 @@ recognising before trusting any number in this project.
 | a verification run learnt the wrong rule | it ran a build from two minutes earlier | `stat -f %Sm` session vs `lib/` |
 | a `min-width` fix did nothing | `<input>` sizes from `size`, not placeholder | construct the trigger, verify it triggers |
 | the panel found a redundant border | light paints every layer `#fff` | render it before believing it |
+| a whole wave of runs stalled upstream | `$LITELLM_24000_API_KEY` was unset | a live process writing nothing |
+| the wave was not running at all | `find -newermt` errored, piped to `wc` | run the check unpiped, read its exit |
+| a card truncated with 800px to spare | the ellipsis is in the DATA | `scrollWidth > box`, not the pixels |
+| 4 of 6 sliders forgot their fill | all four are "pick a value", which must NOT fill | read what the number means |
 
 Four properties they share: **the failure and the interesting result are identical at the metric**,
 so repetition does not help; **the wrong answer is the alarming one**, which is the direction that
@@ -1198,6 +1202,18 @@ Of their four recurring criticisms, **one survived checking**:
 | 720 is a dead single column | sampling — the set had nothing to put in columns |
 | dark is light inverted | false premise — cards reference tokens, not palettes |
 
+**Wave 2 is 26 runs, not 72, and they are all one family.** `score-wave.py` counted files, and 46
+of that wave's 72 said `stale  src/ is newer than lib/` — runs that never reached a model, each
+scored as `skill=no card=no`, i.e. as the model deciding against a card. Corrected, the wave reads
+**26 runs, skill 100%, cards 100%, markdown-instead 0%, turns 00-03, every one of them 饮食**. So
+no cross-family or trigger-rate claim can come out of wave 2 at all; what survives is everything
+derived from the 26 cards themselves (the panel below, the screenshots, the paired `text-base`
+delta, the reflow ratios). Both the runner and the scorer now test for eval.sh's one success
+shape (a line starting `skill=`) rather than enumerating failure strings — the leak that started
+this was `bash: ./scripts/eval.sh: Operation not permitted`, which is on nobody's refuse-list —
+and the scorer prints every excluded run by name, because a count of skipped runs can only be
+believed where a list can be checked.
+
 **Second run, wave 2** (24 cards, 117 scored verdicts, mean 5.45 sd 0.94). No ranking claim:
 the three generators land at 5.12–5.67 with SE ≈0.15, judge self-variance is ≈2.0, and 6 of the 8
 overflowing cards belong to the lowest-scoring family, so its mean is confounded with a defect
@@ -1227,9 +1243,13 @@ whole input is the images: the `text-base` fix changed how every card rendered w
 byte of source, so a rerun would have replayed 117 stale verdicts at full confidence and I would
 have compared a fix against itself. Keyed on the image bytes now.
 
-Three probes now report what the eye cannot, in `shot-card.mjs`: `OVERFLOW` (content past the
+Four probes now report what the eye cannot, in `shot-card.mjs`: `OVERFLOW` (content past the
 card's right edge), `CRUSHED` (a control narrower than its own label), `UNUSED` (width the card
-declined to paint). **Each was verified to fire on a case that should fire AND stay silent on one
+declined to paint), and `FLUSH` (text sitting against the host edge — a card whose root has no
+padding, where the other three are all silent because nothing goes PAST the host, the content is
+flush TO it). `FLUSH` measures **text-bearing leaves only**: the first version measured every
+element and fired on the control too, because a card's own root div is supposed to fill the host
+and a perfectly-padded card still has a 0px-from-edge container. **Each was verified to fire on a case that should fire AND stay silent on one
 that should not** — the first `UNUSED` was silent on the very card four judges flagged, because
 `.ui4a-root` is a full-width wrapper and "furthest painted right edge" always found it at the host
 edge. A probe that reports nothing looks identical to a clean wave.
@@ -1292,6 +1312,13 @@ instruction to do unnecessary work.**
   **snapshot the inputs into the run's own directory**, **fingerprint `lib/index.js` and
   `lib/client.js` separately** (a prompt change invalidates the run, a render change only means
   re-shoot), and **never cache a result whose text says the process died**.
+- **An eval home reads its gateway key from an env var, and unset it hangs rather than fails.**
+  `apiKeyEnv: LITELLM_24000_API_KEY` in each `~/.dsh-eval-<model>/settings.yaml`; with it unset,
+  dsh starts, opens a session and sits there — process alive, connection open, nothing returned,
+  nothing logged. A wave of 72 spent itself that way and was diagnosed as the upstream stalling,
+  which looks identical. `eval.sh` now refuses with `nocreds`, alongside its two existing guards.
+  The key is the `master_key` in `~/litellm_config_24000.yaml` on sd (`m sd` prints the ssh line);
+  it is **not** the `:4000` one, and it lives in the shell that launches the wave, nowhere else.
 - **Evals: concurrency ≤3.** The `macaron-v1` family stalls under sustained load and the eval chain
   has no fallback, so it arrives as 900 seconds of silence.
 - **A prompt is not a neutral probe.** `现在到哪一步了` calls dsh's own `get_goal`; a fixture whose
