@@ -1,0 +1,14 @@
+#!/bin/sh
+# The record's own consistency checks, on any commit that touches it.
+#
+# Three times in one session a commit landed while `bun run audit` was failing — a stale
+# denominator, a rate that no longer matched the corpus, a section inserted out of order. Each was
+# caught minutes later and fixed in a follow-up commit, which is the cheap version of the failure;
+# the expensive version is the one nobody notices, because a wrong number in this file is read as
+# fact by everyone after.
+#
+# Half a second, and only when CLAUDE.md is staged. `bun run check` belongs in pre-push, where it
+# already is — this is the subset that guards the thing being edited.
+git diff --cached --name-only | grep -q '^CLAUDE.md$' || exit 0
+bun run audit >/dev/null 2>&1 || { echo "pre-commit: bun run audit fails — a quoted rate is stale"; bun run audit 2>&1 | tail -4; exit 1; }
+bun test test/record-structure.test.ts >/dev/null 2>&1 || { echo "pre-commit: record structure is wrong (order, duplicate title, or a path that does not exist)"; bun test test/record-structure.test.ts 2>&1 | tail -6; exit 1; }
