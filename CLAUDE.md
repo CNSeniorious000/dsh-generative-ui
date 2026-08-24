@@ -8892,6 +8892,23 @@ A flex item defaults to `min-width: auto` — it will not shrink below its conte
 **77 of the 109 corpus cards with a `flex: 1` text or input row omit it**, and the fix is one
 property. Now a rule in the resident layer, stated as the line to type.
 
+**And the first version of that rule taught the wrong fix.** It wrote `minWidth: 0` together with
+`overflow: hidden` and `textOverflow: "ellipsis"`, which is what my A/B had used — so the "after"
+row showed the text cut off at an ellipsis. That trades a button the reader cannot see for content
+they cannot see. `minWidth: 0` **on its own** lets the text wrap and keeps the button in place, and
+everything stays readable:
+
+| at 320px | |
+| --- | --- |
+| `flex: 1` | the button is gone |
+| `+ minWidth: 0, overflow: hidden, textOverflow` | button in place, **text truncated** |
+| `+ minWidth: 0` alone | button in place, text wraps to two lines — nothing lost |
+| `+ flexWrap: "wrap"`, text at `flex: "1 1 12rem"` | button drops to its own line |
+
+Truncation is right only where the row must stay one line tall — a table, a list of equal-height
+rows — and it is not the default. Four renderings side by side is what separated them; the first
+three all "work" in the sense that nothing overflows the card.
+
 **No screen**, and the reason is the fifth instance of a pattern this file already names. The
 obvious predicate — a `flex: 1` style object with no `minWidth`, no `overflow` and no `width` —
 reports 97 of 378, and reading the hits kills it: most are buttons, `flex: "1 1 7rem"` (a basis

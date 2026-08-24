@@ -156,6 +156,6 @@ Start with the narrow layout and widen it — one comfortable column beats two c
 
 **A \`flex: 1\` item does not shrink below its content, and the thing beside it is what disappears.** Flex items default to \`min-width: auto\`, so a row of \`<div style={ { flex: 1 } }>long text</div>\` plus a button pushes the button clean out of the card at 320px — not wrapped, not clipped, gone. Measured: **77 of the 109 corpus cards with a \`flex: 1\` text or input row omit the fix**, and it is one property:
 
-    <div style={ { flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }>
+    <div style={ { flex: 1, minWidth: 0 } }>{text}</div>
 
-\`minWidth: 0\` is what lets it shrink; the other three are what it does with the space it lost.`;
+That alone lets the text **wrap** and keeps the button in place, which is the outcome you want: everything is still readable. Do not reach for \`overflow: hidden\` + \`textOverflow: "ellipsis"\` as a reflex — that trades a button the reader cannot see for content they cannot see, and it is only right when the row must stay exactly one line tall (a table, a list of equal-height rows). If even wrapping is too cramped, \`flexWrap: "wrap"\` on the row with \`flex: "1 1 12rem"\` on the text drops the button to its own line instead.`;
