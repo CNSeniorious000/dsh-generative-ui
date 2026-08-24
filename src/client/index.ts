@@ -8,6 +8,7 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
+import { reportCardError } from "./runtime/report-error.ts";
 import { disposeCompiler } from "./runtime/compiler.ts";
 import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
@@ -163,7 +164,25 @@ export function apply(ctx: ClientContext): void {
       };
     }, "dsh-generative-ui: canvas links open the panel");
   });
-  ctx.effect(() => claimInlineFences({ segments, render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming }) }), "dsh-generative-ui: inline fences");
+  // A card that fails to compile used to be a red panel the reader saw and the model never did.
+  // `onError` fires only for a failure that survived settling and retries, so this is the real
+  // ones — see `report-error.ts` for why it is once per message and why it says it is automatic.
+  const sendToModel = (text: string) => {
+    const id = currentSession();
+    const session = id === undefined ? undefined : ctx.sessions.scope(id);
+    if (session === undefined) return;
+    session.inject(["conversation"], (addressed) => {
+      void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] card error report failed", error));
+    });
+  };
+  ctx.effect(
+    () =>
+      claimInlineFences({
+        segments,
+        render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase) }),
+      }),
+    "dsh-generative-ui: inline fences",
+  );
 }
 
 /** All assistant prose in one node, concatenated; empty for every other node kind. */
