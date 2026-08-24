@@ -147,7 +147,7 @@ block — the classes below are the app's own semantic colours, and they follow 
 
 | Class | Use |
 | --- | --- |
-| \`bg-base\` | the surface you sit on |
+| \`bg-page\` | the surface you sit on |
 | \`bg-layer\` | a card or raised block |
 | \`bg-layer-2\` | a block raised above that |
 | \`border-line\` | hairline borders and dividers |

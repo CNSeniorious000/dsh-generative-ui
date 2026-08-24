@@ -46,7 +46,10 @@ export const unoConfig = (scope: string): UserConfig => ({
     colors: {
       // The host's 12 semantic tokens, under names short enough to write in a class.
       // A card can still reach any variable through an arbitrary value: `bg-[var(--dsw-…)]`.
-      base: "var(--dsw-alias-bg-base)",
+      // NOT `base`: `text-base` is Wind4's body font size, and a colour of that name wins the
+      // token, so `<h2 className="text-base">` computed `color: #ffffff` on a white card — present,
+      // laid out, invisible, and no probe can see it. 18 corpus cards wrote `text-base`.
+      page: "var(--dsw-alias-bg-base)",
       layer: "var(--dsw-alias-bg-layer-1)",
       "layer-2": "var(--dsw-alias-bg-layer-2)",
       line: "var(--dsw-alias-border-l1)",

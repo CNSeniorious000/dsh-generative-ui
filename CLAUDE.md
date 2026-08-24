@@ -1277,6 +1277,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `score-wave.py` | that wave's skill / card / **markdown-table-instead** rates, by model and by family |
 | `shoot-wave.sh` | every card the wave produced, at 320/440/720 in both themes |
 | `close-wave.sh` | score → shoot → judge, in order. Reading the screenshots is deliberately NOT in it |
+| `run-waves.sh` | drives a range of waves back to back. `nohup … &` dies with the shell that started it — wave 2 lost a whole run that way, so this is what the harness backgrounds instead |
 | `ab-rule.sh` | one rule, the same corpus turns before and after, three models. Refuses to cache a run whose text says it crashed |
 | **visual** | |
 | `surface-harness.ts` | serves one card on the real `GenUISurface`, with the real design tokens |

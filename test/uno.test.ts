@@ -50,7 +50,7 @@ test("container queries generate as @container, not @media", async () => {
 // silently paints nothing. Note what is deliberately ABSENT: `brand-primary` has no short name,
 // because it is a foreground colour that 50 of 378 real cards used as a fill.
 test("every colour name maps to a host token, and brand is not among them", async () => {
-  const names = ["base", "layer", "layer-2", "line", "line-2", "label", "muted", "accent", "hover", "danger", "success", "warn"];
+  const names = ["page", "layer", "layer-2", "line", "line-2", "label", "muted", "accent", "hover", "danger", "success", "warn"];
   const { css, matched } = await generate(names.map((n) => `bg-${n}`));
   expect(matched.size).toBe(names.length);
   // Not just that the class generated — that the variable it points at is one the host defines.
@@ -85,6 +85,22 @@ test("box-sizing is border-box inside the scope, and not outside it", async () =
   const { css } = await generate(["w-full"]);
   expect(css).toMatch(/\.ui4a-root[^{]*\*[^{]*\{[^}]*box-sizing:\s*border-box/);
   expect(css).not.toMatch(/(^|[};])\s*\*[^{]*\{[^}]*box-sizing/m);
+});
+
+// A colour name that collides with a Wind4 utility WINS, silently. `base` did: `text-base` is the
+// body font size and the commonest way to write body text, and with a colour called `base` it
+// resolved to `color: var(--dsw-alias-bg-base)` — #ffffff in light theme. Measured live on a wave-2
+// card: `<h2 className="text-base font-semibold">` computed color #ffffff, font-size 24px, opacity
+// 1, on a white card. Present, laid out, invisible, and invisible to every probe too. 18 corpus
+// cards wrote `text-base`. Any future colour name has to clear the same bar.
+test("no colour name shadows a Wind4 sizing utility", async () => {
+  for (const t of ["text-base", "text-sm", "text-lg", "text-xs", "text-xl"]) {
+    const { css } = await generate([t]);
+    expect(css).toContain("font-size");
+  }
+  // and the renamed one still reaches the same host variable
+  const { css } = await generate(["bg-page"]);
+  expect(css).toContain("--dsw-alias-bg-base");
 });
 
 // UnoCSS merges selectors that share a declaration, and Chromium drops any rule whose selector
