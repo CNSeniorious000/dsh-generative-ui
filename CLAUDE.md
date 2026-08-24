@@ -8362,6 +8362,37 @@ It also caught me pushing past a red `check:ci` for the fourth time this session
 hook added earlier guards the record checks only, and this failure was in the test suite. The
 pre-push hook is what would have stopped it, which is the division those two hooks were given.
 
+### Three fixtures, three different ways of measuring nothing (2026-08-24)
+
+Six runs went to prose on prompts this file records as producing UI. Every one is the fixture, and
+the three failures are different from each other — which is why a single "check your seed" rule does
+not cover them.
+
+**The seed had one commit.** `看看这个仓库最近都改了啥` against `test/seed`: the model correctly
+answers "one commit, nothing since". `make-seed.sh git` builds the 24-commit repository that prompt
+needs and has existed for a day; `test/eval-fixtures.md` said `test/seed` and now says otherwise.
+One of those runs spent **103 bash calls** re-checking a repository that had nothing in it, and
+opened its reply with *"I got stuck re-running the same check — my apologies"* — so an
+under-specified fixture does not merely produce a wrong score, it can produce a pathological run.
+
+**The premise was false.** `这台机器磁盘都被什么占满了`, 0/3, and all three replies begin
+*"这台机器的磁盘并没有被占满"* — the eval sandbox is at **5% of 926 GB**. The prompt asks about a
+condition that does not hold, and denying it is the right answer. This is `还有多久发布` in a
+workspace with no project, arriving as a fact about the machine rather than about the directory.
+
+**The seed announced itself.** With the right 24-commit seed, `这个项目的 git 历史帮我梳理一下`
+came back 0/3 — and all three replies say why: *"这是合成测试项目：文件内容全是占位符"*, *"这是一个
+用于测试的 fixture 仓库，不是真实项目"*. The commit subjects were plausible and the file contents
+were `change 0`…`change 23`, appended over 24 commits with no deletions. Two tells: placeholder
+contents, and a history that only ever grows.
+
+Fixed by making the first twelve commits declare real parser functions and the second twelve
+**revise** them, so `git log --stat` shows insertions and deletions.
+
+The general form is the one this file already states for prompts — *a prompt is not a neutral probe*
+— applied to the workspace: **a fixture is read by the model, and a fixture that looks generated
+gets answered as a fixture.** The model was right every time; the score was mine.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
