@@ -8310,6 +8310,35 @@ Worth noting which check would have caught this without a fresh card to read. No
 `screens-quiet-on-fix.test.ts` pins one `[defect, fix]` pair per construct, and the fix it pins is
 `aria-pressed`. A screen can be quiet on the fix you thought of and loud on the fix that is better.
 
+### The weakest rule was one prompt (2026-08-24)
+
+`UNANNOUNCED-ASYNC-RESULT` has been called the weakest rule in the set, at roughly 50% where it
+applies, with four hypotheses tested and none established. Every one of those measurements was the
+**same prompt** — a file browser — because that is the card the rule was found on.
+
+Split the fresh set at the commit that moved the rule into the skill (`3efbafb`, 23:42), and then
+split the runs after it by prompt:
+
+| | announces |
+| --- | --- |
+| before the move into the skill | **0 of 14** |
+| after — the file-browser prompt | 6 of 11 |
+| after — every other prompt | **8 of 9** |
+
+So the rule is not weak. It lands like its neighbours everywhere except on one card type, where it
+lands half the time. The 0-of-14 before the move is the sharper half of that table: it makes the
+earlier A/B — *the rule in `prompt.ts` alone against the rule in the skill* — a much larger effect
+than the two runs it was originally recorded from.
+
+All five misses reported `skill=yes`, so this is not the load confound. Nothing structural separates
+the two groups of file-browser cards either: sizes overlap (8.5-13.2 kb against 6.0-12.4), and the
+count of scrolling panes is 0, 1 or 2 on both sides. Every announcing card writes the same thing —
+`aria-live="polite"` on the results pane — and every miss simply does not write it.
+
+The method lesson is the one this file keeps relearning in new costumes: **a rate measured on one
+prompt is a fact about that prompt.** Four hypotheses were tested against a number that was never
+the rule's rate, and the fix was not another hypothesis — it was measuring a second prompt.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
