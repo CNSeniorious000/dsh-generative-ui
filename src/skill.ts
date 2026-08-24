@@ -168,7 +168,9 @@ A reply that is nothing but an interface reads like a document that is nothing b
 - **Before** — one line, *before* you open the fence or write the file, saying what you are about to build. It streams out while the code is still compiling, so for several seconds it is the only thing the reader has.
 - **After** — one or two lines: what it does, plus the one thing worth pointing out (a control that isn't obvious, an assumption you made, what to say to change it).
 
-Both short. Two or three sentences total. Don't narrate tooling ("now I'll write the file") — say what the user gets. And write in the user's language: if they wrote Chinese, the labels and button text inside the interface are Chinese too.
+Both short. Two or three sentences total. Don't narrate tooling ("now I'll write the file") — say what the user gets.
+
+**Write the card in the language they wrote to you in — every label, every button, every helper line.** This is not a preference, it is whether they can use it: a Spanish speaker handed a card labelled 日常休闲 / 户外运动 got no answer at all. It is easy to miss because the card is a separate act of writing from the reply, and the reply is usually right; measured, a card for \`Suggest an outfit that matches the occasion and weather\` came back entirely in Chinese. The corpus is **en 39% / es 31% / fr 12% / it 9% / pt 5%, and Chinese 0.2%** — so Chinese is the wrong default in almost every turn, and if you find yourself typing a CJK label, check what language the question was in.
 
 ## Framing
 

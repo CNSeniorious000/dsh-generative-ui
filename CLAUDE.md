@@ -8538,6 +8538,80 @@ The general shape, and it is one this file keeps meeting: **a credential that is
 fails identically to one that is absent.** The tell was not in the error — it was that every
 prerequisite for the path that would have worked was already satisfied.
 
+### The form the model typed out (2026-08-24)
+
+The real-query batch produced two prose replies that were **forms typed out** — a numbered list of
+questions ending on "once I have that, I'll…". The reasoning trace on one of them is the clearest
+evidence in this file that a rule can be read and still not apply:
+
+> Let me check the available skills — the `generative-ui` skill is available and relevant … However,
+> the user's request is quite vague — they haven't specified their weekend plans, location, weather,
+> or occasion. … Actually, looking at the generative-ui guidance: **"When they tell you they want to
+> change something without saying what to, the missing value is the card."** The user said "based on
+> my weekend plans" but didn't provide them — this is a case where I need to ask for the missing
+> information.
+
+It quotes the rule, applies it correctly to its own situation, and concludes with prose. The rule is
+not wrong — it is **scoped to the wrong half**. Every example in it is about changing values that
+already exist (`有几个值我要改`, a config, a `.env`), so a model that needs values it never had reads
+it as adjacent rather than as covering the case.
+
+Measured before writing anything: **230 first turns in six days** end with the model asking for
+information in prose, concentrated in skincare routines, workout plans, makeup, meal plans — every
+one an enumerable set of questions with sensible defaults available.
+
+Extended the rule to name that half, with the four real queries in it. Same prompts, five runs:
+
+| | before | after |
+| --- | --- | --- |
+| produced a card | 0 of 5 | **4 of 5** |
+| loaded the skill | 1 of 5 | **5 of 5** |
+
+Both hard negatives still answer in prose, checked in the same batch.
+
+The cards are the thing the rule describes. `Q talla me vendría bien de pantalón` — prose before,
+asking for waist, hip and inseam — is now a form with a cm/pulgadas toggle, placeholder measurements
+and a gender/fit pair. `quiero una rutina del cuidado para el cuerpo` is a nine-step routine with
+morning/night badges, checkboxes and a progress count. Three of the four are clean under all 30
+screens; the fourth trips `UNLABELLED-CONTROL`.
+
+One is weaker and worth naming: `para bajar de peso` came back as a **menu of four options**
+(calculator / plan / tracking / tips) rather than the form. That is the shape the skill's own
+"ask first" section describes, so it is defensible — but it is one more click before anything
+happens, and the rule as written argues for the fields.
+
+### A card in the wrong language (2026-08-24)
+
+Screenshotting the four ask-back cards found something no screen and no mount could: the card for
+`Suggest an outfit that matches the occasion and weather based on my weekend plans` — an English
+prompt — came back **entirely in Chinese**. 日常休闲 / 户外运动 / 约会聚餐, and the reply above it too.
+For the user who typed that, the card is not usable at all.
+
+The skill already had the rule, and its wording is the bug:
+
+> And write in the user's language: if they wrote Chinese, the labels and button text inside the
+> interface are Chinese too.
+
+Chinese-first, mid-sentence, at the end of a paragraph about reply length. On a corpus that is
+**en 39% / es 31% / fr 12% / it 9% / pt 5% and Chinese 0.2%**, the one example given is the one case
+that almost never occurs — and the rule reads as being about a rare exception rather than about
+every turn.
+
+Rewritten as its own paragraph, leading with the requirement, carrying the real distribution and the
+observed failure, and stating the tell as something the model can catch itself doing: *if you find
+yourself typing a CJK label, check what language the question was in.*
+
+Worth being precise about the rate, because the screenshot makes it look endemic and it is not.
+In production, replies containing CJK to a user writing es/fr/it/pt are **46 of 24,501 turns
+(0.2%)** — rare. It hit 1 in 4 here because these were first turns with no conversational context
+to anchor the language, which is exactly where a card gets built.
+
+The general point is about the instrument, not the rule: **a screenshot is the only check that
+reads the card as a person would.** `compile-cards` said it compiled, all 30 screens said clean,
+`mount-card.sh` reported every node and every announced state — and the card was unusable for the
+person who asked. Nothing text-based was ever going to catch a card written in the wrong language,
+because at the level those checks work, Chinese labels and Spanish labels are the same thing.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
