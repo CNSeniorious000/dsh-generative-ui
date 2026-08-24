@@ -38,7 +38,6 @@ export function decodeBase64(base64: string): Uint8Array<ArrayBuffer> {
 
 export function registerUi4aHost(next: Ui4aHost): () => void {
   host = next;
-  registerModules({ [INTERNAL]: { bind } });
   return () => {
     if (host === next) host = null;
   };
@@ -213,6 +212,14 @@ let cached: Record<string, string> | null = null;
 
 export function bindingImports(): Record<string, string> {
   if (cached !== null) return cached;
+  // Registered here rather than in `registerUi4aHost`: what goes in the registry is `bind` itself,
+  // which does not depend on the host *value*. Hanging it off host registration meant a page with
+  // no host — a preview, a harness, the first frame of a session, any profile without
+  // `conversation` — got capability blobs importing an EMPTY `$dsh/internal`. The first mount
+  // reported `Unresolvable imports` and every one after it rendered silently blank. Verified: with
+  // this moved, a `$dsh/state` card mounts and persists with nothing else registered, and a
+  // `$dsh/chat` card lays out correctly and only throws `no host bound` when the button is pressed.
+  registerModules({ [INTERNAL]: { bind } });
   const internal = moduleUrl(INTERNAL);
   const imports: Record<string, string> = {};
   const bound = bind();

@@ -85,3 +85,24 @@ test("releasing a stale host does not unbind the current one", () => {
   globalThis.fetch = (async () => new Response("{}")) as typeof fetch;
   expect(() => bind().fs.readFile("x")).not.toThrow();
 });
+
+// `$dsh/internal` used to be registered inside `registerUi4aHost`, so a surface that came up
+// before any host — a preview, a harness, the first frame of a session, any profile without
+// `conversation` — got capability blobs importing an empty module. The first mount reported
+// `Unresolvable imports` and every one after it rendered silently blank. Nothing in `bind`
+// depends on the host *value*, so nothing about it belongs behind that call.
+test("capability modules resolve without a host registered", async () => {
+  const { bindingImports, bind } = await import("../src/client/runtime/bindings");
+  const imports = bindingImports();
+  const groups = Object.keys(bind());
+  expect(groups.length).toBeGreaterThan(0);
+  for (const group of groups) {
+    const url = imports[`$dsh/${group}`];
+    expect(url).toBeDefined();
+    const source = await (await fetch(url)).text();
+    // Each blob re-exports from the `$dsh/internal` blob; an unregistered one is an empty module.
+    const internalUrl = source.match(/from "(blob:[^"]+)"/)?.[1];
+    expect(internalUrl).toBeDefined();
+    expect(await (await fetch(internalUrl!)).text()).toContain("bind");
+  }
+});
