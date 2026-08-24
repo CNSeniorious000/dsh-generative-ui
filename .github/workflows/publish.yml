@@ -80,10 +80,29 @@ jobs:
           case "$tarball" in /*) tarball_path="$tarball" ;; *) tarball_path="$tarball_dir/$tarball" ;; esac
           echo "tarball=$tarball_path" >> "$GITHUB_OUTPUT"
 
-      # Provenance needs id-token: write (declared above) plus a GitHub-hosted runner, and a
-      # `repository` field matching this repo case-sensitively — all three hold here.
-      # --access public is required for the first publish of a new package name.
+      # Trusted publishing (OIDC): no NPM_TOKEN. The npm CLI detects the OIDC environment and
+      # exchanges the workflow's short-lived id-token for a registry token — but only if
+      # NODE_AUTH_TOKEN is ABSENT. Setting it (even to an empty secret) takes the legacy path,
+      # which is what failed here: `ENEEDAUTH … you need to authorize this machine`, after the
+      # release commit and tag had already been pushed.
+      #
+      # Four things all have to hold, and the first is not in this file:
+      #   1. npmjs.com → the package → Settings → Trusted Publisher: owner `CNSeniorious000`,
+      #      repo `dsh-generative-ui`, workflow filename `publish.yml` (filename only, with the
+      #      extension), environment `npm`. All case-sensitive, and npm does NOT validate them
+      #      when saved — a typo only shows up as ENEEDAUTH at publish time.
+      #   2. `id-token: write` (declared above) and a GitHub-hosted runner. Self-hosted is unsupported.
+      #   3. npm >= 11.5.1 — the runner had 11.17.0, so this was never the problem.
+      #   4. `repository.url` in package.json matching this repo, which provenance also requires.
+      #
+      # Two things the docs warn about that apply here. The package must already EXIST on npm
+      # before a trusted publisher can be attached to it, so the very first publish of a new name
+      # cannot use OIDC — it needs one manual `npm publish` (or a token) to create the name, and
+      # every release after that is tokenless. And `workflow_dispatch` is named as a case where
+      # npm validates the CALLING workflow rather than the one running `npm publish`; that is only
+      # a mismatch for `workflow_call`, which this file does not use.
+      #
+      # --provenance is not passed: with trusted publishing the CLI attaches provenance by default.
+      # --access public is still required for the first publish of a new package name.
       - name: Publish package
-        run: npm publish --provenance --access public "${{ steps.pack.outputs.tarball }}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public "${{ steps.pack.outputs.tarball }}"

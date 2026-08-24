@@ -23,11 +23,24 @@ const calls: ToolCallView[] = Array.from({ length: 34 }, (_, i) => ({
 /** The same key `mountCanvasHost` computes, kept here so the shape is asserted rather than described. */
 const keyOf = (views: readonly ToolCallView[]) => `${views.length}:${views.reduce((total, call) => total + call.argsRaw.length + (call.settled ? 1 : 0) , 0)}`;
 
+/*
+ * The BEST of several batches, not the mean of one.
+ *
+ * A mean measures the machine as much as the code: on a loaded box (this failed at load average
+ * 50, with five model evals running) the scheduler can preempt either batch, and whichever it
+ * preempts decides the ratio. The minimum is the run that was not interrupted, which is the one
+ * that says something about the algorithm — the property under test is a 265x gap, so a sample
+ * that lands anywhere near the truth passes easily.
+ */
 const msPerCall = (run: () => void) => {
   for (let i = 0; i < 5; i++) run();
-  const start = performance.now();
-  for (let i = 0; i < 40; i++) run();
-  return (performance.now() - start) / 40;
+  let best = Infinity;
+  for (let batch = 0; batch < 5; batch++) {
+    const start = performance.now();
+    for (let i = 0; i < 40; i++) run();
+    best = Math.min(best, (performance.now() - start) / 40);
+  }
+  return best;
 };
 
 test("the cheap key is an order of magnitude cheaper than the walk", () => {

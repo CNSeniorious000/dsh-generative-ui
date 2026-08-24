@@ -8497,6 +8497,47 @@ on top of the text checks — it is the only check that can see the thing the ru
 accessibility rule in the skill is about what a reader perceives, and until today nothing in this
 repo had rendered a card with the palette it ships with.
 
+### The publish failed because a token was set (2026-08-24)
+
+The `publish` workflow failed on its first run — after pushing the release commit and the `v0.0.1`
+tag, which is the worst place for it to stop:
+
+    npm error code ENEEDAUTH
+    npm error need auth This command requires you to be logged in to https://registry.npmjs.org/
+
+The workflow already had everything OIDC needs — `id-token: write`, a GitHub-hosted runner, npm
+**11.17.0** on node 24 (the minimum is 11.5.1), and a `repository.url` matching the repo. What it
+also had was the thing that disables OIDC:
+
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+The CLI detects an OIDC environment and uses it **before falling back to a token** — but setting
+`NODE_AUTH_TOKEN` takes the legacy path, and the secret was empty. So the failure reads as "no
+credentials" when the real state is "credentials were available and the workflow opted out of them".
+
+Removed, along with `--provenance`: trusted publishing attaches provenance by default, so passing
+the flag is redundant. `--access public` stays — it is about first-publish visibility, not auth.
+
+Two caveats worth writing next to the fix, because neither is discoverable from the error:
+
+- **A trusted publisher can only be attached to a package that already exists on npm.** So the
+  first publish of a new name cannot use OIDC at all; it needs one manual publish to create the
+  name, and every release after that is tokenless. `dsh-generative-ui` is not on the registry yet,
+  so this run could not have succeeded either way.
+- **npm does not validate the trusted-publisher config when you save it.** Owner, repo, workflow
+  filename (filename only, with the extension) and environment are all case-sensitive, and a typo
+  surfaces as exactly this `ENEEDAUTH` — indistinguishable from having no config at all.
+
+Cleaned up per the user's instruction: tag `v0.0.1` deleted, `main` force-pushed back to `7211930`
+(the release commit's only change was the version bump, and its parent is that commit). No GitHub
+release existed and nothing reached npm, so there was nothing else to undo. The prior sha was
+recorded before touching either ref.
+
+The general shape, and it is one this file keeps meeting: **a credential that is present but wrong
+fails identically to one that is absent.** The tell was not in the error — it was that every
+prerequisite for the path that would have worked was already satisfied.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
