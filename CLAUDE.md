@@ -7395,3 +7395,56 @@ re-encountered here:
   called a helper this branch does not export, so the pre-pass crashed while the mount below it
   succeeded — a failure that looks like the card being fine.
 
+### Naming the preset row, and the compile error it uncovered (2026-08-24)
+
+Three corpus cards write `aria-pressed` on a `chmod` permission grid and nothing on the preset row
+twenty lines below. The rule already covered the construct — a `role="radiogroup"` example with
+`aria-checked` — and the residue said it was not being reached, so the skill gained a paragraph
+naming *the preset row specifically*, with the measurement in it.
+
+Tested on a prompt that names the construct and not the fix
+(`给我个权限计算器，能点开关看 chmod 数字，也给几个常用预设`), three runs:
+
+| | the bit grid | the preset row |
+| --- | --- | --- |
+| 3 corpus cards | `aria-pressed` | **nothing** |
+| 3 fresh cards | `aria-pressed` | **`role="radiogroup"` + `role="radio"` + `aria-checked`** |
+
+**3/3**, and the mount confirms it from the other side — clicking 600 gives
+`"states": ["755=false", "644=false", "700=false", "600=true", "777=false"]`, where the cards it
+replaces exposed nothing for any of them.
+
+That is the fourth time this procedure has worked: take the largest screen, ask **where** its
+violations sit, and check whether the rule names that exact case. It also has a limit worth
+recording — `PRESETS` is only 19 of the 114 cards this screen flags. Bucketing the other 95 by
+keyword suggested filters, modes and tabs, and reading them showed the buckets were measuring
+**vocabulary, not widget kind**: `ranges.map`, `options.map`, `STYLES.map` are all one construct, a
+pick-one row shown as a colour. Naming one noun at a time will not finish this.
+
+### The card that fixed the rule broke on something else
+
+The third run's card is clean under all 25 screens and **does not compile**:
+
+    <div style={{ marginBottom: 12, color: var(--dsw-alias-label-primary) }}>
+
+A bare `var(--…)` in a style object is a call to an undefined `var`. Same family as `fontSize:
+11px`, which has had a screen since August — but that screen anchors on numeric units, so the token
+spelling walked straight past it.
+
+This arm is the one the **prompt steers into**. The colour rule says take every colour from a
+`--dsw-alias-*` token, so a card writing this is following the instruction and forgetting the
+quotes. And it cannot reuse the unit arm's camelCase discriminator: `color` is spelled identically
+in CSS and in a style object, and unquoted `var(--x)` is *correct* in a `<style>` block, which is
+where most cards write it. Anchoring inside `style={{` separates them — 1 of 378 corpus cards,
+0 of 77 fresh, 0 of 10 reference, unchanged from before the arm existed.
+
+Two process notes, both re-treads:
+
+- **`git checkout` during an ablation reverted the arm I was testing**, and the next several
+  minutes were spent debugging a regex that was no longer in the file. The record already says to
+  restore from git rather than a snapshot; the other half is that a `checkout` mid-experiment
+  discards the experiment.
+- **The pair map needed to grow a list**, for the fifth time. A screen with two arms pinned by one
+  pair confirms one arm — and adding the second as a `"NAME/token"` key fails the test that asserts
+  the pair keys equal the screen list, which is that test working.
+
