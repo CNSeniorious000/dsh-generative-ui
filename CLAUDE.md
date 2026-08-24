@@ -1591,7 +1591,8 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `make-seed.sh` | a workspace a prompt can refer to (a repo with real history, files) |
 | `loads.sh` | boots dsh and asks for a string only this plugin could supply |
 | `pickup.sh` | resumes a session for a second turn |
-| `run-wave.py` | one wave of 12 corpus turns × 3 models × 2 samples, each with its real prior context; snapshots its own questions so a growing pool cannot change them mid-run |
+| `run-wave.py` | one wave of 12 corpus turns × 7 models × 2 samples, each with its real prior context; snapshots its own questions AND the plugin it measures, so neither a growing pool nor an edit to `src/` can change them mid-run |
+| `eval-home.py` | one eval home per model — its own `settings.yaml` naming that model at `reasoningEffort: low`, everything else shared by symlink. A wave needs one per entry in `MODELS` |
 | `score-wave.py` | that wave's skill / card / **markdown-table-instead** rates, by model and by family |
 | `shoot-wave.sh` | every card the wave produced, at 320/440/720 in both themes |
 | `close-wave.sh` | score → shoot → judge, in order. Reading the screenshots is deliberately NOT in it |
