@@ -90,7 +90,9 @@ for (const width of widths) {
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0 && r.right > right + 1) worst.push({ px: Math.round(r.right - right), tag: el.tagName.toLowerCase(), cls: (el.className || "").toString().slice(0, 70) });
     }
-    return worst.sort((a, b) => b.px - a.px)[0] || null;
+    // The single worst overflow, not a sorted list of them: one pass instead of a sort, and the
+    // array stays untouched for whatever reads it next.
+    return worst.reduce((a, b) => (a === null || b.px > a.px ? b : a), null);
   });
   // `.ui4a-root` is the full-width wrapper GenUISurface mounts, so measuring every descendant
   // always finds it at the host's own right edge and reports 0 — the first version of this probe
@@ -124,7 +126,7 @@ for (const width of widths) {
       const label = (el.innerText || el.getAttribute("aria-label") || "").trim();
       if (r.width > 0 && label && el.scrollWidth > r.width + 2) out.push({ px: Math.round(r.width), want: el.scrollWidth, label: label.slice(0, 24) });
     }
-    return out.sort((a, b) => b.want - a.want)[0] || null;
+    return out.reduce((a, b) => (a === null || b.want > a.want ? b : a), null);
   });
   if (crushed) console.log(`CRUSHED ${width} "${crushed.label}" ${crushed.px}px wants ${crushed.want}px`);
   // The gap the other three cannot see. A card whose ROOT has no padding puts its text flush
