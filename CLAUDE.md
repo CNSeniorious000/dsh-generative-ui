@@ -1036,6 +1036,21 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
   the resident layer named what the skill carries *after* the decision to build — then 17 of 17,
   and the residue on every screen went to zero. The skill-load rate is part of the measurement, not
   context: 4 of 4 runs that loaded it followed the rule; 0 of 2 that did not.
+- **The cleanest flip this project has measured, and what made it measurable.** The rule "if your
+  last answer restated a running total, the answer was already a card" went **0 of 18 → 5 of 8** on
+  the same six conversations and the same three models, with the prompt as the only variable.
+  Three things made that readable rather than suggestive:
+  - **The baseline was an absolute zero, not a low rate.** 18 runs, 0 fences, 0 canvases, 0 skill
+    loads — while 17 of those 18 replies carried a markdown list, half of them eight rows or more.
+    A rate moving from 2 to 5 is noise; a rate moving off zero is not.
+  - **One sample in the set was supposed to stay prose, and did.** `oki ha calorie?` — asking what
+    a single food costs, in a conversation that happens to be tracking calories — stayed 0 of 3
+    after the change. Without that control the result reads equally well as "the model now builds a
+    card whenever it sees a number".
+  - **The model quoted the mechanism back.** *"ya no necesitas que te vuelva a escribir toda la
+    lista cada vez"* — the rule's own sentence, in the model's words, in the reply that then built
+    the canvas. §4.5 records the same tell on `v-bmi`; it is the difference between a rule landing
+    and a rate drifting.
 - **A trigger rule has a rate, not a verdict.** One run decides nothing (`98 华氏度` reads 0/1 and
   4/5). With ~30% of runs skipping the skill, a nominal three-run test yields about two eligible
   samples — enough to see never→always and nothing smaller.
@@ -1193,6 +1208,15 @@ instruction to do unnecessary work.**
 - **Name and close what you start.** A `dsh web` outlived its session by a day; seven
   `surface-harness.ts` processes pushed load average to 51 and made a timing test fail on its own
   timeout. A 200 on the port you asked for is not proof your server started.
+- **A measurement in flight owns its inputs, and this is the easiest rule here to break.** Broken
+  three times in one session: `waves.json` regenerated while a wave was reading it (48 of 72 runs
+  lost, and the surviving 24 looked like a complete wave), `lib/index.js` rebuilt mid-A/B by a
+  stray `bun test`, and a `pkill` aimed at one batch's leftovers that killed the batch that had
+  just started — five runs cached as `crash/nosession`, which reads exactly like the real
+  "0 cards" answer. Each one is invisible in the numbers. The three defences that work:
+  **snapshot the inputs into the run's own directory**, **fingerprint `lib/index.js` and
+  `lib/client.js` separately** (a prompt change invalidates the run, a render change only means
+  re-shoot), and **never cache a result whose text says the process died**.
 - **Evals: concurrency ≤3.** The `macaron-v1` family stalls under sustained load and the eval chain
   has no fallback, so it arrives as 900 seconds of silence.
 - **A prompt is not a neutral probe.** `现在到哪一步了` calls dsh's own `get_goal`; a fixture whose
@@ -1235,6 +1259,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `score-wave.py` | that wave's skill / card / **markdown-table-instead** rates, by model and by family |
 | `shoot-wave.sh` | every card the wave produced, at 320/440/720 in both themes |
 | `close-wave.sh` | score → shoot → judge, in order. Reading the screenshots is deliberately NOT in it |
+| `ab-rule.sh` | one rule, the same corpus turns before and after, three models. Refuses to cache a run whose text says it crashed |
 | **visual** | |
 | `surface-harness.ts` | serves one card on the real `GenUISurface`, with the real design tokens |
 | `shot-card.mjs` | screenshots it at 320/440/720, cropped to content, `THEME=dark` for the other |

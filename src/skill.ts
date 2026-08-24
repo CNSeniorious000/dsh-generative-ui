@@ -234,6 +234,14 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 - **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-base\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
 
+  **And a field you type into is not a surface — it is a hole in one.** \`bg-base\` is the colour
+  of the ground everything else sits on, so an \`<input>\` painted with it is the same white as the
+  card in light theme and reads as a faint outline. Measured on a card generated after the rule
+  above landed: nine inputs, all \`bg-base border-line\`, on a card that used \`bg-layer-2\`
+  correctly exactly once elsewhere — the model knows the token and still reaches for the ground
+  colour. An input takes \`bg-layer-2\` (a step further from the ground than its container, not
+  back towards it) with \`border-line-2\`, and the placeholder takes \`text-muted\`.
+
   **A thing you can tap needs more than the divider colour.** The rule above is about separating a
   block from the surface below it, and \`border-line\` — 4% black — is right for that. It is not
   enough for a control sitting on a surface that already has the same background: measured on a
