@@ -16,6 +16,7 @@
 import type * as Ai from "$dsh/ai";
 import type * as Chat from "$dsh/chat";
 import type * as Exec from "$dsh/exec";
+import type * as Web from "$dsh/web";
 import type * as Fs from "$dsh/fs";
 import type { bind } from "../src/client/runtime/bindings.ts";
 
@@ -26,6 +27,7 @@ type Declared = {
   ai: { streamText: typeof Ai.streamText };
   fs: { readFile: typeof Fs.readFile; readdir: typeof Fs.readdir; readBytes: typeof Fs.readBytes; writeFile: typeof Fs.writeFile };
   exec: { bash: typeof Exec.bash };
+  web: { search: typeof Web.search };
   state: { usePersistedState: <T>(key: string, initial: T | (() => T)) => [T, import("react").Dispatch<import("react").SetStateAction<T>>] };
 };
 

@@ -38,13 +38,16 @@ const EMPTY_RESULT: Record<string, string> = {
   // members that had been added at the time and never revisited when `bash` and `readBytes`
   // arrived. Anything unlisted silently returns undefined, so a new member starts out broken.
   bash: '{ stdout: "", stderr: "", exitCode: 0, truncated: { stdout: false, stderr: false }, timedOut: false }',
+  // `sources` must be an ARRAY: every card that searches maps over it, and the whole point of a
+  // quiet stub is that an exported page renders rather than throwing on `.map` of undefined.
+  search: "{ sources: [], truncated: false }",
 };
 // Which stubs are `async`. Hand-written on purpose and NOT derived: the real members are arrow
 // functions returning promises, so `constructor.name === "AsyncFunction"` sees only one of the
 // five — a derived version silently made four stubs synchronous, which an `await` shrugs at and
 // a `for await` does not. The `unlisted` gate below is what keeps this list honest instead.
 // `streamText` returns an async ITERABLE rather than a promise, so it is correctly absent.
-const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash"]);
+const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash", "search"]);
 
 /**
  * Groups that need no harness, and therefore ship their real implementation rather than a stub.

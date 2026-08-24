@@ -24,7 +24,7 @@ import type {} from "@deepseek-ai/dsh-skill";
 // A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
 // and this is the constructor that stamps the identity and source tags it requires.
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH } from "./contract-assets.ts";
+import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH, WEB_SEARCH_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { inlinePrompt, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
@@ -347,6 +347,68 @@ export async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<
   }
 }
 
+/** Context shape for the search route. Only the two methods it calls, so a fake in a test is small. */
+type WebCtx = {
+  web: {
+    search: (request: { query: string; maxResults?: number }, signal?: AbortSignal) => Promise<{ content?: string; sources: readonly { url: string; title?: string; snippet?: string; publishedAt?: string }[]; truncated: boolean }>;
+  };
+};
+
+/** How many sources a card gets by default; the host's own tool-web default is 8. */
+const SEARCH_MAX_RESULTS = 8;
+
+/**
+ * Runs one web search on behalf of a generated card.
+ *
+ * A card that wants live information — a price, a release date, what a package exports — otherwise
+ * has nothing: `fetch` from inside the surface is not the shape (no credentials, no CORS, no
+ * provider selection), and routing the question through `$dsh/ai` asks a model to recall rather
+ * than to look. `ctx.web` already owns provider selection, the result shape, and the truncation
+ * bound, so this forwards and does not re-decide any of it.
+ *
+ * SEARCH ONLY — see `WEB_SEARCH_PATH` for why `fetch` is not forwarded.
+ *
+ * `WebError` carries a `code` and the seam's own contract calls that set OPEN: a provider may
+ * raise a code this build has never seen. So the error is passed through as text rather than
+ * matched on, and the card decides what to show.
+ */
+/** Exported for `test/web-search-route.test.ts`. */
+export async function serveWebSearch(ctx: WebCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const url = new URL(req.url ?? "/", "http://x");
+  const cwd = url.searchParams.get("cwd");
+  if (cwd === null || !liveWorkspaces().has(cwd)) return void res.writeHead(cwd === null ? 400 : 403).end();
+  if (req.method !== "POST") return void res.writeHead(405).end();
+
+  let body = "";
+  for await (const chunk of req) {
+    body += chunk as string;
+    if (body.length > MAX_BODY) return void res.writeHead(413).end();
+  }
+  let query: string;
+  let maxResults: number | undefined;
+  try {
+    ({ query, maxResults } = JSON.parse(body) as { query: string; maxResults?: number });
+  } catch {
+    return void res.writeHead(400).end();
+  }
+  if (typeof query !== "string" || query.trim() === "") return void res.writeHead(400).end();
+
+  const json = (status: number, value: unknown): void => {
+    res.writeHead(status, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+    res.end(JSON.stringify(value));
+  };
+  try {
+    // Same reason the exec route does it: a card that searches as the reader types has no other
+    // way to cancel, and the seam forwards the signal to the provider.
+    const controller = new AbortController();
+    req.on("close", () => controller.abort());
+    const result = await ctx.web.search({ query, maxResults: maxResults ?? SEARCH_MAX_RESULTS }, controller.signal);
+    return json(200, { content: result.content, sources: result.sources, truncated: result.truncated });
+  } catch (error) {
+    return json(500, { error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
 /** Context shape for the two services the AI route needs; see the SessionStoreCtx note. */
 type LlmCtx = {
   llm: { stream: (options: { provider: string; model: string; messages: readonly unknown[]; system?: string; signal?: AbortSignal }) => AsyncIterable<{ type: string; text?: string; reason?: { kind: string; failure?: { message?: string } } }> };
@@ -501,6 +563,11 @@ function applyWith(ctx: Context, allowExec: boolean): void {
     // both are expressed the same way: no route.
     if (allowExec) scoped.inject(["shell", "sandboxPolicy"], (withShell) => {
       withShell.effect(() => withShell.webServer.register({ kind: "exact", path: EXEC_PATH, handler: (req, res) => serveExec(withShell as unknown as ExecCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: commands");
+    });
+    // Same nesting as the rest: a host with no web capability loses `$dsh/web` and keeps
+    // everything else. `dsh-base` composes `ctx.web` with `searchProvider: deepseek-official`.
+    scoped.inject(["web"], (withWeb) => {
+      withWeb.effect(() => withWeb.webServer.register({ kind: "exact", path: WEB_SEARCH_PATH, handler: (req, res) => serveWebSearch(withWeb as unknown as WebCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: web search");
     });
     scoped.inject(["llm", "agentDefaultModel"], (withLlm) => {
       withLlm.effect(() => withLlm.webServer.register({ kind: "exact", path: AI_STREAM_PATH, handler: (req, res) => serveAi(withLlm as unknown as LlmCtx, liveWorkspaces, req, res) }), "dsh-generative-ui: model stream");

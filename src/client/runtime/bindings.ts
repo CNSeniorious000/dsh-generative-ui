@@ -10,7 +10,7 @@
  * gateway, so `$dsh/fs` and `$dsh/ai` have no implementation here yet.
  */
 import { moduleUrl, registerModules, registryImports } from "./registry.ts";
-import { AI_STREAM_PATH, EXEC_PATH, FS_PATH } from "../../contract-assets.ts";
+import { AI_STREAM_PATH, EXEC_PATH, FS_PATH, WEB_SEARCH_PATH } from "../../contract-assets.ts";
 import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
 import { usePersistedState } from "./state.ts";
@@ -127,6 +127,22 @@ export function bind() {
     },
   };
 
+  const web = {
+    /**
+     * One web search, through whichever provider the host composed.
+     *
+     * Search only: `ctx.web` also does `fetch`, and this deployment turns that off for its own
+     * tools because the local backend can reach private-network addresses. A card wanting a page
+     * body should ask the user for it or search for a quotable source instead.
+     */
+    search: (query: string, options?: { maxResults?: number; signal?: AbortSignal }): Promise<Ui4aSearchResult> => {
+      if (host === null) throw new Error("[dsh-generative-ui] no host bound");
+      const workspace = host.cwd();
+      if (workspace === undefined) throw new Error("[dsh-generative-ui] $dsh/web needs a session workspace");
+      return searchRequest(workspace, query, options);
+    },
+  };
+
   // No host behind this one — `localStorage` and React are both already in the page. It exists
   // because the model reaches for it unprompted: five of six habit-tracker runs wrote
   // `import { usePersistedState } from "$dsh/state"` against a module that did not exist, and a
@@ -134,7 +150,28 @@ export function bind() {
   // with it, so the card renders blank.
   const state = { usePersistedState };
 
-  return { chat, ai, fs, exec, state };
+  return { chat, ai, fs, exec, web, state };
+}
+
+/** What one search returns. Mirrors the seam's `WebSearchResult`, which is what the route forwards. */
+export type Ui4aSearchResult = {
+  /** A provider-generated answer or summary, when the provider makes one (Exa and DeepSeek do not). */
+  content?: string;
+  sources: readonly { url: string; title?: string; snippet?: string; publishedAt?: string }[];
+  /** True when the seam cut `sources` down to the requested bound. */
+  truncated: boolean;
+};
+
+async function searchRequest(cwd: string, query: string, options?: { maxResults?: number; signal?: AbortSignal }): Promise<Ui4aSearchResult> {
+  const response = await fetch(`${WEB_SEARCH_PATH}?cwd=${encodeURIComponent(cwd)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query, ...(options?.maxResults === undefined ? {} : { maxResults: options.maxResults }) }),
+    signal: options?.signal,
+  });
+  const body = (await response.json().catch(() => ({}))) as Ui4aSearchResult & { error?: string };
+  if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/web: ${body.error ?? response.statusText}`);
+  return body;
 }
 
 /** Talks to the fs route, carrying the workspace and the session whose policy applies. */

@@ -33,3 +33,14 @@ export const FS_PATH = "/dsh-generative-ui/fs";
  * long-running process wants a different product.
  */
 export const EXEC_PATH = "/dsh-generative-ui/exec";
+
+/**
+ * One web search for a generated card: `?cwd=<workspace>`, POST `{query, maxResults?}`.
+ *
+ * Search only. `ctx.web` also exposes `fetch`, and this deliberately does not forward it: the
+ * deployment's own `tool-web` is configured `fetch: false`, and the doc says why — *"the local
+ * backend does not block private-network targets; do not enable web_fetch where it can reach
+ * sensitive internal ones."* A card is model-written code firing on a reader's keystrokes, so
+ * re-opening from here what the host closed for its own tools is not ours to do.
+ */
+export const WEB_SEARCH_PATH = "/dsh-generative-ui/web-search";

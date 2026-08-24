@@ -26,10 +26,20 @@ export const inlinePrompt = (allowExec = false): string =>
     // A sentence, not a bullet: browsing git history is a card only because a card can run
     // `git log`. Left in with commands off it reads as advice the model cannot follow.
     .replace("__EXEC_HISTORY__", allowExec ? EXEC_HISTORY : "")
-    .replaceAll("__CAPABILITY_SET__", allowExec ? "five" : "four")
-    .replaceAll("__CAPABILITY_LIST__", allowExec ? EVERY_CAPABILITY : EVERY_CAPABILITY.replace(", \\`exec\\`", ""));
+    .replaceAll("__CAPABILITY_SET__", allowExec ? "six" : "five")
+    .replaceAll("__CAPABILITY_LIST__", capabilityList(allowExec));
 
-const EVERY_CAPABILITY = "\\`fs\\`, \\`ai\\`, \\`exec\\`, \\`chat\\`, \\`state\\`";
+/**
+ * The closed set, as a list rather than a string to subtract from. Built by filtering because the
+ * subtraction form was silently wrong: it searched for a differently-escaped spelling of the very
+ * string it was meant to remove, matched nothing, and left `exec` in the sentence on a host that
+ * does not have it — a `replace` that matches nothing is not an error, it is a no-op.
+ */
+const CAPABILITIES = ["fs", "ai", "exec", "web", "chat", "state"] as const;
+const capabilityList = (allowExec: boolean) =>
+  CAPABILITIES.filter((name) => allowExec || name !== "exec")
+    .map((name) => `\`${name}\``)
+    .join(", ");
 
 const BASE_PROMPT = `# Generative UI
 
@@ -87,6 +97,8 @@ export default function Answer() {
 - \`import { readFile, writeFile, readdir } from "$dsh/fs"\` reads and writes the workspace, under **the session's own access mode** — the same fence the model's own file tools run behind, so a read-only session refuses the write rather than pretending. **Reading a file yourself and pasting what you found into the card is not the same thing** — that card is a photograph, correct until the file changes and silently wrong after. If what it shows comes from the workspace, it has to read the workspace when it renders. \`localStorage\` is still right for a canvas's own private state.
 - \`import { streamText } from "$dsh/ai"\` runs a model call from inside the card, on the app's own model and credentials. **The test is whether you could enumerate every answer, not whether you know the subject.** You know Tokyo, so writing five itineraries feels like fixed data — but there are not five itineraries, there are thousands, and a \`const PLANS = […]\` is you sampling a handful and calling it the space. Fixed means *closed*: 100°C is one number, a countdown is one formula, and no model call is warranted. Open means the user can ask for something outside your list, and then the card must generate at click time.
 __EXEC_BULLET__
+
+- \`import { search } from "$dsh/web"\` runs one web search and resolves with \`{content?, sources, truncated}\` — \`sources\` is \`{url, title?, snippet?, publishedAt?}\`, and only \`url\` is guaranteed. **Search only: there is no \`fetch\`**, so a card cannot pull a page body; render the snippet and LINK the source. **Show the sources.** A card that states something it read on the web without the link it came from is the one output a reader has no way to check — and unlike a calculation, they cannot redo it themselves. Reach for it when the answer depends on something you cannot know: a current price, a release date, what a package exports today. Not for what you already know.
 - \`import { sendMessage } from "$dsh/chat"\` drives the next turn from inside the card. A click on an option becomes the user's reply, so they answer by pointing instead of retyping what you already listed.
 - \`import { usePersistedState } from "$dsh/state"\` is \`useState\` that survives — same signature, lazy initialiser included, kept in \`localStorage\` under a namespaced key with the read and the write already wrapped. Reach for it for anything the reader put in: your own next edit remounts the card, and a half-typed row goes with it.
 - **These __CAPABILITY_SET__ are the whole set — __CAPABILITY_LIST__ — and a further one you reason your way to does not exist.** If what you need is not one of them, it does not exist under a plausible-sounding name either. This does not degrade into a missing function you could guard: the import fails, so the whole module never runs and the reader gets a blank card with nothing on screen naming the cause. If what you want is not on this list, build it out of what is.

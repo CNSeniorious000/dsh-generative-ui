@@ -28,8 +28,8 @@ test("with commands off, nothing in either half suggests running one", () => {
 // so it has to name the set that exists — claiming five while documenting four is worse than not
 // claiming a number at all.
 test("the closed-set sentence counts the capabilities that exist", () => {
-  expect(inlinePrompt(false)).toContain("These four are the whole set");
-  expect(inlinePrompt(true)).toContain("These five are the whole set");
+  expect(inlinePrompt(false)).toContain("These five are the whole set");
+  expect(inlinePrompt(true)).toContain("These six are the whole set");
   expect(inlinePrompt(false)).not.toContain("`exec`");
 });
 

@@ -100,6 +100,7 @@ const SECTIONS = [
   "Declare every hook before the JSX",
   "Anything that keeps running",
   "Running a command",
+  "Searching the web",
   "Reading and writing workspace files",
   "Generating content inside the card",
   "Check it before you hand it over",
