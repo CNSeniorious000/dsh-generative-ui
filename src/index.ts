@@ -282,6 +282,19 @@ const EXEC_TIMEOUT_MS = 15_000;
  *
  * A non-zero exit is a RESULT, not an error: a card wants to show `git status` failing in a
  * non-repo as much as it wants to show it succeeding. Only infrastructure failures reject.
+ *
+ * **Why this does not go through `ctx.approval`, which is the seam for "may this action
+ * proceed?".** It is the right question and dsh's own `tool-bash` asks it — but the service
+ * cannot answer it here. `approval.request()` takes an `agent` and throws outright when the
+ * session has no open turn: *"approval.request() outside an open turn … Ask from inside the turn
+ * that needs the decision."* A card's command is the opposite of that — it fires on the reader's
+ * keystroke, long after the turn that wrote the card ended, with no agent on whose behalf to ask.
+ * `ctx.userQuestions.ask()` DOES work outside a turn (its `agent` is optional), so a per-command
+ * prompt is buildable; what stops it is that a card runs one command per keystroke, and a dialog
+ * per keystroke is not a safety feature. The setting is therefore about whether the CAPABILITY
+ * exists, and the per-command fence remains the session's own sandbox policy, which this passes
+ * through unchanged. Anything genuinely destructive belongs in `sendMessage`, where the user's
+ * next turn — and with it the whole approval machinery — is what runs it.
  */
 /** Exported for `test/exec-route.test.ts`. */
 export async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<string>, req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -425,17 +438,18 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   // off `configured`, and `onChange` disposes and rebuilds it, which re-registers the section
   // with the new text and adds or removes the route. Reading `current()` inside the effects
   // without this would change the value and leave the registrations as they were.
-  let configured: { dispose: () => Promise<void> } | null = null;
-  let mounted: boolean | null = null;
+  // The mounted value rides ON the handle rather than in a second variable: the two would have to
+  // be assigned in lockstep by hand, and an early return added between them later would desync the
+  // dedup from what is actually mounted.
+  let configured: { allowExec: boolean; fiber: { dispose: () => Promise<void> } } | null = null;
   const rebuild = () => {
     const allowExec = current().allowExec === true;
     // `onChange` fires on every write to the section, and the section may grow other keys later.
     // Rebuilding on a value that did not move would tear down the prompt and both routes for
     // nothing — visible to a reader as a card losing its host mid-conversation.
-    if (allowExec === mounted) return;
-    mounted = allowExec;
-    void configured?.dispose();
-    configured = ctx.plugin({ name: "dsh-generative-ui:configured", apply: (scoped: Context) => applyWith(scoped, allowExec) });
+    if (configured?.allowExec === allowExec) return;
+    void configured?.fiber.dispose();
+    configured = { allowExec, fiber: ctx.plugin({ name: "dsh-generative-ui:configured", apply: (scoped: Context) => applyWith(scoped, allowExec) }) };
   };
   // Called here as well as from `onChange`, and that is not belt-and-braces: the whole of
   // `installSettingsSection` sits inside `ctx.inject(["settings"])`, so on a host with no settings
@@ -448,7 +462,7 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     },
     onChange: rebuild,
   });
-  ctx.effect(() => () => void configured?.dispose(), "dsh-generative-ui: settings scope");
+  ctx.effect(() => () => void configured?.fiber.dispose(), "dsh-generative-ui: settings scope");
 }
 
 /** Everything whose shape depends on `allowExec`; rebuilt when the setting changes. */
