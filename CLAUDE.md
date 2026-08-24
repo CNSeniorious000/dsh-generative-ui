@@ -80,13 +80,48 @@ Registration must be wrapped in `ctx.slots.inject(name, () => ...)`: these slots
 
 The loader's `claimStyles(id)` runs `document.querySelectorAll('style:not([data-plugin])')` and **claims every match** for whichever plugin is currently materializing. So every `<style>` this plugin appends must carry `data-plugin="dsh-generative-ui"` itself, or HMR and unload will tear each other's styles out. `injectStyles` in `canvas/mount.ts` is the one place that appends one.
 
-**There is no CSS framework here, and that is a deliberate split from the playground.** The panel is hand-written CSS in `panel.css` (compiled into `panel-css.ts` at build time) over the host's `--dsw-alias-*` tokens, and §3.7's prompt tells the model to write inline `style` from those same tokens. Measured across 16 canvases this prompt produced: **0 atomic/utility classes** (Tailwind-shaped ones — the model does write semantic class names like `wrap`/`score-box` alongside its own `<style>` block, 37 of them across the three cards in `test/cards`, which is not what an atomic engine would generate) **and 592 inline `style` objects** — so there is nothing for an atomic-CSS engine to generate, and nothing needing class-name scoping.
+**UnoCSS generates the cards' CSS in the browser, and the panel's own CSS is still hand-written.**
+`panel.css` (compiled into `panel-css.ts`) styles the chrome; everything a *card* writes goes
+through `src/client/runtime/uno.ts`, which runs a real generator against the classes in the code
+that just arrived. A build-time pass cannot do it: those classes are typed by the model seconds
+ago and exist in no stylesheet of ours. Responsive is where that shows worst — a build-time sweep
+generates no `@container` breakpoint at all, so every card is single-column at any width.
 
-`ui4a-playground` runs a real UnoCSS generator in the browser (`ui4a-playground/src/runtime/uno.ts`) because its prompt teaches Tailwind v4 syntax, and the model's classes therefore do not exist in any build-time stylesheet. Worth reading before dismissing it — it is **scoped**, not the global runtime §5 warns about: passing a string as `important` makes UnoCSS treat it as a selector prefix, so every rule comes out `.ui4a-root .hidden{…}`. That scoping is not optional, and their comment records why: the runtime sheet is appended last, so an unscoped `hidden` from generated code overrode the app's own `@md:flex` and made a sidebar vanish.
+Four things about that setup are load-bearing, each measured rather than assumed:
 
-**What we do need from that half is responsiveness**, and it is not free either way. The same block renders in a chat column and in a panel the reader drags between 320 and 720px, so the viewport says nothing — and 16 of 16 canvases had no breakpoint at all. The smaller answer, given that our model already writes plain CSS: give the mount node `container-type: inline-size` (`GenUISurface`) and teach `@container` in the prompt. Measured: without `container-type` the guarded declaration is simply inert, which reads as the model writing something bad rather than as a missing container.
+- **`important` takes a SELECTOR STRING, and that is the scoping mechanism.** Every rule comes out
+  `.ui4a-root :is(.gap-4){…}`. The runtime sheet is appended to `<head>` last, so an unscoped
+  `hidden` from a card would beat the shell's own and make part of the app vanish — the playground
+  has exactly that bug on record.
+- **`preflights: { reset: false }`**, because presetWind4's reset is 3.5KB of `*, ::before,
+  ::after { margin: 0; border: 0 solid }` aimed at the HOST's DOM. The `theme` layer survives it
+  and is the half we need: `--spacing` is defined there and every `gap-*` / `h-*` / `p-*` resolves
+  against it. Dropping preflights entirely makes those rules generate and compute to nothing.
+- **Form controls need their own scoped reset.** With the vendor reset gone, a `<button>` keeps the
+  UA's `buttonface`, which is not theme-aware: measured in dark mode, two unselected buttons
+  rendered as light grey blocks with black text while the rest of the card was dark.
+- **A merged vendor rule has to be split, or Chromium drops the half it understands.** UnoCSS
+  merges selectors that share a declaration, so a card styling a slider for both engines produces
+  `…::-moz-range-thumb, …::-webkit-slider-thumb { height: … }` as ONE rule — and one unrecognised
+  pseudo-element makes the browser discard the whole list. Measured on a real card: 75 of 87 rules
+  survived parsing, the slider computed to `height: 0px`, and three controls were simply not
+  there. Order is irrelevant; either vendor first gives zero surviving rules. The model writing
+  both prefixes is correct, so `splitVendorRules` in `uno.ts` fixes it at generation time. **This
+  is the shape to fear here**: it compiles, it renders, no screen fires, and only reading
+  `getComputedStyle` off the real element shows it.
 
-If an atomic engine is ever added anyway, the trap waiting is that the host themes by ancestor (`body[data-ds-dark-theme]`), so a scoping rewrite has to **hoist the theme selector** — `.dark .foo` → `.dark .genui-root .foo` — and prefixing without hoisting breaks the moment the theme flips.
+`ui4a-playground` runs the same design (`ui4a-playground/src/runtime/uno.ts`) and our file is a
+port of it — diff the two rather than skimming, since ported files drift (§5).
+
+**Responsiveness comes from the container, not the viewport.** The same block renders in a chat
+column and in a panel the reader drags between 320 and 720px. `GenUISurface` gives the mount node
+`container-type: inline-size` and the prompt teaches `@[30rem]:` prefixes. Measured: without
+`container-type` the guarded declaration is simply inert, which reads as the model writing
+something bad rather than as a missing container.
+
+The trap still waiting: the host themes by ancestor (`body[data-ds-dark-theme]`), so if a rule
+ever needs the theme in its selector, the scoping rewrite has to **hoist** it — `.dark .foo` →
+`.dark .ui4a-root .foo` — and prefixing without hoisting breaks the moment the theme flips.
 
 ### 2.6 Four bundling settings you cannot skip
 
@@ -260,9 +295,22 @@ turn the user never sees; `ctx.conversation.send` always writes their message in
 transcript. So a card's click has to read as something the user would have said — `我选 红`,
 not a JSON payload.
 
-## 3.7 Colors: put the tokens in the prompt
+## 3.7 Colors: name the tokens, in the spelling the model will write
 
-Generated UI doesn't know the host is dark by default and will paint white cards onto a dark app. The fix isn't runtime CSS rewriting — it's **listing the 14 `--dsw-alias-*` semantic tokens in the system prompt** and stating flatly that literal colors are never allowed. Measured: 106 token uses across the generated code, zero literal hex.
+Generated UI doesn't know the host is dark by default and will paint white cards onto a dark app.
+The fix isn't runtime CSS rewriting — it's **naming the host's semantic tokens in the prompt** and
+stating flatly that literal colours are never allowed. Measured on the inline-`style` era of that
+rule: 106 token uses across the generated code, zero literal hex.
+
+Since the UnoCSS switch the tokens are named as **classes** (`bg-layer`, `text-muted`,
+`border-line`, `bg-accent`) mapped in `uno-config.ts` onto the same twelve `--dsw-alias-*`
+variables. Two consequences worth keeping: a card can still reach any variable through an
+arbitrary value (`bg-[var(--dsw-alias-bg-base)]`), and **`brand-primary` deliberately has no short
+name** — it is a foreground colour that 50 of 378 corpus cards used as a fill, and leaving it out
+of the map makes the commonest colour defect unspellable rather than merely discouraged. The two
+screens that used to read `background:` out of a style object are blind to class syntax and were
+replaced (`HARDCODED-COLOUR-CLASS`, `BRAND-PRIMARY-FILL-CLASS`); a probe confirmed the old pair
+fired on neither `bg-[#fff]` nor a fixed-palette ramp.
 
 Data visualization is the stated exception — chart series need their own hues to be distinguishable — and **a thing's own identity is the same case**, which the wording did not originally cover. Measured 2026-08-23 on the three cards in `test/cards`: 12-22 token uses each, and the 24 literal hexes are all `TILE_COLORS` in 2048 (the game's own palette) and the black and white of piano keys. `metro` has zero. So the rule holds where it should: chrome takes tokens, the subject keeps its colours.
 
@@ -1096,6 +1144,16 @@ Of their four recurring criticisms, **one survived checking**:
 One in four is the hit rate a first-pass regex gets here, for the same reason: a criticism is
 generated from a principle, and the principle assumes a context. Still worth its cost — the one
 that was right had gone unnoticed through 378 cards and 30 screens.
+
+**The slider criticism outlived the rule written for it, twice.** A rule teaching the overrides in
+a `<style>` block produced a card that put the class on the `<input>` and wrote
+`.r input[type=range]` — asking for an input inside the input, so nothing matched and the OS-blue
+track shipped anyway. The utility syntax fixed that by attaching the selector to the element, and
+then the SAME control failed a third way: the model correctly wrote both `-moz-` and `-webkit-`
+prefixes, UnoCSS merged them into one rule, and Chromium discarded the pair (§2.5). Three
+mechanisms, one symptom, and each one only visible in a screenshot or a `getComputedStyle` call.
+**When a defect survives the rule aimed at it, the next question is whether the rule was even
+reaching the element** — not how to word it better.
 
 ### 6.7 Traps that stayed true
 
