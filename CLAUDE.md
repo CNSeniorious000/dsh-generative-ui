@@ -7613,6 +7613,12 @@ every miss observed, and naming that spelling did not move it. Left as measured 
 rewritten a third time — the file's own record of what happens when a rule is pushed harder at a
 model that is already reading it is two reverts and no gain.
 
+**Kept rather than reverted**, and the distinction from the two reverts is worth being explicit
+about: those were rules that *cost* something — the `knob` reframing displaced a working trigger,
+and the *rule vs process* fix moved two hard negatives to cards. This one is 180 characters in a
+41,000-character body, it is factually true, and both control runs stayed clean. The bar for
+removing a rule is that it does harm, not that a single prompt failed to move.
+
 The screen catches it either way, which is the part that matters for the corpus: it fires on the
 className form (`8 of 114`), and the miss above was flagged the moment it was written. **A rule that
 lands 2 times in 3 and a screen that catches the third is a working loop**; a rule at 3/3 with no
