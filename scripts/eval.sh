@@ -175,4 +175,10 @@ fi
 # discard the run from a skill-rule measurement, not a result. Three separate conclusions were
 # written from runs that never read the rule they were testing before this line existed.
 skill=$(printf %s "$calls" | grep -q 'skillx' && echo yes || echo no)
-echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out"
+
+# `$d` is a `mktemp -d` the system reclaims, so a canvas card's SOURCE vanished with it and every
+# source-level statistic silently covered only the fence half. Measured on wave 7: canvas=21 vs
+# fence=22, and grok-4.6 wrote ZERO fences — it was absent from every source analysis, not
+# under-represented in one. Copying the directory costs nothing and changes no verdict.
+if [ -d "$d/.dsh/ui4a/canvases" ]; then cp -R "$d/.dsh/ui4a/canvases" "$out.canvases"; fi
+echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out canvases=$out.canvases"
