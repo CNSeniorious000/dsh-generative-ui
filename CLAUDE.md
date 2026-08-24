@@ -8137,6 +8137,45 @@ louder — is what this file has twice reverted. If it is right, the lever is no
 something that makes the omission visible: `UNANNOUNCED-ASYNC-RESULT` already is that thing, and
 it is doing its job at 15 cards in the fresh set.
 
+### An inconclusive result, and how many runs a rule test needs (2026-08-24)
+
+The visibility hypothesis suggested a lever: name the invisibility inside the rule, since the reader
+cannot perceive the omission. Added to the `aria-live` rule — *this is the one rule whose effect you
+cannot see*, with the 8-of-23 figure beside it — and measured on the file-browser prompt.
+
+| arm | `aria-live` present |
+| --- | --- |
+| before the split | 0 of 2 eligible |
+| split into its own bullet | 0 of 1 eligible |
+| invisibility named | **2 of 5** |
+
+**And that is not a result.** A true rate of 40% produces a clean 0-of-3 twenty-two percent of the
+time, so the arms are not separated by this data — 2/5 against 0/3 is what you would see if nothing
+had changed. Recorded as inconclusive rather than as the improvement it looks like.
+
+Worth doing the arithmetic once, since three-run tests have been the default all day:
+
+| to rule out a true rate of | a clean 0-of-n needs |
+| --- | --- |
+| 80% | n = 2 |
+| 50% | n = 5 |
+| 35% | n = 7 |
+| 20% | n = 14 |
+
+Three runs can only detect an effect that is nearly total. Combined with the 30% of runs that never
+load the skill, a nominal three-run test of a skill rule has **about two eligible samples** — enough
+to notice a rule going from never to always, and nothing else. Every rule this file records as
+landing (preset row 3/3, `<select>`, the four-library rows) was that kind of effect, which is why
+they read cleanly; every ambiguous result today was an attempt to measure something smaller.
+
+Two runs were correctly excluded by the harness while gathering this, both by machinery added
+today: one hit `timeout after 900s`, and one reported `crash/unfinished` after degenerating into
+repeated text and never completing its turn. Neither is evidence about the rule, and before this
+morning both would have counted as a miss.
+
+The honest state of `UNANNOUNCED-ASYNC-RESULT`: **the weakest rule in the set, cause unknown, three
+hypotheses tested and none established.** The screen catches it, which is what the screen is for.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
