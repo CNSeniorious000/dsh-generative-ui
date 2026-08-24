@@ -8214,6 +8214,29 @@ Two things worth keeping:
   here was a text predicate reading the source. Three layers of verification, and the cheapest one
   is the only one that saw it.
 
+### Pooled: half the cards announce, and the arms never separated (2026-08-24)
+
+Pooling every eligible run of the file-browser prompt across all three arms — the rule alone, the
+rule split into its own bullet, and the rule naming its own invisibility:
+
+    5 of 10 file-browser cards announce their results
+
+Against 35% across all fetching cards and 0 of 64 in the corpus. **The arms remain unseparated**:
+4 of 8 in the last arm against 0 of 3 in the first is a 12.5% coincidence at a true rate of 50%, so
+nothing here shows that either edit did anything. What the pooled number does establish is the
+rule's actual standing — around half, on the prompt where it matters most, against 88-94% for every
+neighbour.
+
+Four runs were excluded by the harness while gathering these ten, all by machinery added today:
+three `timeout after 900s` and one `crash/unfinished`. That is a **29% loss rate to the harness
+alone**, on top of the 30% that never load the skill — so a nominal twelve-run batch yields six or
+seven usable samples, and the arithmetic in the previous section should be read with that in mind.
+
+The honest summary of a long investigation: `UNANNOUNCED-ASYNC-RESULT` is the weakest rule in the
+set at roughly 50% where it applies; four hypotheses have been tested (accretion, dilution, headline
+grammar, author-invisibility) and none is established; and the screen catches every miss, which is
+what makes the residue visible at all rather than silently shipped.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
