@@ -40,8 +40,14 @@ for (const width of widths) {
     host.style.containerType = 'inline-size'
     createRoot(host).render(React.createElement(GenUISurface, { code, streaming: false }))
   }, width)
-  try { await p.waitForFunction(() => (document.body.innerText || '').trim().length > 40, { timeout: 20000 }) }
-  catch { console.log(`WARN ${width} never painted`) }
+  // "40 characters of text" is an English-shaped threshold: five two-character Chinese names is
+  // ten. Wait for the host to have painted a box instead, which is what `hasPainted` asks too.
+  try {
+    await p.waitForFunction(() => {
+      const h = document.getElementById('shot-host')
+      return h && (h.getBoundingClientRect().height > 20 || (h.innerText || '').trim().length > 8)
+    }, { timeout: 20000 })
+  } catch { console.log(`WARN ${width} never painted`) }
   await p.waitForTimeout(1000)
   // The host box is not the content box. A child that overflows crops short, and a host that
   // collapses while absolutely-positioned children paint crops to nothing — so take the furthest
