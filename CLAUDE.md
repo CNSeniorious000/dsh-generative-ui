@@ -3277,7 +3277,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 65 of 94 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 67 of 99 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -6889,7 +6889,7 @@ automating; a one-off count has to be re-derived by whoever doubts it.
     0 of 378 carry three or more accessibility signals (0→337 1→35 2→6 3→0 4→0)
 
     bun scripts/fresh-rates.ts
-    65 of 94 carry three or more accessibility signals (0→5 1→4 2→20 3→48 4→17)
+    67 of 99 carry three or more accessibility signals (0→5 1→5 2→22 3→50 4→17)
 
 The rule this suggests: **a number worth putting in the record is worth a script that prints it.**
 Not every number — most of today's measurements were one-offs answering a question that stayed
@@ -7766,6 +7766,45 @@ Worth pairing with the mtime observation, because the predicate is weaker than i
 newer than `lib/`* is not *`src/` has changed*. It is the right trade for its job (a false alarm
 costs one `bun run build`, a missed stale build costs an afternoon of measurements), but anything
 that depends on it has to either build first or not depend on it.
+
+### A defect the persistence rule created, and a rule that will not land (2026-08-24)
+
+The persistence rule created a defect the record already flagged as a second-order effect: once a
+card keeps its data, a bare `filter` on a row destroys something. Measured properly this time —
+"destructive" meaning *removes a row the user entered, from a card that persists it*, rather than
+the first predicate, which counted **69** cards and was reading 重置 buttons that rewind an
+animation.
+
+    corpus:  1 such card
+    fresh:  13 such cards, 2 of which ask anything first
+
+The asymmetry is the finding, not the ratio: **a corpus written before the persistence rule barely
+has this defect available to make.** Thirteen cards can now lose a note to one click.
+
+So a rule went into the persistence section — *persisting makes deletion permanent, so a delete
+needs a way back* — with the measurement in it. Then five runs of a prompt naming exactly the
+construct (`做个待办清单，能加能删，刷新还在`, which names adding, deleting, and persisting, and
+names no remedy):
+
+**0 of 5.** Every card writes `setTodos(prev => prev.filter(t => t.id !== id))` behind one button.
+
+Delivery is not the question — the paragraph is in the assembled body at a known offset and in
+`lib/index.js`. One hypothesis was tested and refuted: the paragraph had no blank line before it,
+so it read as a continuation of the persistence bullet rather than as its own point. Fixed, re-run,
+still 0/2. And the control against reading too much into spacing is in the same bullet — *a reload
+is not the common case, your own next edit is* is also glued to its predecessor and is a rule the
+record measures as landing.
+
+Left at 0/5 and recorded. This is the third rule today in that state — the className spelling, and
+now this — against four that landed on their first test. What separates them is not clarity or
+placement, and the file's own history of pushing harder is two reverts and no gain.
+
+One observation worth keeping for whoever tries next. The four rules that landed today all name a
+**construct you can see yourself writing** (a preset row, a `<select>`, a conditional background, a
+`localStorage` write). This one names a **consequence** — that a delete is now permanent — and the
+reader has to derive the construct from it. That is the same distinction as *rule vs process*,
+which also failed, and as the `knob` reframing, which also failed: a rule that asks the model to
+reason from a property of the system loses to one that points at a line of code.
 
 ### And the removal of the invented names cost nothing
 
