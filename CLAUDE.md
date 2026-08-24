@@ -8060,6 +8060,37 @@ the kind of edit that could pull a one-line answer toward a card. Both hard nega
 sentence is conditional on having decided to build, and a request that never decides never reaches
 it.
 
+### Eighteen of eighteen: the residue was delivery, not wording (2026-08-24)
+
+Scoring the cards written after the resident-layer edit, across three prompts:
+
+    18 of 18 clean under all 30 screens
+    17 of 17 eligible runs loaded the skill
+
+No card written since that edit appears in any screen's residue. The fresh set's remaining flags —
+`SELECTION-WITHOUT-STATE` on 11, `UNANNOUNCED-ASYNC-RESULT` on 15 — are all cards from earlier
+today or earlier sessions, every one predating either the rule or the load fix.
+
+The chain, because each link was measured separately and only the last one is the finding:
+
+1. Screens found a residue on rules that looked correct.
+2. Rewording the rules moved nothing — three separate attempts, and the file's own history of
+   pushing harder is two reverts.
+3. The tool list showed every miss was a run that never loaded the skill: **4/4 with, 0/2 without.**
+4. The skill-load rate was 62% on the prompt in question, and the resident layer described the
+   skill purely as a decision aid — so a run that had decided had no stated reason to load it.
+5. One sentence naming what the skill carries *after* deciding: **17 of 17.**
+6. The residue is gone, and the boundary fixtures still answer in prose.
+
+What makes this worth more than the individual rules: **the rules were never the problem.** Every
+one of them was at or near 100% on the runs that read it, all day, while the screens showed a
+steady residue that looked exactly like rules not landing. The gap was delivery, and it was visible
+in output I had been reading for hours.
+
+The limit to state plainly: 17 runs, three prompts, all card-shaped, one model. `run-fixtures.sh`
+now marks ineligible cells lowercase, so the next person can check the rate on any prompt without
+re-deriving any of this.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
