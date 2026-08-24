@@ -8237,6 +8237,30 @@ set at roughly 50% where it applies; four hypotheses have been tested (accretion
 grammar, author-invisibility) and none is established; and the screen catches every miss, which is
 what makes the residue visible at all rather than silently shipped.
 
+### A commit gate for the record, after the third red commit (2026-08-24)
+
+The pre-push hook has caught red pushes since it was added. Commits had no such gate, and three
+times in this session a commit landed while `bun run audit` was failing — each time a stale
+denominator in the fresh-set figures, each time noticed minutes later and fixed in a follow-up.
+
+That is the cheap version of the failure. The expensive version is the one nobody notices: a wrong
+number in this file is read as fact by everyone after, and `audit-record.py` exists because exactly
+that happened once already (`什么是二分查找` recorded as both 2/3 and 1/3).
+
+`scripts/hooks/pre-commit` runs the two record checks — `bun run audit` and
+`test/record-structure.test.ts` — and only when `CLAUDE.md` is staged. Half a second. `bun run
+check` stays in pre-push where it belongs; this is the subset that guards the file being edited.
+
+Verified the only way that means anything: staged a deliberately wrong denominator
+(`99 of 999`), and the commit was refused with the audit's own message. Then hit the follow-on
+trap immediately — `git checkout CLAUDE.md` does not revert a **staged** change, so the second
+attempt was refused too, correctly. `git restore --staged --worktree` is the one that works.
+
+The pattern this closes: every discipline in this file that had to be remembered eventually was
+not. The isolation rules became `test/isolation.test.ts`, the screen obligations became three
+tests that fail when a map is incomplete, red pushes became pre-push, and this is the last of the
+four things I did wrong more than once today.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
