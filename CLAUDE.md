@@ -7421,6 +7421,38 @@ keyword suggested filters, modes and tabs, and reading them showed the buckets w
 **vocabulary, not widget kind**: `ranges.map`, `options.map`, `STYLES.map` are all one construct, a
 pick-one row shown as a colour. Naming one noun at a time will not finish this.
 
+### A defect at zero in 456 cards is a note, not a screen (2026-08-24)
+
+A 2048 canvas came back clean under all 25 screens and threw `window is not defined` in
+`paint-cards.ts`:
+
+    const cellSize = useMemo(() => {
+      const gap = 12
+      return Math.min(72, Math.floor((Math.min(window.innerWidth, 480) - gap * 5) / 4))
+    }, [])
+
+`window` read during **render**, not in an effect. In a browser it works; anywhere the first render
+happens without a DOM it throws, which is the whole reason `paint-cards.ts` uses
+`react-dom/server` — the check found something no screen could.
+
+Measured before reaching for a screen: **0 of 378 corpus cards and 0 of 77 fresh ones** do this.
+The predicate — a `window.`/`document.` inside a `useMemo` or a `useState` initialiser, with
+comments stripped and `useEffect` deliberately excluded — is cheap and finds nothing. So this is
+`test/cards-negative`'s bar failing in the other direction: the defect is real and fatal, and one
+occurrence in 456 cards is not a pattern. Recorded, not screened.
+
+The card was discarded and the prompt re-run, per `test/cards/README.md` — the reference cards are
+unretouched output, so editing the `useMemo` out would make it a card this project wrote rather
+than a card the model wrote.
+
+Worth noting what the same card got *right*, because it is the reason it was a candidate at all: it
+answers the 慢/中/快 segmented control that `SELECTION-WITHOUT-STATE` flags on the card it would
+have replaced with a **labelled `<input type="range">`** instead. There is then no selection to
+announce, and a continuous speed is what a slider is for. **A rule can be satisfied by removing the
+construct**, which is the better outcome and the one no screen can observe — the same thing
+recorded earlier when `UNREACHABLE-CONTROL`'s residue was answered with `<button>` rather than with
+`tabIndex`.
+
 ### The card that fixed the rule broke on something else
 
 The third run's card is clean under all 25 screens and **does not compile**:
