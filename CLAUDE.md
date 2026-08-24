@@ -8909,6 +8909,16 @@ Truncation is right only where the row must stay one line tall — a table, a li
 rows — and it is not the default. Four renderings side by side is what separated them; the first
 three all "work" in the sense that nothing overflows the card.
 
+**The verification run for that fix was itself invalid, and the timestamps are what showed it.**
+The card came back carrying `minWidth: 0` *with* the full truncation set — which reads as the model
+learning the wrong half of the rule, and is not: the session started at 15:06 and `lib/index.js`
+was rebuilt at 15:08, so it ran the previous version and followed it faithfully. The staleness
+guard added this morning protects the START of a run and cannot protect its middle, which is the
+second time today an in-flight rebuild has contaminated a measurement.
+
+Cheap check, worth making a habit: `stat -f %Sm` on the session directory against `lib/index.js`.
+A session older than the build measured a prompt no commit contains.
+
 **No screen**, and the reason is the fifth instance of a pattern this file already names. The
 obvious predicate — a `flex: 1` style object with no `minWidth`, no `overflow` and no `width` —
 reports 97 of 378, and reading the hits kills it: most are buttons, `flex: "1 1 7rem"` (a basis
