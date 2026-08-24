@@ -131,11 +131,24 @@ Two things follow from the lifetime difference:
     setUndo(rows.find((r) => r.id === id) ?? null)
     setRows((prev) => prev.filter((r) => r.id !== id))
   }
-  { undo && <button onClick={() => { setRows((p) => [...p, undo]); setUndo(null) }}>撤销删除</button> }
+  { undo && <button onClick={() => { setRows((p) => [...p, undo]); setUndo(null) }}>Undo delete</button> }
   \`\`\`
 
-  A confirm step does the same job. Measured: 13 cards persist a list the user built and 2 offer
-  either.
+  A confirm step does the same job — but not the browser's own \`confirm()\`, which is a modal
+  from another era sitting on top of a panel that has its own visual language, and which offers
+  no way back once it is answered.
+
+  **The reason this is missed is not that undo is hard to write — it is that the line does not
+  look like a delete.** Measured across 34 cards that destroy something: 6 shipped no way back,
+  and every one of them had written one of these without recognising it:
+
+  - \`setRows(prev => prev.filter(r => r.id !== id))\` — the one above
+  - \`setRows([])\` behind "clear", "reset", "start over", or a new day
+  - \`rows.splice(i, 1)\`, or \`delete obj[key]\` on a persisted map
+  - setting a quantity or a count to 0 where the row disappears at 0
+  - replacing a whole persisted object — \`setPlan(freshPlan)\` drops whatever the user edited
+
+  Anything the user cannot type back in under five seconds needs a way back.
 
   **A running clock is state too**, and the least obvious kind: a stopwatch or a timer mid-count
   reads 0 again after one edit. Measured — the interval itself is cleaned up correctly, nothing
