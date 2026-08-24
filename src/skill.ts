@@ -187,6 +187,31 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 ## Layout
 
+- **The space between blocks is the root's job, and it belongs in the inline \`style\` where you
+  can see it.** A card is two to four stacked blocks, and what separates them is one declaration
+  on the element that holds them — not a margin on each child, which collapses and doubles
+  unpredictably, and not a class in \`<style>\` that has to find its element:
+
+      <div style={ { display: "grid", gap: 16, … } }>
+
+  Measured on a real card: the root's layout was written as \`.r { display: grid; gap: 12px }\` in
+  \`<style>\`, the class landed on an \`<input>\` twenty lines away, and the two blocks below ended
+  up flush against each other — no border between them, no space, reading as one block with a
+  stray heading in the middle. Nothing failed; the gap simply never applied. Written inline on
+  the element it governs, that cannot happen. Inside a block, the same \`gap\` separates its rows;
+  \`marginBottom\` on one child while its siblings rely on a gap is the spelling that produces one
+  odd space and eleven equal ones.
+
+- **A comparison table is read down a column, so its text cells are left-aligned and only its
+  numbers are right-aligned.** Measured on a real card comparing two cell types over 12 rows:
+  every cell was centred, so at 440px eight of the twelve rows wrapped to two lines and each
+  line started at a different x — there is no straight edge for the eye to run down, and the
+  two columns being compared no longer line up with each other row by row. Centring looks tidy
+  in a mock where every cell is one short word and falls apart the moment one cell is a phrase.
+  Numbers are the exception in both directions: right-align them and add
+  \`font-variant-numeric: tabular-nums\`, so the digits stack. Header cells take the alignment of
+  the column beneath them, not their own.
+
 - **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-base\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
 
   **A control you have FILLED is the opposite case, and the two get confused.** The rule above is
@@ -358,8 +383,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   the right one for a \`role="radio"\` — and they simply never meet, so all three buttons rendered
   identically at every width while the card carried a full selected-state block in its
   \`<style>\`. It compiles, it renders, no checker fires, and only a screenshot shows it. The same
-  failure produced an unstyled slider (\`className="r"\` on the \`<input>\` against a \`.s::…\`
-  selector). **Whenever a \`<style>\` rule keys off something JSX writes — an attribute, a class,
+  failure produced an unstyled slider, and there it cost twice over: the card's \`<style>\` opened
+  with \`.r { display: grid; gap: 12px }\` — the root container's own layout — and then put
+  \`className="r"\` on the \`<input type=range>\`. So the slider silently became a grid, every
+  \`.r input[type=range]::…\` override addressed an input inside an input and matched nothing, **and
+  the root never got its \`gap\`**, so the two blocks below it sit flush against each other with no
+  space at all. One misplaced class, three symptoms, none of them where the class is. **Whenever a \`<style>\` rule keys off something JSX writes — an attribute, a class,
   a data-* attribute — write the two lines next to each other and read them as one.** The cheaper habit
   is to keep the state in the inline \`style\` ternary you are already writing, and let
   \`<style>\` hold only what inline cannot express (pseudo-elements, \`@container\`, \`:focus-visible\`).
