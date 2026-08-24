@@ -292,7 +292,7 @@ export const SCREENS = {
         // Either spelling of "shown as selected": an inline style ternary or a conditional class.
         && (/(background|border|color)\s*:\s*[^\n]*\?/.test(block) || /className=\{`[^`]*\$\{[^}]*\?/.test(block))
         && /<button/.test(block)
-        && !/aria-(pressed|selected|checked)|role="(radio|tab|option|checkbox|switch)"/.test(block)
+        && !/aria-(pressed|selected|checked|current)|role="(radio|tab|option|checkbox|switch)"/.test(block)
         // A label that switches on the same flag carries the state, less conventionally but audibly.
         && !/aria-label=\{[^}]*\?/.test(block)
         // A key held down is momentary feedback, not a selection — announcing it would announce a

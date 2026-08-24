@@ -62,9 +62,18 @@ const PAIRS: Record<string, [string, string] | [string, string][]> = {
     `const run = async (t: string) => { const id = ++runId.current; for await (const c of streamText({ prompt: t })) { if (id !== runId.current) return; setOut(c) } }`,
   ],
   "NO-FOCUS-RING": [`const s = { outline: "none" }`, `const s = { outline: "none", border: focused ? "1px solid blue" : "none" }`],
+  // Three pairs: the toggle spelling, and the two a real card reached for that an earlier version
+  // reported. A list of navigable rows is not a set of toggles, so `aria-current` is the more
+  // precise answer there — and a screen quiet on the fix you thought of can be loud on a better one.
   "SELECTION-WITHOUT-STATE": [
-    `OPTS.map((o) => { const sel = o.id === picked; return <button style={{ background: sel ? "#06f" : "transparent" }} /> })`,
-    `OPTS.map((o) => { const sel = o.id === picked; return <button aria-pressed={sel} style={{ background: sel ? "#06f" : "transparent" }} /> })`,
+    [
+      `OPTS.map((o) => { const sel = o.id === picked; return <button style={{ background: sel ? "#06f" : "transparent" }} /> })`,
+      `OPTS.map((o) => { const sel = o.id === picked; return <button aria-pressed={sel} style={{ background: sel ? "#06f" : "transparent" }} /> })`,
+    ],
+    [
+      `rows.map((r) => { const sel = r.id === picked; return <button className={\`row\${sel ? " on" : ""}\`} /> })`,
+      `rows.map((r) => { const sel = r.id === picked; return <button aria-current={sel ? "true" : undefined} className={\`row\${sel ? " on" : ""}\`} /> })`,
+    ],
   ],
   "NEVER-LEAVES-LOADING": [
     `import { bash } from "$dsh/exec";\nconst [busy, setBusy] = useState(true);\nconst load = async () => { await bash("git log"); setBusy(false) };`,

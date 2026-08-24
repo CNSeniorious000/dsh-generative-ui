@@ -3279,7 +3279,7 @@ phenomenon. Counting how many of four independent signals (`:focus-visible`, `ar
 | corpus (378) | **337** | 35 | 6 | 0 | 0 |
 | fresh (77) | 3 | 4 | 18 | **39** | 13 |
 
-**Not one corpus card in 378 carries three of them. 91 of 126 fresh cards do.** The corpus's mode
+**Not one corpus card in 378 carries three of them. 94 of 129 fresh cards do.** The corpus's mode
 is zero and the fresh set's is three — the change is not "more cards happen to use an attribute",
 it is that accessibility became something a card does as a matter of course rather than something
 one card in ten stumbled into.
@@ -8260,6 +8260,55 @@ The pattern this closes: every discipline in this file that had to be remembered
 not. The isolation rules became `test/isolation.test.ts`, the screen obligations became three
 tests that fail when a map is incomplete, red pushes became pre-push, and this is the last of the
 four things I did wrong more than once today.
+
+### Three runs cannot see a half-effect (2026-08-24)
+
+`NEVER-LEAVES-LOADING` caught a card whose loader was defined and never called, so the skill gained
+the effect that starts the first fetch, as code:
+
+    useEffect(() => { void load(path) }, [path])   // ← the line that is missing when a card hangs
+
+Three more runs of the same prompt after it, against the seven before:
+
+| | cards using `useEffect` |
+| --- | --- |
+| before the code block | 3 of 7 |
+| after | **3 of 3** |
+
+No recurrence of the stuck card, which is what the block targeted. But three runs can only detect an
+effect that is nearly total — a true rate of 50% produces a clean 3-of-3 one time in eight — so this
+is consistent with the block working and equally consistent with it doing nothing. Recorded as
+measured rather than as a result: the before column is not a baseline either, since four of those
+seven simply had nothing to fetch on mount.
+
+What the batch does establish is the load rate holding. **All ten runs of this prompt today reported
+`skill=yes`**, against the 62% base rate the resident-layer edit replaced — 17 of 17 eligible has
+become 27 of 27.
+
+`aria-live` in the same ten cards is 5, which is the pooled ~50% already recorded for this rule and
+this prompt. Nothing in this batch separates its arms either.
+
+### A better fix the screen did not know (2026-08-24)
+
+`SELECTION-WITHOUT-STATE` fired on two fresh file-browser cards that announce their selected row
+with **`aria-current`**:
+
+    className={`fb-row${isSel ? " is-selected" : ""}`}
+    aria-current={isSel ? "true" : undefined}
+
+That is the className spelling the rule names, with a state attribute the screen did not know. For a
+list of navigable rows `aria-current` is the more precise choice than `aria-pressed` — the row is not
+a toggle — so both cards were doing the right thing and being reported for it.
+
+Widened to accept it. The corpus verdict is **unchanged at 114 of 378**, because `aria-current`
+appears in **0 of 378 corpus cards** and in only these 2 of the fresh set; the negative control still
+fires. So the widening costs no coverage and clears two true negatives, which is the same shape as
+the knob/thumb exemption: **a screen whose residue in one population is a different thing from its
+residue in another is measuring two things.**
+
+Worth noting which check would have caught this without a fresh card to read. None of them:
+`screens-quiet-on-fix.test.ts` pins one `[defect, fix]` pair per construct, and the fix it pins is
+`aria-pressed`. A screen can be quiet on the fix you thought of and loud on the fix that is better.
 
 ### A crash verdict on a run that plainly produced a card
 
