@@ -7518,6 +7518,43 @@ check, the replay, the rate audit and the shuffled-order run had never run on an
 gate this record spends its length building was local-only. That is the same shape as the four
 rotted citations: nothing failed, so nothing said it was not happening.
 
+### The shape, not the noun: what 95 of 114 cards have in common (2026-08-24)
+
+`SELECTION-WITHOUT-STATE`'s residue is one construct wearing many nouns. Bucketing the 114 flagged
+cards by what the mapped array is *called* produced 66 in "other" — `PRESETS`, `options`, `ranges`,
+`STYLES`, `MODES`, `segs` are all the same widget, and the buckets were measuring vocabulary.
+
+Asking instead **how the selection is expressed** gives one answer:
+
+| | of 114 |
+| --- | --- |
+| conditional `background` | **95** |
+| conditional `border` | 50 |
+| conditional `opacity` | 19 |
+| conditional `fontWeight` | 16 |
+| interpolated `className` | 8 |
+
+The rule's first sentence already said "differs only by `background` or `border`", and 95 cards did
+it anyway — so the wording was not the gap. What it lacked was **a tell you can recognise while
+typing**: *if you are writing a conditional `background` inside a `.map` over choices, the
+attribute goes on that element, with the condition you already typed.*
+
+Tested on a prompt with nothing to do with the card it was derived from
+(`做个字号预览，能在几个常用字号之间切换看效果`), naming the construct and not the fix:
+
+- both cards clean under all 25 screens, both paint, `aria-pressed={size === s}` — the styling
+  condition and the announced state as one expression;
+- one goes further than asked and styles **from** the attribute (`.fp-btn[aria-pressed="true"]`),
+  which makes the visual state and the announced state the same fact rather than two that can
+  drift;
+- the mount confirms it at the a11y-tree level: `14 像素=true` with the other six `false`.
+
+Two things worth keeping. **A rule derived from one card type has to be tested on another** — the
+preset-row paragraph landed 3/3 on chmod, which says nothing about whether it generalised, and this
+does. And the general lesson from both: the four rules that landed this session all name **a shape
+visible in the code being written**, not a category of widget. `PRESETS` is a name; a conditional
+`background` inside a `.map` is something you can catch your own hand doing.
+
 ### The card that fixed the rule broke on something else
 
 The third run's card is clean under all 25 screens and **does not compile**:
