@@ -38,6 +38,15 @@ export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} 
 export function mapNotes(typesMap: string | undefined, standaloneMap: string | undefined): string {
   if (typesMap === undefined) return "";
   const check = [
+    // A card is created BY its path. Checking a draft somewhere else therefore produces a card
+    // nothing will ever mount — measured once in wave 8: a complete 150-line routine written to
+    // `rutina.tsx` in the workspace root, because the model planned "write a temp file, then run
+    // the checker" and the checker step never finished. It reads as the model declining to build.
+    `**Check the canvas file itself, at \`${CANVAS_DIR}/<id>${CANVAS_SUFFIX}\`.** Writing that path is what creates the`,
+    "canvas, so there is no draft stage to check first: a `.tsx` anywhere else is a file the user",
+    "will never see, however correct it is. Write it where it belongs, then check it there and fix",
+    "it in place — the panel streams as you write and re-renders as you edit.",
+    "",
     `The \`-i\` is not optional when the card imports \`${CAPABILITY_PREFIX}/*\`: without it every one of those lines`,
     "is reported as `Cannot find module`, and there is nothing to fix — they resolve at render time.",
     "",
