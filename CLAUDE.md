@@ -1522,6 +1522,38 @@ mid-wave (again — see 6.8), so the measurement is 45 verdicts and not 72. And 
 that the old guard would have discarded**: the split stale check reported them as
 `note: src/client/ …`, a render change that leaves the verdict standing.
 
+### 6.857 Sampling more models, and what the gateway will not give you
+
+A wave sampled three models from two families, which makes every result a claim about those
+families. It now samples six across six upstreams — `macaron-v1-venti`,
+`macaron-v1-coding-venti`, `glm-5.2`, `gemini-3.7-flash`, `grok-4.6`, `gpt-5.6-terra` — for two
+reasons, and the second is the one that matters. **Throughput**: `macaron-v1-*` share a backend
+capped at 3 concurrent, so a wave whose work is mostly theirs runs 3-wide however many workers
+exist (wave 5's retry: 27 macaron jobs, ~25 minutes, every other slot idle). One semaphore per
+upstream and `3 × len(upstreams)` workers took in-flight calls from 6 to 18. **Evidence**: the
+weight rule going to zero on three models was suggestive; holding on Gemini, GPT, Grok and GLM
+too — measured on wave 6's first 21 verdicts, `font-medium` 75/3/12 and `font-semibold` **0**
+everywhere — is a rule about the constraint rather than about one family's habits.
+
+Three things this cost, all worth knowing before adding a model:
+
+- **Each model needs its own eval home** (`scripts/eval-home.py <model>`), whose `settings.yaml`
+  is a REAL FILE naming one model. Symlinked back to the shared home, setting one home's model
+  sets every home's and the wave measures one model N times while reporting N.
+- **No Anthropic model can be sampled here.** The headless profile composes `tool-web`, and every
+  `claude-*` on this gateway answers a request carrying it with
+  `The use of the web search tool is not supported` (400). Measured on sonnet-5, sonnet-4-6 and
+  opus-4-8 — a gateway capability gap, not a model one.
+- **`reasoningEffort: low` does not work yet, and would be worth having.** dsh rejects the field
+  with `UNSUPPORTED_REASONING_EFFORT` unless the model ENTRY declares `reasoningEfforts`, and none
+  of the seven do. Declaring them means writing each provider's own wire value, and a wrong one
+  sends the gateway a parameter it will not understand. `EVAL_EFFORT=…` is wired and off.
+
+  The probe that "confirmed" all six supported it was measuring nothing: it used `timeout 60`, and
+  **macOS has no `timeout(1)`**, so every command failed at the shell and every model came back
+  `ok`. Same class as the build-vs-test artefact confusion in 6.8 — a plausible result from a
+  measurement that never ran. `command -v` the tool before trusting a loop built on it.
+
 ### 6.86 Errors that reach only the reader teach the model nothing
 
 `onError` had no consumer: a card that failed to compile painted a red panel and the model never
