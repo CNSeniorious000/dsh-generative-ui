@@ -631,7 +631,7 @@ Four that are easy not to think of, each with the one thing to get right:
 | --- | --- | --- |
 | a running total, score, or counter the user watches change | \`@number-flow/react\` | \`import NumberFlow from "@number-flow/react"\` — a **default** import; there is no named \`NumberFlow\` export, and \`import { NumberFlow }\` is \`undefined\` and a blank card. Then \`<NumberFlow value={n} />\` in place of \`{n}\` |
 | a panel that slides in, especially on a narrow card | \`vaul\` | \`<Drawer.Portal container={hostEl}>\` — without \`container\` it portals to \`document.body\`, outside your card |
-| a transient confirmation | \`sonner\` | import **both** \`toast\` and \`Toaster\`, and render \`<Toaster />\` in your tree — \`toast()\` alone is silent, with no error anywhere |
+| a transient confirmation | \`sonner\` | import **both** \`toast\` and \`Toaster\`, and render \`<Toaster />\` in your tree — \`toast()\` alone is silent, with no error anywhere. Worth reaching for rather than hand-rolling: a hand-written toast is almost always \`position: fixed\`, which floats it over the whole app instead of your card |
 | form controls | \`@headlessui/react\` | \`Field\` + \`Label\` around \`Switch\`/\`Listbox\`/\`Combobox\` — labelling comes with them |
 
 
