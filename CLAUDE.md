@@ -8667,6 +8667,38 @@ The general form, which is new: **when a repair changes a test's cost, it change
 test reports.** A timing test has two budgets — the ratio it asserts and the wall-clock it is
 allowed — and spending the second to stabilise the first trades one flake for another.
 
+### A five-model panel grades what the screens cannot see (2026-08-24)
+
+Every check in this repo reads the source or the DOM. None of them can see what the card looks
+like, and a five-model panel grading screenshots put a number on what that costs: **no card scored
+above 6 of 10**, on a set that passes all 30 screens, paints, and announces every state correctly.
+
+`scripts/judge-cards.py` shoots each card at 320 / 440 / 720 in both themes, hands the six images
+and the TSX to `kimi-k3`, `gemini-3.7-flash`, `grok-4.6`, `claude-opus-5` and `gpt-5.6-sol`, and
+asks for specific criticism on four axes. Verdicts cache by content hash, so a rerun is free.
+
+| card | claude | gemini | gpt | grok | kimi |
+| --- | --- | --- | --- | --- | --- |
+| 2048 | 2 | 2 | 2 | 2 | 4 |
+| catnames-a | 4 | 4 | 6 | 6 | 4 |
+| menu-cena | 4 | 5 | 5 | 5 | 6 |
+| metro / piano / pick-one | 5 | 6 | 5 | 5 | 6 |
+| regex-tester | 5 | 7 | 6 | 6 | — |
+
+The models agree on the ranking, which is what makes the panel worth its cost: five models sharing
+nothing but the images put the same card last and the same card first.
+
+**On 2048 all five independently found a defect no existing check could see**, and three of them
+found more than I had. `cellStyle` positions a 4×4 grid at `left: (c+1)*2%` with `width: 22%` — the
+step is 2% and the cells are 22% wide, so **every cell overlaps the next by 91%** and the whole
+board is a single square in the corner. Beyond that: `tileStyle` sets no `left`/`top` at all, so the
+numbers stack at the origin (4 of 5 caught this, I had not); the game-over overlay is
+`position: absolute` with no positioned ancestor, so it escapes the card and covers the **host app**
+(3 of 5); and on light the board is invisible, `bg-layer-1` on `bg-layer-2` both being `#fff`.
+
+That card is `test/cards/2048.ui4a.tsx`, regenerated this morning and recorded here as "clean,
+paints, mounts, responds" — every one of those was true, and the board had never worked.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
