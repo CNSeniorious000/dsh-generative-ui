@@ -139,12 +139,15 @@ Two things follow from the lifetime difference:
   no way back once it is answered.
 
   **The reason this is missed is not that undo is hard to write — it is that the line does not
-  look like a delete.** Measured across 34 cards that destroy something: 6 shipped no way back,
+  look like a delete.** Measured across 36 cards that destroy something: 10 shipped no way back,
   and every one of them had written one of these without recognising it:
 
-  - \`setRows(prev => prev.filter(r => r.id !== id))\` — the one above
-  - \`setRows([])\` behind "clear", "reset", "start over", or a new day
-  - \`rows.splice(i, 1)\`, or \`delete obj[key]\` on a persisted map
+  - \`setRows(prev => prev.filter(r => r.id !== id))\` — 6 of the 10
+  - \`delete obj[key]\` on a persisted map — the other 4, and the one that reads least like a
+    delete because nothing named \`remove\` appears anywhere near it
+  - \`rows.splice(i, 1)\`
+  - \`setRows([])\` behind "clear", "reset", "start over", or a new day — but only when the rows
+    are the user's; clearing a queue you generated is not a delete
   - setting a quantity or a count to 0 where the row disappears at 0
   - replacing a whole persisted object — \`setPlan(freshPlan)\` drops whatever the user edited
 
