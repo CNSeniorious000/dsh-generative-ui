@@ -24,21 +24,26 @@ const calls: ToolCallView[] = Array.from({ length: 34 }, (_, i) => ({
 const keyOf = (views: readonly ToolCallView[]) => `${views.length}:${views.reduce((total, call) => total + call.argsRaw.length + (call.settled ? 1 : 0) , 0)}`;
 
 /*
- * The BEST of several batches, not the mean of one.
+ * The BEST of several batches, not the mean of one — and few enough iterations that the whole
+ * test stays well inside the default 5s timeout.
  *
- * A mean measures the machine as much as the code: on a loaded box (this failed at load average
- * 50, with five model evals running) the scheduler can preempt either batch, and whichever it
- * preempts decides the ratio. The minimum is the run that was not interrupted, which is the one
- * that says something about the algorithm — the property under test is a 265x gap, so a sample
- * that lands anywhere near the truth passes easily.
+ * A mean measures the machine as much as the code: on a loaded box the scheduler can preempt
+ * either batch, and whichever it preempts decides the ratio. The minimum is the run that was not
+ * interrupted, which is the one that says something about the algorithm — the property under test
+ * is a 265x gap, so a sample anywhere near the truth passes easily.
+ *
+ * The iteration count is part of the fix, not an accident. The first version of this repair took
+ * the best of five batches of forty and made the test FIVE TIMES SLOWER, so it started failing on
+ * the 5s timeout instead of on the assertion — a "fix" whose failures looked identical to the bug
+ * it replaced. The walk is ~0.16ms per canvas over 34 canvases, so 3 x 8 is ~130ms of real work.
  */
 const msPerCall = (run: () => void) => {
-  for (let i = 0; i < 5; i++) run();
+  for (let i = 0; i < 3; i++) run();
   let best = Infinity;
-  for (let batch = 0; batch < 5; batch++) {
+  for (let batch = 0; batch < 3; batch++) {
     const start = performance.now();
-    for (let i = 0; i < 40; i++) run();
-    best = Math.min(best, (performance.now() - start) / 40);
+    for (let i = 0; i < 8; i++) run();
+    best = Math.min(best, (performance.now() - start) / 8);
   }
   return best;
 };

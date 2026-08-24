@@ -28,6 +28,25 @@ fi
 [ -x "$d/setup.sh" ] && ( cd "$d" && ./setup.sh >/dev/null 2>&1 && rm -f setup.sh )
 # DSH_HOME can point at an isolated home with a different default model — used to keep
 # measuring when the primary account runs out of balance, and to compare models.
+#
+# It ALSO decides where the session transcript lands, and that is why it defaults to an eval home
+# rather than to `~/.dsh`. dsh writes one session per working directory, this script makes a fresh
+# `mktemp -d` per run, and the user's sidebar lists them all: a day of measuring left **2,143
+# `tmp.XXXXXXXX` conversations** in it against 85 real ones. The eval home is a sibling of the real
+# one — same profile, same credentials by symlink — so nothing about the run changes except which
+# sidebar the debris lands in.
+if [ -z "${DSH_HOME:-}" ]; then
+  export DSH_HOME="$HOME/.dsh-eval"
+  if [ ! -d "$DSH_HOME/profiles/headless" ]; then
+    mkdir -p "$DSH_HOME/profiles"
+    cp -R "$HOME/.dsh/profiles/headless" "$DSH_HOME/profiles/" 2>/dev/null || true
+    # Symlinked, not copied: credentials rotate, and a stale copy fails as an auth error that
+    # looks exactly like a refused rule.
+    for f in settings.yaml .credentials.yaml .anonymous-user-id; do
+      [ -e "$HOME/.dsh/$f" ] && ln -sf "$HOME/.dsh/$f" "$DSH_HOME/$f"
+    done
+  fi
+fi
 # The transcript goes OUTSIDE the workspace. Written as `$d/o.txt` it is a file the model can
 # see and edit, and one run in six wrote its card into the very file that measures it.
 out=$(mktemp)

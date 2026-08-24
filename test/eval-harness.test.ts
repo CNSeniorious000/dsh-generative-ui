@@ -76,6 +76,17 @@ test("a build older than the source is refused", () => {
   expect(script).toContain("src/ is newer than lib/");
 });
 
+// A day of measuring left 2,143 `tmp.XXXXXXXX` conversations in the user's sidebar against 85 real
+// ones: dsh writes one session per working directory, and this script makes a fresh one per run.
+// The fix is an eval home, and it is only a fix while the default is unset — someone "simplifying"
+// this back to `${DSH_HOME:-$HOME/.dsh}` would refill the sidebar with no test failing.
+test("runs default to an eval home, not the user's", () => {
+  expect(script).toContain('export DSH_HOME="$HOME/.dsh-eval"');
+  // Symlinked rather than copied: a stale credential copy fails as an auth error that reads
+  // exactly like a refused rule.
+  expect(script).toContain("ln -sf");
+});
+
 // The grid must stop rather than record a stale run as a data point.
 test("run-fixtures aborts on a stale plugin", () => {
   const grid = readFileSync("scripts/run-fixtures.sh", "utf8");

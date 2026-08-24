@@ -8612,6 +8612,61 @@ reads the card as a person would.** `compile-cards` said it compiled, all 30 scr
 person who asked. Nothing text-based was ever going to catch a card written in the wrong language,
 because at the level those checks work, Chinese labels and Spanish labels are the same thing.
 
+### 2143 conversations in someone else's sidebar (2026-08-24)
+
+The user opened their dsh sidebar and it was **2,143 `tmp.XXXXXXXX` conversations** against 85 real
+ones. Every one of them is mine: `eval.sh` makes a fresh `mktemp -d` per run, dsh writes one session
+per working directory, and the sidebar lists sessions. A day of measuring buried the user's own
+conversations under debris from mine.
+
+Cleaned up, carefully, because this is deleting data: the four real workspace directories
+(`Desktop`, `macaron`, `dsh-generative-ui`, `reinvent-agents-slides` — 85 sessions between them)
+were identified and pinned to a keep-list, everything was backed up first
+(`/tmp/dsh-sessions-backup-20260824.tgz`, 181 MB), and the delete loop re-checks the keep-list per
+entry rather than trusting the file it was handed. 189 MB → 16 MB, 2147 → 4.
+
+One trap on the way, and it nearly made me delete a directory I had just declared empty: these
+directory names **begin with `--`**, so `ls "$d"` reads the name as a flag and reports nothing. My
+first survey said all four real workspaces had `sessions=0`. `ls "./$d"` gives the true answer —
+1, 67, 2 and 15. **A leading `--` turns any path argument into an option**, and the failure is
+silent in exactly the direction that makes data look disposable.
+
+The fix is the source, not the cleanup: `eval.sh` now defaults `DSH_HOME` to `~/.dsh-eval`, a
+sibling home with the headless profile copied and credentials **symlinked** (a stale credential copy
+fails as an auth error indistinguishable from a refused rule). `DSH_HOME` was already the documented
+escape hatch for running another model; this makes the isolation the default rather than something
+to remember. Verified: a run lands its session in `~/.dsh-eval` and the user's `~/.dsh/sessions`
+stays at 4.
+
+Pinned by a test, because the whole point is that nobody has to remember: someone simplifying it
+back to `${DSH_HOME:-$HOME/.dsh}` would refill the sidebar with no test failing.
+
+### A timing fix that made the test time out (2026-08-24)
+
+The sweep-cost timing test failed two shuffled seeds under load, so I made it take the best of five
+batches instead of the mean of one. It then failed **four** seeds — and the durations say why:
+5817ms, 6659ms, 11962ms, 5178ms. Those are not assertion failures, they are the **5s default
+timeout**. Best-of-five ran the same forty-iteration batch five times, so the repair made the test
+five times slower and moved it from "occasionally loses a timing race" to "occasionally exceeds its
+own budget".
+
+Both failure modes print the identical line. A fix whose failures are indistinguishable from the bug
+it replaced is not obviously a fix, and I would not have noticed if the count had stayed at two.
+
+Fixed properly: best of **three batches of eight**, which is ~130ms of real work against a 265x
+property — 97ms per run instead of 5000+, and 20 of 20 shuffled orders clean. Mutation-checked both
+times: making the cheap key do the walk still fails it.
+
+The load was mine too. `ps` showed load average 51 with **zero** eval processes running, and seven
+`surface-harness.ts` servers I had started for screenshots and never stopped, plus a headless
+Chromium. That is the "name and close what you start" entry in this file, met from the other side:
+those harnesses were started with `nohup … &` precisely so they would survive the shell that
+launched them, and nothing was tracking them afterwards.
+
+The general form, which is new: **when a repair changes a test's cost, it changes which failure the
+test reports.** A timing test has two budgets — the ratio it asserts and the wall-clock it is
+allowed — and spending the second to stabilise the first trades one flake for another.
+
 ### A crash verdict on a run that plainly produced a card
 
 One chmod run reported `crash` with the card visible in the same line:
