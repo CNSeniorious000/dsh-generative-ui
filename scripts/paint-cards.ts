@@ -112,4 +112,13 @@ const parts = [skipped && `${skipped} skipped${top === "" ? "" : `: ${top}`}`, c
 const note = parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 console.warn = realWarn;
 console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
+// A skip is honest for the corpus — recharts is 51 cards and a deliberate trade. It is NOT honest
+// for `test/cards`, which is this repo's own examples inside `bun run check`: everything they
+// import either resolves here or has a stub, so a skip there means the gate quietly stopped
+// looking at one of them. That happened — a stale capability list dropped `metro.ui4a.tsx` and the
+// report still read `ok`.
+if (dir === "test/cards" && skipped > 0) {
+  console.log(`paint: ${skipped} reference card(s) were skipped — every import here should resolve or be stubbed`);
+  process.exit(1);
+}
 if (bad > 0) process.exit(1);
