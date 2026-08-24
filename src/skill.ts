@@ -109,6 +109,12 @@ Two things follow from the lifetime difference:
   whole file, so the canvas remounts and anything held only in \`useState\` is gone; change one word
   in a label and the user's half-typed row goes with it. Persist what they typed, not just what
   they saved.
+  **Persisting makes deletion permanent, so a delete needs a way back.** This is the cost of the
+  rule above: before, a row removed by mistake came back on reload because nothing was saved;
+  now it is gone for good. Measured on cards written under this rule — 8 persist a list the user
+  built, and only 2 ask anything before removing a row. A confirm step or an undo, either is
+  enough; a single unguarded click on a persisted row is the one irreversible thing a card can do.
+
   **A running clock is state too**, and the least obvious kind: a stopwatch or a timer mid-count
   reads 0 again after one edit. Measured — the interval itself is cleaned up correctly, nothing
   stacks up, but the elapsed value is gone. Store the *start timestamp* rather than the elapsed
