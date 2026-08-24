@@ -92,11 +92,15 @@ for (const width of widths) {
     }
     return worst.sort((a, b) => b.px - a.px)[0] || null;
   });
+  // `.ui4a-root` is the full-width wrapper GenUISurface mounts, so measuring every descendant
+  // always finds it at the host's own right edge and reports 0 — the first version of this probe
+  // was silent on the very card four judges flagged. Skip the wrapper and measure the CARD.
   const unused = await p.evaluate(() => {
     const host = document.getElementById("shot-host");
     const hw = host.getBoundingClientRect().width;
     let right = 0;
     for (const el of host.querySelectorAll("*")) {
+      if (el.classList.contains("ui4a-root")) continue;
       const r = el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) right = Math.max(right, r.right);
     }
