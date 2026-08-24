@@ -181,4 +181,9 @@ skill=$(printf %s "$calls" | grep -q 'skillx' && echo yes || echo no)
 # fence=22, and grok-4.6 wrote ZERO fences — it was absent from every source analysis, not
 # under-represented in one. Copying the directory costs nothing and changes no verdict.
 if [ -d "$d/.dsh/ui4a/canvases" ]; then cp -R "$d/.dsh/ui4a/canvases" "$out.canvases"; fi
-echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out canvases=$out.canvases"
+# A card written to the WRONG path is invisible twice: the user never sees it (nothing outside
+# `.dsh/ui4a/canvases/` is mounted) and the verdict reads `canvas=0`, which scores as "chose not
+# to build one". Measured once in wave 8 — a complete 150-line routine written to `rutina.tsx` in
+# the workspace root. Rare, but it is the one failure that looks exactly like the model declining.
+stray=$(find "$d" -name '*.tsx' -not -path "$d/.dsh/*" 2>/dev/null | head -3 | tr '\n' ',')
+echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out canvases=$out.canvases${stray:+  stray=${stray%,}}"
