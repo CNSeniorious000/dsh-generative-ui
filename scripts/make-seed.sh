@@ -24,6 +24,10 @@ case "$kind" in
     # this seed — is a history a paragraph genuinely covers, so it measured the wrong thing.
     mkdir -p "$dir/src" "$dir/docs"
     authors=("Ada Lovelace|ada@example.com" "Grace Hopper|grace@example.com" "Alan Turing|alan@example.com")
+    names=(
+      parseGroup parseAtom parseQuantifier parseAlternation parseClass parseEscape
+      parseAnchor parseBackref parseNamedGroup parseLookahead parseRange parseLiteral
+    )
     subjects=(
       "add the parser skeleton" "fix off-by-one in the tokenizer" "extract the lexer"
       "handle empty input" "document the grammar" "speed up the hot loop"
@@ -35,9 +39,29 @@ case "$kind" in
       for day in 04 11 18 25; do
         who=${authors[$((n % 3))]}
         subj=${subjects[$((n % 12))]}
-        printf 'change %s\n' "$n" >> "$dir/src/parser.ts"
-        [ $((n % 3)) -eq 0 ] && printf 'note %s\n' "$n" >> "$dir/docs/notes.md"
-        [ $((n % 4)) -eq 0 ] && printf 'case %s\n' "$n" >> "$dir/src/lexer.ts"
+        # The lines have to look like code. An earlier version appended `change 0`…`change 23`, and
+        # all three runs of the history fixture spotted it — "这是合成测试项目：文件内容全是占位符" —
+        # and answered about the fixture instead of building anything. A seed whose contents announce
+        # that they are a seed measures the model noticing, not the rule.
+        name=${names[$((n % 12))]}
+        if [ "$n" -lt 12 ]; then
+          printf 'export const %s = (t: Token) => t.kind === "%s";\n' "$name" "${name#parse}" >> "$dir/src/parser.ts"
+        else
+          # The second pass EDITS what the first pass wrote. Appending a second `export const` of the
+          # same name is not something a repository ever contains, and 24 appended lines with no
+          # deletions is its own tell — a real history revises.
+          perl -pi -e "s/^export const $name = .*/export const $name = (t: Token) => t.kind === \"${name#parse}\" \&\& t.span.end > t.span.start;/" "$dir/src/parser.ts"
+        fi
+        # Same shape for the other two files: write on the first pass, revise on the second.
+        if [ $((n % 3)) -eq 0 ]; then
+          if [ "$n" -lt 12 ]; then printf -- '- `%s` accepts a bare symbol, and returns null on EOF.\n' "$name" >> "$dir/docs/notes.md"
+          else perl -pi -e "s/^- \\\`$name\\\` .*/- \\\`$name\\\` accepts a bare symbol; nested groups recurse./" "$dir/docs/notes.md"; fi
+        fi
+        if [ $((n % 4)) -eq 0 ]; then
+          sym=$(echo "${name#parse}" | tr "a-z" "A-Z")
+          if [ "$n" -lt 12 ]; then printf 'export const %s = /^[a-z_][a-z0-9_]*$/;\n' "$sym" >> "$dir/src/lexer.ts"
+          else perl -pi -e "s|^export const $sym = .*|export const $sym = /^[a-z_][a-z0-9_-]*\\\$/u;|" "$dir/src/lexer.ts"; fi
+        fi
         git -C "$dir" add -A
         GIT_AUTHOR_NAME="${who%%|*}" GIT_AUTHOR_EMAIL="${who##*|}" \
         GIT_COMMITTER_NAME="${who%%|*}" GIT_COMMITTER_EMAIL="${who##*|}" \
