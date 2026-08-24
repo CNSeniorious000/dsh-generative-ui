@@ -7806,6 +7806,45 @@ reader has to derive the construct from it. That is the same distinction as *rul
 which also failed, and as the `knob` reframing, which also failed: a rule that asks the model to
 reason from a property of the system loses to one that points at a line of code.
 
+### The same rule as code: 0/5 to 2/2 (2026-08-24)
+
+The delete rule sat at 0/5 as a **consequence** — *persisting makes deletion permanent, so a delete
+needs a way back* — and the section above closed with a guess about why: every rule that landed
+today names a construct you can see yourself writing, and this one asked the model to reason from a
+property of the system.
+
+Rewritten to point at the line instead, with the remedy as code:
+
+    **If you write `setRows(prev => prev.filter(r => r.id !== id))` behind a button, keep the row.**
+
+    const [undo, setUndo] = React.useState<Row | null>(null)
+    const remove = (id: string) => {
+      setUndo(rows.find((r) => r.id === id) ?? null)
+      setRows((prev) => prev.filter((r) => r.id !== id))
+    }
+    { undo && <button onClick={() => { setRows((p) => [...p, undo]); setUndo(null) }}>撤销删除</button> }
+
+Same prompt, same three-word ask, nothing about undo in it:
+
+| | undo offered |
+| --- | --- |
+| as a consequence | **0 of 5** |
+| as code | **2 of 2** so far |
+
+And written the taught way exactly — `const [undo, setUndo] = useState<Todo | null>(null)`, the
+removed row captured before the filter, a 撤销 button that puts it back. Both cards clean under all
+30 screens, both paint, both persist through `$dsh/state`.
+
+This is the sharpest instance yet of the finding the file already records from the abort rules
+(18/19 shown as code against 0/11 described in prose). What is new is that the **content was
+identical** — same defect, same remedy, same section, same measurement quoted. The only variable
+was whether the reader has to derive the code or can copy it. Two rewordings and a spacing fix
+moved nothing; the code block moved it on the first try.
+
+Worth stating as the rule for the next one: **if a rule is not landing, the question is not how to
+say it more clearly — it is whether the model has to write anything to obey it that the rule does
+not already show.**
+
 ### And the removal of the invented names cost nothing
 
 The `INVENTED-CAPABILITY` bullet listed `$dsh/storage`, `$dsh/db`, `$dsh/http` as the
