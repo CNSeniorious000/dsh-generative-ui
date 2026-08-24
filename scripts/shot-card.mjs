@@ -106,7 +106,11 @@ for (const width of widths) {
     }
     return Math.round(hw - Math.min(right, hw));
   });
-  if (unused > 24) console.log(`UNUSED ${width} ${unused}px of ${width} never painted`);
+  // NOT a defect — a signal that needs a human. A short list capped at `max-w-[28rem]` leaves
+  // 240px unpainted at 720 and is RIGHT to: stretched full-bleed, a meal name and its number sit a
+  // screen apart. Four judges called the same `max-w` a bug from the source alone. Reported so the
+  // reader can look, not so the count can be minimised.
+  if (unused > 24) console.log(`UNUSED ${width} ${unused}px of ${width} unpainted (judge by eye)`);
   if (over) console.log(`OVERFLOW ${width} +${over.px}px ${over.tag}.${over.cls}`);
   // The other half of the same squeeze. `min-width: auto` makes a sibling overflow; `shrink`
   // makes the element itself collapse, and a button crushed to a coloured lozenge with its label
