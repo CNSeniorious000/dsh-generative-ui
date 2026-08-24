@@ -9,21 +9,35 @@ const OUTDIR = process.env.BUILD_OUTDIR ?? "lib";
 // A wave measures `lib/`, so REPLACING it while one runs changes the prompt under jobs that are
 // already in flight: they come back `stale` (the eval guard catches those) or, worse, they come
 // back with a VERDICT produced by a different prompt than the one the wave reported. That has
-// happened four times, and every time it was the same shape — an unrelated edit, a reflexive
-// `bun run build`, and a wave whose numbers mix two prompts. Remembering not to do it has not
-// worked, so the build refuses instead.
+// happened five times, so the build refuses instead of relying on anyone remembering.
 //
 // The guard is on the OUTPUT, not on building: `bun run check` compiles to prove the tree is
-// sound, and a check that cannot run during a wave means no push during a wave — which is how
-// this first showed up. `BUILD_OUTDIR=… ` sends the artefacts somewhere else and the guard has
-// nothing to protect. `--force` still overrides for a wave known to be void.
+// sound, and a check that cannot run during a wave means no push during a wave. `BUILD_OUTDIR=…`
+// sends the artefacts elsewhere and the guard has nothing to protect.
+//
+// A LOCK FILE, not `pgrep`. Two pgrep patterns were tried and both matched things that were not a
+// wave — a monitor shell waiting on one, a `tail | grep` of its log — because a command line that
+// MENTIONS the script is indistinguishable from one that runs it. One of those blocked every
+// build for half an hour after the wave had already died. The lock names the wave's own pid, so a
+// dead wave's lock is detectably dead: `kill -0` answers the question `pgrep` was being asked to
+// guess at.
 if (OUTDIR === "lib" && !Bun.argv.includes("--force")) {
-  const ps = Bun.spawnSync(["pgrep", "-f", "run-wave.py"]);
-  if (ps.exitCode === 0 && new TextDecoder().decode(ps.stdout).trim() !== "") {
-    console.error("refusing to overwrite lib/: a wave is running, and replacing it moves the prompt under jobs already in flight.");
-    console.error("  to check the tree without touching it: BUILD_OUTDIR=/tmp/build-check bun run build");
-    console.error("  or `bun run build --force` if you know this wave is already void.");
-    process.exit(1);
+  const lock = Bun.file(resolve(import.meta.dir, "../.wave-running"));
+  if (await lock.exists()) {
+    const pid = Number((await lock.text()).trim());
+    let alive = false;
+    try {
+      process.kill(pid, 0);
+      alive = true;
+    } catch {
+      alive = false; // ESRCH: the wave died and left its lock behind
+    }
+    if (alive) {
+      console.error(`refusing to overwrite lib/: wave ${pid} is running, and replacing it moves the prompt under jobs already in flight.`);
+      console.error("  to check the tree without touching it: BUILD_OUTDIR=/tmp/build-check bun run build");
+      console.error("  or `bun run build --force` if you know this wave is already void.");
+      process.exit(1);
+    }
   }
 }
 

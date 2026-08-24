@@ -144,6 +144,11 @@ homes = [pathlib.Path(os.path.expanduser(f"~/.dsh-eval-{m}")) / LINK for m in MO
 restore = [(h, os.readlink(h)) for h in homes if h.is_symlink()]
 for h, _ in restore:
     h.unlink(); h.symlink_to(snapshot)
+# Tell `bun run build` a wave owns `lib/`. The pid is the point: a lock left behind by a wave that
+# crashed answers `kill -0` with ESRCH, so it cannot block a build forever the way the earlier
+# pgrep guard did. Removed in the same `finally` that restores the symlinks.
+lock = REPO / ".wave-running"
+lock.write_text(str(os.getpid()))
 print(f"wave {WAVE}: {len(jobs)} runs  lib={before}  frozen at {snapshot}", flush=True)
 # One budget per UPSTREAM, not one for the wave. `macaron-v1-*` share a backend that stalls above
 # three concurrent requests — and stalling arrives as 900 seconds of silence, not an error — while
@@ -165,6 +170,7 @@ try:
         for tag, line in ex.map(gated, jobs):
             print(f"  {tag}: {line}", flush=True)
 finally:
+    lock.unlink(missing_ok=True)
     for h, target in restore:
         if h.is_symlink(): h.unlink()
         h.symlink_to(target)
