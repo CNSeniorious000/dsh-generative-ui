@@ -79,7 +79,11 @@ mdcard = sum(1 for r in rows if not r["card"] and r["listish"] and r["skill"])
 mdcard_noskill = sum(1 for r in rows if not r["card"] and r["listish"] and not r["skill"])
 withskill = sum(1 for r in rows if r["skill"])
 print(f"wave {W}: {n} runs  skill {skill} ({skill/n:.0%})  cards {card} ({card/n:.0%})  "
-      f"list-shape-instead {mdcard} of {withskill} that loaded the skill ({mdcard/withskill:.0%})"
+      # A wave where NOTHING loaded the skill is not a divide-by-zero, it is the most important
+      # result the scorer can print — every rule that lives in the skill was unreachable, and the
+      # trigger layer is what needs looking at. Crashing there hides exactly that.
+      f"list-shape-instead {mdcard} of {withskill} that loaded the skill"
+      + (f" ({mdcard / withskill:.0%})" if withskill else " (no run loaded it — the rules were unreachable)")
       + (f"  [+{mdcard_noskill} more from runs that never loaded it]" if mdcard_noskill else ""))
 for key in ("model", "fam"):
     agg = collections.defaultdict(lambda: [0, 0, 0, 0])
