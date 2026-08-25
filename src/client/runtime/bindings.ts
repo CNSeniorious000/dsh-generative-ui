@@ -183,8 +183,9 @@ async function request<T>(method: "GET" | "POST", path: string, content?: string
   const response = await fetch(`${FS_PATH}?${query}`, content === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ content }) });
   const body = (await response.json().catch(() => ({}))) as { error?: string };
   // A denial is not an outage. Naming it lets the card say "this session is read-only"
-  // rather than "something went wrong".
-  if (!response.ok) throw new Error(`[dsh-generative-ui] $dsh/fs ${path}: ${body.error ?? response.statusText}`);
+  // rather than "something went wrong" — and `denied` carries that as a field, because the
+  // alternative is every card string-matching our message, which then cannot be reworded.
+  if (!response.ok) throw Object.assign(new Error(`[dsh-generative-ui] $dsh/fs ${path}: ${body.error ?? response.statusText}`), { code: body.error, denied: response.status === 403 });
   return body as T;
 }
 

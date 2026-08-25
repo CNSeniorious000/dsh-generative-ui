@@ -12,6 +12,20 @@ declare module "$dsh/fs" {
    * `readFile` decodes as UTF-8 and would corrupt them silently. Capped at 8MB.
    */
   export function readBytes(path: string): Promise<Uint8Array<ArrayBuffer>>;
-  /** Rejects with `FS_SANDBOX_DENIED` when the session is read-only. */
+  /**
+   * A refusal, told apart from a breakage.
+   *
+   * `denied` is the field to branch on: the session said no, and no retry changes that —
+   * show the reader what would have been written and let them apply it another way.
+   * Anything else (a missing directory, a full disk) is an outage and reads as one.
+   */
+  export type FsError = Error & { denied?: boolean; code?: string };
+  /**
+   * Writes the file, under the session's own access mode.
+   *
+   * Rejects with a `FsError` whose `denied` is true when the session may not write —
+   * `code` is `FS_SANDBOX_DENIED` there. **A write the reader did not ask for is not
+   * yours to make**: put it behind a control they press.
+   */
   export function writeFile(path: string, content: string): Promise<void>;
 }

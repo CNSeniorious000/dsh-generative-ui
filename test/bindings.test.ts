@@ -59,6 +59,31 @@ test("a rejected fs or exec request surfaces the route's reason", async () => {
   await expect(bind().exec.bash("ls")).rejects.toThrow("read-only session");
 });
 
+/**
+ * The reason has to be a FIELD, not only a sentence.
+ *
+ * A card that wants to draw "this session is read-only" differently from "that file is gone"
+ * can only do so by branching, and branching on our message text makes every reword a breaking
+ * change for cards already written. `denied` says which of the two it is; `code` carries the
+ * host's own name for it.
+ */
+test("a denial is told from an outage by a field, not by the message", async () => {
+  release = hostWith("/tmp");
+  const failWith = (status: number, error: string) => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error }), { status })) as typeof fetch;
+  };
+  failWith(403, "FS_SANDBOX_DENIED");
+  const refused = await bind().fs.writeFile("a.txt", "x").catch((e: unknown) => e as { denied?: boolean; code?: string });
+  expect(refused.denied).toBe(true);
+  expect(refused.code).toBe("FS_SANDBOX_DENIED");
+  // A missing file is not a denial: same rejection shape, `denied` false, so a card that
+  // branches on it offers a retry here and does not offer one above.
+  failWith(404, "ENOENT");
+  const missing = await bind().fs.readFile("a.txt").catch((e: unknown) => e as { denied?: boolean; code?: string });
+  expect(missing.denied).toBe(false);
+  expect(missing.code).toBe("ENOENT");
+});
+
 // `statusText` is the fallback when the route dies before writing a body at all.
 test("a denial with no body still names something", async () => {
   release = hostWith("/tmp");
