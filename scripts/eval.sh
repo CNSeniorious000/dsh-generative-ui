@@ -72,6 +72,11 @@ fi
 # A seed may need more than files — `git 历史` wants commits, and a checked-in `.git` would
 # nest inside this repo. `setup.sh` runs in the copy, never in the seed.
 [ -x "$d/setup.sh" ] && ( cd "$d" && ./setup.sh >/dev/null 2>&1 && rm -f setup.sh )
+# A seed ships its own `.tsx` (make-seed.sh's `src` kind writes App.tsx and Button.tsx), so the
+# stray-card check below has to report what THIS RUN added, not what it found. Comparing against a
+# baseline taken here is the difference between a signal and a constant: without it every run
+# against that seed reports `stray=2` whatever the model did.
+seeded=$(find "$d" -name '*.tsx' -not -path "$d/.dsh/*" 2>/dev/null | sort)
 # DSH_HOME can point at an isolated home with a different default model — used to keep
 # measuring when the primary account runs out of balance, and to compare models.
 #
@@ -194,5 +199,5 @@ if [ -d "$d/.dsh/ui4a/canvases" ]; then cp -R "$d/.dsh/ui4a/canvases" "$out.canv
 # `.dsh/ui4a/canvases/` is mounted) and the verdict reads `canvas=0`, which scores as "chose not
 # to build one". Measured once in wave 8 — a complete 150-line routine written to `rutina.tsx` in
 # the workspace root. Rare, but it is the one failure that looks exactly like the model declining.
-stray=$(find "$d" -name '*.tsx' -not -path "$d/.dsh/*" 2>/dev/null | head -3 | tr '\n' ',')
+stray=$(find "$d" -name '*.tsx' -not -path "$d/.dsh/*" 2>/dev/null | sort | grep -vxF "$seeded" 2>/dev/null | head -3 | tr '\n' ',')
 echo "skill=$skill fence=$(grep -c '```ui4a' "$out") canvas=$(ls "$d"/.dsh/ui4a/canvases/ 2>/dev/null | wc -l | tr -d ' ') bytes=$(wc -c < "$out" | tr -d ' ')  tools=[${calls% }]  $d  reply=$out canvases=$out.canvases${stray:+  stray=${stray%,}}"
