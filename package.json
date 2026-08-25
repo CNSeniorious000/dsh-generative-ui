@@ -7,9 +7,11 @@
   "main": "lib/index.js",
   "exports": {
     ".": {
+      "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
     "./client": {
+      "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
     "./package.json": "./package.json"
@@ -51,8 +53,8 @@
     }
   },
   "scripts": {
-    "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
-    "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts",
+    "build": "bun scripts/gen-standalone.ts && bun scripts/build.ts && tsc -p tsconfig.types.json",
+    "prepare": "bun scripts/gen-standalone.ts && bun scripts/build.ts && tsc -p tsconfig.types.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "loads": "sh scripts/loads.sh",
