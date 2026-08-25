@@ -84,6 +84,11 @@ export function apply(ctx: ClientContext): void {
   // its URL is revoked (the module graph holds it), so this only reclaims URLs nothing can
   // reach any more. Without it every HMR round leaks one per registered specifier.
   ctx.effect(() => disposeRegistry, "dsh-generative-ui: blob module URLs");
+  // An error report waits a second before it is sent (see `SETTLE_MS`), and an unload inside that
+  // second leaves the timer holding a closure over a conversation that is being torn down. There
+  // is nothing to flush — a report nobody will read is not worth delivering — so cancelling is
+  // the whole disposer, and `cardRendered` already is one.
+  ctx.effect(() => () => cardRendered(), "dsh-generative-ui: pending error report");
   // The wasm half of the same problem: ~16MB per instance, one per HMR round, and upstream
   // offers no dispose — dropping the reference is all there is (see `disposeCompiler`).
   ctx.effect(

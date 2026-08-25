@@ -240,6 +240,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   const onRenderedRef = useLatest(onRendered);
   // Set by a RENDER throw, consumed by the paint that follows it — see `onRendered` below.
   const threwRef = useRef(false);
+  const retryTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const streamingRef = useLatest(streaming);
   // Read once at attach: the renderer takes it as a construction option.
   const preserveStateRef = useRef(preserveState);
@@ -284,7 +285,11 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
             setAttempts: (n) => {
               retriesRef.current = n;
             },
-            schedule: (ms) => setTimeout(() => retryRef.current(), ms),
+            // Tracked so the cleanup below can cancel it: a retry is scheduled up to 1.2s out,
+            // and a surface can unmount well inside that (a canvas tab closed, a message scrolled
+            // out of the host's window). Firing after that runs the whole import-probe chain
+            // against a renderer that has already been detached.
+            schedule: (ms) => void retryTimers.current.add(setTimeout(() => retryRef.current(), ms)),
             report: () => onErrorRef.current?.(error, phase),
           });
         },
@@ -313,6 +318,8 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       attached?.detach();
       attached = null;
       setRenderer(null);
+      for (const timer of retryTimers.current) clearTimeout(timer);
+      retryTimers.current.clear();
     };
     // Attach exactly once. The refs above are how later prop values reach the renderer
     // without tearing it down, so they deliberately do not belong in these deps.

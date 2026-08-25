@@ -25,7 +25,7 @@ export type CanvasHostOptions = {
    */
   onCardError?: (message: string, phase: string) => void;
   /** A canvas that painted; cancels a deferred error report the next frame made untrue. */
-  onCardRendered?: () => void;
+  onCardRendered?: (restored: boolean) => void;
 };
 
 const EMPTY: ReadonlySet<string> = new Set();

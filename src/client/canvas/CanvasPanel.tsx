@@ -28,7 +28,7 @@ export type CanvasPanelProps = {
   /** A canvas that failed to compile; see `runtime/report-error.ts`. */
   onCardError?: (message: string, phase: string) => void;
   /** A canvas that painted; see `runtime/report-error.ts`. */
-  onCardRendered?: () => void;
+  onCardRendered?: (restored: boolean) => void;
 };
 
 /**
