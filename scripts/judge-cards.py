@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["httpx~=0.28"]
+# dependencies = ["httpx~=0.28", "pillow~=11.0"]
 # ///
 """Grade a directory of cards on their SCREENSHOTS, with a panel of five vision models.
 
@@ -30,7 +30,12 @@ KEY = os.environ["LITELLM_KEY"]  # never hardcode: this is the user's gateway ke
 # screenshot on each — worth doing before a run rather than after, because a model without vision
 # answers the rubric from the SOURCE alone and its verdict reads exactly like a real one.
 BASE = os.environ.get("LITELLM_BASE", "http://34.177.103.253:4000")
-MODELS = ["kimi-k3", "gemini-3.7-flash", "grok-4.6", "claude-opus-5", "gpt-5.6-sol"]
+# `kimi-k3` was dropped 2026-08-26: it accepts the request and never answers, and a judge that
+# hangs is worse than one that errors — the batch stays "in progress" and the missing verdicts
+# read as cards nobody had anything to say about. Probe a candidate by asking it to READ TEXT off
+# a real screenshot before adding it back; a model without vision answers the rubric from the
+# source alone and its verdict is indistinguishable from a real one.
+MODELS = ["gemini-3.7-flash", "grok-4.6", "claude-opus-5", "gpt-5.6-sol"]
 WIDTHS = [320, 440, 720]
 SHOTS = pathlib.Path(os.environ.get("SHOTS_DIR", "/tmp/shots"))
 CARDS = pathlib.Path(os.environ.get("CARDS_DIR", "/tmp/judgecards"))
@@ -63,7 +68,45 @@ RUBRIC = """你在评审一个嵌在聊天流里的生成式 UI 卡片。它渲�
 - 简体中文，总共不超过 500 字。"""
 
 
-def b64(p): return base64.b64encode(p.read_bytes()).decode()
+# Shots are taken at deviceScaleFactor 3 so a judge can read a 13px label, which puts a single
+# 320px card at ~1.7MB and six of them past every provider's per-request image budget. Measured
+# on the panel: Anthropic answered 400 outright, and — worse — one model returned 200 with an
+# EMPTY body, which lands in the results file looking like a card nobody had anything to say
+# about. Halving the pixels keeps the labels legible and the request inside the limits.
+#
+# Scaling is by WIDTH, never by the long edge. Cards are tall — measured on one wave, 31% of the
+# shots ran past 4000px and the tallest hit the 12000px capture ceiling — so "fit the long edge
+# into 1600" turns a 960x12000 card into 128px wide and every label into mush. The judge is being
+# asked to read 13px text, so the width is the dimension that must survive.
+#
+# Height is handled by CROPPING, not squashing: a card that keeps going below `MAX_H` is already
+# failing the density rule, and the judge can say so from the top of it. The crop is announced in
+# the prompt so a verdict never describes a truncation as if the card ended there.
+#
+# This lives in the consumer, not in `shot-card.mjs`: the shots are also read by eyes and by the
+# diffing checks, and those want the full resolution.
+MAX_W, MAX_H = 900, 2400
+
+def downscaled(p: pathlib.Path) -> tuple[bytes, bool]:
+    """The image as JPEG within the judge's budget, and whether it had to be cut short."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return p.read_bytes(), False
+    import io
+    im = Image.open(p).convert("RGB")
+    if im.width > MAX_W:
+        im = im.resize((MAX_W, max(1, round(im.height * MAX_W / im.width))), Image.LANCZOS)
+    cut = im.height > MAX_H
+    if cut: im = im.crop((0, 0, im.width, MAX_H))
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=82)
+    return buf.getvalue(), cut
+
+
+def b64(p):
+    data, cut = downscaled(p)
+    return base64.b64encode(data).decode(), cut
 
 
 def content_for(card):
@@ -77,8 +120,10 @@ def content_for(card):
         for theme in ("light", "dark"):
             f = SHOTS / f"{shot_stem(card)}.{theme}.{w}.png"
             if not f.exists(): continue
-            parts.append({"type": "text", "text": f"\n{w}px {'浅色' if theme=='light' else '深色'}："})
-            parts.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64(f)}"}})
+            data, cut = b64(f)
+            note = "（图已在此截断——卡片实际更长，这本身就是密度问题）" if cut else ""
+            parts.append({"type": "text", "text": f"\n{w}px {'浅色' if theme=='light' else '深色'}：{note}"})
+            parts.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{data}"}})
             shots.update(f.read_bytes())
             n += 1
     src = (CARDS / f"{card}.tsx").read_text()
