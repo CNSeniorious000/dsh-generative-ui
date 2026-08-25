@@ -135,6 +135,17 @@ for probe_model in MODELS:
 # So the wave gets its own copy and points the homes at it: `src/` is then free to move, the
 # fingerprint below cannot change under the run, and the numbers are about one prompt. Restored in
 # a `finally` — a wave that dies mid-flight must not leave the homes pointing into /tmp.
+# Freezing a STALE `lib/` freezes the wrong prompt, and `eval.sh` cannot catch it: its staleness
+# check deliberately skips a frozen snapshot ("a frozen copy cannot change"), which is true and
+# beside the point — what matters is whether `lib/` was current at the moment it was frozen.
+# Measured: wave 9 froze a `lib/` three commits behind `src/`, because those commits landed while
+# wave 8 held the build lock, so it silently tested none of the three rules it was started for.
+# This is the last moment the question can still be asked.
+newer = [q for q in (REPO / "src").rglob("*.ts*") if q.stat().st_mtime > (REPO / "lib" / "index.js").stat().st_mtime]
+if newer:
+    sys.exit(f"wave {WAVE} refused to start — lib/ is older than {len(newer)} file(s) in src/ "
+             f"(e.g. {newer[0].relative_to(REPO)}). Run `bun run build` first, or the wave freezes the wrong prompt.")
+
 snapshot = ROOT / "waves" / f"w{WAVE:03d}" / "plugin"
 if snapshot.exists(): shutil.rmtree(snapshot)
 snapshot.mkdir(parents=True)
