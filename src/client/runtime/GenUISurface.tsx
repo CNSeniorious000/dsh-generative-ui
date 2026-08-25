@@ -110,7 +110,13 @@ export const shouldRetry = (message: string, phase: string, streaming: boolean, 
 export type Delivery = { do: "nothing" } | { do: "replace"; code: string } | { do: "append"; delta: string } | { do: "restart"; code: string };
 
 export const deliveryFor = (code: string, delivered: string, streaming: boolean): Delivery => {
-  if (!streaming) return code === delivered ? { do: "nothing" } : { do: "replace", code };
+  // Trailing whitespace only: the SETTLED frame is the streamed one plus the newline that sat
+  // in front of the closing fence (`parseUi4aSegments` slices to `closeIndex`, the streaming
+  // branch slices to the end of the buffer). Byte-comparing those two says "changed", and the
+  // `replace` that follows tears the card down and rebuilds it — every card remounted once, at
+  // the very moment the reader started using it, losing scroll position, focus and any state
+  // held in a component. Nothing a reader can see is different, so nothing should be delivered.
+  if (!streaming) return code.trimEnd() === delivered.trimEnd() ? { do: "nothing" } : { do: "replace", code };
   if (!code.startsWith(delivered)) return { do: "restart", code };
   const delta = code.slice(delivered.length);
   return delta === "" ? { do: "nothing" } : { do: "append", delta };
