@@ -9,7 +9,16 @@ d=$(mktemp -d)
 # The profile loads whatever this symlink resolves to. When it is a different checkout, every
 # prompt A/B measures an unchanged prompt and reports plausible numbers — a whole afternoon of
 # conclusions was lost to it once. Exit 4 rather than measuring the wrong tree.
-linked=$(readlink "${DSH_HOME:-$HOME/.dsh}/profiles/headless/node_modules/dsh-generative-ui" 2>/dev/null || true)
+link=${DSH_HOME:-$HOME/.dsh}/profiles/headless/node_modules/dsh-generative-ui
+linked=$(readlink "$link" 2>/dev/null || true)
+# `readlink` returns the target VERBATIM, and pnpm writes a RELATIVE one — relative to the
+# symlink's own directory, not to wherever this script runs. Resolving it from the cwd therefore
+# fails silently: `cd` errors, `pwd -P` yields nothing, and the comparison below can never match,
+# so a correctly-linked checkout reports `stale` and every eval exits 4. Resolve from the link.
+case "$linked" in
+  ""|/*) ;;
+  *) linked=$(cd "$(dirname "$link")/$linked" 2>/dev/null && pwd -P || echo "$linked") ;;
+esac
 here=$(cd "$(dirname "$0")/.." && pwd -P)
 # A wave FREEZES the plugin into its own directory and points the homes there, so that a `src/`
 # edit in another window cannot move the prompt under jobs already running — five waves were lost
