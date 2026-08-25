@@ -37,11 +37,10 @@ dsh plugin --profile web add link:/path/to/dsh-generative-ui
 
 `dsh plugin` forwards to the profile's package manager, so any of these installs the package —
 and adds it to `~/.dsh/profiles/web/package.json`'s `dsh.profile.bundles`, which is the list dsh
-actually boots. Verified on a clean machine, that file reads:
+actually boots. Verified on a clean machine, the bundle list reads:
 
 ```json
 {
-  "dependencies": { "dsh-generative-ui": "^0.0.1" },
   "dsh": {
     "profile": {
       "bundles": [
@@ -53,6 +52,10 @@ actually boots. Verified on a clean machine, that file reads:
   }
 }
 ```
+
+The `dependencies` entry beside it is whatever form you installed — and from the registry that is
+a caret, which on a `0.0.x` version pins exactly: `^0.0.1` matches `0.0.1` and nothing later. Edit
+it to `~0.0.1` if you want patches.
 
 Start `dsh web` and it is there — or restart it if it was already running, since plugins are
 mounted at boot and adding one has no hot-reload.
