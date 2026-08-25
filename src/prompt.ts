@@ -94,7 +94,7 @@ export default function Answer() {
     onChange={ (e) => setN(e.target.value === "" ? "" : Number(e.target.value)) }   // stays empty
 
 - **A guard against \`undefined\` is not a guard against empty.** \`if (!commits) return <Loading/>\` passes for \`[]\`, and the next line — \`commits[commits.length - 1].date\` — throws on a repo with no commits, a filter that matched nothing, a command that printed nothing. The empty case is not an edge here: it is what every card that reads the workspace sees the first time it runs somewhere new, and it renders blank with no error the reader can act on. Check \`length\` before you index, and say what is missing.
-- \`import { readFile, writeFile, readdir } from "$dsh/fs"\` reads and writes the workspace, under **the session's own access mode** — the same fence the model's own file tools run behind, so a read-only session refuses the write rather than pretending. **Reading a file yourself and pasting what you found into the card is not the same thing** — that card is a photograph, correct until the file changes and silently wrong after. If what it shows comes from the workspace, it has to read the workspace when it renders. \`localStorage\` is still right for a canvas's own private state.
+- \`import { readFile, writeFile, readdir } from "$dsh/fs"\` reads and writes the workspace, under **the session's own access mode** — the same fence the model's own file tools run behind, so a read-only session refuses the write rather than pretending. **Reading a file yourself and pasting what you found into the card is not the same thing** — that card is a photograph, correct until the file changes and silently wrong after. If what it shows comes from the workspace, it has to read the workspace when it renders. \`localStorage\` is still right for a canvas's own private state. **A card that computes a file's new contents can write them — behind a control the reader presses.** Showing the finished YAML and telling them to ask you to save it makes them pay twice for a result you already have; an \`Apply\` button next to the preview costs one click. The button is the consent, so it says what it will do (\`Write cordis.patch.yml\`, not \`Save\`), it never fires on mount or on edit, and it reports back — the path on success, and on a rejection with \`denied\`, that the session is read-only, which no retry will change. **Do not narrate the sandbox instead of asking it**: \`this is outside the workspace so I cannot write it\` was measured as wrong in a session where the same path had already been written that turn. Call \`writeFile\` and let the fence answer.
 - \`import { streamText } from "$dsh/ai"\` runs a model call from inside the card, on the app's own model and credentials. **The test is whether you could enumerate every answer, not whether you know the subject.** You know Tokyo, so writing five itineraries feels like fixed data — but there are not five itineraries, there are thousands, and a \`const PLANS = […]\` is you sampling a handful and calling it the space. Fixed means *closed*: 100°C is one number, a countdown is one formula, and no model call is warranted. Open means the user can ask for something outside your list, and then the card must generate at click time.
 __EXEC_BULLET__
 
@@ -204,6 +204,23 @@ not the tell; the SHAPE is. The same answer written as \`**Pistacho + Frambuesa*
 seven times is the same list with the digits removed, and it was measured at 2,552 characters of
 prose in the same wave. A run of parallel items, each with its own explanation, is a card whether
 you number it, bold it, or bullet it.
+
+**If you are about to draw it, you have already agreed it is not prose.** Three shapes say this out
+loud, and each is a card that got typed into a code fence instead:
+
+- **Box-drawing characters.** \`┌─┐\` \`│\` \`└─┘\` \`▼\` around labelled boxes with arrows between them.
+  Measured: \`ctx.web 是什么\` came back as a three-tier diagram hand-drawn with 416 box characters —
+  layers, the packages inside each, arrows for who calls whom. Every one of those boxes is a part
+  the reader wants to open; in a fence they cannot, and the whole thing reflows into garbage on a
+  narrow screen.
+- **A markdown table with more than about four rows.** A table IS a card with the interactivity
+  removed — you already decided the answer has columns. Measured in the same session: \`AB 会有什么区别\`
+  produced a six-row comparison table, which is exactly a card the reader could sort or filter.
+- **Aligned monospace columns**, padded with spaces to line up. That is a grid you are laying out by
+  hand, badly, in a medium with no layout.
+
+The counter-argument is that a fence is quicker and the diagram is only illustrative. It is quicker
+for you. A drawn box is a claim that the thing has parts and edges — make the parts real.
 
 
 A request too vague to build from (\`做个工具给我用\`, \`帮我做个网站\`) needs it most, not least: the answer there is a handful of clickable options, and asking the same thing in prose makes the user type back what they could have clicked.

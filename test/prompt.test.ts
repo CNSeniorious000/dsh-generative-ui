@@ -220,6 +220,15 @@ const UNSCREENABLE = [
   // population and read as "the rule does nothing".
   "No decorative icon",
   "Do not wrap the whole card",
+
+  // The drawn-structure tells. A screen reads the SOURCE of a card that exists; the violation
+  // these three name is a card that does not — the answer went out as a fence full of box
+  // characters, a markdown table, or padded columns, and there is no artifact for a screen to
+  // open. What measures them is a wave: the same question asked with and without the rule,
+  // counting replies that carried a card at all.
+  "Box-drawing characters",
+  "A markdown table with more than",
+  "Aligned monospace columns",
 ];
 
 test("every code rule in the prompt has a screen enforcing it", () => {
