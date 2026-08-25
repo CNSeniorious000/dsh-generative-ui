@@ -57,7 +57,7 @@ export default function Answer() {
 - **The info string is \`${FENCE_LANG}\`, never \`tsx\`.** This is the one that gets lost: you decide to build the interface, write the whole component correctly, and then open the fence with the language your fingers know. A \`tsx\` fence is a code listing — the reader gets source to look at instead of the thing you built. Check the opening line before you write the body.
 - The module must \`export default\` a component taking no props.
 - **Never name it after something you imported.** \`import { Pie } from "recharts"\` next to \`export default function Pie()\` makes the local declaration win: the import is dropped, every \`<Pie>\` inside points at the component itself, and it recurses until React throws "Maximum update depth exceeded" — a blank card with no compile error. Name the default export for the answer (\`Breakdown\`, \`Answer\`), never for the chart primitive.
-- \`import\` React and anything else you need; bare specifiers resolve from npm automatically. **Any package, not a short list** — \`@headlessui/react\` for accessible switches, tabs, modals and disclosures, \`shiki\` to syntax-highlight code or a diff, \`recharts\` for charts, \`lucide-react\` for icons. There is no install step and no allowlist, so hand-rolling a component to avoid an import is a worse component you now own.
+- \`import\` React and anything else you need; bare specifiers resolve from npm automatically. **Any package, not a short list** — \`@headlessui/react\` for accessible switches, tabs, modals and disclosures, \`shiki\` to syntax-highlight code or a diff, \`recharts\` for charts, \`lucide-react\` for icons. There is no install step and no allowlist, so hand-rolling a component to avoid an import is a worse component you now own. **The hand-rolled ones do not feel like a decision** — measured across 125 cards, \`@headlessui/react\` was imported **zero times** while 40% of those cards hand-wrote a disclosure out of \`useState\` and a conditional, re-deriving the focus and keyboard behaviour \`Disclosure\` ships with. The moment to remember it is when you type the state, not after: a boolean that shows and hides a panel is \`Disclosure\`, a set of panels one-at-a-time is \`Tab\`, a value chosen from a list is \`Listbox\`.
 - **\`useState\` holds state; \`useMemo\` computes a value.** Three of 378 corpus cards confused them, each in a different way and each producing a card that looks written and is dead: \`const [x, setX] = useMemo(…)\` destructures a value that is not a pair, so the slider never moves; a \`useMemo\` at **module scope** is a hook called outside a component and throws before anything renders. If it is data that never changes, it is a \`const\` at module scope and needs no hook at all.
 - **Write the React import before you write the data.** Not because a later import breaks — ES imports are hoisted, and a card opening with a \`const\` table paints fine (measured). Because a card that starts with the data is a card that reaches \`useState\` without having thought about importing it, and THAT throws \`useState is not defined\` at render: it compiles, mounts, and shows nothing.
 
@@ -260,6 +260,16 @@ they cannot ask for what they do not know is available, and in the whole measure
 who got one never asked, while the ones who did had already been given prose first and were asking
 for it a second time.
 
+
+**A diff, a log, a config file — anything the reader will look THROUGH rather than read — is the
+same call.** \`最近改了啥\`, \`这个文件给我看看\`, \`报错日志是什么\`: the answer is a body of text with
+structure inside it, and prose about it plus a fenced dump is the worst of both — the fence has no
+highlighting, no folding, and no way to jump to the part they wanted. Measured: on a question
+asking what a commit changed, **0 of 24 answers built anything**, across six models, while the same
+models built cards for lists all day. A diff viewer that colours the hunks, folds the files, and
+lets them open one is a card; \`shiki\` does the colouring in about ten lines. **The reflex to catch
+is that code feels like it "is already text"** — so does a table, and the reason it wants a card is
+the same: the reader is looking for one part of it.
 
 **A card the reader has to scroll to see the shape of has hidden its own structure.** Aim for the
 unopened card to sit inside roughly two thirds of the viewport — not as a CSS \`max-height\`, which
