@@ -25,7 +25,7 @@ export type GenUISurfaceProps = {
   /** Real compile diagnostics. Transient streaming frames are filtered out — see TRANSIENT below. */
   onError?: (error: Error, phase: "transform" | "compile" | "render") => void;
   /** Fires whenever a frame actually painted. Use it to clear a previously shown error. */
-  onRendered?: () => void;
+  onRendered?: (restored: boolean) => void;
   className?: string;
 };
 
@@ -238,6 +238,8 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   // through refs rather than captured — a new handler identity must not re-attach it.
   const onErrorRef = useLatest(onError);
   const onRenderedRef = useLatest(onRendered);
+  // Set by a RENDER throw, consumed by the paint that follows it — see `onRendered` below.
+  const threwRef = useRef(false);
   const streamingRef = useLatest(streaming);
   // Read once at attach: the renderer takes it as a construction option.
   const preserveStateRef = useRef(preserveState);
@@ -276,6 +278,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       preserveStateOnUpdate: preserveStateRef.current,
       callbacks: {
         onError: (error, phase) => {
+          if (phase === "render") threwRef.current = true;
           dispatchError(errorAction(error.message, phase, streamingRef.current, retriesRef.current), {
             attempts: () => retriesRef.current,
             setAttempts: (n) => {
@@ -287,7 +290,13 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
         },
         onRendered: () => {
           retriesRef.current = 0;
-          onRenderedRef.current?.();
+          // partial-react repaints the LAST GOOD component after a render throw (`preserve` is on
+          // for every inline card), so this fires for a card whose new code is broken. The throw
+          // set `threwRef` a tick earlier; consuming it here is what tells the caller that this
+          // paint is a restore, not the new code working.
+          const restored = threwRef.current;
+          threwRef.current = false;
+          onRenderedRef.current?.(restored);
         },
       },
     }).then((created) => {

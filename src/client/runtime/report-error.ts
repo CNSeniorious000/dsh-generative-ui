@@ -58,22 +58,36 @@ export const reportBody = (message: string, phase: string) =>
  */
 const SETTLE_MS = 1000;
 
-let pending: ReturnType<typeof setTimeout> | null = null;
+let pending: { timer: ReturnType<typeof setTimeout>; message: string } | null = null;
 
-/** Called when a surface paints. Cancels a report the very next frame made untrue. */
-export function cardRendered(): void {
+/**
+ * Called when a surface paints. Cancels a report the very next frame made untrue.
+ *
+ * **`restored` is not a detail.** partial-react answers a render throw by re-mounting the LAST
+ * GOOD component (`runtime.ts:416-419`, whenever `preserve` is on — which is every inline card),
+ * and that re-mount paints, and painting used to cancel the report that the very same throw had
+ * just armed. So the one case the reporting exists for — a card that worked, then broke on an
+ * edit — showed the reader stale content and told the model nothing. A paint only means the card
+ * is fine when it is the NEW code that painted.
+ */
+export function cardRendered(restored = false): void {
+  if (restored) return;
   if (pending === null) return;
-  clearTimeout(pending);
+  clearTimeout(pending.timer);
   pending = null;
 }
 
 export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string): void {
   if (send === undefined) return;
   if (sent.has(message)) return;
-  sent.add(message);
-  if (pending !== null) clearTimeout(pending);
-  pending = setTimeout(() => {
+  if (pending !== null) clearTimeout(pending.timer);
+  // The dedup key is claimed WHEN SENT, not when armed. Claiming it here instead cost the model
+  // the message entirely whenever the pending report was cancelled — and cancelling is the normal
+  // path (`cardRendered` fires on the very next paint), so a card that failed, recovered, and
+  // failed the same way again reported nothing at all, twice.
+  pending = { timer: setTimeout(() => {
     pending = null;
+    sent.add(message);
     send(reportBody(message, phase));
-  }, SETTLE_MS);
+  }, SETTLE_MS), message };
 }

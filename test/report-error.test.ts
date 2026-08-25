@@ -85,3 +85,31 @@ test("the message tells the model to answer in the user's language", () => {
 test("no channel is a no-op, not a throw", () => {
   expect(() => reportCardError(undefined, "boom", "compile")).not.toThrow();
 });
+
+// partial-react answers a render throw by re-mounting the LAST GOOD component (`runtime.ts:416-419`,
+// whenever `preserve` is on — which is every inline card). That re-mount PAINTS, and painting used
+// to cancel the report the same throw had just armed, so the one case this feature exists for — a
+// card that worked and then broke on an edit — showed stale content and told the model nothing.
+test("a restore-to-last-good does not cancel the report it was armed by", async () => {
+  forgetReportedErrors();
+  const sent: string[] = [];
+  reportCardError((t) => sent.push(t), "no export named MonacoEditor", "compile");
+  cardRendered(true); // the restore's paint, ~16ms later
+  await new Promise((r) => setTimeout(r, 1100));
+  expect(sent).toHaveLength(1);
+});
+
+// The dedup key is claimed when the message is SENT. Claiming it at arm time meant a cancelled
+// report still burned it, so the same failure on a later edit reported nothing at all.
+test("a cancelled report leaves its message reportable", async () => {
+  forgetReportedErrors();
+  const sent: string[] = [];
+  reportCardError((t) => sent.push(t), "same message", "compile");
+  cardRendered(); // a genuine paint — the next frame fixed it
+  await new Promise((r) => setTimeout(r, 1100));
+  expect(sent).toHaveLength(0);
+
+  reportCardError((t) => sent.push(t), "same message", "compile");
+  await new Promise((r) => setTimeout(r, 1100));
+  expect(sent).toEqual([expect.stringContaining("same message")]);
+});
