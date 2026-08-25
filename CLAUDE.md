@@ -1680,6 +1680,8 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `render-cards.ts` | the browser render sweep (`render-check.md` says why compiling is not painting) |
 | `judge-cards.py` | five vision models grade the screenshots — see §6.6 |
 | `judge-delta.py` | pairs those verdicts before/after a change, per card — the panel's own spread is ~2.0, so only a paired read says anything |
+| `card-shape.py` | what the cards ARE, not whether one appeared: which libraries they reached for, whether anything folds, how long they run. Card rate is noisy (an 8-point move measured 1.4× SE and said nothing); "did it import `@headlessui/react`" is deterministic, so a change of a few points is a change |
+| `card-height.py` | how tall they render, in CSS pixels, against the viewport fraction the prompt asks them to fit. Measured on wave 15: at 320px wide, **90% run past 60vh and 23% past two screens** — the density rule had no measurement behind it until this |
 | **maintenance** | |
 | `mutation-audit.sh` / `invert-ifs.mjs` | inverts one condition at a time; names what no test constrains |
 | `check-exports.ts` | a package's real exports, through the same esm.sh URL the runtime resolves |
