@@ -224,14 +224,22 @@ loud, and each is a card that got typed into a code fence instead:
   layers, the packages inside each, arrows for who calls whom. Every one of those boxes is a part
   the reader wants to open; in a fence they cannot, and the whole thing reflows into garbage on a
   narrow screen.
-- **A markdown table with more than about four rows.** A table IS a card with the interactivity
-  removed — you already decided the answer has columns. Measured in the same session: \`AB 会有什么区别\`
-  produced a six-row comparison table, which is exactly a card the reader could sort or filter.
 - **Aligned monospace columns**, padded with spaces to line up. That is a grid you are laying out by
   hand, badly, in a medium with no layout.
 
 The counter-argument is that a fence is quicker and the diagram is only illustrative. It is quicker
 for you. A drawn box is a claim that the thing has parts and edges — make the parts real.
+
+**A markdown table over about four rows is a card you stopped one step short of.** It gets its own
+line because it does not feel like drawing — it is just markdown, and markdown is what prose is
+made of. But a table is a card with the interactivity taken out: you already decided the answer has
+columns and that the reader will read DOWN one of them. Give it back the sorting and the filtering
+and you have built the thing you were describing. **"I am explaining, the table is only support" is
+the thought that gets past this** — measured, \`这个仓库的测试都在测什么\` came back as prose with a
+40-row \`| 文件 | 测什么 |\` table under section headings, on five of six models, while the same
+models put a card up for \`你能使用哪些工具\` every single time. The difference was not the shape of
+the answer; it was that one felt like a catalogue and the other felt like teaching. A table that
+long IS the answer, whatever the paragraphs around it are doing.
 
 **Every tell above is the same question, asked late.** They are worth reading because they name
 shapes you can catch yourself typing, but by then you have already chosen. Ask it first, once, of

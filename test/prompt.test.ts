@@ -227,7 +227,6 @@ const UNSCREENABLE = [
   // open. What measures them is a wave: the same question asked with and without the rule,
   // counting replies that carried a card at all.
   "Box-drawing characters",
-  "A markdown table with more than",
   "Aligned monospace columns",
 ];
 
