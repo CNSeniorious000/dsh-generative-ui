@@ -16,11 +16,20 @@ The `ui4a` in that fence is the harness this implements — **UI for Agent**, fr
 
 ## Install
 
+**Not on npm yet**, so install the preview build published on every push:
+
 ```sh
-dsh plugin --profile web add dsh-generative-ui
+dsh plugin --profile web add https://pkg.pr.new/CNSeniorious000/dsh-generative-ui@main
 ```
 
-`dsh plugin` forwards to the profile's package manager, so that installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
+Or, working on it locally, point the profile at your checkout — `lib/` is built by `prepare`, so
+the profile does not care that this package uses bun and dsh uses pnpm:
+
+```sh
+dsh plugin --profile web add link:/path/to/dsh-generative-ui
+```
+
+`dsh plugin` forwards to the profile's package manager, so either form installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
 
 ```json
 {
@@ -37,6 +46,13 @@ dsh plugin --profile web add dsh-generative-ui
 ```
 
 Then restart `dsh web` — plugins are mounted at boot, and there is no hot-reload for adding one.
+
+**If nothing happens, check which agent preset the session is on first.** Under `minimal`
+(极简模式) the persona is declared `complete: true`, so nothing can append to the system prompt and
+the `skill` tool is not in the preset — the model is never told this format exists. Measured: 45
+characters of system prompt against 27524, and zero mentions of the fence. The rendering half still
+works, so a card you paste by hand renders; the model just will not write one. Use `standard`, or
+copy the preset and add `tool-skill` back.
 
 ## How it works
 
