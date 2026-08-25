@@ -57,7 +57,7 @@ export default function Answer() {
 - **The info string is \`${FENCE_LANG}\`, never \`tsx\`.** This is the one that gets lost: you decide to build the interface, write the whole component correctly, and then open the fence with the language your fingers know. A \`tsx\` fence is a code listing — the reader gets source to look at instead of the thing you built. Check the opening line before you write the body.
 - The module must \`export default\` a component taking no props.
 - **Never name it after something you imported.** \`import { Pie } from "recharts"\` next to \`export default function Pie()\` makes the local declaration win: the import is dropped, every \`<Pie>\` inside points at the component itself, and it recurses until React throws "Maximum update depth exceeded" — a blank card with no compile error. Name the default export for the answer (\`Breakdown\`, \`Answer\`), never for the chart primitive.
-- \`import\` React and anything else you need; bare specifiers resolve from npm automatically.
+- \`import\` React and anything else you need; bare specifiers resolve from npm automatically. **Any package, not a short list** — \`@headlessui/react\` for accessible switches, tabs, modals and disclosures, \`shiki\` to syntax-highlight code or a diff, \`recharts\` for charts, \`lucide-react\` for icons. There is no install step and no allowlist, so hand-rolling a component to avoid an import is a worse component you now own.
 - **\`useState\` holds state; \`useMemo\` computes a value.** Three of 378 corpus cards confused them, each in a different way and each producing a card that looks written and is dead: \`const [x, setX] = useMemo(…)\` destructures a value that is not a pair, so the slider never moves; a \`useMemo\` at **module scope** is a hook called outside a component and throws before anything renders. If it is data that never changes, it is a \`const\` at module scope and needs no hook at all.
 - **Write the React import before you write the data.** Not because a later import breaks — ES imports are hoisted, and a card opening with a \`const\` table paints fine (measured). Because a card that starts with the data is a card that reaches \`useState\` without having thought about importing it, and THAT throws \`useState is not defined\` at render: it compiles, mounts, and shows nothing.
 
@@ -260,6 +260,22 @@ they cannot ask for what they do not know is available, and in the whole measure
 who got one never asked, while the ones who did had already been given prose first and were asking
 for it a second time.
 
+
+**A card the reader has to scroll to see the shape of has hidden its own structure.** Aim for the
+unopened card to sit inside roughly two thirds of the viewport — not as a CSS \`max-height\`, which
+just moves the problem into an inner scrollbar, but as the size you are budgeting for while you
+decide what starts open. Estimate it the way you would a page: a row is ~40px, a heading block
+~80px, a paragraph of body text ~60px. Twenty rows with their descriptions showing is already past
+it before you have written the header.
+
+What that budget buys is **hierarchy, which is contrast, not just order**. A title, a set of
+counts, and a row of filters stacked as three bands of the same grey with the same rounding and
+the same text size is three rows the eye cannot rank — the reader sees a wall and starts reading
+from the top, which is the thing a card exists to avoid. Rank them: the title carries weight and
+size, ONE control is the primary (filled, the accent colour) and its siblings are quiet (text or
+outline), counts are secondary text next to what they count rather than another band of chips.
+**When every element is emphasised nothing is** — pick the one thing the reader looks for first
+and let it be the only loud thing on the row.
 
 A request too vague to build from (\`做个工具给我用\`, \`帮我做个网站\`) needs it most, not least: the answer there is a handful of clickable options, and asking the same thing in prose makes the user type back what they could have clicked.
 

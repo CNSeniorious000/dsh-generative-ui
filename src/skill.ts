@@ -911,14 +911,15 @@ Bare specifiers resolve from npm at render time — there is no install step, so
 
 **Nor because a library might have quirks.** Hand-rolling an SVG chart to avoid \`recharts\`, or a plain textarea to avoid a markdown renderer, is not the safe choice — it is a worse component and several hundred lines you now own. Reach for the real library: \`recharts\` for charts, \`@dnd-kit/core\` for drag, \`motion/react\` for animation, \`lucide-react\` for icons. Write it by hand only when nothing does the job.
 
-Four that are easy not to think of, each with the one thing to get right:
+Five that are easy not to think of, each with the one thing to get right:
 
 | want | reach for | the detail |
 | --- | --- | --- |
 | a running total, score, or counter the user watches change | \`@number-flow/react\` | \`import NumberFlow from "@number-flow/react"\` — a **default** import; there is no named \`NumberFlow\` export, and \`import { NumberFlow }\` is \`undefined\` and a blank card. Then \`<NumberFlow value={n} />\` in place of \`{n}\` |
 | a panel that slides in, especially on a narrow card | \`vaul\` | \`<Drawer.Portal container={hostEl}>\` — without \`container\` it portals to \`document.body\`, outside your card |
 | a transient confirmation | \`sonner\` | import **both** \`toast\` and \`Toaster\`, and render \`<Toaster />\` in your tree — \`toast()\` alone is silent, with no error anywhere. Worth reaching for rather than hand-rolling: a hand-written toast is almost always \`position: fixed\`, which floats it over the whole app instead of your card |
-| form controls | \`@headlessui/react\` | \`Field\` + \`Label\` around \`Switch\`/\`Listbox\`/\`Combobox\` — labelling comes with them |
+| form controls — a switch, a select, a combobox, a modal, tabs, a disclosure | \`@headlessui/react\` | \`Field\` + \`Label\` around \`Switch\`/\`Listbox\`/\`Combobox\` — labelling comes with them. Its \`Disclosure\` and \`Tab\` are also the cheapest correct way to build the folding a dense card needs, keyboard behaviour included |
+| showing code, a diff, or a config file | \`shiki\` | \`await codeToHtml(src, { lang, theme })\` in an effect, then \`dangerouslySetInnerHTML\` — it is async, so render a \`<pre>\` of the raw text first and swap. A hand-rolled \`<pre>\` with no highlighting is the tell that this was skipped, and for a diff the red/green is the whole point. \`@monaco-editor/react\` only when the reader has to EDIT the text; for read-only it is megabytes for nothing |
 
 
 Names you half-remember are the main failure mode: a wrong export is not a typo, it is an \`undefined\` component and a blank render, with nothing in the console naming it. So look a name up *before* you write the code, not after it breaks — for lucide, fetching \`https://lucide.dev/icons/<kebab-name>\` answers it outright, since a 404 means the name does not exist. Icons you have actually watched render are fine to reuse from memory.
