@@ -97,6 +97,13 @@ def run(job):
     return tag, (p.stdout.strip().splitlines() or ["(empty)"])[0][:90]
 
 jobs = [(i, m, s) for i in range(len(wave)) for m in MODELS for s in range(SAMPLES)]
+# `lib/` is not in git (it is built by `prepare`), so a fresh clone has none — and every read of
+# it below, starting with the fingerprint, would raise a bare FileNotFoundError traceback instead
+# of naming the one command that fixes it. This is the first line that touches the directory.
+for half in ("index.js", "client.js"):
+    if not (REPO / "lib" / half).exists():
+        sys.exit(f"wave {WAVE} refused to start — lib/{half} does not exist. Run `bun run build` first.")
+
 # Fingerprint the halves separately. `lib/index.js` carries the prompt and the skill and is what
 # decides whether a card is attempted at all — a change there mid-wave invalidates the run. A
 # change in `lib/client.js` only alters how a card RENDERS, so the runs stay valid and the
@@ -105,6 +112,19 @@ def fp():
     import hashlib
     return {f: hashlib.md5((REPO / "lib" / f).read_bytes()).hexdigest()[:8] for f in ("index.js", "client.js")}
 before = fp()
+# Freezing a STALE `lib/` freezes the wrong prompt, and `eval.sh` cannot catch it: its staleness
+# check deliberately skips a frozen snapshot ("a frozen copy cannot change"), which is true and
+# beside the point — what matters is whether `lib/` was current at the moment it was frozen.
+# Measured: wave 9 froze a `lib/` three commits behind `src/`, because those commits landed while
+# wave 8 held the build lock, so it silently tested none of the three rules it was started for.
+# Asked HERE rather than beside the snapshot it protects: this costs two stat()s, and the live
+# probe below costs a real model call per upstream — a stale tree should not pay for that first.
+cutoff = (REPO / "lib" / "index.js").stat().st_mtime
+newer = [q for q in (REPO / "src").rglob("*.ts*") if q.stat().st_mtime > cutoff]
+if newer:
+    sys.exit(f"wave {WAVE} refused to start — lib/ is older than {len(newer)} file(s) in src/ "
+             f"(e.g. {newer[0].relative_to(REPO)}). Run `bun run build` first, or the wave freezes the wrong prompt.")
+
 # `eval.sh`'s guards (stale build, wrong symlink, missing credential) exit 4 in milliseconds, and
 # a wave that hits one does not fail — it "completes". Measured: waves 5 through 9 reported
 # `WAVE DONE ... 72 runs` across four seconds, 360 files all reading `stale  src/ is newer than
@@ -135,17 +155,6 @@ for probe_model in MODELS:
 # So the wave gets its own copy and points the homes at it: `src/` is then free to move, the
 # fingerprint below cannot change under the run, and the numbers are about one prompt. Restored in
 # a `finally` — a wave that dies mid-flight must not leave the homes pointing into /tmp.
-# Freezing a STALE `lib/` freezes the wrong prompt, and `eval.sh` cannot catch it: its staleness
-# check deliberately skips a frozen snapshot ("a frozen copy cannot change"), which is true and
-# beside the point — what matters is whether `lib/` was current at the moment it was frozen.
-# Measured: wave 9 froze a `lib/` three commits behind `src/`, because those commits landed while
-# wave 8 held the build lock, so it silently tested none of the three rules it was started for.
-# This is the last moment the question can still be asked.
-newer = [q for q in (REPO / "src").rglob("*.ts*") if q.stat().st_mtime > (REPO / "lib" / "index.js").stat().st_mtime]
-if newer:
-    sys.exit(f"wave {WAVE} refused to start — lib/ is older than {len(newer)} file(s) in src/ "
-             f"(e.g. {newer[0].relative_to(REPO)}). Run `bun run build` first, or the wave freezes the wrong prompt.")
-
 snapshot = ROOT / "waves" / f"w{WAVE:03d}" / "plugin"
 if snapshot.exists(): shutil.rmtree(snapshot)
 snapshot.mkdir(parents=True)
