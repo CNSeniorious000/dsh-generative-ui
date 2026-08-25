@@ -70,6 +70,19 @@ def prompt_for(r):
     return (f"以下是我们此前对话的摘要，供你了解上下文：\n\n{prev}\n\n"
             f"---\n\n（以上是此前的对话。现在是我这一轮说的话：）\n\n{turn}")
 
+def keep_canvases(verdict, tag):
+    """Copy a run's canvas sources into the wave, if the sandbox still holds them.
+
+    `eval.sh` rescues them out of the run's `mktemp -d`, but only as far as a sibling of the reply
+    — still under /var/folders, still reclaimed on the system's schedule. A canvas card's source is
+    half a wave (wave 7: canvas=21, fence=22, and grok-4.6 wrote no fences at all), so without this
+    every source-level statistic keeps covering the fence half only.
+    """
+    kept = re.search(r"canvases=(\S+)", verdict)
+    if not (kept and pathlib.Path(kept.group(1)).is_dir()): return
+    target = outdir / "canvases" / tag
+    if not target.exists(): shutil.copytree(kept.group(1), target)
+
 def run(job):
     i, model, s = job
     r = wave[i]
@@ -81,7 +94,15 @@ def run(job):
     # answers and cached forever. `eval.sh` emits exactly one shape on success — a line starting
     # `skill=` — and every failure path (stale, timeout, crash/*, and anything the SHELL says
     # before eval.sh even runs) is something else. So test for the success, not against the list.
-    if dest.exists() and dest.read_text().startswith("skill="): return tag, "cached"
+    if dest.exists() and dest.read_text().startswith("skill="):
+        # A cached run must still get its canvas sources copied. Returning here without doing so
+        # was the bug dc9fb5a exists to prevent, reintroduced through the replay path: a wave
+        # resumed after an interruption would carry canvases for the fresh runs only, and every
+        # source-level statistic over it would quietly cover a subset. The sandbox may already
+        # have been reclaimed, in which case there is nothing to rescue and nothing to report —
+        # the copy is best-effort by nature.
+        keep_canvases(dest.read_text(), tag)
+        return tag, "cached"
     env = {**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{model}"), "EVAL_TIMEOUT": "900"}
     p = subprocess.run(["./scripts/eval.sh", prompt_for(r)], cwd=REPO, env=env,
                        capture_output=True, text=True, timeout=1200)
@@ -90,10 +111,7 @@ def run(job):
     # sibling of the reply — still under /var/folders, still reclaimed. A canvas card's source is
     # half the wave (wave 7: canvas=21, fence=22, and grok-4.6 wrote no fences at all), so without
     # this every source-level statistic keeps covering the fence half only.
-    kept = re.search(r"canvases=(\S+)", p.stdout)
-    if kept and pathlib.Path(kept.group(1)).is_dir():
-        target = outdir / "canvases" / tag
-        if not target.exists(): shutil.copytree(kept.group(1), target)
+    keep_canvases(p.stdout, tag)
     return tag, (p.stdout.strip().splitlines() or ["(empty)"])[0][:90]
 
 jobs = [(i, m, s) for i in range(len(wave)) for m in MODELS for s in range(SAMPLES)]
