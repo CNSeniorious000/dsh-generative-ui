@@ -1,5 +1,6 @@
 # dsh-generative-ui
 
+[![npm](https://img.shields.io/npm/v/dsh-generative-ui)](https://www.npmjs.com/package/dsh-generative-ui)
 [![pkg.pr.new](https://pkg.pr.new/badge/CNSeniorious000/dsh-generative-ui)](https://pkg.pr.new/~/CNSeniorious000/dsh-generative-ui)
 [![MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
@@ -16,20 +17,25 @@ The `ui4a` in that fence is the harness this implements — **UI for Agent**, fr
 
 ## Install
 
-**Not on npm yet**, so install the preview build published on every push:
+```sh
+dsh plugin --profile web add dsh-generative-ui
+```
+
+Every release is published from CI over OIDC, so the tarball carries npm provenance. For an
+unreleased commit there is a preview build of every push:
 
 ```sh
 dsh plugin --profile web add https://pkg.pr.new/CNSeniorious000/dsh-generative-ui@main
 ```
 
-Or, working on it locally, point the profile at your checkout — `lib/` is built by `prepare`, so
+And working on it locally, point the profile at your checkout — `lib/` is built by `prepare`, so
 the profile does not care that this package uses bun and dsh uses pnpm:
 
 ```sh
 dsh plugin --profile web add link:/path/to/dsh-generative-ui
 ```
 
-`dsh plugin` forwards to the profile's package manager, so either form installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
+`dsh plugin` forwards to the profile's package manager, so any of these installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
 
 ```json
 {
