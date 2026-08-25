@@ -192,7 +192,13 @@ for item in ("lib", "types", "package.json"):
 (snapshot / "node_modules").symlink_to(REPO / "node_modules")
 LINK = "profiles/headless/node_modules/dsh-generative-ui"
 homes = [pathlib.Path(os.path.expanduser(f"~/.dsh-eval-{m}")) / LINK for m in MODELS]
-restore = [(h, os.readlink(h)) for h in homes if h.is_symlink()]
+# Restore to the CHECKOUT, not to whatever the link happened to hold. Recording the current
+# value looks equivalent and is not: a wave that dies before its `finally` leaves the homes
+# pointing into its own snapshot, and every wave after it then faithfully "restores" them to
+# that dead snapshot. Measured — six homes were still pointing at w006's plugin four waves
+# later, and `eval.sh` cannot catch it because a `waves/wNNN/plugin` link is exempt from the
+# stale check by design. The checkout is the only correct resting state.
+restore = [(h, str(REPO)) for h in homes if h.is_symlink()]
 for h, _ in restore:
     h.unlink(); h.symlink_to(snapshot)
 # Tell `bun run build` a wave owns `lib/`. The pid is the point: a lock left behind by a wave that
