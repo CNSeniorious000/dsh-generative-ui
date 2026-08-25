@@ -1415,6 +1415,17 @@ instruction to do unnecessary work.**
 - **Name and close what you start.** A `dsh web` outlived its session by a day; seven
   `surface-harness.ts` processes pushed load average to 51 and made a timing test fail on its own
   timeout. A 200 on the port you asked for is not proof your server started.
+- **Order the refusals by what they cost, not by where the thing they protect lives.** The
+  stale-`lib/` check was written directly above the snapshot it guards, which reads well and put
+  it AFTER the live probe — so a tree that could not be measured still spent one real model call
+  per upstream before being turned away, which is the exact waste the guard exists to prevent. It
+  costs two `stat()`s; it belongs beside the other millisecond refusals. Two smaller things from
+  the same edit: the mtime was being `stat()`ed inside the comprehension, once per source file for
+  a value that never changes, and the FIRST read of `lib/` in the script is the fingerprint, not
+  the guard — so an existence check added later in the file still crashed with a bare
+  `FileNotFoundError` on a fresh clone, where `lib/` legitimately does not exist yet because it is
+  built by `prepare` and not in git. **A precondition has to sit before the first use, not before
+  the use you were thinking about.**
 - **A guard that cannot pass is indistinguishable from a subject that is broken.** `eval.sh`'s
   staleness check read the profile symlink with `readlink`, which returns the target VERBATIM —
   and pnpm writes a RELATIVE one, relative to the symlink's own directory. Resolving it against
