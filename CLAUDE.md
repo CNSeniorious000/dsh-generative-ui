@@ -1592,6 +1592,28 @@ said nothing). Verified end to end in a browser: the card failed, the `[自动]`
 16.5s later, and the model replied *"its actual exports are Workspace, errors, hydrate, init, and
 lazy … instead of using the named import I assumed existed"*.
 
+### 6.865 A repaint is not a recovery, and a cancelled report must stay reportable
+
+The reporting above shipped with two defects that cancelled each other into silence, and both were
+found by review rather than by use — which is the point: the failure mode is *nothing happening*.
+
+- **`partial-react` answers a render throw by repainting the LAST GOOD component**
+  (`runtime.ts:416-419`, whenever `preserve` is on — which is every INLINE card, since
+  `GenUISurface` defaults `preserveState` to true; canvases pass `false`, so the bug was invisible
+  there). That repaint fires `onRendered` about 16ms later, and `cardRendered()` treated it as the
+  card being fine — cancelling the report the very same throw had armed. So the one case the
+  feature exists for, a card that worked and then broke on an edit, showed the reader stale content
+  and told the model nothing. `cardRendered(restored)` now takes the distinction, and
+  `GenUISurface` sets it from a ref the render throw wrote a tick earlier.
+- **The dedup key was claimed when the timer was ARMED, not when the message was sent.** Cancelling
+  is the normal path, so a cancelled report still burned its key: the same failure on a later edit
+  reported nothing at all, twice. Claim it inside the timer.
+
+Both are the same shape as §6.4's rule about gates — *"no failures" has two causes that look
+identical* — one level down: **a callback named for the happy path will be called on the sad one
+too, if the recovery goes through the same code.** Ask what the library does about an error before
+deciding what its success callback means.
+
 ### 6.87 What dsh gives you, and one seam that does not fit
 
 Read `deepseek-ai/deepseek-harness/docs` before hand-rolling: `capability-seams.md` is the index of
