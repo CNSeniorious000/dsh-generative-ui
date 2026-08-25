@@ -30,6 +30,9 @@ jobs:
     if: github.repository == 'CNSeniorious000/dsh-generative-ui'
     runs-on: ubuntu-latest
     environment: npm
+    # Job level, because a step's own `env` is not in scope for that step's `if`.
+    env:
+      BOOTSTRAP_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -116,5 +119,25 @@ jobs:
       #
       # --provenance is not passed: with trusted publishing the CLI attaches provenance by default.
       # --access public is still required for the first publish of a new package name.
+      #
+      # TWO publish steps, mutually exclusive, because the note above is the whole problem: an
+      # empty `NODE_AUTH_TOKEN` is not the same as an absent one — npm takes the legacy path either
+      # way and OIDC never runs. A single step with `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`
+      # therefore breaks trusted publishing permanently the moment the secret is deleted, which is
+      # exactly the wrong failure: the bootstrap that was supposed to be temporary becomes forever.
+      #
+      # So the OIDC step carries no such env at all, and the bootstrap step only exists while the
+      # secret does. npm's registry cannot create a package name over OIDC (npm/cli#8544 — left
+      # out of the MVP on purpose), so set `NPM_TOKEN` once, publish, attach the trusted publisher,
+      # and delete the secret. Everything after that is tokenless and carries provenance.
       - name: Publish package
+        if: env.BOOTSTRAP_TOKEN == ''
         run: npm publish --access public "${{ steps.pack.outputs.tarball }}"
+
+      - name: Publish package (bootstrap, token auth)
+        if: env.BOOTSTRAP_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ env.BOOTSTRAP_TOKEN }}
+        run: |
+          npm publish --access public "${{ steps.pack.outputs.tarball }}"
+          echo "::warning::Published with token auth, so this release has NO provenance. The package name now exists — attach the trusted publisher on npmjs.com and delete the NPM_TOKEN secret; every later release is then tokenless."
