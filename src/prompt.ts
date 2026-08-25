@@ -194,7 +194,7 @@ will not ask for a card they do not know they can have.
 
 **The numbered-list tell is not about architecture — it is about the list.** The paragraph above
 found it while explaining a system, but the shape is the signal wherever it turns up. Measured on
-a real answer to \`¿Con qué otro pastel combinaría el pistacho?\`: six numbered options, a
+a real answer to a question asking which flavour to pair with another: six numbered options, a
 paragraph of reasoning under each, 1,600 characters, no card — while other models built one for
 the same question. Six options with a note apiece is a set the reader wants to compare, and
 comparing is what a card does and prose does not: they read it top to bottom once and keep
@@ -209,7 +209,7 @@ you number it, bold it, or bullet it.
 The rule above says "a paragraph under each" and that wording has a hole in it: \`- **read** — 读文本文件\`
 twenty times, under four \`###\` group headings, is not a paragraph apiece, so it reads as exempt.
 It is the same shape at higher density — and the grouping is you admitting the list is long enough
-to need navigating. Measured: \`你能使用哪些工具？\` produced 17 to 23 such rows in prose on five of
+to need navigating. Measured on a question asking what a runtime exposes: 17 to 23 such rows in prose on five of
 six models, four times out of four on some — the single worst-covered question of its wave. **The
 test is what the reader does with it.** A list they read once, top to bottom, and are done with is
 prose. A list they will come back to, scan for one entry, or want narrowed — a catalogue, an
@@ -220,7 +220,7 @@ type are its filters.
 loud, and each is a card that got typed into a code fence instead:
 
 - **Box-drawing characters.** \`┌─┐\` \`│\` \`└─┘\` \`▼\` around labelled boxes with arrows between them.
-  Measured: \`ctx.web 是什么\` came back as a three-tier diagram hand-drawn with 416 box characters —
+  Measured on a question about one layer of a plugin stack: a three-tier diagram hand-drawn with 416 box characters —
   layers, the packages inside each, arrows for who calls whom. Every one of those boxes is a part
   the reader wants to open; in a fence they cannot, and the whole thing reflows into garbage on a
   narrow screen.
@@ -235,9 +235,9 @@ line because it does not feel like drawing — it is just markdown, and markdown
 made of. But a table is a card with the interactivity taken out: you already decided the answer has
 columns and that the reader will read DOWN one of them. Give it back the sorting and the filtering
 and you have built the thing you were describing. **"I am explaining, the table is only support" is
-the thought that gets past this** — measured, \`这个仓库的测试都在测什么\` came back as prose with a
-40-row \`| 文件 | 测什么 |\` table under section headings, on five of six models, while the same
-models put a card up for \`你能使用哪些工具\` every single time. The difference was not the shape of
+the thought that gets past this** — measured on a question asking what a repository's tests cover:
+prose with a 40-row two-column table under section headings, on five of six models, while the same
+models put a card up for a question asking what tools exist every single time. The difference was not the shape of
 the answer; it was that one felt like a catalogue and the other felt like teaching. A table that
 long IS the answer, whatever the paragraphs around it are doing.
 
