@@ -242,6 +242,18 @@ test("every code rule in the prompt has a screen enforcing it", () => {
   expect(unmatched).toEqual([]);
 });
 
+/**
+ * The registration has to still point AT something.
+ *
+ * The test above asks "does every bullet have a cover"; nothing asked the reverse, so a phrase
+ * left in `UNSCREENABLE` after its bullet was reworded or promoted out of the list keeps passing
+ * while covering nothing. Measured: the table rule was moved into its own paragraph and its old
+ * phrase sat here matching no bullet at all — green, and the rule it named was unenforced.
+ */
+test("every unscreenable registration still names a rule in the prompt", () => {
+  expect(UNSCREENABLE.filter((phrase) => !PROMPT.includes(phrase))).toEqual([]);
+});
+
 test("every screen has a rule telling the model not to do it", async () => {
   const { SCREENS } = await import("../scripts/screens.ts");
   expect(Object.keys(RULE_FOR_SCREEN).toSorted()).toEqual(Object.keys(SCREENS).toSorted());
