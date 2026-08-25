@@ -119,10 +119,15 @@ before = fp()
 # wave 8 held the build lock, so it silently tested none of the three rules it was started for.
 # Asked HERE rather than beside the snapshot it protects: this costs two stat()s, and the live
 # probe below costs a real model call per upstream — a stale tree should not pay for that first.
+# `src/client/` is EXCLUDED, the same way `eval.sh` prunes it: the client half only decides how a
+# card renders, so a stale one costs the screenshots and leaves every verdict standing. A wave once
+# lost 67 of 72 runs to three edited files under it, and checking all of `src/` here reintroduced
+# exactly that — the frozen snapshot a wave reads is the node half.
 cutoff = (REPO / "lib" / "index.js").stat().st_mtime
-newer = [q for q in (REPO / "src").rglob("*.ts*") if q.stat().st_mtime > cutoff]
+client = REPO / "src" / "client"
+newer = [q for q in (REPO / "src").rglob("*.ts*") if client not in q.parents and q.stat().st_mtime > cutoff]
 if newer:
-    sys.exit(f"wave {WAVE} refused to start — lib/ is older than {len(newer)} file(s) in src/ "
+    sys.exit(f"wave {WAVE} refused to start — lib/index.js is older than {len(newer)} file(s) in src/ "
              f"(e.g. {newer[0].relative_to(REPO)}). Run `bun run build` first, or the wave freezes the wrong prompt.")
 
 # `eval.sh`'s guards (stale build, wrong symlink, missing credential) exit 4 in milliseconds, and
