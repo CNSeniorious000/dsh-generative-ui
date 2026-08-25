@@ -98,7 +98,19 @@ jobs:
       # Two things the docs warn about that apply here. The package must already EXIST on npm
       # before a trusted publisher can be attached to it, so the very first publish of a new name
       # cannot use OIDC — it needs one manual `npm publish` (or a token) to create the name, and
-      # every release after that is tokenless. And `workflow_dispatch` is named as a case where
+      # every release after that is tokenless. That is a REGISTRY limitation, not a mistake in
+      # this file: npm/cli#8544 is open, and npm's answer is that first-publish was left out of
+      # the MVP on purpose. PyPI and JSR both let you register a pending publisher before the
+      # package exists; npm does not. The 2026-08-24 run failed here with ENEEDAUTH for exactly
+      # this reason, having already built and packed a correct 0.0.1 tarball.
+      #
+      # The bootstrap is one interactive command, run once by a human with 2FA:
+      #
+      #     npm login && npm publish --access public
+      #
+      # then attach the trusted publisher per (1) below. Everything after that is tokenless. A
+      # placeholder version (`0.0.0-placeholder`, deprecated afterwards) is the common way to do
+      # this without shipping a real release first. And `workflow_dispatch` is named as a case where
       # npm validates the CALLING workflow rather than the one running `npm publish`; that is only
       # a mismatch for `workflow_call`, which this file does not use.
       #
