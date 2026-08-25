@@ -35,10 +35,13 @@ the profile does not care that this package uses bun and dsh uses pnpm:
 dsh plugin --profile web add link:/path/to/dsh-generative-ui
 ```
 
-`dsh plugin` forwards to the profile's package manager, so any of these installs the package. Mounting it also takes one line in `~/.dsh/profiles/web/package.json` — the profile's bundle list is what dsh actually boots:
+`dsh plugin` forwards to the profile's package manager, so any of these installs the package —
+and adds it to `~/.dsh/profiles/web/package.json`'s `dsh.profile.bundles`, which is the list dsh
+actually boots. Verified on a clean machine, that file reads:
 
 ```json
 {
+  "dependencies": { "dsh-generative-ui": "^0.0.1" },
   "dsh": {
     "profile": {
       "bundles": [
@@ -51,7 +54,8 @@ dsh plugin --profile web add link:/path/to/dsh-generative-ui
 }
 ```
 
-Then restart `dsh web` — plugins are mounted at boot, and there is no hot-reload for adding one.
+Start `dsh web` and it is there — or restart it if it was already running, since plugins are
+mounted at boot and adding one has no hot-reload.
 
 **If nothing happens, check which agent preset the session is on first.** Under `minimal`
 (极简模式) the persona is declared `complete: true`, so nothing can append to the system prompt and
