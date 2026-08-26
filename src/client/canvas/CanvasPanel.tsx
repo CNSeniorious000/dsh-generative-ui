@@ -228,9 +228,15 @@ export function CanvasPanel({ canvases, offerable, cwd, onOpen, onClose, onWidth
         {active === undefined ? (
           <div className="dgu-empty">写入 ui4a/canvases/&lt;id&gt;.ui4a.tsx 后，画布会出现在这里</div>
         ) : (
-          // A canvas arrives as whole files, so recompiles replace rather than extend —
-          // preserving state would make an edited canvas silently keep the old render.
-          <GenUISurface key={active.id} code={resolved} streaming={active.streaming} preserveState={false} onError={(error, phase) => onCardError?.(error.message, phase)} onRendered={onCardRendered} />
+          // `preserveState` was false here, on the theory that a whole-file replace could
+          // "silently keep the old render". It cannot: both of partial-react's reuse branches
+          // (`runtime.ts:317` and `:404`) require `updateMode === "push"`, and a canvas arrives
+          // whole, so it always runs in `"render"` — measured, the edit lands either way.
+          // What preserving buys is the state: `:426` calls the generated component from inside
+          // a stable slot wrapper, so its hooks stay on the same fiber across a recompile, and
+          // `:424` keys the error boundary off the hook signature instead of the render round.
+          // Without it every edit remounted the tree and a running timer went back to zero.
+          <GenUISurface key={active.id} code={resolved} streaming={active.streaming} onError={(error, phase) => onCardError?.(error.message, phase)} onRendered={onCardRendered} />
         )}
       </div>
     </div>

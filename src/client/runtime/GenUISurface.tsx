@@ -16,10 +16,12 @@ export type GenUISurfaceProps = {
   /** True while `code` is still a prefix, so partial frames get normalized before compiling. */
   streaming?: boolean;
   /**
-   * Keep React state across recompiles. Right for a growing stream, where each frame is
-   * the previous one plus more text. Wrong for a whole-file replacement: the renderer
-   * decides reuse from the hook signature, so a rewrite that keeps the same hooks — an
-   * edited canvas usually does — is silently dropped rather than rendered.
+   * Keep React state across recompiles, by rendering through partial-react's stable slot
+   * wrapper so hooks stay on the same fiber. Off, every recompile renders a freshly
+   * compiled function type, which React remounts — a running timer restarts at zero.
+   *
+   * It does NOT risk dropping an edit: the renderer's two reuse branches only fire in
+   * `push` mode, so a whole-file replacement always renders.
    */
   preserveState?: boolean;
   /** Real compile diagnostics. Transient streaming frames are filtered out — see TRANSIENT below. */
