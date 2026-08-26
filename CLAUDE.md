@@ -1321,6 +1321,19 @@ every judge twice. That is what makes the +0.45 readable: the panel's spread is 
 pooled delta was a meaningless +0.23, but paired and split by exposure it separates cleanly.
 `scripts/judge-delta.py` does the paired read and refuses to call anything significant below 2 SE.
 
+**A row split wide is not a defect — measured, and it looked like one.** Two cards for the same
+food-log turn, from two models, both 5.5/10, both put a meal name at one edge and its kcal at the
+other with 400px of 720 between them. That is the failure §Width already names, so it read as a
+rule that exists and is not landing. `shot-card.mjs` grew a `STRETCHED` probe to count it, and the
+count says otherwise: of wave 0's 22 cards the 9 it fires on average **6.08** and the 13 it does
+not average **5.96**. The widest split in the wave — 4 rows at 567px of 720 — scored 6.62, above
+the median; the wave's worst card at 1.25 is not flagged at all, because it threw before rendering
+anything to split. An ingredient table at 455px reads fine, because its quantities line up as a
+right-aligned column the eye runs down; a food log at 407px does not, because there is nothing to
+run down. Geometry cannot separate those, and the two cards that started this were marked down for
+empty vertical bands and thin content — the stretch came along for the ride. The probe stays as a
+signal to look at, on the same footing as `UNUSED`; it is not evidence for a prompt rule.
+
 **Which judge, measured — the panel is four rulers, not four opinions.** Waves 0 and 1 on the
 rebuilt corpus (45 cards with all four judges, 180 scored verdicts) give a mean of 6.01 and 6.50.
 The between-wave gap is the noise floor, not a result: same prompt, different questions, 0.5 apart.

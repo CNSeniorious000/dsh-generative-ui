@@ -114,6 +114,51 @@ for (const width of widths) {
   // reader can look, not so the count can be minimised.
   if (unused > 24) console.log(`UNUSED ${width} ${unused}px of ${width} unpainted (judge by eye)`);
   if (over) console.log(`OVERFLOW ${width} +${over.px}px ${over.tag}.${over.cls}`);
+  // The complement of UNUSED, and the defect UNUSED cannot see: a card that paints the FULL width
+  // by pushing a label to one edge and its number to the other. Nothing is unpainted, so UNUSED is
+  // silent, and the reader still has to cross the card to pair a name with its value. Measured on
+  // two cards for the same food-log turn, from two different models, both scored 5.5/10 by four
+  // judges: a meal name at x=80 and its kcal at x=1900 of 2160.
+  //
+  // Three lines or more, not one. A header with a title left and a total right is ordinary and
+  // right; a LIST whose every row does it is the thing that reads badly, and the repetition is
+  // what separates them. Geometry only — no CSS declaration is consulted, because the same layout
+  // arrives as `justify-between`, as `ml-auto`, and as a two-column grid.
+  const stretched = await p.evaluate((w) => {
+    const host = document.getElementById("shot-host");
+    const boxes = [];
+    for (const el of host.querySelectorAll("*")) {
+      if (el.children.length || !(el.innerText || "").trim()) continue;   // leaves with text
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) boxes.push(r);
+    }
+    const lines = new Map();
+    for (const r of boxes) {
+      const key = Math.round((r.top + r.bottom) / 2 / 6);                 // same visual line
+      if (!lines.has(key)) lines.set(key, []);
+      lines.get(key).push(r);
+    }
+    const gaps = [];
+    for (const row of lines.values()) {
+      const line = row.toSorted((a, b) => a.left - b.left);
+      let biggest = 0;
+      for (let i = 1; i < line.length; i += 1) biggest = Math.max(biggest, line[i].left - line[i - 1].right);
+      if (biggest > w * 0.4) gaps.push(Math.round(biggest));
+    }
+    return gaps.toSorted((a, b) => b - a);
+  }, width);
+  // Reported, not judged — the same standing as UNUSED above, and measured to deserve it. Across
+  // wave 0's 22 cards the 9 this fires on average 6.08/10 and the 13 it does not average 5.96:
+  // no difference, and what difference there is points the wrong way. The widest split in the
+  // wave (4 rows at 567px of 720) scored 6.62, above the median, while the worst card in the
+  // wave scored 1.25 and is not flagged at all — it threw before it rendered anything to split.
+  //
+  // Two cards for one food-log turn, both 5.5/10, both stretched, are what suggested this was a
+  // defect. They are not: a right-aligned column of quantities reads fine at the same geometry,
+  // and those two cards were marked down for empty vertical bands and thin content. So this
+  // reports what it measured and nothing more — it is not evidence for a prompt rule.
+  if (stretched.length) console.log(`STRETCHED ${width} ${stretched.length} row(s) split by ${stretched.join("/")}px of ${width} (judge by eye)`);
+
   // The other half of the same squeeze. `min-width: auto` makes a sibling overflow; `shrink`
   // makes the element itself collapse, and a button crushed to a coloured lozenge with its label
   // clipped away does NOT overflow, so the check above is blind to it. Measured on a wave 2 card:

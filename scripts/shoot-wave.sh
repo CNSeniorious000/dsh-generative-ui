@@ -65,7 +65,7 @@ shoot_one() {
   up=0
   for _ in $(seq 60); do curl -sf -o /dev/null "http://127.0.0.1:$port/surface.js" && { up=1; break; }; sleep 0.25; done
   [ "$up" = 1 ] || { echo "  harness never came up on $port for $base ($theme)"; kill $hp 2>/dev/null; return; }
-  bun "$REPO/scripts/shot-card.mjs" "$port" "$SHOTS/$base.$theme" 2>&1 | grep -E "OVERFLOW|CRUSHED|UNUSED|FLUSH|pageerror|WARN" | sed "s|^|  $base.$theme |" | tee -a "$SHOTS/defects.log"
+  bun "$REPO/scripts/shot-card.mjs" "$port" "$SHOTS/$base.$theme" 2>&1 | grep -E "OVERFLOW|CRUSHED|UNUSED|STRETCHED|FLUSH|pageerror|WARN" | sed "s|^|  $base.$theme |" | tee -a "$SHOTS/defects.log"
   kill $hp 2>/dev/null
 }
 export -f shoot_one
