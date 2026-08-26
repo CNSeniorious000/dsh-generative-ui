@@ -5,9 +5,8 @@ set -u
 TAG=$1
 export AB_REPO=$(cd "$(dirname "$0")/.." && pwd)
 PROBE=${2:?pass a probe json: [{prev, q}, …]}
-# Defaults under ~/.cache, not /tmp: macOS reaps /tmp and took every wave from w001 to w019
-# with it — cards, screenshots and verdicts, all of it paid for in real model calls.
-OUT=${AB_ROOT:-$HOME/.cache/genui-loop}/ab/$TAG; mkdir -p "$OUT"
+. "$(dirname "$0")/wave-root.sh"
+OUT=${AB_ROOT:-$WAVE_ROOT}/ab/$TAG; mkdir -p "$OUT"
 python3 - "$OUT" "$PROBE" <<'PY'
 import json, os, subprocess, sys, concurrent.futures as cf, threading
 out = sys.argv[1]

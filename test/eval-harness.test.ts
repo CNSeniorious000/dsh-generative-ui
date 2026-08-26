@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 
 /**
  * `eval.sh` is the instrument every prompt measurement goes through, and it has been wrong in ways
@@ -68,8 +68,16 @@ test.skipIf(!hasDsh || waveRunning)(
     // 3, which reads as a flaky timeout test and is really the defence above quietly doing
     // nothing. Safe unconditionally: `waveRunning` has already skipped this test if a wave holds
     // the lock, so there is no `lib/` to protect here.
-    const { BUILD_OUTDIR: _redirected, ...env } = process.env;
-    expect(Bun.spawnSync(["bun", "run", "build"], { env }).exitCode).toBe(0);
+    // Only when `lib/` is actually behind. `test-shuffled.sh` runs this whole suite 20 times, so
+    // an unconditional build here is 21 builds per `bun run check` to advance one mtime — the
+    // first does the work and the other twenty repeat it. NOT a `touch`: this repo has lost an
+    // afternoon to a `lib/` that was newer than `src/` without being built from it, and a test
+    // that fakes freshness is how that comes back.
+    const newest = (dir: string) => Math.max(...[...new Bun.Glob("**/*").scanSync(dir)].map((f) => statSync(`${dir}/${f}`).mtimeMs));
+    if (newest("src") > statSync("lib/index.js").mtimeMs) {
+      const { BUILD_OUTDIR: _redirected, ...env } = process.env;
+      expect(Bun.spawnSync(["bun", "run", "build"], { env }).exitCode).toBe(0);
+    }
     // A dummy credential, because `eval.sh` refuses (exit 4) when the variable its DSH_HOME names
     // is unset — with it unset, dsh opens a session and hangs with no error, and a whole wave was
     // spent that way.

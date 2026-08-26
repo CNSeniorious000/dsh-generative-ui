@@ -15,6 +15,9 @@ import { readdirSync, readFileSync } from "node:fs";
 test("every script is named in CLAUDE.md", () => {
   const doc = readFileSync("CLAUDE.md", "utf8");
   const stem = (name: string) => name.replace(/\.(ts|sh|py|mjs|md|html)$/, "");
-  const missing = readdirSync("scripts").filter((name) => !doc.includes(stem(name)));
+  // Files only. Introducing an importable `wave_root.py` made Python write a `scripts/__pycache__/`
+  // directory, and this asked CLAUDE.md to document it — a build artefact reported as an
+  // undocumented script, which is a true statement about nothing.
+  const missing = readdirSync("scripts", { withFileTypes: true }).filter((e) => e.isFile() && !doc.includes(stem(e.name))).map((e) => e.name);
   expect(missing).toEqual([]);
 });

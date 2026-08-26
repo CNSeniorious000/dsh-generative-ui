@@ -9,3 +9,4 @@ src/client/canvas/panel-css.ts
 # Raw brainstorm output — the curated set lives in docs/examples.md
 .research/
 .wave-running
+__pycache__/

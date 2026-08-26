@@ -16,7 +16,7 @@ import collections, json, os, pathlib, re, sys
 # The wave directory is state, not source; it lives outside the repo and can be pointed elsewhere.
 # Defaults under `~/.cache`, not `/tmp`: macOS reaps /tmp and took every wave from w001 to
 # w019 with it — cards, screenshots and verdicts, all of it paid for in real model calls.
-ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop")))
+from wave_root import ROOT
 W = int(sys.argv[1])
 d = ROOT / "waves" / f"w{W:03d}"
 # The wave's OWN snapshot, not the live file: see run-wave.py.

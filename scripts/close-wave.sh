@@ -8,9 +8,8 @@ set -u
 W=$1
 # Never hardcode the gateway key: this file is versioned.
 : "${LITELLM_KEY:?set LITELLM_KEY to the gateway key before closing a wave}"
-# Defaults under ~/.cache, not /tmp: macOS reaps /tmp and took every wave from w001 to w019
-# with it — cards, screenshots and verdicts, all of it paid for in real model calls.
-ROOT=${WAVE_ROOT:-$HOME/.cache/genui-loop}
+. "$(dirname "$0")/wave-root.sh"
+ROOT=$WAVE_ROOT
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$ROOT"
 echo "== score"

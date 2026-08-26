@@ -7,6 +7,7 @@ hand-roll. Those need the source, which lives in the reply file for a fence card
 `canvases/` for a canvas one.
 """
 import collections, os, pathlib, re, sys
+from wave_root import ROOT
 
 FENCE = re.compile(r"```+ui4a/tsx\n(.*?)```+", re.S)
 
@@ -34,8 +35,7 @@ PROBES = {
 }
 
 for name in sys.argv[1:]:
-    root = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop")))
-    wave = pathlib.Path(name) if "/" in name else root / "waves" / name
+    wave = pathlib.Path(name) if "/" in name else ROOT / "waves" / name
     stat, lines = collections.Counter(), []
     for _, src in sources(wave):
         stat["cards"] += 1

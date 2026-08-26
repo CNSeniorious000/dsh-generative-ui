@@ -11,6 +11,7 @@ CSS pixels, which is what a viewport fraction is about.
     python3 scripts/card-height.py w015 w017
 """
 import collections, os, pathlib, sys
+from wave_root import ROOT
 
 DSF = 3          # `shot-card.mjs` shoots at deviceScaleFactor 3 so a judge can read 13px labels
 VIEWPORT = 800   # a common laptop viewport; 60% of it is the budget the prompt asks cards to fit
@@ -21,7 +22,7 @@ except ImportError:
     sys.exit("card-height needs Pillow: uv run --with pillow scripts/card-height.py <wave>")
 
 for name in sys.argv[1:]:
-    shots = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop"))) / "shots" / name
+    shots = ROOT / "shots" / name
     by_width = collections.defaultdict(list)
     for f in sorted(shots.glob("*.png")):
         parts = f.stem.rsplit(".", 2)          # <tag>.<theme>.<width>

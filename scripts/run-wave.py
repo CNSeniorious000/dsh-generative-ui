@@ -18,7 +18,7 @@ import concurrent.futures as cf, hashlib, re, json, os, pathlib, shutil, subproc
 
 # Defaults under `~/.cache`, not `/tmp`: macOS reaps /tmp and took every wave from w001 to
 # w019 with it — cards, screenshots and verdicts, all of it paid for in real model calls.
-ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop")))
+from wave_root import ROOT
 REPO = pathlib.Path(__file__).resolve().parent.parent
 # WHICH MODELS A WAVE SAMPLES.
 #
@@ -203,23 +203,23 @@ for h, _ in restore:
 # AFTER the freeze and the relink, not before. Run before them it probed the CHECKOUT, and the
 # snapshot it was vouching for was missing a file dsh boots through — 72 jobs, every one
 # `crash/nosession`, wave "DONE" in under a minute. A probe that does not go through the same
-# symlink is not a probe of this wave. A failure here therefore has to put the homes back itself:
-# it sits above the `try` whose `finally` would otherwise do it.
+# symlink is not a probe of this wave.
 #
 # One probe PER MODEL HOME, because that is the thing being checked. The first version ran a
 # single probe under the default `DSH_HOME`, whose model is neither of the three — it failed on
 # an unrelated upstream 400 and refused a wave that would have run fine. Each home carries its
 # own settings.yaml and its own credential, so only its own turn can clear it.
-for probe_model in MODELS:
-    probe = subprocess.run(["bash", str(REPO / "scripts" / "eval.sh"), "hi"], cwd=REPO,
-                           env={**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{probe_model}"), "EVAL_TIMEOUT": "180"},
-                           capture_output=True, text=True)
-    if probe.returncode != 0:
-        line = ((probe.stdout + probe.stderr).strip().splitlines() or [f"eval.sh exited {probe.returncode}"])[0]
-        for h, target in restore:
-            if h.is_symlink(): h.unlink()
-            h.symlink_to(target)
-        sys.exit(f"wave {WAVE} refused to start — {probe_model}: {line[:160]}")
+#
+# Concurrently: six independent homes, six independent upstreams, nothing shared. Serially the
+# floor is the SUM of six timeouts — 18 minutes of nothing before the wave starts, if one upstream
+# is hanging rather than answering — where in parallel it is the slowest single probe.
+def probe_home(model):
+    p = subprocess.run(["bash", str(REPO / "scripts" / "eval.sh"), "hi"], cwd=REPO,
+                       env={**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{model}"), "EVAL_TIMEOUT": "180"},
+                       capture_output=True, text=True)
+    if p.returncode == 0: return None
+    line = ((p.stdout + p.stderr).strip().splitlines() or [f"eval.sh exited {p.returncode}"])[0]
+    return f"{model}: {line[:160]}"
 # Tell `bun run build` a wave owns `lib/`. The pid is the point: a lock left behind by a wave that
 # crashed answers `kill -0` with ESRCH, so it cannot block a build forever the way the earlier
 # pgrep guard did. Removed in the same `finally` that restores the symlinks.
@@ -240,6 +240,16 @@ GATES = {u: threading.Semaphore(3) for u in {upstream_of(m) for m in MODELS}}
 def gated(job):
     with GATES[upstream_of(job[1])]: return run(job)
 try:
+    # Inside the `try`, so the `finally` below is what puts the homes back — a refusal here used
+    # to restore them by hand, one more copy of the same three lines to keep in step.
+    with cf.ThreadPoolExecutor(max_workers=len(MODELS)) as ex:
+        refused = [r for r in ex.map(probe_home, MODELS) if r is not None]
+    # Grouped by REASON, not listed per home: a missing credential is every home's answer at once,
+    # and six copies of one sentence buries the case where only one upstream is actually down.
+    if refused:
+        by_reason = {}
+        for model, reason in (r.split(": ", 1) for r in refused): by_reason.setdefault(reason, []).append(model)
+        sys.exit(f"wave {WAVE} refused to start — " + "; ".join(f"{', '.join(ms)}: {why}" for why, ms in by_reason.items()))
     # Enough workers for every upstream to hold its full budget at once; the semaphores,
     # not the pool, are what keeps any one backend from being overrun.
     with cf.ThreadPoolExecutor(max_workers=3 * len(GATES)) as ex:

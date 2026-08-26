@@ -24,6 +24,7 @@ Refuses to grade a card whose images are missing or blank, and prints what it sk
 about a dead harness reads exactly like a verdict about a bad card.
 """
 import asyncio, base64, hashlib, json, os, pathlib, sys, httpx
+from wave_root import ROOT
 
 KEY = os.environ["LITELLM_KEY"]  # never hardcode: this is the user's gateway key
 # The clhh gateway carries all five of the models below and was probed reading text off a real
@@ -40,7 +41,7 @@ WIDTHS = [320, 440, 720]
 SHOTS = pathlib.Path(os.environ.get("SHOTS_DIR", "/tmp/shots"))
 CARDS = pathlib.Path(os.environ.get("CARDS_DIR", "/tmp/judgecards"))
 # Beside the waves, not in /tmp — same reason as OUT below.
-CACHE = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop"))) / "judge-cache"
+CACHE = ROOT / "judge-cache"
 CACHE.mkdir(parents=True, exist_ok=True)
 # Named after the shots it graded, so two waves cannot overwrite each other. A fixed filename
 # meant every run clobbered the last, and comparing two waves depended on remembering to `cp` the
@@ -48,8 +49,15 @@ CACHE.mkdir(parents=True, exist_ok=True)
 # `JUDGE_OUT` overrides for a one-off.
 # Beside the wave, not in /tmp: macOS reaps /tmp, and these verdicts cost one vision call per
 # card per judge to produce.
-OUT = pathlib.Path(os.environ.get("JUDGE_OUT") or (pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop"))) / "verdicts" / f"judge-{pathlib.Path(os.environ.get('SHOTS_DIR', 'shots')).name}.jsonl"))
+OUT = pathlib.Path(os.environ.get("JUDGE_OUT") or (ROOT / "verdicts" / f"judge-{pathlib.Path(os.environ.get('SHOTS_DIR', 'shots')).name}.jsonl"))
 OUT.parent.mkdir(parents=True, exist_ok=True)
+
+# What counts as NOT a verdict, in one place. It was spelled out at three call sites — the cache
+# guard, the progress mark and the final count — and the whole point of the count is that a
+# failure must never pass for a verdict, which three copies of the rule cannot promise.
+def failed(verdict: str) -> bool:
+    return verdict.startswith(("HTTP", "ERR"))
+
 
 # `shoot-wave.sh` strips the whole `.ui4a.tsx` suffix chain when it names shots, so a card looked
 # up under its raw stem finds none of its own images and is skipped — which reads exactly like a
@@ -173,17 +181,11 @@ async def judge(c, model, card, parts, fp):
     except Exception as e:
         out = f"ERR {type(e).__name__}: {e}"
     rec = {"model": model, "card": card, "verdict": out}
-    if not out.startswith(("HTTP", "ERR")): f.write_text(json.dumps(rec, ensure_ascii=False))
+    if not failed(out): f.write_text(json.dumps(rec, ensure_ascii=False))
     return rec
 
 
 async def main():
-    # One cheap call before spending hundreds: a wrong key answers every one of them identically,
-    # and finding that out at the end costs the whole wave's judging. Same reason `run-wave.py`
-    # probes before it starts.
-    async with httpx.AsyncClient(base_url=BASE, timeout=30, headers={"Authorization": f"Bearer {KEY}"}) as c:
-        probe = await c.get("/v1/models")
-    if probe.status_code != 200: sys.exit(f"judge refused to start — {BASE} answered {probe.status_code}: {probe.text[:120]}")
     cards = sorted(p.stem for p in CARDS.glob("*.tsx"))
     # Network-bound, not CPU-bound: each task uploads six images and waits. 6 was picked when the
     # panel was five models on one upstream; the gateway takes far more, and a wave of 86 cards is
@@ -191,10 +193,17 @@ async def main():
     sem = asyncio.Semaphore(int(os.environ.get("JUDGE_CONC") or 16))
     results = []
     async with httpx.AsyncClient(base_url=BASE, timeout=600, headers={"Authorization": f"Bearer {KEY}"}) as c:
+        # One cheap call before spending hundreds: a wrong key answers every one of them
+        # identically, and finding that out at the end costs the whole wave's judging. Same reason
+        # `run-wave.py` probes before it starts. Its own short timeout — the 600s the judging
+        # needs would turn an unreachable gateway into a ten-minute wait for a one-line refusal.
+        probe = await c.get("/v1/models", timeout=30)
+        if probe.status_code != 200: sys.exit(f"judge refused to start — {BASE} answered {probe.status_code}: {probe.text[:120]}")
+
         async def one(card, model, parts, fp):
             async with sem:
                 r = await judge(c, model, card, parts, fp)
-                mark = "ok" if not r["verdict"].startswith(("HTTP", "ERR")) else "!!"
+                mark = "!!" if failed(r["verdict"]) else "ok"
                 print(f"{mark} {card:14} {model}", flush=True)
                 return r
         tasks = []
@@ -231,8 +240,15 @@ async def main():
     # nobody and reported as judged. Measured: the key for :4000 was the key for :24000, every one
     # of 88 calls came back `HTTP 401: Invalid API key`, and this line said `JUDGEDONE 88
     # verdicts`. They are not cached (see `one`), so the count was the only place it could show.
-    failed = [r for r in results if r["verdict"].startswith(("HTTP", "ERR"))]
-    print(f"JUDGEDONE {len(results) - len(failed)} verdicts" + (f", {len(failed)} FAILED ({failed[0]['verdict'][:80]})" if failed else "") + f" -> {OUT}", flush=True)
-    if failed and not (len(results) - len(failed)): sys.exit("every judge call failed — nothing was judged")
+    bad = [r for r in results if failed(r["verdict"])]
+    ok = len(results) - len(bad)
+    line = f"JUDGEDONE {ok} verdicts"
+    if bad: line += f", {len(bad)} FAILED ({bad[0]['verdict'][:80]})"
+    print(line + f" -> {OUT}", flush=True)
+    # Non-zero on ANY failure, not only on total failure. A pass where a tenth of the calls died
+    # still writes a file a caller will happily score, on a denominator nobody chose — the same
+    # silently-narrowed denominator this whole function exists to stop. Failures are not cached,
+    # so re-running costs only the ones that failed.
+    if bad: sys.exit(f"{len(bad)} of {len(results)} judge calls failed — re-run to fill them in")
 
 asyncio.run(main())

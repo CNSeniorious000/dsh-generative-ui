@@ -13,9 +13,8 @@
 set -u
 W=$1
 REPO=$(cd "$(dirname "$0")/.." && pwd)
-# Defaults under ~/.cache, not /tmp: macOS reaps /tmp and took every wave from w001 to w019
-# with it — cards, screenshots and verdicts, all of it paid for in real model calls.
-ROOT=${WAVE_ROOT:-$HOME/.cache/genui-loop}
+. "$(dirname "$0")/wave-root.sh"
+ROOT=$WAVE_ROOT
 WD=$(printf "w%03d" "$W")
 
 bash "$REPO/scripts/shoot-wave.sh" "$W" &
