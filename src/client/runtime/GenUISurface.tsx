@@ -178,8 +178,19 @@ export const errorAction = (message: string, phase: string, streaming: boolean, 
   return shouldRetry(message, phase, streaming, attempts) ? "retry" : "report";
 };
 
-/** 0.4s / 0.8s / 1.2s covers an esm.sh cold start; past that the package itself is the problem. */
-const RETRY_BACKOFF_MS = 400;
+/**
+ * 0.5s / 2s / 8s. **Linear 0.4/0.8/1.2 did not cover a cold start** — it spends 2.4 seconds
+ * total, and a first request for a package esm.sh has never built waits on that build: measured
+ * 2.27s cold against 0.50s warm for the same URL, so all three attempts landed inside one
+ * unfinished build and the reader got `failed to fetch dynamically imported module` on a package
+ * that resolves fine a second later. Seen in a real session on `@headlessui/react`, twice in a
+ * row, on a card the model had been asked to write with it.
+ *
+ * Backing off ×4 spends 10.5s across the same three attempts, which covers a cold build with room
+ * and still gives up fast enough that a genuinely missing package does not hang the card.
+ */
+const RETRY_BACKOFF_MS = 500;
+const RETRY_FACTOR = 4;
 
 /**
  * What `onError` DOES with the three outcomes, separated from where they come from. The decision
@@ -214,7 +225,7 @@ export const dispatchError = (action: "ignore" | "retry" | "report", effects: { 
   if (action === "retry") {
     const next = effects.attempts() + 1;
     effects.setAttempts(next);
-    effects.schedule(RETRY_BACKOFF_MS * next);
+    effects.schedule(RETRY_BACKOFF_MS * RETRY_FACTOR ** (next - 1));
     return;
   }
   effects.report();

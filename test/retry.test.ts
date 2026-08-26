@@ -14,7 +14,7 @@
  * agree — which is how `compiler.test.ts` stayed green through six real mutations.
  */
 import { describe, expect, test } from "bun:test";
-import { bustFetchedImports, shouldRetry } from "../src/client/runtime/GenUISurface.tsx";
+import { bustFetchedImports, dispatchError, shouldRetry } from "../src/client/runtime/GenUISurface.tsx";
 
 const bust = (url: string, attempt: number) => bustFetchedImports({ x: url }, attempt).x;
 
@@ -73,4 +73,36 @@ describe("shouldRetry", () => {
   test("the attempts run out", () => {
     expect(shouldRetry("Failed to fetch", "compile", false, 3)).toBe(false);
   });
+});
+
+/**
+ * The backoff has to outlast an esm.sh COLD BUILD, which is the failure it exists for.
+ *
+ * Measured 2026-08-26 on a package esm.sh had never built: **2.27s cold, 0.50s warm** for the
+ * same URL. The old linear 0.4/0.8/1.2 spent 2.4s across all three attempts, so every one of
+ * them landed inside a single unfinished build and the card reported `failed to fetch
+ * dynamically imported module` for a package that resolves fine seconds later — seen twice in
+ * one real session on `@headlessui/react`.
+ *
+ * So the property under test is a total, not a shape: three attempts must span comfortably more
+ * than a cold build. Asserted as a floor rather than exact values, because the constants may be
+ * retuned and only the floor is the reason they exist.
+ */
+test("three retries outlast an esm.sh cold build", () => {
+  const waits: number[] = [];
+  let attempts = 0;
+  for (let i = 0; i < 3; i++) {
+    dispatchError("retry", {
+      attempts: () => attempts,
+      setAttempts: (n) => { attempts = n; },
+      schedule: (ms) => waits.push(ms),
+      report: () => { throw new Error("must not report while retrying"); },
+    });
+  }
+  expect(waits).toHaveLength(3);
+  // Strictly increasing: a flat or shrinking backoff spends its budget before the build finishes.
+  expect(waits[1]).toBeGreaterThan(waits[0]!);
+  expect(waits[2]).toBeGreaterThan(waits[1]!);
+  // 2.27s was the measured cold build; leave real headroom above it.
+  expect(waits.reduce((a, b) => a + b, 0)).toBeGreaterThan(8000);
 });

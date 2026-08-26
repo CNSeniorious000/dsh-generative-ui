@@ -76,11 +76,13 @@ test("ignore does nothing at all — a streaming frame is not a failed attempt",
 });
 
 test("retry counts first, then schedules on the new count", () => {
+  // ORDER is the property here, not the delays — `retry.test.ts` owns those, and pinning both in
+  // one test made retuning the backoff look like an ordering regression.
   const s = spy();
   dispatchError("retry", s.effects);
-  expect(s.calls).toEqual(["attempts=1", "schedule 400"]);
+  expect(s.calls.map((c) => c.split(" ")[0])).toEqual(["attempts=1", "schedule"]);
   dispatchError("retry", s.effects);
-  expect(s.calls.slice(2)).toEqual(["attempts=2", "schedule 800"]);
+  expect(s.calls.slice(2).map((c) => c.split(" ")[0])).toEqual(["attempts=2", "schedule"]);
 });
 
 test("report tells the caller and leaves the counter alone", () => {
