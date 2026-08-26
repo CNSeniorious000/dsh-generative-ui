@@ -165,7 +165,10 @@ async def judge(c, model, card, parts, fp):
 
 async def main():
     cards = sorted(p.stem for p in CARDS.glob("*.tsx"))
-    sem = asyncio.Semaphore(6)
+    # Network-bound, not CPU-bound: each task uploads six images and waits. 6 was picked when the
+    # panel was five models on one upstream; the gateway takes far more, and a wave of 86 cards is
+    # 344 calls. `JUDGE_CONC` retunes it without an edit.
+    sem = asyncio.Semaphore(int(os.environ.get("JUDGE_CONC") or 16))
     results = []
     async with httpx.AsyncClient(base_url=BASE, timeout=600, headers={"Authorization": f"Bearer {KEY}"}) as c:
         async def one(card, model, parts, fp):
