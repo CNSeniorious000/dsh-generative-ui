@@ -490,6 +490,18 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
 
+- **Getting the attribute right and the pixels wrong is the commoner half.** A vision panel reading
+  59 cards raised this in **22% of its verdicts**, in one recurring form: \`aria-checked\` correctly
+  set, and the selected chip differing from its siblings **only by background colour**. That is one
+  channel, and it is the channel that fails first — greyscale, a dim screen, or the 8% of men with
+  a colour vision deficiency. The fix is a second channel on the same ternary, and it costs a
+  class: \`font-medium\` on the selected one, or a \`✓\` before its label, or a ring the unselected
+  ones do not carry. **Colour may be the loudest signal; it may not be the only one.**
+  (No screen for this one, deliberately: a prototype matching the template-literal ternary found
+  **7 selections across three waves and zero colour-only ones**, against 22% in the verdicts — the
+  shapes a card writes this in are too many for a regex, and a detector that narrow reports a
+  clean sweep on a defect that is everywhere.)
+
   **Write the state and the style it produces as one token, and this whole class of bug stops
   existing.** \`aria-checked:bg-accent\` is a single string: there is no second place for it to
   disagree with. Measured on a card written before that was possible — the CSS said
