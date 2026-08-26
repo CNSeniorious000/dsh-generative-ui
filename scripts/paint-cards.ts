@@ -126,7 +126,14 @@ const top = [...blockedBy.entries()]
 const parts = [skipped && `${skipped} skipped${top === "" ? "" : `: ${top}`}`, corrupt && `${corrupt} corrupt extraction`].filter(Boolean);
 const note = parts.length === 0 ? "" : ` (${parts.join("; ")})`;
 console.warn = realWarn;
-console.log(bad === 0 ? `paint: ok — every card in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
+// "every card" when six were never rendered is the sentence a reader trusts and should not.
+// Measured: a card wrote `<Disclosure className=…>`, threw *Passing props on "Fragment"!* and
+// showed the reader that message instead of itself — and this line said `ok — every card
+// renders something (6 skipped: @headlessui/react ×4 …)`. The skip note was right there and
+// the headline still said every. The libraries we push hardest for are exactly the ones this
+// check cannot resolve, so the blind spot tracks the advice.
+const checked = bad === 0 ? (skipped === 0 ? "every card" : "every card it could check") : "";
+console.log(bad === 0 ? `paint: ok — ${checked} in ${dir} renders something${note}` : `paint: ${bad} card(s) render nothing${note}`);
 // A skip is honest for the corpus — recharts is 51 cards and a deliberate trade. It is NOT honest
 // for `test/cards`, which is this repo's own examples inside `bun run check`: everything they
 // import either resolves here or has a stub, so a skip there means the gate quietly stopped
