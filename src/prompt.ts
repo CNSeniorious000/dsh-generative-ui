@@ -278,6 +278,15 @@ decide what starts open. Estimate it the way you would a page: a row is ~40px, a
 ~80px, a paragraph of body text ~60px. Twenty rows with their descriptions showing is already past
 it before you have written the header.
 
+**The moment to act on this is when you write \`.map\`, not when you finish.** Measured across two
+waves of real cards: at 320px wide, **90% render past 60vh and a fifth past two full screens**,
+median 950px — and saying "budget for two thirds of a viewport" changed that by one point, because
+by the time a card feels long it is written. So make it a rule about the code: **a \`.map\` over
+more than about eight items renders those items COLLAPSED**, one line each, with the body behind
+a \`Disclosure\`; and the filter above it starts on a real subset, never on "all". If you cannot
+decide which subset, that is the card telling you it needs a search box, not that it needs to show
+everything.
+
 What that budget buys is **hierarchy, which is contrast, not just order**. A title, a set of
 counts, and a row of filters stacked as three bands of the same grey with the same rounding and
 the same text size is three rows the eye cannot rank — the reader sees a wall and starts reading
