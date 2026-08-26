@@ -153,22 +153,6 @@ if newer:
 # `WAVE DONE ... 72 runs` across four seconds, 360 files all reading `stale  src/ is newer than
 # lib/`, and the reflection that followed was written about them. So ask the guards ONCE, before
 # spending anything: a wave with nothing to measure should refuse to start, not finish instantly.
-# A REAL run, not a stubbed one. The guards above are static checks and a stub would clear them
-# while telling us nothing about the credential's VALUE: a key that is set but rejected produces
-# `AUTH: 401` on every job, 72 times, and the wave still reports DONE. Measured — that is how the
-# second attempt at wave 5 was lost, minutes after the stale-build guard had just been added for
-# the first. One cheap turn up front is the only thing that distinguishes a working key.
-# One probe PER MODEL HOME, because that is the thing being checked. The first version ran a
-# single probe under the default `DSH_HOME`, whose model is neither of the three — it failed on
-# an unrelated upstream 400 and refused a wave that would have run fine. Each home carries its
-# own settings.yaml and its own credential, so only its own turn can clear it.
-for probe_model in MODELS:
-    probe = subprocess.run(["bash", str(REPO / "scripts" / "eval.sh"), "hi"], cwd=REPO,
-                           env={**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{probe_model}"), "EVAL_TIMEOUT": "180"},
-                           capture_output=True, text=True)
-    if probe.returncode != 0:
-        line = ((probe.stdout + probe.stderr).strip().splitlines() or [f"eval.sh exited {probe.returncode}"])[0]
-        sys.exit(f"wave {WAVE} refused to start — {probe_model}: {line[:160]}")
 # FREEZE what the wave reads. Each eval home reaches the plugin through a symlink into this
 # working copy, so every job re-reads `lib/` as it starts — and an edit to `src/` plus any rebuild
 # lands under jobs already in flight. That has now cost five waves: the `bun run build` guard stops
@@ -181,8 +165,15 @@ for probe_model in MODELS:
 snapshot = ROOT / "waves" / f"w{WAVE:03d}" / "plugin"
 if snapshot.exists(): shutil.rmtree(snapshot)
 snapshot.mkdir(parents=True)
-for item in ("lib", "types", "package.json"):
+# WHAT to freeze comes from `package.json`'s own `files`, not a list beside it. The hand-written
+# list said `lib, types, package.json` and missed `cordis.patch.yml` — which `dsh.bundle.patch`
+# names, so dsh refused to boot through the snapshot and all 72 jobs died `crash/nosession` in
+# under a minute. `files` is what npm publishes: anything the plugin needs at runtime is in it by
+# construction, and a file added there later is picked up without anyone remembering this line.
+frozen = json.loads((REPO / "package.json").read_text()).get("files", [])
+for item in [*frozen, "package.json"]:
     src = REPO / item
+    if not src.exists(): continue
     (shutil.copytree if src.is_dir() else shutil.copy2)(src, snapshot / item)
 # `node_modules` is SYMLINKED, not copied: `lib/index.js` imports real packages (`schemastery`,
 # the dsh peers) and a copy in /tmp resolves none of them — measured, every job of wave 6 died with
@@ -201,6 +192,32 @@ homes = [pathlib.Path(os.path.expanduser(f"~/.dsh-eval-{m}")) / LINK for m in MO
 restore = [(h, str(REPO)) for h in homes if h.is_symlink()]
 for h, _ in restore:
     h.unlink(); h.symlink_to(snapshot)
+# A REAL run, not a stubbed one, through the SNAPSHOT the jobs will read. The guards above are
+# static checks and a stub would clear them while telling us nothing about the credential's
+# VALUE: a key that is set but rejected produces `AUTH: 401` on every job, 72 times, and the wave
+# still reports DONE. Measured — that is how the second attempt at wave 5 was lost, minutes after
+# the stale-build guard had just been added for the first.
+#
+# AFTER the freeze and the relink, not before. Run before them it probed the CHECKOUT, and the
+# snapshot it was vouching for was missing a file dsh boots through — 72 jobs, every one
+# `crash/nosession`, wave "DONE" in under a minute. A probe that does not go through the same
+# symlink is not a probe of this wave. A failure here therefore has to put the homes back itself:
+# it sits above the `try` whose `finally` would otherwise do it.
+#
+# One probe PER MODEL HOME, because that is the thing being checked. The first version ran a
+# single probe under the default `DSH_HOME`, whose model is neither of the three — it failed on
+# an unrelated upstream 400 and refused a wave that would have run fine. Each home carries its
+# own settings.yaml and its own credential, so only its own turn can clear it.
+for probe_model in MODELS:
+    probe = subprocess.run(["bash", str(REPO / "scripts" / "eval.sh"), "hi"], cwd=REPO,
+                           env={**os.environ, "DSH_HOME": os.path.expanduser(f"~/.dsh-eval-{probe_model}"), "EVAL_TIMEOUT": "180"},
+                           capture_output=True, text=True)
+    if probe.returncode != 0:
+        line = ((probe.stdout + probe.stderr).strip().splitlines() or [f"eval.sh exited {probe.returncode}"])[0]
+        for h, target in restore:
+            if h.is_symlink(): h.unlink()
+            h.symlink_to(target)
+        sys.exit(f"wave {WAVE} refused to start — {probe_model}: {line[:160]}")
 # Tell `bun run build` a wave owns `lib/`. The pid is the point: a lock left behind by a wave that
 # crashed answers `kill -0` with ESRCH, so it cannot block a build forever the way the earlier
 # pgrep guard did. Removed in the same `finally` that restores the symlinks.
