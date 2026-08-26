@@ -34,23 +34,35 @@ n=$(ls "$CARDS"/*.tsx 2>/dev/null | wc -l | tr -d ' ')
 echo "$W: $n cards extracted"
 [ "$n" -eq 0 ] && exit 0
 
-for card in "$CARDS"/*.tsx; do
-  # `.ui4a.tsx` means `basename .tsx` leaves `.ui4a` on the stem — harmless in a filename, fatal
-  # when it is reassembled into a path. Strip the whole suffix chain, and pass $card through
-  # untouched to the harness.
+# One (card, theme) per line, shot CONCURRENTLY. Every pair is independent — its own harness on
+# its own random port, its own output file — and the loop that used to run them one at a time
+# spent most of its wall clock waiting for a server to boot: 86 cards x 2 themes x (start +
+# poll + shoot + kill) is 172 serial round trips for work with no ordering between any two of
+# them. `xargs -P` rather than a hand-rolled gate because macOS ships bash 3.2, which has no
+# `wait -n` — a counter-based gate there fails silently open and spawns everything at once.
+#
+# The cap is deliberately below the core count: each job runs a bun server AND a headless
+# Chromium, so the limit is memory and the GPU process, not CPU.
+shoot_one() {
+  card=$1; theme=$2
   base=$(basename "$card"); base=${base%.tsx}; base=${base%.ui4a}
-  for theme in light dark; do
-    port=$(( 30000 + RANDOM % 20000 ))
-    THEME=$theme nohup bun "$REPO/scripts/surface-harness.ts" "$port" "$card" >$ROOT/h.log 2>&1 &
-    hp=$!
-    # `-f` is not optional: without it curl exits 0 on a refused connection too, so `&& break`
-    # fires on the first attempt, the shot runs against nothing, and the wave reports 0 screenshots
-    # with no error anywhere. Cost an hour of looking at the wrong half of the pipeline.
-    up=0
-    for _ in $(seq 60); do curl -sf -o /dev/null "http://127.0.0.1:$port/surface.js" && { up=1; break; }; sleep 0.25; done
-    [ "$up" = 1 ] || { echo "  harness never came up on $port for $base ($theme)"; kill $hp 2>/dev/null; continue; }
-    bun "$REPO/scripts/shot-card.mjs" "$port" "$SHOTS/$base.$theme" 2>&1 | grep -E "OVERFLOW|CRUSHED|UNUSED|FLUSH|pageerror|WARN" | sed "s|^|  $base.$theme |" | tee -a "$SHOTS/defects.log"
-    kill $hp 2>/dev/null
-  done
-done
+  port=$(( 30000 + RANDOM % 20000 ))
+  THEME=$theme nohup bun "$REPO/scripts/surface-harness.ts" "$port" "$card" >>"$ROOT/h.log" 2>&1 &
+  hp=$!
+  # `-f` is not optional: without it curl exits 0 on a refused connection too, so `&& break`
+  # fires on the first attempt, the shot runs against nothing, and the wave reports 0 screenshots
+  # with no error anywhere. Cost an hour of looking at the wrong half of the pipeline.
+  up=0
+  for _ in $(seq 60); do curl -sf -o /dev/null "http://127.0.0.1:$port/surface.js" && { up=1; break; }; sleep 0.25; done
+  [ "$up" = 1 ] || { echo "  harness never came up on $port for $base ($theme)"; kill $hp 2>/dev/null; return; }
+  bun "$REPO/scripts/shot-card.mjs" "$port" "$SHOTS/$base.$theme" 2>&1 | grep -E "OVERFLOW|CRUSHED|UNUSED|FLUSH|pageerror|WARN" | sed "s|^|  $base.$theme |" | tee -a "$SHOTS/defects.log"
+  kill $hp 2>/dev/null
+}
+export -f shoot_one
+export REPO ROOT SHOTS
+
+SHOOT_JOBS=${SHOOT_JOBS:-6}
+for card in "$CARDS"/*.tsx; do
+  for theme in light dark; do printf '%s\0%s\0' "$card" "$theme"; done
+done | xargs -0 -P "$SHOOT_JOBS" -n 2 bash -c 'shoot_one "$0" "$1"' 
 echo "$W: $(ls "$SHOTS"/*.png 2>/dev/null | wc -l | tr -d ' ') screenshots"

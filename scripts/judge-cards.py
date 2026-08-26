@@ -40,7 +40,11 @@ WIDTHS = [320, 440, 720]
 SHOTS = pathlib.Path(os.environ.get("SHOTS_DIR", "/tmp/shots"))
 CARDS = pathlib.Path(os.environ.get("CARDS_DIR", "/tmp/judgecards"))
 CACHE = pathlib.Path("/tmp/judge-cache"); CACHE.mkdir(exist_ok=True)
-OUT = pathlib.Path("/tmp/judge-results.jsonl")
+# Named after the shots it graded, so two waves cannot overwrite each other. A fixed filename
+# meant every run clobbered the last, and comparing two waves depended on remembering to `cp` the
+# results out first — which is a step, and steps that exist only in someone's head get skipped.
+# `JUDGE_OUT` overrides for a one-off.
+OUT = pathlib.Path(os.environ.get("JUDGE_OUT") or f"/tmp/judge-{pathlib.Path(os.environ.get('SHOTS_DIR', 'shots')).name}.jsonl")
 
 # `shoot-wave.sh` strips the whole `.ui4a.tsx` suffix chain when it names shots, so a card looked
 # up under its raw stem finds none of its own images and is skipped — which reads exactly like a
