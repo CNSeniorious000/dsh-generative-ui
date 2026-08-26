@@ -61,7 +61,15 @@ if (waveRunning) console.log("skipping the timeout test: a wave is running, so `
 test.skipIf(!hasDsh || waveRunning)(
   "a run that exceeds EVAL_TIMEOUT reports timeout and exits 3",
   () => {
-    expect(Bun.spawnSync(["bun", "run", "build"]).exitCode).toBe(0);
+    // With BUILD_OUTDIR CLEARED, whatever the caller set. The `pre-push` hook sets it so a
+    // running wave's `lib/` is not replaced under it — but this build exists to refresh `lib/`
+    // itself, and inheriting the redirect sends it to a scratch directory and leaves `lib/`
+    // exactly as stale as it was. `eval.sh` then exits 4 on the staleness guard and this asserts
+    // 3, which reads as a flaky timeout test and is really the defence above quietly doing
+    // nothing. Safe unconditionally: `waveRunning` has already skipped this test if a wave holds
+    // the lock, so there is no `lib/` to protect here.
+    const { BUILD_OUTDIR: _redirected, ...env } = process.env;
+    expect(Bun.spawnSync(["bun", "run", "build"], { env }).exitCode).toBe(0);
     // A dummy credential, because `eval.sh` refuses (exit 4) when the variable its DSH_HOME names
     // is unset — with it unset, dsh opens a session and hangs with no error, and a whole wave was
     // spent that way.
