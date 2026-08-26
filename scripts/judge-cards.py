@@ -44,7 +44,10 @@ CACHE = pathlib.Path("/tmp/judge-cache"); CACHE.mkdir(exist_ok=True)
 # meant every run clobbered the last, and comparing two waves depended on remembering to `cp` the
 # results out first — which is a step, and steps that exist only in someone's head get skipped.
 # `JUDGE_OUT` overrides for a one-off.
-OUT = pathlib.Path(os.environ.get("JUDGE_OUT") or f"/tmp/judge-{pathlib.Path(os.environ.get('SHOTS_DIR', 'shots')).name}.jsonl")
+# Beside the wave, not in /tmp: macOS reaps /tmp, and these verdicts cost one vision call per
+# card per judge to produce.
+OUT = pathlib.Path(os.environ.get("JUDGE_OUT") or (pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop"))) / "verdicts" / f"judge-{pathlib.Path(os.environ.get('SHOTS_DIR', 'shots')).name}.jsonl"))
+OUT.parent.mkdir(parents=True, exist_ok=True)
 
 # `shoot-wave.sh` strips the whole `.ui4a.tsx` suffix chain when it names shots, so a card looked
 # up under its raw stem finds none of its own images and is skipped — which reads exactly like a
@@ -164,6 +167,12 @@ async def judge(c, model, card, parts, fp):
 
 
 async def main():
+    # One cheap call before spending hundreds: a wrong key answers every one of them identically,
+    # and finding that out at the end costs the whole wave's judging. Same reason `run-wave.py`
+    # probes before it starts.
+    async with httpx.AsyncClient(base_url=BASE, timeout=30, headers={"Authorization": f"Bearer {KEY}"}) as c:
+        probe = await c.get("/v1/models")
+    if probe.status_code != 200: sys.exit(f"judge refused to start — {BASE} answered {probe.status_code}: {probe.text[:120]}")
     cards = sorted(p.stem for p in CARDS.glob("*.tsx"))
     # Network-bound, not CPU-bound: each task uploads six images and waits. 6 was picked when the
     # panel was five models on one upstream; the gateway takes far more, and a wave of 86 cards is
@@ -207,6 +216,12 @@ async def main():
         results = await asyncio.gather(*tasks)
     with OUT.open("w") as fh:
         for r in results: fh.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"JUDGEDONE {len(results)} verdicts -> {OUT}", flush=True)
+    # A failed call is not a verdict, and counting it as one is how a whole wave gets judged by
+    # nobody and reported as judged. Measured: the key for :4000 was the key for :24000, every one
+    # of 88 calls came back `HTTP 401: Invalid API key`, and this line said `JUDGEDONE 88
+    # verdicts`. They are not cached (see `one`), so the count was the only place it could show.
+    failed = [r for r in results if r["verdict"].startswith(("HTTP", "ERR"))]
+    print(f"JUDGEDONE {len(results) - len(failed)} verdicts" + (f", {len(failed)} FAILED ({failed[0]['verdict'][:80]})" if failed else "") + f" -> {OUT}", flush=True)
+    if failed and not (len(results) - len(failed)): sys.exit("every judge call failed — nothing was judged")
 
 asyncio.run(main())
