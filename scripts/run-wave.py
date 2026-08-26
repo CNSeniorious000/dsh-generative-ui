@@ -16,7 +16,9 @@ Usage: uv run run-wave.py <wave-index> [samples]
 """
 import concurrent.futures as cf, hashlib, re, json, os, pathlib, shutil, subprocess, sys
 
-ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", "/tmp/genui-loop"))
+# Defaults under `~/.cache`, not `/tmp`: macOS reaps /tmp and took every wave from w001 to
+# w019 with it — cards, screenshots and verdicts, all of it paid for in real model calls.
+ROOT = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop")))
 REPO = pathlib.Path(__file__).resolve().parent.parent
 # WHICH MODELS A WAVE SAMPLES.
 #

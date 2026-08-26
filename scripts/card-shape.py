@@ -6,7 +6,7 @@ questions that follow: is the thing dense, does it fold, did it reach for a libr
 hand-roll. Those need the source, which lives in the reply file for a fence card and in
 `canvases/` for a canvas one.
 """
-import collections, pathlib, re, sys
+import collections, os, pathlib, re, sys
 
 FENCE = re.compile(r"```+ui4a/tsx\n(.*?)```+", re.S)
 
@@ -34,7 +34,8 @@ PROBES = {
 }
 
 for name in sys.argv[1:]:
-    wave = pathlib.Path(name if "/" in name else f"/tmp/genui-loop/waves/{name}")
+    root = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop")))
+    wave = pathlib.Path(name) if "/" in name else root / "waves" / name
     stat, lines = collections.Counter(), []
     for _, src in sources(wave):
         stat["cards"] += 1
