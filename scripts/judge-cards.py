@@ -39,7 +39,9 @@ MODELS = ["gemini-3.7-flash", "grok-4.6", "claude-opus-5", "gpt-5.6-sol"]
 WIDTHS = [320, 440, 720]
 SHOTS = pathlib.Path(os.environ.get("SHOTS_DIR", "/tmp/shots"))
 CARDS = pathlib.Path(os.environ.get("CARDS_DIR", "/tmp/judgecards"))
-CACHE = pathlib.Path("/tmp/judge-cache"); CACHE.mkdir(exist_ok=True)
+# Beside the waves, not in /tmp — same reason as OUT below.
+CACHE = pathlib.Path(os.environ.get("WAVE_ROOT", os.path.expanduser("~/.cache/genui-loop"))) / "judge-cache"
+CACHE.mkdir(parents=True, exist_ok=True)
 # Named after the shots it graded, so two waves cannot overwrite each other. A fixed filename
 # meant every run clobbered the last, and comparing two waves depended on remembering to `cp` the
 # results out first — which is a step, and steps that exist only in someone's head get skipped.
@@ -155,10 +157,19 @@ async def judge(c, model, card, parts, fp):
     if f.exists(): return json.loads(f.read_text())
     try:
         r = await c.post("/v1/chat/completions",
-                         json={"model": model, "max_tokens": 3000, "messages": [{"role": "user", "content": parts}]})
+                         json={"model": model, "max_tokens": 8000, "messages": [{"role": "user", "content": parts}]})
         # A 200 whose `content` is null is not a verdict. Cached, it becomes a permanent empty
         # entry that silently narrows the denominator — worse than an error, which at least shows.
-        out = (r.json()["choices"][0]["message"].get("content") or "ERR empty content") if r.status_code == 200 else f"HTTP {r.status_code}: {r.text[:200]}"
+        # Nor is a TRUNCATED one: at 3000 tokens, claude-opus-5 ran out mid-sentence on 6 of its
+        # 22 cards and the `SCORE:` line never arrived, so those cards were scored by three judges
+        # and the fourth's silence read as agreement. It is not random which ones — a judge writes
+        # most about the card it likes least, so the drop lands on the worst cards. 8000 is room
+        # for the longest verdict seen plus half again; `length` still refuses rather than scores.
+        if r.status_code != 200: out = f"HTTP {r.status_code}: {r.text[:200]}"
+        else:
+            choice = r.json()["choices"][0]
+            out = choice["message"].get("content") or "ERR empty content"
+            if choice.get("finish_reason") == "length": out = f"ERR truncated at max_tokens ({len(out)} chars, no SCORE line)"
     except Exception as e:
         out = f"ERR {type(e).__name__}: {e}"
     rec = {"model": model, "card": card, "verdict": out}
