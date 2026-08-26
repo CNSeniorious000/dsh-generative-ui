@@ -1321,6 +1321,26 @@ every judge twice. That is what makes the +0.45 readable: the panel's spread is 
 pooled delta was a meaningless +0.23, but paired and split by exposure it separates cleanly.
 `scripts/judge-delta.py` does the paired read and refuses to call anything significant below 2 SE.
 
+**Which judge, measured — the panel is four rulers, not four opinions.** Waves 0 and 1 on the
+rebuilt corpus (45 cards with all four judges, 180 scored verdicts) give a mean of 6.01 and 6.50.
+The between-wave gap is the noise floor, not a result: same prompt, different questions, 0.5 apart.
+What is stable is the *offset* — every pair holds its direction on 38 to 43 of the 45 cards:
+
+| pair | mean delta | sd | same direction |
+| --- | --- | --- | --- |
+| `claude-opus-5` − `grok-4.6` | −0.11 | 0.71 | 38/45 |
+| `claude-opus-5` − `gpt-5.6-sol` | −0.62 | 0.82 | 42/45 |
+| `claude-opus-5` − `gemini-3.7-flash` | −1.11 | 0.92 | 42/45 |
+| `grok-4.6` − `gpt-5.6-sol` | −0.51 | 0.69 | 43/45 |
+| `grok-4.6` − `gemini-3.7-flash` | −1.00 | 0.88 | 43/45 |
+| `gpt-5.6-sol` − `gemini-3.7-flash` | −0.49 | 0.73 | 40/45 |
+
+Strictness runs `claude ≈ grok < gpt < gemini`, and it is a property of the judge, not of the card.
+So a wave whose per-card spread is 2.0 is not a wave of controversial cards — reading it that way
+was a wrong call made here once. The number that carries information is the PAIRED delta, whose sd
+is 0.7–0.9 against a between-wave swing of 0.5 in the pooled mean: with the panel held fixed, a
+paired read sees effects the pooled mean cannot. Absolute scores are worth nothing on their own.
+
 The panel's cache used to key on `md5(model + card + SOURCE)`. That is wrong for a check whose
 whole input is the images: the `text-base` fix changed how every card rendered without touching a
 byte of source, so a rerun would have replayed 117 stale verdicts at full confidence and I would
