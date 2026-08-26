@@ -114,7 +114,15 @@ const client = await Bun.build({
     // @esm.sh/tsx's entry reads `import.meta.url`, which does not exist in a CJS factory.
     // Only read on the branches taken when no wasm path was passed, and we always pass one.
     "import.meta.url": JSON.stringify("https://dsh-generative-ui.invalid/"),
-    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "production"),
+    // Hard-coded, not `process.env.NODE_ENV ?? "production"`: `??` only covers an UNSET
+    // variable, and the caller that actually breaks this sets it — `bun test` runs children
+    // with NODE_ENV=test, and one test shells out to a build. That leaves `react-dom/server`
+    // resolving to its DEVELOPMENT build, which reads `ReactDebugCurrentFrame` off the shell's
+    // production React and dies with "cannot read properties of undefined (reading
+    // 'getCurrentStack')" — reported to the model as "your card did not render", on a card that
+    // is fine. A browser bundle we ship is production by definition; nothing here is debuggable
+    // by shipping React's dev build to a reader.
+    "process.env.NODE_ENV": JSON.stringify("production"),
   },
   banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(PLUGIN_ID)}, factory: (require) => {\nvar module = { exports: {} }; var exports = module.exports;`,
   footer: "return module.exports; } });",
@@ -131,4 +139,13 @@ for (const [label, result] of [
     throw new Error(`${label} build failed`);
   }
   for (const output of result.outputs) console.log(`${label}: ${output.path.split("/").slice(-1)[0]} ${(output.size / 1024).toFixed(1)} kB`);
+}
+
+// The one thing a caller's environment could still poison, checked in the artefact rather than
+// trusted from the config: React's DEV builds read internals the shell's production React does
+// not carry, and the symptom is an unrelated TypeError blamed on the card that happened to be
+// rendering. Cheap enough to run on every build.
+const clientSource = await Bun.file(`${OUTDIR}/client.js`).text();
+for (const marker of ["react-dom-server.browser.development", "react/jsx-dev-runtime\")"]) {
+  if (clientSource.includes(marker)) throw new Error(`client bundle carries a React development build (${marker}) — check NODE_ENV handling in this file`);
 }
