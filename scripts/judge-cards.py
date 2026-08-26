@@ -135,7 +135,15 @@ def content_for(card):
 
 
 async def judge(c, model, card, parts, fp):
-    key = hashlib.md5((model + card + fp).encode()).hexdigest()
+    # The RUBRIC is part of the key, and leaving it out has now cost two measurements.
+    # A verdict is a function of (model, images, source, QUESTION ASKED) — change the question
+    # and every cached answer is about a different question. Measured 2026-08-26: the rubric was
+    # rewritten to drop a leading question that had been fabricating a defect in 73% of verdicts,
+    # the re-run replayed 199 cached verdicts, and the paired difference came out **exactly
+    # zero** — which reads like "the rewrite changed nothing" and was really "nothing ran".
+    # §6.6 records the same trap one field over: the key once omitted the IMAGES, so a rendering
+    # fix replayed 117 stale verdicts at full confidence.
+    key = hashlib.md5((model + card + fp + RUBRIC).encode()).hexdigest()
     f = CACHE / f"{key}.json"
     if f.exists(): return json.loads(f.read_text())
     try:
