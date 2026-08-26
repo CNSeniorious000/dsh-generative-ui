@@ -389,6 +389,15 @@ written \`@[30rem]:\`:
 
     <div className="grid grid-cols-1 gap-3 @[30rem]:grid-cols-2">
 
+**Spend the width on the ROW, not inside it.** This is the half that gets missed: 71% of measured
+cards carry a real breakpoint, and a vision panel still called out wasted width in **27% of its
+verdicts** — because the prefixes went on padding, gaps and font sizes while the list itself stayed
+one column at every width. Its words for the result: *"餐名与右侧热量标签间距过宽、视线脱节"* — a
+name on the far left and its number on the far right, 700 pixels apart, on a row that should have
+become two columns. **Before the small stuff, ask what the LIST does with the extra width**: a run
+of items with a label and a value is \`@[30rem]:grid-cols-2\`; a row of three bands is
+\`@[32rem]:grid-cols-[1fr_auto_auto]\` so the three sit on one line instead of stacking.
+
 **Reflowing text is not a responsive layout, and it is what you ship when you write no prefix at
 all.** A card with no breakpoint still "works" at every width — the text simply wraps — so nothing
 looks broken while you write it, and the failure only shows in a screenshot. Measured on one card
