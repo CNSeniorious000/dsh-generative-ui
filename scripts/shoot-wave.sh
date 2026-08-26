@@ -46,6 +46,15 @@ echo "$W: $n cards extracted"
 shoot_one() {
   card=$1; theme=$2
   base=$(basename "$card"); base=${base%.tsx}; base=${base%.ui4a}
+  # Already shot: skip. A wave's shoot is the slowest stage by far, and it gets interrupted —
+  # a killed run, a machine asleep, a retune of the concurrency. Without this, resuming means
+  # re-taking every image that already exists, which is most of them. `SHOOT_FORCE=1` re-takes
+  # anyway, which is what a rendering change needs.
+  if [ "${SHOOT_FORCE:-}" != 1 ]; then
+    have=1
+    for w in 320 440 720; do [ -s "$SHOTS/$base.$theme.$w.png" ] || have=0; done
+    [ "$have" = 1 ] && return
+  fi
   port=$(( 30000 + RANDOM % 20000 ))
   THEME=$theme nohup bun "$REPO/scripts/surface-harness.ts" "$port" "$card" >>"$ROOT/h.log" 2>&1 &
   hp=$!
