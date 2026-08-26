@@ -107,9 +107,68 @@ export type InlineFenceOptions = {
   scope?: HTMLElement;
 };
 
+/**
+ * How far outside the viewport a card is still worth compiling.
+ *
+ * One viewport in each direction: the reader who scrolls towards a card finds it already
+ * rendered, because compiling starts a screen before it arrives. Smaller and a fast scroll
+ * outruns it; much larger and the whole transcript is "near" again, which is the state this
+ * exists to leave.
+ */
+const NEAR_VIEWPORT = "100% 0px";
+
 export function claimInlineFences({ segments, render, scope }: InlineFenceOptions): () => void {
   const claims = new Map<HTMLElement, Claim>();
   const root = scope ?? document.body;
+
+  // Blocks parked until they come near the viewport. Kept so the disposer can stop observing
+  // them, and so `sweep` does not re-observe one it is already watching.
+  const parked = new Set<HTMLElement>();
+  // Blocks the observer has woken. Kept separately because waking does NOT move the block: the
+  // observer fires on entering the margin, while `getBoundingClientRect` still reads whatever
+  // the layout says, so re-measuring in the sweep that the wake triggered parks it straight back
+  // and the card never renders. Membership here is the permission; the sweep clears it.
+  const woken = new Set<HTMLElement>();
+  const nearby: IntersectionObserver | null =
+    typeof IntersectionObserver === "undefined"
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            let woke = false;
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              const block = entry.target as HTMLElement;
+              nearby?.unobserve(block);
+              parked.delete(block);
+              woken.add(block);
+              woke = true;
+            }
+            // One sweep for the batch, not one per block: a scroll can bring a dozen into range
+            // in the same frame, and `sweep` walks the whole transcript each time it runs.
+            if (woke) sweep();
+          },
+          { rootMargin: NEAR_VIEWPORT },
+        );
+
+  /** True when this block should wait. An incomplete (still streaming) segment never waits — it is what the reader is watching. */
+  const defer = (block: HTMLElement, segment: Ui4aSegment): boolean => {
+    if (nearby === null || !segment.complete) return false;
+    if (woken.delete(block)) return false;
+    if (parked.has(block)) return true;
+    // `getBoundingClientRect` rather than waiting for the observer's first callback: the observer
+    // reports asynchronously, so a block would be claimed before its first entry ever arrives and
+    // the deferral would never happen at all.
+    const box = block.getBoundingClientRect();
+    const limit = (globalThis.innerHeight || 0) || 0;
+    // A zero-height box means the block is not laid out yet (display:none, or an ancestor still
+    // hidden). That is not "far away", and treating it as such parks a card that is about to be
+    // visible, so measure it again next sweep instead of parking it.
+    if (limit === 0 || (box.height === 0 && box.width === 0)) return false;
+    if (box.bottom > -limit && box.top < limit * 2) return false;
+    parked.add(block);
+    nearby.observe(block);
+    return true;
+  };
 
   const release = (claim: Claim, restore: boolean) => {
     claim.painted?.disconnect();
@@ -132,6 +191,18 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // A streaming block's rendered text is a prefix of its segment; a settled one equals it.
       const segment = matchSegment(current, code);
       if (segment === undefined) continue;
+      // FAR OFFSCREEN AND NOT YET STREAMING: leave it for later. Claiming a block compiles it,
+      // mounts a React root, runs every effect it declares and pulls its third-party imports off
+      // esm.sh — a Monaco card costs megabytes and starts a language service. `isConnected` was
+      // the only liveness test here, and the host keeps a long transcript's messages in the DOM,
+      // so scrolling back through twenty cards paid all of that twenty times over for cards
+      // nobody was looking at.
+      //
+      // A STREAMING block is never deferred: it is what the reader is watching, and its segment
+      // is still growing. `defer` also answers false when there is no observer (no
+      // IntersectionObserver, or `scope` is detached in a test), so the behaviour without one is
+      // exactly what it was before.
+      if (defer(block, segment)) continue;
       block.setAttribute(CLAIMED, "");
       const mount = document.createElement("div");
       mount.setAttribute(MOUNT, "");
@@ -217,6 +288,11 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
 
   return () => {
     stop();
+    // `disconnect` rather than unobserving each: the observer is going away with us, and a
+    // parked block that is never claimed would otherwise keep it alive through its target list.
+    nearby?.disconnect();
+    parked.clear();
+    woken.clear();
     for (const claim of claims.values()) release(claim, true);
   };
 }

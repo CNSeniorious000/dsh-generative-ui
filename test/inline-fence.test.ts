@@ -20,6 +20,7 @@ let unmounts = 0;
 let frames: (() => void)[] = [];
 let blocks: any[] = [];
 let observers: { target: any; fire: () => void }[] = [];
+let intersections: { target: any; enter: () => void }[] = [];
 
 const paint = () => {
   const due = frames;
@@ -28,12 +29,15 @@ const paint = () => {
 };
 
 /** A `.md-code-block` wrapper with a `<pre>` inside, plus the members the module touches. */
-const makeBlock = (text: string) => {
+const makeBlock = (text: string, top = 0) => {
   const pre = { textContent: text };
   const block: any = {
     attrs: {} as Record<string, string>,
     style: {},
     isConnected: true,
+    // Where this block sits relative to the viewport. `defer` measures it, so a test that wants
+    // an offscreen block sets `top` far below `innerHeight`.
+    getBoundingClientRect: () => ({ top, bottom: top + 200, height: 200, width: 300 }),
     children: [] as any[],
     querySelector: (sel: string) => (sel === "pre" ? pre : null),
     setAttribute(k: string, v: string) {
@@ -66,11 +70,25 @@ beforeEach(() => {
   frames = [];
   blocks = [];
   observers = [];
+  intersections = [];
   (globalThis as any).requestAnimationFrame = (cb: () => void) => {
     frames.push(cb);
     return frames.length;
   };
   (globalThis as any).cancelAnimationFrame = () => {};
+  (globalThis as any).innerHeight = 800;
+  (globalThis as any).IntersectionObserver = class {
+    constructor(private cb: (entries: { target: any; isIntersecting: boolean }[]) => void) {}
+    observe(target: any) {
+      intersections.push({ target, enter: () => this.cb([{ target, isIntersecting: true }]) });
+    }
+    unobserve(target: any) {
+      intersections = intersections.filter((i) => i.target !== target);
+    }
+    disconnect() {
+      intersections = [];
+    }
+  };
   (globalThis as any).MutationObserver = class {
     constructor(private cb: () => void) {}
     observe(target: any) {
@@ -295,4 +313,62 @@ test("disposing does not touch a block that is already gone", async () => {
   stop();
   expect(block.style.display).toBe("none");
   expect(unmounts).toBe(1);
+});
+
+/**
+ * A card far below the fold costs everything a visible one costs — the compile, a React root,
+ * every effect it declares, and its third-party imports off esm.sh. `isConnected` was the only
+ * liveness test, and the host keeps a long transcript in the DOM, so scrolling back through
+ * twenty cards paid all of that twenty times for cards nobody was looking at. Measured on a real
+ * trace: one Monaco card spent 22 seconds of worker time and 571ms registering languages.
+ */
+const CODE = "export default () => <div />";
+
+test("a settled card far below the viewport waits until it comes near", async () => {
+  makeBlock(CODE, 5000); // innerHeight is 800, so this is six screens down
+  const { stop } = await start(() => [segment(CODE)]);
+  expect(painted).toEqual([]);
+  expect(blocks[0].attrs["data-ui4a-claimed"]).toBeUndefined();
+  expect(intersections).toHaveLength(1);
+
+  intersections[0]!.enter();
+  await Promise.resolve();
+  expect(painted).toEqual([{ code: CODE, streaming: false }]);
+  expect(blocks[0].attrs["data-ui4a-claimed"]).toBe("");
+  stop();
+});
+
+// The reader is watching this one arrive. Deferring it would show them the source instead.
+test("a streaming card is claimed however far down the page it is", async () => {
+  makeBlock(CODE, 5000);
+  const { stop } = await start(() => [segment(CODE, false)]);
+  expect(painted).toEqual([{ code: CODE, streaming: true }]);
+  expect(intersections).toHaveLength(0);
+  stop();
+});
+
+// A block one screen down is on its way in: compiling now is what makes it ready on arrival.
+test("a card just below the fold is claimed immediately", async () => {
+  makeBlock(CODE, 900);
+  const { stop } = await start(() => [segment(CODE)]);
+  expect(painted).toHaveLength(1);
+  stop();
+});
+
+/**
+ * Without an IntersectionObserver — an old browser, or a test harness that does not stub one —
+ * every block must be claimed exactly as before. A performance optimisation that silently drops
+ * cards on a host it cannot measure is worse than the cost it saves.
+ */
+test("no IntersectionObserver means no deferral", async () => {
+  const saved = (globalThis as any).IntersectionObserver;
+  (globalThis as any).IntersectionObserver = undefined;
+  try {
+    makeBlock(CODE, 5000);
+    const { stop } = await start(() => [segment(CODE)]);
+    expect(painted).toEqual([{ code: CODE, streaming: false }]);
+    stop();
+  } finally {
+    (globalThis as any).IntersectionObserver = saved;
+  }
 });
