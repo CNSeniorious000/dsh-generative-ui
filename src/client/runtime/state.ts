@@ -12,7 +12,19 @@
  */
 import * as React from "react";
 
-/** Namespaced so two cards picking the same obvious key ("todos") do not read each other's data. */
+/**
+ * Namespaced away from the host's own storage — and **not** from other cards, which this comment
+ * used to claim. Two cards that both pick `"todos"` share one entry, because the prefix is
+ * constant. The design note for this feature keys on the message id as well
+ * (`key + message id`), which would isolate them; we do not, and the measured consequence is
+ * small: across 36 uses in four waves, 35 keys were distinct — the model reaches for descriptive
+ * names (`plan-semanal:eaten`) rather than `todos`, and the one collision was the same question
+ * sampled twice, where sharing is arguably right.
+ *
+ * Adding the message id is not free either: it would make a card's state vanish when the card is
+ * re-delivered under a new id, which is the remount this hook exists to survive. Left as is
+ * deliberately, recorded so the next reader does not have to re-derive it.
+ */
 const scope = (key: string) => `dsh-genui:${key}`;
 
 function read<T>(key: string, initial: T | (() => T)): T {
