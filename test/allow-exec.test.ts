@@ -80,6 +80,7 @@ test("the handler carries no switch of its own — the route is the switch", () 
 // as well, guarded so a host that DOES have settings mounts once, not twice.
 test("a host with no settings service still mounts the prompt and the skill", () => {
   const sections: unknown[] = [];
+  const contexts: unknown[] = [];
   const skills: unknown[] = [];
   const stub = {
     // A headless host: no settings service, no web server, no skills subsystem beyond the one
@@ -88,7 +89,7 @@ test("a host with no settings service still mounts the prompt and the skill", ()
     inject: (names: string[], run: (c: unknown) => void) => { if (names.every((n) => n in stub)) run(stub); },
     effect: (run: () => unknown) => void run(),
     plugin: (spec: { apply: (c: unknown) => void }) => { spec.apply(stub); return { dispose: async () => {} }; },
-    systemPrompt: { section: (s: unknown) => void sections.push(s) },
+    systemPrompt: { section: (s: unknown) => void sections.push(s), context: (c: unknown) => void contexts.push(c) },
     skills: { register: (s: unknown) => void skills.push(s) },
   };
   const { apply } = require("../src/index.ts") as { apply: (c: unknown, config: unknown) => void };

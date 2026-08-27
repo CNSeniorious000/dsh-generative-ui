@@ -8,7 +8,7 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
-import { cardRendered, reportCardError } from "./runtime/report-error.ts";
+import { cancelPendingReport, cardRendered, reportCardError } from "./runtime/report-error.ts";
 import { disposeCompiler } from "./runtime/compiler.ts";
 import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
@@ -20,6 +20,7 @@ import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
 import { mountCanvasHost } from "./canvas/index.ts";
 import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
 import { canvasIdOf } from "../contract.ts";
+import { CARD_ERROR_PATH } from "../contract-assets.ts";
 
 export const inject = ["sessions"];
 
@@ -88,7 +89,7 @@ export function apply(ctx: ClientContext): void {
   // second leaves the timer holding a closure over a conversation that is being torn down. There
   // is nothing to flush — a report nobody will read is not worth delivering — so cancelling is
   // the whole disposer, and `cardRendered` already is one.
-  ctx.effect(() => () => cardRendered(), "dsh-generative-ui: pending error report");
+  ctx.effect(() => () => cancelPendingReport(), "dsh-generative-ui: pending error report");
   // The wasm half of the same problem: ~16MB per instance, one per HMR round, and upstream
   // offers no dispose — dropping the reference is all there is (see `disposeCompiler`).
   ctx.effect(
@@ -134,14 +135,19 @@ export function apply(ctx: ClientContext): void {
   });
   // A card that fails to compile used to be a red panel the reader saw and the model never did.
   // `onError` fires only for a failure that survived settling and retries, so this is the real
-  // ones — see `report-error.ts` for why it is once per message and why it says it is automatic.
-  const sendToModel = (text: string) => {
+  // ones — see `report-error.ts` for why it is once per message and why it waits a beat.
+  //
+  // A route rather than `conversation.send`: the detail belongs in the model's CONTEXT, which is
+  // assembled host-side, and a chat message could never be taken back once the card was fixed.
+  // `card-failure.ts` has the rest.
+  const sendToModel = (report: { message: string; phase: string } | null) => {
     const id = currentSession();
-    const session = id === undefined ? undefined : ctx.sessions.scope(id);
-    if (session === undefined) return;
-    session.inject(["conversation"], (addressed) => {
-      void addressed.conversation.send(text).catch((error: unknown) => console.error("[dsh-generative-ui] card error report failed", error));
-    });
+    if (id === undefined) return;
+    void fetch(`${CARD_ERROR_PATH}?session=${encodeURIComponent(id)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(report ?? {}),
+    }).catch((error: unknown) => console.error("[dsh-generative-ui] card error report failed", error));
   };
 
   // Mounted inside the effect, not beside it: `mountCanvasHost` reaches for MutationObserver

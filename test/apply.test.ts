@@ -52,7 +52,7 @@ const applyWith = (available: readonly string[], config: unknown = {}) => {
   return { registrations, effects, asked };
 };
 
-const ALL = ["webServer", "sessions", "fs", "sandboxPolicy", "shell", "llm", "agentDefaultModel", "skills", "settings", "web"];
+const ALL = ["webServer", "sessions", "fs", "sandboxPolicy", "shell", "llm", "agentDefaultModel", "skills", "settings", "web", "agents"];
 
 test("a full profile registers every route", () => {
   const { effects } = applyWith(ALL, { allowExec: true });

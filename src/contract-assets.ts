@@ -44,3 +44,14 @@ export const EXEC_PATH = "/dsh-generative-ui/exec";
  * re-opening from here what the host closed for its own tools is not ours to do.
  */
 export const WEB_SEARCH_PATH = "/dsh-generative-ui/web-search";
+
+/**
+ * A card's surviving failure, reported by the browser half: `?session=<id>`, POST
+ * `{message, phase}` to set it and `{}` to clear it.
+ *
+ * The detail does NOT come back as a chat message. It becomes a runtime-context snapshot
+ * (`ui4a:card-failure`), which is re-evaluated per assembly and superseded by the next one, so a
+ * card that gets fixed stops being mentioned instead of leaving a stale complaint in history. The
+ * route only carries the state; `wakeAgent` is what asks the model to look at it.
+ */
+export const CARD_ERROR_PATH = "/dsh-generative-ui/card-error";

@@ -24,10 +24,27 @@ import type {} from "@deepseek-ai/dsh-skill";
 // A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
 // and this is the constructor that stamps the identity and source tags it requires.
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
-import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, EXEC_PATH, FS_PATH, WASM_PATH, WEB_SEARCH_PATH } from "./contract-assets.ts";
+import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, CARD_ERROR_PATH, EXEC_PATH, FS_PATH, WASM_PATH, WEB_SEARCH_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
+import { CardFailures, CARD_FAILURE_CONTEXT, CARD_FAILURE_CONTEXT_ORDER, WAKE_SUMMARY, WAKE_TEXT } from "./card-failure.ts";
 import { inlinePrompt, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
 import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
+
+/**
+ * The one field of the assembling agent this plugin reads: its id, which IS the session id.
+ *
+ * Declared here rather than by importing `@deepseek-ai/dsh-agent`, which owns the real
+ * augmentation. That package also augments cordis `Context` with the HOST's `sessions` service,
+ * and the augmentation is global — pulling it in retyped `ctx.sessions` inside `src/client/`,
+ * where the session store is the browser runtime's and has `getSnapshot`/`binding` instead.
+ * Six type errors in files this change does not touch. One optional field is the whole
+ * dependency, so it is cheaper to state it than to import the package that carries it.
+ */
+declare module "@deepseek-ai/dsh-system-prompt" {
+  interface AssembleContext {
+    agent?: { readonly id: string };
+  }
+}
 
 export const name = "dsh-generative-ui";
 export const inject = ["systemPrompt"];
@@ -533,6 +550,27 @@ function applyWith(ctx: Context, allowExec: boolean): void {
   // teaches the model to write cards that cannot work — and the failure surfaces to the user as a
   // dead card, not as a disabled feature.
   ctx.effect(() => ctx.systemPrompt.section({ name: PROMPT_SECTION_NAME, order: PROMPT_SECTION_ORDER, text: inlinePrompt(allowExec) }), "dsh-generative-ui: inline prompt");
+  // A card that will not render, as CONTEXT rather than as a message — see `card-failure.ts`.
+  // The provider runs per assembly, so an empty string is how a fixed card stops being mentioned;
+  // `agent.id` is the session id, which is what the browser half keys its reports on.
+  const failures = new CardFailures();
+  ctx.effect(() => ctx.systemPrompt.context({ name: CARD_FAILURE_CONTEXT, order: CARD_FAILURE_CONTEXT_ORDER, text: (assembly) => failures.text(assembly.agent?.id) }), "dsh-generative-ui: card failure context");
+  // The nudge needs the agent registry, which a diagnostic or headless composition may not have.
+  // Scoped, like every other capability here: without it the failure still reaches the model, just
+  // on the next turn the user starts rather than on one of its own.
+  let wake: ((session: string) => void) | null = null;
+  ctx.inject(["agents"], (withAgents) => {
+    wake = (session) => {
+      const agent = (withAgents as unknown as { agents: { get: (id: string) => { followup: (message: ReturnType<typeof createUserMessage>) => void } | undefined } }).agents.get(session);
+      // `source.kind` is what the transcript renders on: anything other than `"user"` is
+      // classified as injected context rather than a chat bubble, which is why this can wake the
+      // model without putting words in the reader's mouth. `form: "notice"` is the presentation.
+      agent?.followup(createUserMessage({ content: [{ type: "text", text: WAKE_TEXT }], source: { kind: "plugin", plugin: "dsh-generative-ui", form: "notice", summary: WAKE_SUMMARY } }));
+    };
+    return () => {
+      wake = null;
+    };
+  });
   // Both routes only matter to a browser half that exists to consume them. Scoped rather than
   // required so the plugin still teaches the model on a profile with no web server at all —
   // `dsh --profile headless` has no `webServer`, and a required injection there means the
@@ -551,6 +589,10 @@ function applyWith(ctx: Context, allowExec: boolean): void {
     };
     scoped.effect(() => scoped.webServer.register({ kind: "prefix", path: ASSET_PREFIX, handler: (req, res) => serveAsset(req, res, file) }), "dsh-generative-ui: tsx wasm");
     scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CANVAS_READ_PATH, handler: (req, res) => serveCanvas(liveWorkspaces, req, res) }), "dsh-generative-ui: canvas reads");
+    // Beside the canvas route rather than under `fs`/`shell`/`llm`: reporting a broken card needs
+    // nothing but a web server, and it is worth the least on the compositions that have the most
+    // missing — a card whose capability module is absent is exactly the card that fails.
+    scoped.effect(() => scoped.webServer.register({ kind: "exact", path: CARD_ERROR_PATH, handler: (req, res) => serveCardError(failures, () => wake, req, res) }), "dsh-generative-ui: card failures");
     // One level deeper again: a deployment can mount a web server without an LLM runtime, and
     // losing `$dsh/ai` there should not take the wasm and canvas routes down with it.
     // Same shape again: a deployment can serve the web without a sandboxed filesystem, and
@@ -580,4 +622,48 @@ function applyWith(ctx: Context, allowExec: boolean): void {
   ctx.inject(["skills"], (scoped) => {
     scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: skillBody(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url)), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
   });
+}
+
+/**
+ * Record or clear one session's failing card, and wake the model when the failure is news.
+ *
+ * `POST ?session=<id>` with `{message, phase}` to set it and `{}` to clear it. The detail never
+ * comes back as a chat message — it becomes the `ui4a:card-failure` runtime context, which the
+ * assembly re-reads each step. See `card-failure.ts` for why the two halves are split.
+ *
+ * The wake is looked up per request rather than captured: the agent registry is scoped, so the
+ * function it hands out can go away while this route stays up, and a stale capture would call
+ * into a disposed fiber.
+ *
+ * Exported for `test/card-error-route.test.ts`.
+ */
+export async function serveCardError(failures: CardFailures, wake: () => ((session: string) => void) | null, req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if (req.method !== "POST") return void res.writeHead(405).end();
+  const url = new URL(req.url ?? "", "http://localhost");
+  const session = url.searchParams.get("session");
+  if (session === null || session === "") return void res.writeHead(400).end();
+
+  let body = "";
+  for await (const chunk of req) {
+    body += chunk as string;
+    if (body.length > MAX_BODY) return void res.writeHead(413).end();
+  }
+  let report: { message?: string; phase?: string };
+  try {
+    report = JSON.parse(body) as typeof report;
+  } catch {
+    return void res.writeHead(400).end();
+  }
+
+  // No message means the card recovered. Clearing is the whole point of routing this through
+  // state instead of the transcript, so it is not an afterthought: without it the model keeps
+  // reading about a card that has been fine for ten turns.
+  if (report.message === undefined || report.message === "") {
+    failures.clear(session);
+  } else if (failures.set(session, { message: report.message, phase: report.phase ?? "compile" })) {
+    // Only on news. A settled card that fails re-renders on every later frame of the transcript,
+    // and a turn per render is a loop the reader has to kill.
+    wake()?.(session);
+  }
+  res.writeHead(204).end();
 }

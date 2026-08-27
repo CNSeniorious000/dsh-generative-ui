@@ -22,34 +22,24 @@
  *   frame costs nothing; sending the model a message about a card that then worked costs it a
  *   turn spent fixing what is not broken. So the send is DEFERRED, and a paint cancels it.
  * - **Once per card, not once per frame.** A settled card that fails re-renders on every later
- *   frame of the transcript, and a message per render is a loop the user has to kill. Keyed on
- *   the message text.
- * - **Announced as automatic.** The model is about to read a user-role message it was not sent.
- *   Saying where it came from is what stops it replying "sorry about that" to a person who typed
- *   nothing.
+ *   frame of the transcript, and a turn per render is a loop the user has to kill. Deduplication
+ *   lives HOST-side now (`CardFailures.set`), because this half is thrown away by every
+ *   navigation and a dedup set that resets on reload wakes the model about a card it already
+ *   knows. What stays here is the settling, which is about frames, not about turns.
+ * - **Recovery is reported too.** The report is state, not an event: a card that starts working
+ *   sends `null`, and the host drops it out of the model's context. As a chat message that was
+ *   impossible, which is why the old body had to carry a paragraph explaining that nobody had
+ *   typed it.
  */
-const sent = new Set<string>();
 
 /** Exported for the test: a fresh card in a fresh session should be able to report again. */
 export const forgetReportedErrors = () => {
-  sent.clear();
-  cardRendered();
+  cancelPendingReport();
+  outstanding = null;
 };
 
-export type ErrorReporter = (text: string) => void;
-
-/**
- * The message body. Kept short and factual: it is spent from the user's context window, and the
- * one thing the model needs is what failed and that nobody typed it.
- *
- * English, like the prompt and the skill it sits beside. This message is the only text this
- * plugin puts into the conversation, and writing it in Chinese did two things: it read as a
- * different voice from everything else the plugin says, and — because a card must be written in
- * the language the USER wrote in — it pushed the model toward answering a Spanish or French
- * speaker in the wrong language for the rest of the turn.
- */
-export const reportBody = (message: string, phase: string) =>
-  `[automatic] The card you just wrote did not render. It failed at the ${phase} step:\n\n${message}\n\nThis was sent by the renderer, not by the user — nobody typed it, so do not apologise or address it as a request. If the error names the correct usage (the available exports, for instance), fix the card and send it again. If it does not, look it up before you change anything, and answer in the language the user has been writing in.`;
+/** `null` means the card recovered. */
+export type ErrorReporter = (report: { message: string; phase: string } | null) => void;
 
 /**
  * How long an error must stand before the model hears about it. A streaming card recompiles many
@@ -59,6 +49,21 @@ export const reportBody = (message: string, phase: string) =>
 const SETTLE_MS = 1000;
 
 let pending: { timer: ReturnType<typeof setTimeout>; message: string } | null = null;
+/**
+ * Whether the host currently holds a failure for this surface.
+ *
+ * The report is state, so recovery has to be reported too — otherwise a card that failed once
+ * stays in the model's context for the rest of the session. Kept here rather than derived from
+ * `pending`, which is only the not-yet-sent window.
+ */
+let outstanding: ErrorReporter | null = null;
+
+/** Drop a report the page is going away before it can deliver. NOT a recovery — nothing is fixed. */
+export function cancelPendingReport(): void {
+  if (pending === null) return;
+  clearTimeout(pending.timer);
+  pending = null;
+}
 
 /**
  * Called when a surface paints. Cancels a report the very next frame made untrue.
@@ -72,22 +77,20 @@ let pending: { timer: ReturnType<typeof setTimeout>; message: string } | null = 
  */
 export function cardRendered(restored = false): void {
   if (restored) return;
-  if (pending === null) return;
-  clearTimeout(pending.timer);
-  pending = null;
+  cancelPendingReport();
+  // A card that is working again must be taken OUT of the model's context, or it reads about a
+  // failure that no longer exists on every step for the rest of the session.
+  const send = outstanding;
+  outstanding = null;
+  send?.(null);
 }
 
 export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string): void {
   if (send === undefined) return;
-  if (sent.has(message)) return;
   if (pending !== null) clearTimeout(pending.timer);
-  // The dedup key is claimed WHEN SENT, not when armed. Claiming it here instead cost the model
-  // the message entirely whenever the pending report was cancelled — and cancelling is the normal
-  // path (`cardRendered` fires on the very next paint), so a card that failed, recovered, and
-  // failed the same way again reported nothing at all, twice.
   pending = { timer: setTimeout(() => {
     pending = null;
-    sent.add(message);
-    send(reportBody(message, phase));
+    outstanding = send;
+    send({ message, phase });
   }, SETTLE_MS), message };
 }
