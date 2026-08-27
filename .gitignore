@@ -10,3 +10,5 @@ src/client/canvas/panel-css.ts
 .research/
 .wave-running
 __pycache__/
+eval/.turns.patch.generated.yml
+eval/turns.patch.yml
