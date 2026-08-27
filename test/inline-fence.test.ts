@@ -40,6 +40,9 @@ const makeBlock = (text: string, top = 0) => {
     getBoundingClientRect: () => ({ top, bottom: top + 200, height: 200, width: 300 }),
     children: [] as any[],
     querySelector: (sel: string) => (sel === "pre" ? pre : null),
+    // `sweep` skips blocks inside our own preview/mount wrappers — see the comment there. A host
+    // block has no such ancestor; `makeOurBlock` below is the one that does.
+    closest: () => null,
     setAttribute(k: string, v: string) {
       this.attrs[k] = v;
     },
@@ -371,4 +374,123 @@ test("no IntersectionObserver means no deferral", async () => {
   } finally {
     (globalThis as any).IntersectionObserver = saved;
   }
+});
+
+/**
+ * A new block must not be handed an OLDER card's code.
+ *
+ * `matchSegment` matches by prefix and takes the first hit in document order, and every generated
+ * card opens the same way. Measured on a real transcript (three cards, all starting
+ * `import { useState } from "react"`): the third card's opening 40 characters were still a prefix
+ * of the FIRST card's code, so its slot rendered card one in full. When the texts diverged at
+ * 276ms the delivery became a `restart`, and the partial buffer had no `export default` until
+ * 3118ms — 2.8 seconds of blank between someone else's card and its own.
+ */
+test("a new block is not given an older card's code", async () => {
+  const shared = 'import { useState } from "react"\n';
+  const older = `${shared}import { sendMessage } from "$dsh/chat"\nexport default () => <div>old</div>`;
+  const newer = `${shared}import * as Tabs from "@radix-ui/react-tabs"\nexport default () => <div>new</div>`;
+  // The older card is on screen and claimed; the new one has only streamed the shared line.
+  const olderBlock = makeBlock(older);
+  let segmentsNow = [segment(older), segment(shared, false)];
+  const { stop, again } = await start(() => segmentsNow);
+  expect(painted.at(-1)).toEqual({ code: older, streaming: false });
+  olderBlock.setText(older);
+  const block = makeBlock(shared);
+  again();
+  expect(painted.at(-1)).toEqual({ code: shared, streaming: true });
+  again();
+  expect(painted.filter((p) => p.code === older)).toHaveLength(1);
+  // And once its own text arrives it settles on its OWN card, not the older one.
+  segmentsNow = [segment(older), segment(newer)];
+  block.setText(newer);
+  again();
+  expect(painted.at(-1)).toEqual({ code: newer, streaming: false });
+  stop();
+});
+
+// Nothing is claimed yet — a reload presents every block at once — so the reservation has to hold
+// WITHIN one sweep as well, or all of them match the first segment.
+test("blocks claimed in the same sweep do not share a segment", async () => {
+  const shared = 'import { useState } from "react"\n';
+  const first = `${shared}export default () => <div>first</div>`;
+  const second = `${shared}export default () => <div>second</div>`;
+  makeBlock(first);
+  makeBlock(second);
+  const { stop } = await start(() => [segment(first), segment(second)]);
+  expect(painted.map((p) => p.code)).toEqual([first, second]);
+  stop();
+});
+
+/**
+ * A replaced block must be able to claim its segment in the SAME sweep the old claim dies in.
+ *
+ * The host re-renders the transcript on every streamed frame, and React can swap the
+ * `.md-code-block` wrapper rather than update it. The claim on the old node is dead but still in
+ * `claims`, so building the reservation before releasing it let a corpse hold the segment for one
+ * more sweep: the replacement block found nothing free, painted nothing, and the next sweep —
+ * with the corpse gone — painted again. Measured as `BLANK, painted, BLANK, painted`: a card that
+ * flickers for the whole stream, and only while it is too early to render anything else.
+ */
+test("a block replaced mid-stream claims without a blank sweep", async () => {
+  const code = 'import { useState } from "react"\nexport';
+  let block = makeBlock(code);
+  const { stop, again } = await start(() => [segment(code, false)]);
+  const trace: string[] = [];
+  for (let n = 0; n < 4; n += 1) {
+    // The wrapper is swapped; the segment has not changed, so nothing else frees the reservation.
+    block.isConnected = false;
+    blocks.length = 0;
+    block = makeBlock(code);
+    const before = painted.length;
+    again();
+    trace.push(painted.length > before ? "painted" : "blank");
+  }
+  expect(trace).toEqual(["painted", "painted", "painted", "painted"]);
+  stop();
+});
+
+/**
+ * Our own source preview must never be claimed as a block.
+ *
+ * `CodeBlock` — the host component the preview is rendered with — puts `md-code-block` on its own
+ * root, so every preview is itself a match for the sweep's selector. Claiming one mounts a card
+ * inside it, whose preview is a third block, and so on.
+ *
+ * Recorded live, several times a second for the whole stream: `blocks` 1 → 2 → 3 with `mounts` and
+ * `prev` climbing alongside, then the whole stack collapsing to 0 and rebuilding. That is the
+ * flicker, and it also explains a flood of `blob:` module loads — one compile per mounted card.
+ *
+ * The segment reservation does NOT cover this. It holds `claim.reserved`, the code from the
+ * PREVIOUS frame, while `segments()` has already grown, so mid-stream the two never compare equal
+ * and nothing is excluded. Ownership of the NODE is the durable answer.
+ */
+test("our own preview is never claimed as a block", async () => {
+  const code = 'export default () => <div />';
+  makeBlock(code);
+  const { stop, again } = await start(() => [segment(code, false)]);
+  expect(painted).toHaveLength(1);
+
+  // The preview React renders one frame later: same class, same text, inside our preview host.
+  const preview = makeBlock(code);
+  preview.closest = (sel: string) => (sel === "[data-ui4a-preview]" ? preview : null);
+  again();
+
+  expect(painted).toHaveLength(1);
+  expect(preview.attrs["data-ui4a-claimed"]).toBeUndefined();
+  stop();
+});
+
+// Same rule for a card that renders a code block of its own: it lives inside our mount, and
+// claiming it would mount a card inside a card.
+test("a code block a card renders is never claimed", async () => {
+  const code = 'export default () => <div />';
+  makeBlock(code);
+  const { stop, again } = await start(() => [segment(code, false)]);
+  const inner = makeBlock(code);
+  inner.closest = (sel: string) => (sel === "[data-ui4a-mount]" ? inner : null);
+  again();
+  expect(painted).toHaveLength(1);
+  expect(inner.attrs["data-ui4a-claimed"]).toBeUndefined();
+  stop();
 });

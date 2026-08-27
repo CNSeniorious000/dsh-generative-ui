@@ -42,7 +42,8 @@ const dropPreview = (claim: { preview: { host: HTMLElement; root: Root } | null 
   });
 };
 
-type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; complete: boolean; rendered: string; painted: MutationObserver | null; preview: { host: HTMLElement; root: Root } | null };
+/** `reserved` is the segment code this claim owns, so no other block can be matched to it — see `sweep`. */
+type Claim = { block: HTMLElement; mount: HTMLElement; root: Root; code: string; reserved: string; complete: boolean; rendered: string; painted: MutationObserver | null; preview: { host: HTMLElement; root: Root } | null };
 
 /**
  * Whether the card has actually painted something a reader can see.
@@ -184,12 +185,41 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
 
   const sweep = () => {
     const current = segments();
+    // Dead claims first, because the reservation below is built from what claims hold. A block
+    // the host's markdown re-render replaced is gone but its claim is not, and releasing it in
+    // the loop *after* the claim loop let it reserve its segment for one more sweep — long
+    // enough for the replacement block to find nothing free and paint nothing. With the
+    // re-render happening every streamed frame that alternates, and the card flickers.
+    for (const claim of claims.values()) if (!claim.block.isConnected) release(claim, false);
+    // A segment backs at most one block. `matchSegment` matches by PREFIX and takes the first
+    // hit in document order, and every generated card opens with the same line — measured on a
+    // real transcript, all three cards started `import { useState } from "react"`, so the third
+    // card's opening 40 characters were still a prefix of the FIRST card's code. Its slot
+    // rendered card one in full, then blanked for 2.8s when the texts diverged and the partial
+    // buffer had no `export default` yet: content, then nothing, then finally the right card.
+    // Excluding what live claims already own leaves each new block only the segments still going
+    // spare, which in a growing transcript is the one still streaming.
+    const taken = new Set([...claims.values()].map((claim) => claim.reserved));
 
     for (const block of root.querySelectorAll<HTMLElement>(`.md-code-block:not([${CLAIMED}])`)) {
+      // OUR OWN nodes are not candidates. `CodeBlock` — the host component the source preview is
+      // rendered with — puts `md-code-block` on its own root, so every preview we mount is itself
+      // a match for this selector, and a card that renders a code block is another. Claiming one
+      // mounts a card inside it, whose preview is a third block, and so on.
+      //
+      // Measured in a live session: `blocks` climbed 1 → 2 → 3 while `mounts` and `prev` climbed
+      // with it, then the whole stack collapsed to 0 and rebuilt, several times a second — the
+      // flicker. The reservation below does NOT stop it: it holds `claim.reserved`, the code from
+      // the PREVIOUS frame, while the segment has already grown, so mid-stream the two never
+      // match and nothing is excluded.
+      if (block.closest(`[${PREVIEW}]`) !== null || block.closest(`[${MOUNT}]`) !== null) continue;
       const code = codeOf(block);
       if (code === "") continue;
       // A streaming block's rendered text is a prefix of its segment; a settled one equals it.
-      const segment = matchSegment(current, code);
+      const segment = matchSegment(
+        current.filter((candidate) => !taken.has(candidate.code)),
+        code,
+      );
       if (segment === undefined) continue;
       // FAR OFFSCREEN AND NOT YET STREAMING: leave it for later. Claiming a block compiles it,
       // mounts a React root, runs every effect it declares and pulls its third-party imports off
@@ -219,7 +249,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       previewHost.setAttribute(PREVIEW, "");
       block.parentElement?.insertBefore(previewHost, block);
       block.style.display = "none";
-      const claim: Claim = { block, mount, root: createRoot(mount), code: "", complete: false, rendered: "", painted: null, preview: { host: previewHost, root: createRoot(previewHost) } };
+      const claim: Claim = { block, mount, root: createRoot(mount), code: "", reserved: segment.code, complete: false, rendered: "", painted: null, preview: { host: previewHost, root: createRoot(previewHost) } };
       // The source stays visible until the card paints. Checked at most once per frame and
       // torn down the moment it fires: a streaming card mutates thousands of times, and
       // `textContent` walks the whole subtree, so a per-mutation check would be
@@ -237,9 +267,14 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       });
       claim.painted.observe(mount, { childList: true, subtree: true, characterData: true });
       claims.set(block, claim);
+      // Within this sweep too: a reload presents every block unclaimed at once, and without this
+      // they would all match the same segment.
+      taken.add(segment.code);
     }
 
     for (const claim of claims.values()) {
+      // Already pruned at the top of the sweep; a block can still go while the claim loop above
+      // runs, so this stays as the guard for the rest of this pass.
       if (!claim.block.isConnected) {
         release(claim, false);
         continue;
@@ -256,7 +291,13 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // is still streaming is being re-scanned every frame regardless.
       if (rendered === claim.rendered && claim.code !== "" && claim.complete) continue;
       claim.rendered = rendered;
-      const segment = matchSegment(current, rendered);
+      // Same reservation as the claim loop, minus this claim's own segment: a block whose text is
+      // still the shared opening line matches an older card here too, and the newest block would
+      // be handed the oldest card's code on the very sweep that claimed it.
+      const segment = matchSegment(
+        current.filter((candidate) => candidate.code === claim.reserved || !taken.has(candidate.code)),
+        rendered,
+      );
       // The snapshot is authoritative while it still describes this block: mid-stream its
       // code runs ahead of what markdown has painted. Once it stops describing it — an
       // older page dropped out of the loaded window — the last good frame stands, because
@@ -273,6 +314,10 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
         continue;
       }
       const { code, complete } = segment;
+      // Follow the segment as it grows, or the reservation still names the prefix it was claimed on.
+      taken.delete(claim.reserved);
+      taken.add(code);
+      claim.reserved = code;
       if (code === claim.code && complete === claim.complete) continue;
       claim.code = code;
       claim.complete = complete;
