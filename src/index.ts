@@ -57,16 +57,27 @@ export const SETTINGS_NAMESPACE = settingsNamespace("dsh-generative-ui");
  * `settings.yaml` section against it and builds the settings UI from it, so a plain interface
  * would be a switch nobody can find and nobody can check.
  *
- * `allowExec` is off by default and that default is the point. `$dsh/fs` is bounded — it takes a
- * workspace-relative path and runs under the session's sandbox policy, so the worst it reaches is
- * a file the user could have opened anyway. `$dsh/exec` takes an arbitrary command string, and a
- * card is code a MODEL wrote, running in the user's browser, firing on their keystrokes. The
- * sandbox policy still applies, but "whatever the agent's own bash tool may do" is a much larger
- * surface than a path — and the user never approves a card's commands the way they approve the
- * agent's.
+ * `allowExec` is ON by default, and the trade it makes is worth stating rather than assuming.
+ *
+ * What it is NOT: an escape from the fence. The route resolves `ctx.sandboxPolicy` for the session
+ * and hands it to `ctx.shell`, so a card's command opens nothing the agent's own bash has not
+ * already opened, in a workdir pinned to a live session's workspace, killed after 15s and on the
+ * reader closing the page.
+ *
+ * What it IS: the approval layer does not reach here. `approval.request()` needs an open turn and
+ * an agent, and a card fires on a reader's keystroke long after its turn ended — so the per-command
+ * fence is the sandbox policy alone. Under `workspace-write` a card can therefore delete inside the
+ * workspace with nobody agreeing to it command by command. The prompt answers that where it can
+ * ("observe, never change"; anything destructive belongs in a `sendMessage` the user agrees to),
+ * which is guidance, not a fence.
+ *
+ * Turned on because the capability it gates is the ordinary case, not the exotic one: search
+ * (`fd`, `rg`) that no `$dsh/fs` call expresses, `lint` / `check` / test runs whose output IS the
+ * card, `git log`, and the twenty-`readdir` walks a single `ls -R` replaces. Off, a model reasoning
+ * from a five-capability set writes those as file-by-file loops or does not write the card at all.
  */
 export const Config = z.object({
-  allowExec: z.boolean().default(false).description("Let generated cards run shell commands through `$dsh/exec`. A card is model-written code running in your browser; leave this off unless you want that."),
+  allowExec: z.boolean().default(true).description("Let generated cards run shell commands through `$dsh/exec`, under this session's own sandbox mode. Cards use it to search (`rg`, `fd`), run `lint`/`check`, and read `git`. The sandbox still applies; what does not is the per-command approval prompt, so turn this off for a session where that matters."),
 });
 
 export type Config = ReturnType<typeof Config>;
@@ -620,7 +631,11 @@ function applyWith(ctx: Context, allowExec: boolean): void {
   // subsystem is disabled. Nested, only the skill goes missing.
   // Model-only: `/generative-ui` as a user command would just print the guidance at the user.
   ctx.inject(["skills"], (scoped) => {
-    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, content: skillBody(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url)), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
+    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, // `allowExec` is the third argument and was omitted, so the skill dropped its whole
+    // "Running a command" section even where the route IS registered: the prompt said six
+    // capabilities and the skill described five. Same rule as the prompt — the docs have to
+    // name the set that exists, in both directions.
+    content: skillBody(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url), allowExec), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
   });
 }
 

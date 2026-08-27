@@ -61,15 +61,22 @@ test("a full profile registers every route", () => {
   }
 });
 
-// The route is the switch, so its absence is what "commands are off" MEANS — and off is what a
-// host that says nothing gets. `$dsh/exec` takes an arbitrary command string from model-written
-// code running in the user's browser; `$dsh/fs` takes a workspace path under the sandbox policy.
-// Only one of those is safe to hand out by default.
-test("a full profile does NOT register the command route by default", () => {
-  const { effects } = applyWith(ALL);
+// The route is the switch, so its absence is what "commands are off" MEANS. Note what this does
+// NOT say: `applyWith` passes a bare `{}`, which never went through `Config`, so `allowExec` is
+// absent rather than defaulted. The PRODUCT default (now on) is pinned in `allow-exec.test.ts`
+// against the schema itself — asserting it from here would be asserting it about an object the
+// host would never hand us.
+test("an explicit off leaves the command route unregistered", () => {
+  const { effects } = applyWith(ALL, { allowExec: false });
   expect(effects).not.toContain("dsh-generative-ui: commands");
   expect(effects).toContain("dsh-generative-ui: workspace files");
   expect(effects).toContain("dsh-generative-ui: skill");
+});
+
+// And the other direction, which nothing checked: the setting has to actually reach the route.
+test("with commands on, the route is registered", () => {
+  const { effects } = applyWith(ALL, { allowExec: true });
+  expect(effects).toContain("dsh-generative-ui: commands");
 });
 
 /**

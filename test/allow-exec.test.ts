@@ -1,16 +1,42 @@
 import { expect, test } from "bun:test";
 import { inlinePrompt } from "../src/prompt.ts";
 import { skillBody } from "../src/skill.ts";
-import { serveExec } from "../src/index.ts";
+import { Config, serveExec } from "../src/index.ts";
 
-// `$dsh/exec` takes an arbitrary command string from code a MODEL wrote, running in the user's
-// browser and firing on their keystrokes. `$dsh/fs` is bounded by comparison — a workspace path
-// under the session's sandbox policy. So commands are opt-in, and every assertion here is about
-// the default: a host that says nothing must not get them.
+// Two different defaults live here and conflating them hid a bug for weeks.
+//
+// The PRODUCT default is `Config`'s: what a host that configures nothing gets. It is ON — cards
+// search with `rg`, run `lint`, read `git`, and a model reasoning from a five-capability set
+// writes none of that.
+//
+// The FUNCTION default is `inlinePrompt()` / `skillBody(a, b)`'s omitted argument, and it stays
+// OFF on purpose, because the two directions are not equally bad: docs that under-describe a
+// registered route cost the model a capability it could have used, while docs that describe an
+// UNregistered one produce cards whose import fails — and a failed import takes the whole module
+// down, so the reader gets a blank card naming nothing.
+//
+// Nothing used to pin the product default: these assertions all called the functions with no
+// argument, so flipping `Config` changed nothing here. That is exactly how `skillBody` came to be
+// called without its third argument at the one real call site — the prompt said six capabilities
+// while the skill described five, and every test stayed green.
 
-test("the default is off", () => {
+test("the product default — a host that configures nothing — is ON", () => {
+  expect(Config({}).allowExec).toBe(true);
+});
+
+test("an explicit off is still honoured", () => {
+  expect(Config({ allowExec: false }).allowExec).toBe(false);
+});
+
+test("an omitted argument documents the SMALLER set, which is the safe direction", () => {
   expect(inlinePrompt()).not.toContain("$dsh/exec");
   expect(skillBody(undefined, undefined)).not.toContain("$dsh/exec");
+});
+
+// The call site that reads the setting has to pass it on. Both halves, both directions.
+test("with commands on, both halves document them", () => {
+  expect(inlinePrompt(true)).toContain("$dsh/exec");
+  expect(skillBody(undefined, undefined, true)).toContain("$dsh/exec");
 });
 
 // Not just the import line. A prompt that drops the bullet but keeps "run `git log` in a card"

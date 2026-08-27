@@ -750,13 +750,36 @@ retrieve a page body — render the snippet and link the source.
 
 ## Reading and writing workspace files
 
-\`$dsh/fs\` gives a card \`readFile(path) -> string\`, \`readdir(path) -> {name, type, size}[]\`
+\`$dsh/fs\` gives a card \`readFile(path) -> string\`, \`readBytes(path) -> Uint8Array\`, \`readdir(path) -> {name, type, size}[]\`
 (\`type\` is \`"file"\` or \`"directory"\`, so a tree needs no probing; \`size\` is bytes, absent on
 directories) and \`writeFile(path, content)\` over the workspace. Paths are workspace-relative and
 \`path\` is required — there is no "current directory" argument-less form, under the
 session's own access mode — the same fence the file tools run behind. So a read-only session
 refuses the write, and the card should say so rather than looking broken: catch it and tell
 the user the session is read-only.
+
+**Anything that is not text goes through \`readBytes\`.** \`readFile\` decodes as UTF-8, so a png, a wav
+or a \`.mid\` read that way comes back with every byte above 0x7f replaced by U+FFFD — corrupt, and
+silently so. And there is **no HTTP route that serves workspace files**: \`<img src={\`/\${path}\`}>\`
+resolves against the app, 404s, and the reader gets a page of broken icons. Measured on a real
+canvas that found 357 images and showed none of them. The whole shape is three lines:
+
+\`\`\`tsx
+const [url, setUrl] = useState<string>()
+useEffect(() => {
+  let live = true, made: string | undefined
+  void readBytes(path).then((bytes) => {
+    if (!live) return
+    made = URL.createObjectURL(new Blob([bytes]))
+    setUrl(made)
+  })
+  return () => { live = false; if (made !== undefined) URL.revokeObjectURL(made) }
+}, [path])
+\`\`\`
+
+Revoking is not optional in a browser that keeps a long transcript: one object URL per image per
+mount, never released, is a leak the reader pays for in memory. A grid of them wants an
+\`IntersectionObserver\` too — read the bytes when the cell comes near, not all of them on mount.
 
 Reach for it when the data **belongs to the workspace** — a file the user can also open, edit
 and commit.
