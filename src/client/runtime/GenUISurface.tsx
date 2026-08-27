@@ -24,7 +24,7 @@ export type GenUISurfaceProps = {
    * `push` mode, so a whole-file replacement always renders.
    */
   preserveState?: boolean;
-  /** Real compile diagnostics. Transient streaming frames are filtered out — see TRANSIENT below. */
+  /** Real compile diagnostics. A streaming frame never reaches this — see `errorAction`. */
   onError?: (error: Error, phase: "transform" | "compile" | "render") => void;
   /** Fires whenever a frame actually painted. Use it to clear a previously shown error. */
   onRendered?: (restored: boolean) => void;
@@ -61,15 +61,6 @@ export const compiler = () => {
 };
 
 /**
- * Mid-stream frames legitimately fail: a prefix that has not reached `export default`
- * yet, or a half-written expression. partial-react treats these as transient and keeps
- * the last good frame, so surfacing them would just make the UI flash errors while the
- * model types. Only a failure that survives settling is the caller's business.
- */
-/** Exported for `test/transient.test.ts`: this decides whether the reader sees an error. */
-export const TRANSIENT = /No default export found|Unexpected (end of|eof)/i;
-
-/**
  * A dependency that failed to arrive, not code that is wrong. esm.sh cold-starts and the
  * network drops, and the symptom is identical to a broken component — a blank surface — so
  * it is worth a few retries before anyone concludes the model wrote something wrong.
@@ -85,16 +76,6 @@ const MAX_RETRIES = 3;
  * each of which sends the reader somewhere different when it is wrong. Exported for
  * `test/retry.test.ts`.
  */
-/**
- * Whether a mid-stream error is the stream not being finished yet.
- *
- * Both patterns come from the parse stages — `No default export found` is thrown inside
- * `importCompiledComponent` (compile), and an unexpected EOF is the transform rejecting a
- * prefix. A card whose own render throws a message that happens to match is a real error, so
- * the phase is part of the question rather than the message alone.
- */
-export const isUnfinishedFrame = (message: string, phase: string, streaming: boolean) => streaming && phase !== "render" && TRANSIENT.test(message);
-
 export const shouldRetry = (message: string, phase: string, streaming: boolean, attempts: number) => phase === "compile" && !streaming && TRANSIENT_LOAD.test(message) && attempts < MAX_RETRIES;
 /**
  * What to do with a frame, given what the surface already holds.
@@ -154,6 +135,21 @@ export const deliver = (renderer: RendererCalls, delivery: Delivery): boolean =>
  */
 export const importSignature = (code: string) => [...code.matchAll(/from\s+["']([^"']+)["']/g)].map((match) => match[1]).join(" ");
 
+/**
+ * Whether a failure suppressed during streaming still has to be told to someone.
+ *
+ * The hole this closes: `errorAction` ignores every streaming frame (a truncated one is not a
+ * broken card), and `deliveryFor` answers `nothing` when the settled frame is byte-identical to
+ * the last streamed one. Both are right on their own, and together they mean a card that really
+ * is broken recompiles never and reports never.
+ *
+ * Pure, and exported, because it is three conditions and each one is a distinct bug when wrong:
+ * without `!streaming` it fires mid-stream and undoes the fix it belongs to; without `stranded`
+ * it reports nothing; without the `reportedFor` guard a settled card re-rendered by every later
+ * frame of the transcript reports on each one.
+ */
+export const reportStranded = (streaming: boolean, stranded: unknown, code: string, reportedFor: string) => !streaming && stranded !== null && reportedFor !== code;
+
 /** Only what `deliver` touches — the real renderer has far more. */
 export type RendererCalls = {
   render: (code: string) => void;
@@ -168,15 +164,18 @@ export type RendererCalls = {
  * - `retry`   a dependency failed to arrive, and busting the import URLs is the fix
  * - `report`  tell the reader
  *
- * Only a SETTLED surface retries: while streaming, the next frame re-delivers on its own, and a
- * retry there would replace the growing buffer with a stale prefix. Compile phase only — a failed
- * dependency import is reported there (`importCompiledComponent` runs inside the compile `catch`,
- * `partial-react/src/runtime.ts:338`), whereas the same message from the RENDER phase is the
- * card's own `fetch` throwing inside its body, where re-importing changes nothing and costs three
- * retries and 2.4 seconds of blank surface before the reader is told anything.
+ * **A streaming frame is never reported, whatever it says.** This used to test the message
+ * against `TRANSIENT` (`No default export found`, unexpected EOF) and report anything else, on
+ * the theory that a truncated frame fails to parse. It does not have to: a cut that lands
+ * mid-identifier leaves valid syntax and throws at module evaluation instead. Measured on one
+ * real session — five consecutive reports, five regenerations, and every final card was fine:
+ * `Mouse is not defined` from a card whose only such name is `MousePointer2`, `type is not
+ * defined` from `type ToolGroup =`, and `icon is not defined` from a card containing no `icon` at
+ * all. The frame, not the card, was broken. There is no message that distinguishes the two, so
+ * the phase does it: only a settled surface has anything worth saying about.
  */
 export const errorAction = (message: string, phase: string, streaming: boolean, attempts: number): "ignore" | "retry" | "report" => {
-  if (isUnfinishedFrame(message, phase, streaming)) return "ignore";
+  if (streaming) return "ignore";
   return shouldRetry(message, phase, streaming, attempts) ? "retry" : "report";
 };
 
@@ -209,17 +208,29 @@ const RETRY_FACTOR = 4;
  *
  * - **stale** — a later frame's probe won the race. Applying this one reverts the map to an
  *   older import set, and the newer frame's packages go missing.
- * - **redeliver** — a settled surface has no next frame. `setImportMap` only stores; it
- *   schedules nothing, so without a re-render the card stays blank for good.
- * - **store** — while streaming, the very next frame applies the map. Re-delivering here instead
- *   would replace the buffer with whatever prefix was current when the probe fired, truncating
- *   the stream mid-flight.
+ * - **redeliver** — nothing else is going to apply the map. Always true of a settled surface,
+ *   and true while streaming too when no frame has been delivered since the probe fired:
+ *   `setImportMap` only stores, so that buffer stays compiled against a map without these
+ *   entries — and an unresolvable bare specifier kills the whole module graph, so the card is
+ *   blank rather than wrong. Measured 2026-08-27 on a card importing `@radix-ui/react-tabs`:
+ *   one delivery with `streaming: true` renders 0 characters **for good**, while the identical
+ *   code with `streaming: false` renders. The error is swallowed on top of it — `errorAction`
+ *   answers `ignore` while streaming, so the reader gets an empty card and the model gets no
+ *   report. A cold probe is 1.0s and the import behind it another 2.4s, so the window this
+ *   covers is seconds wide, not a frame.
+ * - **store** — a newer frame has already been delivered, and it will apply the map itself.
+ *   Re-delivering here instead would replace the buffer with the prefix that was current when
+ *   the probe fired, truncating the stream mid-flight.
+ *
+ * `redeliver` renders `deliveredRef.current`, which is read at SETTLE time — the newest buffer,
+ * not the captured one — so the append the next frame computes still lines up.
  *
  * The `delivered !== ""` part is not defensive: re-rendering an empty buffer clears the surface.
  */
-export const probeOutcome = (signature: string, current: string, streaming: boolean, delivered: string): "stale" | "redeliver" | "store" => {
+export const probeOutcome = (signature: string, current: string, streaming: boolean, delivered: string, probed: string): "stale" | "redeliver" | "store" => {
   if (signature !== current) return "stale";
-  return !streaming && delivered !== "" ? "redeliver" : "store";
+  if (delivered === "") return "store";
+  return !streaming || delivered === probed ? "redeliver" : "store";
 };
 
 export const dispatchError = (action: "ignore" | "retry" | "report", effects: { attempts: () => number; setAttempts: (n: number) => void; schedule: (ms: number) => void; report: () => void }) => {
@@ -253,6 +264,19 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
   const onRenderedRef = useLatest(onRendered);
   // Set by a RENDER throw, consumed by the paint that follows it — see `onRendered` below.
   const threwRef = useRef(false);
+  /**
+   * The last failure `errorAction` suppressed because the surface was still streaming.
+   *
+   * Suppressing them is right — a truncated frame is not a broken card — but it leaves a hole at
+   * the other end: when the settled frame is byte-identical to the last streamed one,
+   * `deliveryFor` answers `nothing`, nothing recompiles, and a card that really is broken reports
+   * NOTHING at all. The last streamed frame's failure is the surface's actual state at that
+   * point, so it is what gets reported. Cleared by a real paint, which is the proof it was
+   * transient after all.
+   */
+  const strandedRef = useRef<{ error: Error; phase: "transform" | "compile" | "render" } | null>(null);
+  /** The code a stranded failure was already reported for, so a re-render does not report it again. */
+  const strandedReportedRef = useRef("");
   const retryTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const streamingRef = useLatest(streaming);
   // Read once at attach: the renderer takes it as a construction option.
@@ -293,7 +317,11 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       callbacks: {
         onError: (error, phase) => {
           if (phase === "render") threwRef.current = true;
-          dispatchError(errorAction(error.message, phase, streamingRef.current, retriesRef.current), {
+          const action = errorAction(error.message, phase, streamingRef.current, retriesRef.current);
+          // Remember what was swallowed. Only the newest matters: each frame supersedes the last,
+          // so this is the state of the buffer the stream stopped on.
+          if (action === "ignore") strandedRef.current = { error, phase };
+          dispatchError(action, {
             attempts: () => retriesRef.current,
             setAttempts: (n) => {
               retriesRef.current = n;
@@ -314,6 +342,9 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
           // paint is a restore, not the new code working.
           const restored = threwRef.current;
           threwRef.current = false;
+          // A restore paints the LAST GOOD component, which says nothing about the current code —
+          // clearing on it would lose exactly the failure this exists to carry.
+          if (!restored) strandedRef.current = null;
           onRenderedRef.current?.(restored);
         },
       },
@@ -357,7 +388,7 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
       importedRef.current = signature;
       // A later frame's probe can settle first; without this the map reverts to an older import set.
       void mergeFallbackImports(localImports(), code).then((imports) => {
-        const settle = probeOutcome(signature, importedRef.current, streamingRef.current, deliveredRef.current);
+        const settle = probeOutcome(signature, importedRef.current, streamingRef.current, deliveredRef.current, code);
         if (settle === "stale") return;
         renderer.setImportMap({ imports });
         if (settle === "redeliver") renderer.render(deliveredRef.current);
@@ -369,7 +400,18 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     // whatever is already mounted, so a card paints unstyled for at most a frame instead of
     // holding up every delivery behind a generator that has to boot on the first call.
     void ensureUnoStyles(code, streaming);
-    if (!deliver(renderer, deliveryFor(code, deliveredRef.current, streaming))) return;
+    if (!deliver(renderer, deliveryFor(code, deliveredRef.current, streaming))) {
+      // Nothing was delivered, so nothing will recompile and no error will be raised — but the
+      // buffer on screen may already have failed while streaming. This is the only moment that
+      // failure can still reach anyone. Keyed on the code so a settled card re-rendered by every
+      // later frame of the transcript reports once, not once per frame.
+      const stranded = strandedRef.current;
+      if (stranded !== null && reportStranded(streaming, stranded, code, strandedReportedRef.current)) {
+        strandedReportedRef.current = code;
+        onErrorRef.current?.(stranded.error, stranded.phase);
+      }
+      return;
+    }
     // `deliveredRef` must follow every delivery, or a later streaming frame diffs against a
     // prefix this render already superseded.
     deliveredRef.current = code;

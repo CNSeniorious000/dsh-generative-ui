@@ -120,17 +120,27 @@ test("both quote styles are seen", () => {
  * good; an extra one truncates a stream to whatever prefix was current when the probe fired.
  */
 test("a probe overtaken by a later frame is dropped", () => {
-  expect(probeOutcome("recharts", "recharts,motion", false, "code")).toBe("stale");
+  expect(probeOutcome("recharts", "recharts,motion", false, "code", "code")).toBe("stale");
 });
 
 test("a settled surface must be re-rendered — nothing else will apply the map", () => {
-  expect(probeOutcome("recharts", "recharts", false, "code")).toBe("redeliver");
+  expect(probeOutcome("recharts", "recharts", false, "code", "code")).toBe("redeliver");
 });
 
-test("while streaming the next frame applies it; re-rendering here truncates the stream", () => {
-  expect(probeOutcome("recharts", "recharts", true, "code")).toBe("store");
+test("while streaming a newer frame applies it; re-rendering here truncates the stream", () => {
+  expect(probeOutcome("recharts", "recharts", true, "newer code", "code")).toBe("store");
+});
+
+/**
+ * The last frame of a stream introduces the specifier as often as any other frame does, and
+ * "the next frame will apply the map" is then a bet on a frame that never comes. Measured on a
+ * real card importing `@radix-ui/react-tabs`: one delivery with `streaming: true` renders 0
+ * characters permanently, and `errorAction` answers `ignore`, so nothing tells anyone.
+ */
+test("while streaming with no frame since the probe, nothing else will apply the map either", () => {
+  expect(probeOutcome("recharts", "recharts", true, "code", "code")).toBe("redeliver");
 });
 
 test("an empty buffer is never re-rendered — that would clear the surface", () => {
-  expect(probeOutcome("recharts", "recharts", false, "")).toBe("store");
+  expect(probeOutcome("recharts", "recharts", false, "", "code")).toBe("store");
 });
