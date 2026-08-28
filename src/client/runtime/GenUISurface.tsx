@@ -273,7 +273,27 @@ export const unbundleFetchedImports = (imports: Record<string, string>): Record<
       if (!url.startsWith("https://esm.sh/")) return [key, url];
       const parsed = new URL(url);
       parsed.searchParams.delete("bundle");
-      parsed.searchParams.delete("external");
+      // `external` STAYS. Dropping it was in this function for one day and it broke rendering in a
+      // way far worse than the 500 it was meant to route around. Measured on the real URLs:
+      //
+      //   ?bundle&target=es2022&external=react,react-dom,scheduler -> 500   (the bug being fixed)
+      //   ?target=es2022&external=react,react-dom,scheduler        -> 200   (fixed, react shared)
+      //   ?target=es2022                                           -> 200   (fixed, react NOT shared)
+      //
+      // The 500 comes from `bundle` alone; `external` has nothing to do with it. What `external`
+      // does do is make esm.sh emit a BARE `import … from "react"`, which the document import map
+      // resolves to the host's single instance. Without it the same build emits
+      // `import "/react@^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0?target=es2022"` — an ABSOLUTE URL
+      // an import map keyed on the bare specifier cannot redirect, so the package gets esm.sh's own
+      // React (19, against this host's 18). Elements it creates then carry a `$$typeof` the host
+      // React does not recognise, and the card dies on **`Minified React error #31`, args
+      // `object with keys {$$typeof, type, key, ref, props}`**.
+      //
+      // Seen end to end in one session: a card rendered correctly, a later retry re-fetched its
+      // icons without `external`, every lucide element became a foreign object, and the model was
+      // handed a render-failure notice for a card that had been fine — it rewrote it, blaming
+      // itself for "rendering icons/objects directly".
+      //
       // `bundle` is a valueless flag, and `URLSearchParams` writes it back as `bundle=` — which
       // esm.sh reads as the flag being present. Deleting is enough; re-serialising is what would
       // put it back.

@@ -114,9 +114,15 @@ test("three retries outlast an esm.sh cold build", () => {
 // retry that only busts the query re-requests the identical broken artefact, and the card stays
 // blank with nothing in the console.
 describe("unbundleFetchedImports", () => {
-  test("drops bundle and external from an esm.sh entry", () => {
+  test("drops bundle and KEEPS external", () => {
+    // The `external` list is what makes esm.sh emit a bare `import … from "react"` for the import
+    // map to resolve onto the host's single instance. Dropping it here gave the package esm.sh's
+    // own React and killed working cards with `Minified React error #31` — a far worse failure
+    // than the bundle-side 500 this retry exists to route around, and one that only shows up on
+    // the SECOND attempt. Asserted as an exact string so a future "simplification" cannot quietly
+    // widen it back.
     expect(unbundleFetchedImports({ x: "https://esm.sh/mermaid?bundle&target=es2022&external=react,react-dom,scheduler" }).x)
-      .toBe("https://esm.sh/mermaid?target=es2022");
+      .toBe("https://esm.sh/mermaid?target=es2022&external=react%2Creact-dom%2Cscheduler");
   });
 
   test("leaves a blob URL alone", () => {
