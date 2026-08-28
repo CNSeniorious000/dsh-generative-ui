@@ -29,7 +29,8 @@ COUNTERS = [
     ("card at turn 3+", lambda f: int(f["later_card"]), lambda f: 1),
     ("clicks that fired the turn", lambda f: f["clicks_that_sent"], lambda f: f["clicks"]),
     ("preview-then-commit", lambda f: int(f["preview_then_commit"]), lambda f: 1),
-    ("reload forgot the answer", lambda f: f["reload_forgot"], lambda f: f["reloads"]),
+    ("committed but not recorded", lambda f: f["did_not_record"], lambda f: f["committed_reloads"]),
+    ("recorded but lost on reload", lambda f: f["did_not_persist"], lambda f: f["committed_reloads"]),
     ("cards that painted", lambda f: f["painted"], lambda f: f["cards"]),
     ("list instead of a card", lambda f: f["markdown_instead"], lambda f: f["turns"]),
 ]

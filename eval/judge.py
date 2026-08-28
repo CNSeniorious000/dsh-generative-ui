@@ -118,9 +118,13 @@ def turn_text(turn: dict) -> str:
                      f'(their reason: {click["why"]}) — {outcome}')
     reload = turn.get("reload")
     if reload is not None:
-        lines.append(f"  [the page was reloaded: the card came back "
-                     f"{'in the same state' if reload['text_same'] else 'in a DIFFERENT state'}"
-                     f"{', and re-sent ' + repr(reload['resent']) if reload['resent'] else ', sending nothing'}]")
+        if not any(c["sent"] for c in turn["clicks"]):
+            lines.append("  [the page was reloaded; nothing had been submitted from this card]")
+        else:
+            recorded = "the card showed the choice it had just sent" if reload.get("recorded") else "the card still looked untouched, as if nothing had been chosen"
+            persisted = "came back showing the choice" if reload.get("persisted") else "came back asking the question again"
+            resent = f", and re-sent {reload['resent']!r} by itself" if reload["resent"] else ""
+            lines.append(f"  [after the submission {recorded}; after a page reload it {persisted}{resent}]")
     if turn.get("done"): lines.append(f"  [the person stopped here: {turn['done']}]")
     return "\n".join(lines)
 

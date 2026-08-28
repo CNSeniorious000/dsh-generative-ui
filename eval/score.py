@@ -52,7 +52,25 @@ def facts(meta: dict) -> dict:
         "preview_then_commit": any(c["sent"] for c in clicks) and any(not c["sent"] and c["ok"] for c in clicks),
         "dead_clicks": sum(1 for c in clicks if not c["ok"]),
         "reloads": len(reloads),
-        "reload_forgot": sum(1 for r in reloads if not r["text_same"]),
+        # Two halves of one rule, measured apart. The skill asks a card that is acted on to
+        # "send the result AND record what was chosen", and a single boolean over two snapshots
+        # scored the two failures identically: a card that came back remembering its answer and
+        # one that never showed an answer at all both leave the text unchanged by a reload.
+        #
+        # Only a turn that actually COMMITTED can fail either half. An earlier version counted
+        # every reload whose text moved and read 43.6%; every hit examined was a person expanding
+        # a preview, and the reload correctly resetting transient state — the order-of-magnitude
+        # over-report CLAUDE.md §6.1 says a first-pass detector always makes.
+        "committed_reloads": sum(1 for t in turns if t.get("reload") and any(c["sent"] for c in t["clicks"])),
+        "did_not_record": sum(1 for t in turns
+                              if t.get("reload") and any(c["sent"] for c in t["clicks"]) and not t["reload"].get("recorded", True)),
+        "did_not_persist": sum(1 for t in turns
+                               if t.get("reload") and any(c["sent"] for c in t["clicks"])
+                               and t["reload"].get("recorded", False) and not t["reload"].get("persisted", False)),
+        # Not a defect, kept apart so the numbers above cannot quietly absorb it: a card that
+        # resets its open tab or its expanded row on reload is behaving correctly.
+        "reload_reset_preview": sum(1 for t in turns
+                                    if t.get("reload") and not any(c["sent"] for c in t["clicks"]) and not t["reload"]["text_same"]),
         "reload_resent": sum(1 for r in reloads if r["resent"]),
         "markdown_instead": sum(1 for t in text_only if len(ROWS.findall(t["reply"])) >= 4),
         # A turn that ended `completed` with no text at all. Measured on glm-5.3-flash: 1172
@@ -83,8 +101,11 @@ def summarise(rows: list[dict], label: str) -> None:
     print(f"  clicks that fired the turn      {pct(sum(r['clicks_that_sent'] for r in rows), clicks)}  of {clicks} clicks")
     print(f"  clicks that did nothing at all  {pct(sum(r['dead_clicks'] for r in rows), clicks)}")
     print(f"  runs showing preview-then-commit{pct(sum(r['preview_then_commit'] for r in rows), n)}")
-    print(f"  reloads that forgot the answer  {pct(sum(r['reload_forgot'] for r in rows), reloads)}  of {reloads} reloads")
-    print(f"  reloads that re-fired the turn  {pct(sum(r['reload_resent'] for r in rows), reloads)}")
+    committed = sum(r["committed_reloads"] for r in rows)
+    print(f"  committed but never recorded    {pct(sum(r['did_not_record'] for r in rows), committed)}  of {committed} commits (the card still looks untouched)")
+    print(f"  recorded but lost on reload     {pct(sum(r['did_not_persist'] for r in rows), committed)}  of the same {committed}")
+    print(f"  reloads that reset a preview    {pct(sum(r['reload_reset_preview'] for r in rows), reloads - committed)}  (not a defect — transient state should reset)")
+    print(f"  reloads that re-fired the turn  {pct(sum(r['reload_resent'] for r in rows), reloads)}  of {reloads} reloads")
     print(f"  text-only turns that were a list{pct(sum(r['markdown_instead'] for r in rows), turns)}")
     print(f"  turns that came back EMPTY      {pct(sum(r['empty_replies'] for r in rows), turns)}")
     print(f"  turns that ended in an error    {pct(sum(r['turn_errors'] for r in rows), turns)}")

@@ -272,7 +272,19 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                 # Per-phase timings. A round's wall clock is set by whichever of the three is
                 # slowest, and without this the only way to find out is to guess.
                 clock = time.time()
-                result = await agent.turn(next_text)
+                try:
+                    result = await agent.turn(next_text)
+                except (httpx.ReadTimeout, httpx.RemoteProtocolError) as error:
+                    # One slow turn must not discard the turns before it. Measured on
+                    # glm-5.3-flash: a turn spent 616s inside the model and the exception reached
+                    # `run()`, which marked the whole conversation `error` — throwing away another
+                    # run's completed first turn AND the card it had already produced.
+                    turn["reply"], turn["tools"], turn["skill"] = "", [], False
+                    turn["reason"] = {"kind": "error", "error": {"code": "TURN_TIMEOUT", "message": f"{type(error).__name__}"}}
+                    turn["t_model"] = round(time.time() - clock, 1)
+                    meta["turns"].append(turn)
+                    (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
+                    return
                 turn["t_model"] = round(time.time() - clock, 1); clock = time.time()
                 turn["reply"] = result.get("text", "")
                 turn["tools"] = result.get("tools", [])
@@ -304,7 +316,15 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                             if got.get("ok"): record.setdefault("shots", []).append(got["path"])
                     await driver.cmd(cmd="mount", code=card["code"], width=WIDTHS[0], theme="light")
                     turn["cards"].append(record)
-                    if shown is None and state.get("painted"): shown = state
+                    if shown is None and state.get("painted"):
+                        shown = state
+                        # The card as DELIVERED, before anyone touched it. Three states are needed
+                        # to read the persistence rule, and a boolean over two of them conflates
+                        # opposite outcomes: `text unchanged after a reload` is a card that
+                        # remembered its answer AND a card that never showed one — the skill's own
+                        # rule has two halves ("send the result AND record what was chosen") and
+                        # only three snapshots can tell which half is missing.
+                        turn["card_text_initial"] = state.get("text", "")
 
                 turn["t_cards"] = round(time.time() - clock, 1); clock = time.time()
                 # The user acts. A click that sends ENDS the turn; a click that only previews does
@@ -344,12 +364,25 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                         if got.get("ok"): turn["after_shots"].append(got["path"])
 
                 turn["t_user"] = round(time.time() - clock, 1)
-                # A reload after the last card of the turn: a remembered choice must come back
-                # answered, and must not re-fire the turn it already fired.
+                # A reload after the last card of the turn. Three texts, not a boolean: what the
+                # card said when it arrived, what it said once the person had finished with it,
+                # and what it says after the page comes back.
+                #
+                #   recorded  = committed text differs from the delivered text
+                #   persisted = the reloaded text still differs from the delivered text
+                #
+                # `text unchanged across the reload` was the first version and it scored a card
+                # that never acknowledged the answer identically to one that remembered it.
                 if turn["cards"] and shown is not None:
+                    committed = shown.get("text", "")
                     after = await driver.cmd(cmd="reload")
-                    turn["reload"] = {"text_same": after.get("text", "") == shown.get("text", ""),
-                                      "resent": after.get("sent", []), "text": after.get("text", "")[:300]}
+                    reloaded = after.get("text", "")
+                    initial = turn.get("card_text_initial", "")
+                    turn["reload"] = {"text_same": reloaded == committed,
+                                      "recorded": committed != initial,
+                                      "persisted": reloaded != initial,
+                                      "resent": after.get("sent", []),
+                                      "text": reloaded[:300], "committed_text": committed[:300]}
 
                 history.append({"user": turn["user"], "reply": turn["reply"]})
                 (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
