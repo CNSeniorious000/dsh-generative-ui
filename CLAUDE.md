@@ -548,438 +548,83 @@ backticks or more (counting four misses 3/5/6/8), and canvas artifacts must be c
 directory (my original `runs/*/ui4a/canvases/*.tsx` glob missed files and turned "8/19 used persistence" into "0/10,
 all useState"). Confirm your baseline numbers are real before changing a prompt.
 
-### Render-layer measurements: 32/33 compile, the one failure is JSX subscripting (2026-08-20)
-
-Put all 33 artifacts from the re-run (19 canvas + 14 inline) through the same `@esm.sh/tsx` the plugin uses:
-
-- **32/33 compile.** The failure is `<STATUS_META[r.status].icon />` — JSX allows member expressions `<a.b />` but
-  **not subscripts `<a[k] />`**. The model even talked itself through "member expressions are allowed" in its
-  reasoning; subscripts don't count.
-- The rest ran in a real dsh web: a dashboard using recharts + lucide-react + motion/react together rendered fine,
-  1064px tall, 12 svgs.
-
-**But real-machine screenshots caught two color bugs caused by the prompt**, invisible to static compilation:
-
-1. **`--dsw-alias-brand-primary` is not an accent, it's a foreground color.** Measured, it equals `label-primary` in
-   both themes (near-white in dark, near-black in light). My palette table called it "the one accent", the model
-   complied — filling icon tiles with it and drawing the icons in white — and produced white-on-white squares. The
-   real accent is `--dsw-alias-state-business-primary` (DeepSeek blue `rgb(103,158,254)` / `rgb(65,118,230)`). Table
-   fixed and a counter-example added.
-2. **In light theme `bg-base`/`layer-1`/`layer-2` are all pure white**, so hierarchy can only come from borders. And
-   the skill's "a border or a background, never both" made the model drop the border once it picked a background —
-   three identical white layers, no hierarchy at all. That rule now reads "a background only counts if it actually
-   differs from what's under it", and the resident layer calls out the theme behavior.
-
-Re-shot in both themes afterwards: the four blue icon tiles read clearly in light and dark, and cards separate by
-border in light.
-
-Same lesson as before: **every variable name you put in a prompt, and its semantics, has to be measured.** Nothing
-fails to compile, nothing errors at render, and the model still ships something a user sees is broken at a glance.
-
-### Streaming and mid-flight frames smoke (2026-08-20)
-
-**Mid-frame stress test**: sliced all 33 real artifacts into growing prefixes ~40 characters apart and ran every
-frame through `normalizeGeneratedTsx` + `transform` (GenUISurface's partial path): **11092 frames, and hard errors
-appeared only in the file that already failed to compile** — zero errors across the other 32. Zero transient errors,
-too, and not because they were filtered: `normalizeGeneratedTsx` genuinely completes half-written attributes,
-unclosed JSX, and missing braces (verified with a separate probe).
-
-**Inline really does stream**: sampled every 250ms on a real machine — first frame at 28.5s, settled at 46s, spanning
-17.5 seconds with **47** state changes (h 0→28→58→78→419→…→1339, nodes 0→4→…→390). A 60ms sampling run saw 23
-changes with **zero error frames and zero blank frames**. Node counts dip mid-flight (196→174, 390→375), which is
-`preserveState` re-rendering with state kept, not content being lost.
-
-**The canvas does not stream under the default PTC mode** — see the measurements in §3.6.
-
-**Multiple cards on one page** (three inline blocks in one reply) don't conflict, but this round caught a new fatal
-error:
-
-- **The default export must not share a name with an import.** `import { Pie } from "recharts"` next to
-  `export default function Pie()` — the compiler **drops `Pie` from the import list entirely** (shadowed by the local
-  declaration), so `<Pie>` points at the component itself and recurses infinitely into React error #185 "Maximum
-  update depth exceeded". **Nothing fails at compile time**; the symptom is a white card with height and zero
-  children. A rule now lives in the resident layer and the re-run passed (the pie chart went from `h=84/n=0` to
-  `h=329/n=83/svg=5`).
-
-One detection technique worth keeping: **judge a broken card by "has height, zero children", not by matching error
-text in innerText** — #185's error text wasn't in the container, and text matching missed it entirely.
-
-But read `innerText` as well, because zero children has **two** causes that need opposite responses
-(2026-08-21, both hit within an hour):
-
-| `innerText` | Meaning | Whose bug |
-| --- | --- | --- |
-| empty | The module graph died — a bad import, a revoked blob URL. ESM kills the whole import silently. | ours |
-| `ERROR: …` | partial-react's error boundary caught a throw during render and painted the message. | the generated code's |
-
-The boundary renders a bare text node, so the child count is 0 either way. Counting alone reported
-a generated component's `item.difficulty.includes(…)` on a half-streamed object as an infrastructure
-failure, and I went looking in the wrong half of the system.
-
-### `$dsh/chat` in the model's hands (2026-08-21, 5 prompts + 5 repeats)
-
-Ran five underspecified requests through headless to see whether the model uses `sendMessage`
-the way the prompt describes, rather than whether the API works:
-
-- **5/5 imported `$dsh/chat` and wired every option to it.** No prompting for it beyond the
-  one line in the resident layer and the example in the skill.
-- **5/5 sent human-readable text** — `sendMessage(id)` where `id` is `单位换算器` / `个人主页` /
-  `习惯打卡`. None sent a JSON payload, which matters because `ctx.conversation.send` always
-  writes the message into the transcript: a click has to read as something the user would say.
-- Unprompted, they also got the answered state right: `disabled` after choosing, the chosen
-  card highlighted, and a free-text field for answers not on the list.
-
-`$dsh/ai` measured the same way: asked for "a recipe tool — I type ingredients, it lists
-dishes", the model reached for `streamText` + `partial-json` and parsed the buffer as it grew,
-without loading the skill. The first attempt then died mid-generation on
-`dish.difficulty.includes(…)` — `partial-json` hands out objects whose fields have not arrived
-yet, and one method call on a missing one throws inside render. After the skill gained a rule
-saying every streamed field is optional until the end, the re-run guarded all of them
-(`?? []`, `?? "…"`, `&&`) and ran clean: 47 → 141 nodes as items landed one at a time.
-
-### `@genui/cli` as the model's own checker (2026-08-21)
-
-The skill tells the model to run `@genui/cli check` over a canvas before leaving it. Three
-things about that recommendation were measured rather than assumed:
-
-- **It catches what matters here.** `check` (which includes TypeScript diagnostics) flags both
-  of §4's expensive failures: the JSX subscript `<a[k] />`, and an import shadowed by the
-  default export — the React #185 recursion that builds clean and renders a blank card.
-  `lint` alone catches only the first.
-- **`npx`, not `bunx`.** The package is not on npm, so the URL is pkg.pr.new's long form
-  (`pkg.pr.new/${owner}/${repo}/${package}@${commit-or-branch}`; the compact form needs an npm
-  release). bun rejects that with `unrecognised dependency format` — a scoped name inside the
-  URL — while npx runs it. This is the one place in this repo where npx is the right answer.
-- **`@main`, not a SHA.** The branch tag resolves to the latest published commit, so the
-  instruction does not rot. pkg.pr.new publishes on every push to that repo.
-
-`@genui/cli` lives in `MindLab-Research/macaron-genui-demo` as a private workspace package; if
-it is ever released to npm, shorten the URL and drop the npx caveat.
-
-**`-i` is mandatory once a card imports `$dsh/*`.** Without it `check` reports
-`Cannot find module '$dsh/chat'` on every such line — a false error the model will go and
-"fix". `types/importmap.json` plus the three `.d.ts` beside it exist for that flag, and
-`src/index.ts` resolves their absolute path at load time (`../types/` relative to
-`import.meta.url`), because the plugin lives wherever the profile installed it and the model
-runs the checker from the workspace. `skillBody` takes that path and omits the flag when it
-cannot be resolved.
-
-**That map is for `check` only.** Its targets are `.d.ts`, so `build` and `dev` fail on it with
-`Missing export` — verified. Not a gap: `$dsh/*` forwards to dsh's own services, so a standalone
-HTML export or a Vite preview has no harness to reach, and there is no JS that would make them
-work there. `types/README.md` says so beside the file.
-
-Two things measured while wiring this up, both worth knowing before trusting the flag:
-
-- **The `.d.ts` are not actually loaded.** `-i` suppresses TS2307 and nothing more:
-  `sendMessage(42)` against a `.d.ts` declaring `(text: string)` still passes. The control
-  proves TS itself is running — a plain `const s: string = useState(0)[0]` is caught. Reported
-  with a minimal repro on MindLab-Research/macaron-genui-demo#1427, which already tracks this
-  class of gap. So today the flag buys silence, not signal; real errors like the shadowed
-  import are still caught because those need no facade types.
-- **`bun genui check -i` and the published CLI disagree.** This repo's host config is
-  `check: async (code, _imports, codeDir) => …` — the underscore discards the import map — so
-  locally the flag does nothing at all, and I nearly concluded from that it was useless
-  everywhere. Verify CLI behaviour against the published build, not the checkout.
-
-### Getting the model to reach for a capability (2026-08-22, 20 prompts + follow-ups)
-
-The negative judgements were already right — 5/5 avoided `$dsh/ai` where the data is fixed,
-4/4 kept a canvas's private state in `localStorage`, 2/2 asked back through `$dsh/chat`. The
-positive ones were the problem: **0/5 used `$dsh/ai` where it was wanted, 0/2 used `$dsh/fs`
-for read-then-display.** The model knew the APIs (another run called `readdir`/`readFile`
-correctly) and chose to hardcode instead.
-
-Two rewrites moved nothing. What did was reading the session log rather than guessing:
-
-> "the content (Tokyo attractions) is fixed knowledge I already have. I don't need
-> `streamText` for Tokyo landmarks — that's fixed data."
-
-**The model reads "fixed" as "known to me"** — which for Tokyo is true, so every framing about
-variable content or unseen inputs argued past it. The test that works is **enumerability**:
-three-day Tokyo itineraries is not a set of five, and writing five samples the space while
-presenting it as the whole. Quoting that reasoning back with a closed/open table took the
-failing prompts to 2/3, the third correctly staying local (two-digit addition is one formula —
-`Math.random` beats a model call).
-
-Same shape for `$dsh/fs`: the model read files with its own tools and pasted the findings in
-as literals. "Reading it yourself is not the card reading it — that card is a photograph" took
-that to 2/2.
-
-A third gap sat above both: **`给我五个猫名` produced no UI at all.** The trigger list in the
-resident layer was all numbers, comparisons and steps, and a naming request is none of those.
-"Asking for a few of something is asking for more of them" fixed it.
-
-One case stayed prose after all of it — a dinner recipe — and the log shows a deliberate
-weighing, not a miss. That is a judgement call worth leaving to the model.
-
-Method note: the first pass concluded the skill had not loaded, from grepping `out.txt`.
-Headless's final reply is far too terse to show internal calls; the session log said it had
-loaded every time. **Check `~/.dsh/sessions/<cwd-key>/session-*/session.jsonl.zstd`**, whose
-`reasoning-chunks` carry a `texts` array — and where the model tells you exactly why it did
-what it did, which beats a third rewrite guessing at it.
-
-### A negative result: the "knob" reframing did not transfer (2026-08-22)
-
-The playground added a rule telling the model to ask **which input the user is most likely
-to change** rather than whether the task is hard enough to deserve an interface, and reported
-its conversion prompts flipping from tables to live fields. Tried here as a replacement for
-our existing trigger rule, on four prompts with a knob and two controls without.
-
-**It did not reproduce: 1/4.** Only the mortgage prompt flipped, and the session logs say why
-each of the others did not:
-
-| prompt | reasoning | what happened |
-| --- | --- | --- |
-| mortgage | 4664 chars, quoted the new rule verbatim | **built the widget** |
-| 1000 USD → CNY | 2773 chars: "the input (amount) is likely to change. **But more fundamentally, I need current data**" | three searches about rate staleness, never returned to the question of shape |
-| 5kg → lb | **172 chars**: "simple conversion... factual calculation. No need for tools." | the rule was never reached at all |
-| React vs Vue | — | prose, correctly |
-
-So the rule lands only when the reply already has room for it. A second pass added "this one
-is simple is not a reason to skip it" and "decide the shape before you go get the data",
-aimed at exactly those two failures. The unit conversion's reasoning grew 172 → 709 chars,
-quoted the new line, **and overruled it**: "this is a trivial single conversion. I think a
-simple prose answer is fine here." The currency one grew to 4519 chars with no mention of
-shape at all — the lookup had taken the whole turn.
-
-Reverted. Two rounds, no movement on the cases it targeted, and the one case that did engage
-came back with a considered judgement rather than a miss. **A prompt rule that the model
-reads, quotes, and then argues with is not a wording problem** — that is the shape §4.5
-already records as worth leaving alone, and pushing harder would just be overriding it. Worth
-knowing too that a fix measured in another harness does not transfer for free: same model
-family, different tool surface, and the same sentence lands differently.
-
-### An expression the user is holding is a fourth trigger shape (2026-08-22)
-
-`这个 cron 到底几点跑？*/17 3-5 * * 2` produced no UI, and the session log shows why: 2003
-characters of reasoning that never once considered an interface. **"This is a simple factual
-question — no tools needed, no skill needed."** The same sentence that killed `5 公斤等于多少磅`
-earlier the same day.
-
-But the answer it wrote was *already a table* — twelve firing times, laid out in markdown. The
-trigger list in the resident layer had three shapes (a number to change, a multi-way
-comparison, steps to step through) and an opaque expression is none of them, even though it is
-the case where a live table pays best: the way to be sure a cron line does what you think is to
-change a field and watch what moves.
-
-Added a fourth shape, with the tell stated explicitly (**your answer is already a table**) and
-the excuse named (`simple is what makes it cheap to build, not what makes it unwanted`).
-Measured: **3/3 flipped** — `cron`, `glob` and `chmod` all produced a fence — and both controls
-(`HTTP 418`, `尾递归优化`) correctly stayed prose. Worth contrasting with the `knob` reframing
-tried earlier the same day, which went 1/4 and was reverted: this one names a request *shape*
-the model can match on sight, where that one asked it to re-judge something it had already
-judged.
-
-### The `$dsh/exec` sandbox, measured (2026-08-22)
-
-Switched the composer to `Read Only` and ran the same two commands through the route:
-
-| command | exit | what came back |
-| --- | --- | --- |
-| `echo hello` | 0 | `hello` — reads are untouched |
-| `touch ./probe.txt` | **1** | `touch: Operation not permitted` on stderr, **HTTP 200**, and no file on disk |
-
-The denial arrives as a *result*, not an exception — same shape as `$dsh/fs`'s
-`FS_SANDBOX_DENIED`, and the reason a card can say "this session is read-only" instead of
-going blank. Under `workspace-write` a write to the platform temp area succeeds, which §3.65
-already records as intended: that is the same `writableRoots` set Seatbelt grants the model's
-own bash, and a narrower fence here would be a second policy to keep in sync.
-
-Note the route requires a resolvable session id — an absent or unknown one is a 400 before any
-command is composed, so there is no unattributed execution path.
-
-### The second turn, measured at last (2026-08-22)
-
-Every number in this section had answered "did a card appear". A critique pass pointed out that
-nothing measured what happens *next*, and that the revision loop is where the documented
-remount-resets-state trap lives. Two runs, both cheap:
-
-**A revision is an edit, not a rewrite.** Asked for a pomodoro canvas (338 lines, using
-localStorage), then `这个不对，休息应该是 10 分钟不是 5 分钟`. The diff is **one line**:
-`BREAK_MS = 5 * 60 * 1000` → `10 * 60 * 1000`, same 338 lines. The reply even says the panel
-needs a refresh. So the feared shape — a whole-file rewrite discarding the reader's state on
-every tweak — is not what the model does; `str_replace` is.
-
-**A vague follow-up resolves, and the width rule survives it.** Third turn on the same canvas:
-`把它改成横着的，字太小了看不清` — a pronoun with no referent in the sentence, a layout verb, and
-a complaint. The model resolved 它 to the canvas in the panel and, crucially, did not simply
-turn the layout sideways: it added `@container (min-width: 640px)` so the horizontal
-arrangement applies when there is room and falls back to a column when there is not, then
-listed the type-size changes it made (56→64px, 14→18px). 125-line diff, and the container-query
-rule held under a request that never mentioned width.
-
-**Two resident rules can fight, and "fine as text" wins.** `帮我算下这个月还剩多少钱能花，
-工资 12000，房租 3500，还了 2000 花呗` produced correct prose and no card, on a request whose
-three numbers are exactly the "a number the user might want to change" shape. The reasoning
-trace is 4010 characters of the model arguing with itself **six times**, quoting the trigger
-rule, nearly building the card (*"Given the strong guidance in the system prompt … I'll provide
-a lightweight interactive card"*), and finally settling it with a different rule of ours:
-
-> "Not for text that is already fine as text. A simple subtraction is fine as text."
-
-Not a rule that failed to land — two that collide, decided by the one that reads as permission
-to stop. Left alone deliberately: tightening either one damages what the other covers, and the
-model's own tie-breaker (*"用户语气是随口问的"*) is a reasonable read of the request.
-
-### Failure-shaped requests: scale is the trigger, not failure (2026-08-22)
-
-A round-7 angle proposed cards for the states people are actually in when they ask for help —
-a stack trace, a failing build, a flaky test. Built a repo with a deliberately broken file and
-asked `build 挂了，我该先看哪个错`.
-
-**Three errors: no card, and rightly so.** The reply ran the build, then made the observation
-that matters — the three are *independent*, not a cascade — ranked them (`TS2304` name-not-found
-above the two type mismatches, because a missing name means a piece of code is absent rather
-than mislabelled), and added a rule worth keeping: *"报错一大堆时通常先看第一个，因为它最可能是
-根因；但这次三个是平级的，所以看最重的那个"*. Nothing there wanted an interface.
-
-Re-ran at **forty-eight** errors, the scale the intent actually named. Still no card, and the
-reply explains why better than the intent did:
-
-> "先看第一条，但更要紧的是先**归类**——这 48 条不是 48 个问题。"
-
-Two codes, twenty-four each, and it said so in a four-row table, noted that the two classes do
-not cascade into one another, and then inferred *"这文件看起来是被截断/删了一半"* — which is
-exactly how the fixture was built. Forty-eight lines of output, two actual problems.
-
-So the angle's premise is wrong about real failures: a big error count is usually a small
-number of classes repeated, and once deduplicated there is nothing to triage.
-
-Then built the case that was supposed to earn the card — a monorepo build failing **seven
-different ways across four packages** (missing workspace module, unresolved import, a postcss
-plugin, an absent env var, an OOM, a test timeout). Still prose, and still right: it picked
-`@org/shared-types` because it is the only *shared internal* dependency, which makes it a build
-graph problem rather than a file problem, and the one whose fix can clear others.
-
-**Triage assumes a flat list of peers. Real build failures have a topology**, and finding the
-upstream root is reasoning, not sorting — the thing the model is better at than any interface
-would be. Two scales, two kinds of heterogeneity, no card either time. The angle is refuted,
-and the reason is worth more than the angle was.
-
-### Is the card's arithmetic right? (2026-08-22)
-
-The critique named this the biggest unexamined risk: *"generative UI raises the credibility of
-output without raising its accuracy."* Three prompts with independently computable answers:
-
-| prompt | truth | card said | card's formula |
-| --- | --- | --- | --- |
-| 30y ¥1M at 4.2%, monthly payment | 4890.17 | **4890.17** | `P*r*(1+r)^n/((1+r)^n-1)`, with an `r === 0` branch |
-| 5 公斤 3 两 in pounds | 11.35 | **11.35** | prose; also flagged that a HK/TW 两 is 37.5g, giving 11.30 |
-
-A third, `这个 cron 一年跑多少次？0 3 * * 1`, was better than correct: it answered **"52 or 53,
-depending on how many Mondays that year has"** (2025 has 52, 2024 has 53) and built a card with
-a **year selector that counts them**, using `Date.UTC` to dodge the timezone trap. The right
-answer to "how many times a year" was not a number, and the card is what let it say so.
-
-All three exact, and the arithmetic lives in the card rather than in a number the model wrote
-down. Three samples is not a guarantee, but the specific fear — a plausible card quietly wrong
-— did not reproduce on the shapes most likely to show it.
-
-### Counting fences does not count canvases (2026-08-22)
-
-Every headless eval in this file counts ` ``` ` fences in the reply. That misses a canvas
-entirely: a canvas is a *file*, and the reply about it is prose. I read `fence=0` on
-`这个目录下都有啥文件，我想快速看看每个文件里写了什么` and concluded the browse rule had failed —
-twice. It had not. The run produced a **522-line canvas file browser**: a collapsible tree from
-`readdir`, `readFile` only on click, a `Map` cache that also caches failures, and a single-column
-fallback under 560px. Exactly the shape the rule describes.
-
-**An eval must count both**: fences in `out.txt` *and* files under
-`.dsh/ui4a/canvases/`. Counting one and calling it "produced UI" understates the model on
-precisely the requests most likely to deserve a canvas — the ones about a whole set of things.
-
-### Regression after a day of prompt changes (2026-08-22)
-
-Three trigger rules were added in one day (expression, browse, exec). Re-ran the six prompts
-§4.5 names as its fixed points:
-
-| control (must stay prose) | | positive (must produce UI) | |
-| --- | --- | --- | --- |
-| `什么是闭包？` | ✓ prose | `帮我算下房贷` | ✓ fence |
-| `今天星期几` | ✓ prose | `帮我看看 BMI 正常范围` | ✓ fence |
-| `HTTP 状态码 418` | ✓ prose | `给我五个猫名` | ✓ fence |
-
-**6/6.** The new rules did not widen the boundary, and adding three did not dilute the ones
-already there enough to lose a positive. Worth re-running whenever the resident layer grows —
-it is six headless runs and it is the only thing that catches a rule eating its neighbours.
-
-### What the resident layer costs (2026-08-22)
-
-The always-on prompt is **3254 tokens across 8 bold rules**; the on-demand skill is 6183. Three
-of those rules were added in one day, which is the moment to say the obvious: every rule added
-to the resident layer dilutes the attention the others get, and it is paid on every turn of
-every session, including the ones that will never produce UI.
-
-The bar for a resident rule, given what §4.5 measures: it must be recognisable from the request
-alone (see the pattern below), it must cover a *shape* of request rather than a topic, and it
-must have flipped something measurable. Everything else belongs in the skill, where it is paid
-for only when the model has already decided UI is on the table.
-
-### Gathering data eats the turn (three observations, 2026-08-22)
-
-The same failure shape showed up three times, on unrelated prompts, and it is not a wording
-problem in any rule:
-
-| prompt | what happened |
-| --- | --- |
-| `1000 美元换成人民币是多少` | 2773 chars of reasoning. Named the trigger rule — *"the input (amount) is likely to change"* — then **"But more fundamentally, I need current data"**, ran three searches about rate staleness, never returned to the question of shape. |
-| `CORS 报错到底谁拒绝了我` | Asked itself *"Should I build a UI?"*, noted it *"does have a kind of flow/decision structure"*, then judged prose sufficient. A considered call. |
-| `这个目录下都有啥文件，我想快速看看每个文件里写了什么` | Read all 26 files with its own tools, then: *"a compact per-file one-liner is best"*. Once the reading was done, a card was redundant work on an answer it already had. **Fixed by the browse rule** — see the counting note below for why it looked like it had not been. |
-
-The middle one is a legitimate judgement. The other two share a mechanism: **the decision about
-what shape the answer takes is made once, early, and a data-gathering detour overwrites it.**
-By the time the model has the data it is finishing, not deciding.
-
-A rule that fires *after* the detour cannot help, which is why the `knob` rewrite went 1/4 —
-it asked the model to re-judge something it had stopped judging. What did work (the expression
-rule, 3/3) matches on the *shape of the request*, before any tool runs. **Trigger rules must be
-recognisable from the prompt alone.** Anything that needs the answer in hand to evaluate will
-lose to whatever the model went to fetch.
-
-### Streaming charts, finally measured (2026-08-22)
-
-Two research passes disagreed about whether a recharts chart restarts its animation on every
-streamed frame. Sampled a real inline card at 100ms while the model wrote it:
-
-```
-13101ms  rc=0  h=0        card mounted, empty
-13501ms  rc=0  h=33       skeleton growing
-14200ms  rc=0  h=363      layout settled
-14301ms  rc=15 h=363      chart elements appearing
-15902ms  rc=75 h=363      chart complete, height never moved
-17221ms  rc=0  h=0        one remount, 80ms
-17301ms  rc=75 h=363      back
-```
-
-**Seventeen distinct states, sixteen of them monotonic growth.** The chart is built up
-incrementally inside a stable layout box; the single collapse is the settled recompile at the
-end and lasts 80ms. No per-frame animation restart, no flicker — the reading that said
-otherwise reasoned correctly from the code and missed that `renderComponent` runs far less
-often than a frame arrives.
-
-Three recharts cards in that session, all rendered: 72, 82 and 89 recharts elements with axes
-and values. Which also settles the earlier claim that the probe browser could not load it.
-
-### The destructive-command rule, tested head-on (2026-08-22)
-
-Asked, in a throwaway repo with an untracked file: `帮我做个卡片，把这个仓库里没跟踪的文件清理一下`
-— a direct request to build a card that deletes.
-
-The card lists the untracked files with one `git ls-files --others --exclude-standard`, and
-routes every delete through `sendMessage`. **Zero destructive commands, and the file survived.**
-The model stated the reason itself, unprompted: *"点「清理」不会在卡片里直接 rm，而是把要删的
-文件名通过 sendMessage 发回给我，由我在对话里执行删除——全程可见、可追溯。"*
-
-That is the consent argument in the model's own words, on the same day the rule was written.
-
-### `$dsh/exec` in the model's hands, first run (2026-08-22)
-
-Asked for a git-log card in a throwaway repo, the model wrote exactly the intended shape
-without being pointed at it: `import { bash } from "$dsh/exec"`, one command for the list, a
-second on click for `git show`, and **`if (res.exitCode !== 0)` rather than a try/catch** — the
-one thing the prompt insists on, because a non-zero exit resolves. A capability added that
-morning was in correct use the same day, from the prompt text alone.
+### What the 2026-08-20…22 rounds established
+
+The rounds themselves are in [docs/measurements-log.md](docs/measurements-log.md) — the numbers, the per-prompt
+tables, and the reasoning traces each conclusion was read out of. What survives them:
+
+**Render and streaming.** 32/33 artifacts compiled; the one failure is **JSX subscripting** — `<a.b />` is a
+legal member expression, `<a[k] />` is not, and the model talks itself past this by quoting the member-expression
+rule. 11092 partial frames across those artifacts produced hard errors only in the file that already failed to
+compile: `normalizeGeneratedTsx` genuinely completes half-written attributes, unclosed JSX and missing braces.
+Inline streams for real (47 state changes over 17.5s, no blank frames); the canvas does not, under the default
+PTC mode (§3.6). A recharts chart does **not** restart its animation per frame — it builds up inside a stable
+layout box, with one 80ms remount at the settled recompile.
+
+**The default export must not share a name with an import.** `import { Pie } from "recharts"` beside
+`export default function Pie()` makes the compiler drop `Pie` from the import list — the local declaration
+shadows it — so `<Pie>` points at itself and recurses into React #185. **Nothing fails at compile time**; the
+symptom is a card with height and zero children. `@genui/cli check` catches it (and the subscript); `lint` alone
+catches only the subscript.
+
+**Judge a broken card by shape, not by error text**, then read `innerText`, because zero children has two causes
+needing opposite responses: empty means the module graph died on a bad import or a revoked blob URL (ours), and
+`ERROR: …` means partial-react's boundary caught a throw during render (the generated code's). Counting children
+alone reported a half-streamed object as an infrastructure failure and sent me into the wrong half of the system.
+
+**Two colour facts the prompt got wrong** (§3.7 carries the corrected table): `--dsw-alias-brand-primary` is a
+**foreground** colour equal to `label-primary` in both themes, not an accent — calling it "the one accent"
+produced white-on-white icon tiles. The real accent is `--dsw-alias-state-business-primary`. And in light theme
+`bg-base`/`layer-1`/`layer-2` are all pure white, so hierarchy can only come from borders; "a border or a
+background, never both" had to become "a background only counts if it differs from what is under it".
+
+**Capabilities, in the model's hands.** 5/5 wired every option to `$dsh/chat` and sent **human-readable text**,
+never a JSON payload — `ctx.conversation.send` writes into the transcript, so a click has to read as something
+the user would say. `$dsh/exec` came out right unprompted, `if (res.exitCode !== 0)` rather than try/catch,
+because a non-zero exit **resolves**; the sandbox denies the same way (exit 1, stderr, HTTP 200), which is why a
+card can say "this session is read-only" instead of going blank. Asked head-on for a card that deletes untracked
+files, the model routed every delete through `sendMessage` and said why, unprompted. Every streamed field is
+optional until the end — `partial-json` hands out objects whose fields have not arrived, and one method call on a
+missing one throws inside render.
+
+**`-i` is mandatory once a card imports `$dsh/*`**, or `check` reports `Cannot find module '$dsh/chat'` on every
+such line and the model goes and "fixes" it. But the `.d.ts` are **not actually loaded**: `-i` suppresses TS2307
+and nothing more, so it buys silence, not signal. Use `npx`, not `bunx` — bun rejects pkg.pr.new's long form —
+and `@main`, not a SHA, so the instruction does not rot.
+
+**Why trigger rules read the way they do.** The model reads "fixed" as *known to me*, so every framing about
+variable content argued past it; the test that works is **enumerability** — three-day Tokyo itineraries is not a
+set of five. "Reading it yourself is not the card reading it — that card is a photograph" took `$dsh/fs` from 0/2
+to 2/2. A naming request is none of the original three shapes, and "asking for a few of something is asking for
+more of them" fixed the one that had produced no UI at all. A **fourth trigger shape** — an opaque expression the
+user is holding — went 3/3 with its tell stated outright (**your answer is already a table**) and its excuse
+named (*simple is what makes it cheap to build, not what makes it unwanted*).
+
+Two rules for writing them, both bought with failures. **A trigger rule must be recognisable from the prompt
+alone**: the decision about what shape the answer takes is made once, early, and a data-gathering detour
+overwrites it — by the time the model has the data it is finishing, not deciding. And **a rule the model reads,
+quotes, and then argues with is not a wording problem**: the "knob" reframing went 1/4 and was reverted, while
+the same sentence measured in another harness had worked — a fix does not transfer between tool surfaces for
+free. Two resident rules can also simply collide, and "not for text that is already fine as text" wins; left
+alone, because tightening either damages what the other covers.
+
+**What a resident rule costs.** The always-on layer is 3254 tokens across 8 bold rules, the on-demand skill 6183.
+Every rule added dilutes the attention the others get and is paid on every turn, including the ones that will
+never produce UI. So the bar: recognisable from the request alone, covering a *shape* rather than a topic, and
+having flipped something measurable. Everything else belongs in the skill.
+
+**Two negative results worth as much as the rules.** Card arithmetic was exact on all three prompts with
+independently computable answers, and the cron one was better than correct — it answered "52 or 53, depending on
+the year" and built a selector that counts them. And failure-shaped requests do **not** want a card at any scale:
+48 errors turned out to be two classes of 24, and a seven-way monorepo break was triaged by finding the only
+shared internal dependency. Real build failures have a topology, and finding the upstream root is reasoning, not
+sorting.
+
+**Counting traps.** An eval must count fences **and** files under `ui4a/canvases/` — a canvas is a file and the
+reply about it is prose, so `fence=0` twice made me conclude the browse rule had failed when the run had produced
+a 522-line file browser. Re-running the six fixed points after three trigger rules landed in one day gave 6/6:
+worth repeating whenever the resident layer grows, since it is the only thing that catches a rule eating its
+neighbours.
 
 ## 4.9 Dependencies and releasing
 
