@@ -22,6 +22,37 @@ import json, pathlib, re, statistics, sys
 # and only one is a model correctly judging that prose was enough — measured on a calorie-log turn,
 # six runs across three models each answered with a 7-to-9-line table and none loaded the skill.
 ROWS = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+|\|)", re.M)
+# Every `usePersistedState` key a run's cards declare. The skill's recipe now carries a literal
+# example key, and a string literal inside a code block is the most copyable thing there is: two
+# asks in one conversation sharing a key is a WORSE defect than the one persistence fixes, and it
+# shows up in none of the counters — the second card silently opens already answered.
+PERSIST_KEY = re.compile(r"usePersistedState\s*(?:<[^>]*>)?\s*\(\s*[\"'`]([^\"'`]+)")
+# The literal key the skill's recipe carries. A string inside a code block is copied verbatim more
+# often than anything else in it, so this is the one unambiguous way the edit can go wrong.
+EXAMPLE_KEY = "ask:which-cloud-host"
+
+
+def persist_keys(run: pathlib.Path) -> tuple[int, int, int]:
+    """(cards that persist, keys shared by two DIFFERENT cards, cards copying the example key).
+
+    Card identity is the filename WITHOUT its turn prefix: one canvas is re-snapshotted on every
+    turn that edits it, and `turn-01.chuanxi-sept.tsx` … `turn-08.chuanxi-sept.tsx` are eight
+    pictures of one card. Counting by file said 16 conversations reused a key; every hit read was
+    that, or a diet log deliberately carrying one target across its own re-emissions. Sharing a key
+    with yourself is what persistence IS.
+    """
+    seen: dict[str, set[str]] = {}
+    persisting = copied = 0
+    for card in sorted(run.glob("turn-*.tsx")):
+        source = card.read_text(encoding="utf-8", errors="replace")
+        keys = set(PERSIST_KEY.findall(source))
+        if keys: persisting += 1
+        if EXAMPLE_KEY in source: copied += 1
+        identity = card.name.split(".", 1)[1]
+        for key in keys: seen.setdefault(key, set()).add(identity)
+    return persisting, sum(1 for holders in seen.values() if len(holders) > 1), copied
+
+
 
 
 def facts(meta: dict) -> dict:
@@ -110,6 +141,11 @@ def summarise(rows: list[dict], label: str) -> None:
     print(f"  turns that came back EMPTY      {pct(sum(r['empty_replies'] for r in rows), turns)}")
     print(f"  turns that ended in an error    {pct(sum(r['turn_errors'] for r in rows), turns)}")
     if controls: print(f"  controls per card               median {statistics.median(controls):.0f}, max {max(controls)}")
+    print(f"  cards that persist their answer {pct(sum(r['persisting_cards'] for r in rows), cards)}")
+    # Not a rate over cards: one collision inside one conversation is already a defect, and the
+    # count is the number of conversations where a key was reused across two different cards.
+    print(f"  one key across two DIFFERENT cards {sum(r['key_collisions'] for r in rows)}  (above 0 is a defect)")
+    print(f"  cards copying the example key   {sum(r['copied_example_key'] for r in rows)}  (above 0 means the recipe's literal leaked)")
     print(f"  runs cut short by the timeout   {pct(sum(1 for r in rows if r['status'] == 'timeout'), n)}")
 
 
@@ -120,7 +156,9 @@ def main() -> None:
         for meta_path in sorted(root.glob("*/*/meta.json")):
             meta = json.loads(meta_path.read_text())
             if meta["status"] not in ("complete", "timeout"): continue
-            row = facts(meta) | {"case": meta["case"], "model": meta["model"],
+            persisting, collisions, copied = persist_keys(meta_path.parent)
+            row = facts(meta) | {"persisting_cards": persisting, "key_collisions": collisions, "copied_example_key": copied,
+                                 "case": meta["case"], "model": meta["model"],
                                  "kind": "single" if meta["case"] in ("cat-names", "mortgage", "closure", "http418") else "multi"}
             rows.append(row)
         print(f"══ {root.name} ══")

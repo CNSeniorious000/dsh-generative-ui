@@ -20,7 +20,7 @@ was readable at +0.45 while its own pooled mean said +0.23 and meant nothing.
 import json, pathlib, statistics, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from score import facts
+from score import facts, persist_keys
 
 KEYS = ["trigger", "clarify", "interaction", "hierarchy", "craft", "overall"]
 # The counters worth a paired read. Each is (label, numerator, denominator) over one run.
@@ -32,6 +32,7 @@ COUNTERS = [
     ("committed but not recorded", lambda f: f["did_not_record"], lambda f: f["committed_reloads"]),
     ("recorded but lost on reload", lambda f: f["did_not_persist"], lambda f: f["committed_reloads"]),
     ("cards that painted", lambda f: f["painted"], lambda f: f["cards"]),
+    ("cards that persist an answer", lambda f: f["persisting_cards"], lambda f: f["cards"]),
     ("list instead of a card", lambda f: f["markdown_instead"], lambda f: f["turns"]),
 ]
 
@@ -41,7 +42,9 @@ def load(root: pathlib.Path) -> dict[tuple[str, str], dict]:
     for path in sorted(root.glob("*/*/meta.json")):
         meta = json.loads(path.read_text())
         if meta["status"] not in ("complete", "timeout") or not meta["turns"]: continue
-        out[(meta["case"], meta["model"])] = facts(meta)
+        persisting, collisions, copied = persist_keys(path.parent)
+        out[(meta["case"], meta["model"])] = facts(meta) | {
+            "persisting_cards": persisting, "key_collisions": collisions, "copied_example_key": copied}
     verdicts = root / "verdicts.json"
     if verdicts.exists():
         for v in json.loads(verdicts.read_text()):
