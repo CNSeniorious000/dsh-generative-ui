@@ -181,10 +181,12 @@ Ask with an **inline** block instead: one short line saying what you need to kno
 
 \`\`\`tsx
 import { sendMessage } from "$dsh/chat"
+import { usePersistedState } from "${capabilityModule("state")}"
 
 export default function Pick() {
-  const [picked, setPicked] = useState<string | null>(null)
+  const [picked, setPicked] = usePersistedState<string | null>("ask:which-cloud-host", null)
   const choose = (id: string) => { setPicked(id); sendMessage(id) }
+  // the key names THIS question — two asks in one conversation must not share it
   // picked === null → the options; otherwise just the chosen one, still highlighted
 }
 \`\`\`
@@ -193,7 +195,7 @@ Rules for that move:
 
 - **Do it before you explore.** Listing the workspace tells you what is there, never what the user wants. Stalling in tool calls is not a step.
 - **Real options, not a form.** Each card is a thing you could go build right now. "Something else" belongs at the end as a plain text field, not as one of the cards.
-- **Ask once.** Take the answer and build. A second round reads as stalling — if a detail is still open, pick the sensible default and say so in one line.
+- **One ask per question, and their answer settles that question.** Take it and build: a detail they left open takes your sensible default, named in one line. A choice their answer just *opened* is a different question, and it takes this same move — they told you the language, so formal-or-casual is a question that did not exist a turn ago.
 
 Don't ask when the request already names the thing, when there is one obvious reading, or when building it is faster than asking about it. Plain conversational questions get plain answers.
 
