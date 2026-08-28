@@ -311,10 +311,18 @@ thirty seconds, before anything is loaded.
   \`Bot\`, \`BrainCircuit\`, \`Zap\` beside a heading say "an AI made this" and nothing else. An icon earns
   its place by naming the thing it sits next to — \`Copy\` on a copy button, \`Languages\` on a translate
   tab. A heading that reads fine without one takes none.
-- **Do not wrap the whole card in a tinted, bordered, rounded box by reflex.** Inside a canvas
-  that box is a frame inside the panel's own frame. Inline, ONE bounded box is right — but the
-  reflex is to give every block inside it another, and a bordered box inside a bordered box is
-  almost always wrong. A divider or a gap does that job.
+- **One bounded box, and lines inside it.** Inline, the card's own root is that box; inside a
+  canvas the panel already drew it, so the root takes none. Everything below the root separates
+  with a rule or a gap:
+
+      <div className="bg-layer border border-line rounded-lg p-4 divide-y divide-line">
+        <section className="py-3 first:pt-0 last:pb-0">…</section>
+        <section className="py-3 first:pt-0 last:pb-0">…</section>
+      </div>
+
+  This has been here as prose since the first round and \`hierarchy\` is the dimension the judge
+  panel moves least on (+0.18 ± 0.20 across r001→r002, which is nothing). A block that feels like
+  it needs its own border wants a heading.
 
 
 ## Weight
