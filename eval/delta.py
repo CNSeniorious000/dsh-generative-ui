@@ -31,7 +31,14 @@ COUNTERS = [
     ("preview-then-commit", lambda f: int(f["preview_then_commit"]), lambda f: 1),
     ("committed but not recorded", lambda f: f["did_not_record"], lambda f: f["committed_reloads"]),
     ("recorded but lost on reload", lambda f: f["did_not_persist"], lambda f: f["committed_reloads"]),
-    ("cards overflowing at 380", lambda f: f["overflowing"], lambda f: f["claimable"]),
+    # Denominator is what the probe MEASURED, not what was claimable. With `claimable` a round
+    # taken before the probe existed contributes 0/claimable = 0.0 — a clean zero — and the round
+    # after it contributes its real rate, so the pair reports the probe's arrival as a regression.
+    # It did: `+0.118 ± 0.044`, the only counter in the r003→r004 read to clear 2 SE, and entirely
+    # an artefact. `score.py` already guards this (it prints `n/a (not measured)`); the guard just
+    # had not reached here. The `db == 0` skip below then drops the pair, which is the honest
+    # answer — the comparison does not exist yet.
+    ("cards overflowing at 380", lambda f: f["overflowing"], lambda f: f["overflow_measured"]),
     ("cards that painted", lambda f: f["painted"], lambda f: f["claimable"]),
     ("  …inline fences", lambda f: f["painted_fence"], lambda f: f["fences"]),
     ("  …canvases", lambda f: f["painted_canvas"], lambda f: f["canvases"]),
