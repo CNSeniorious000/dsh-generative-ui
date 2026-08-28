@@ -73,3 +73,7 @@ credit for a rule that shipped before it.
 | runs where the reader clicked and nothing ever sent | **108 / 161 (67%)** | one control ends the step | r006 |
 | `useEffect` timers with no cleanup | **0 / 39** | none — already correct, and a crude regex said 212 | never |
 | cards carrying a `@container` breakpoint | **591 / 766 (77%)** | already landed; was the top panel criticism at 76% | already read |
+| cards nesting the box recipe three or more deep | **256 / 766 (33%)**, worst 7 | countable nesting check | r006 |
+| submissions that left the card looking untouched | **36 / 105 (34%)** | record-then-show, three statements | r006 |
+| submissions recorded but lost on reload | **20 / 105 (19%)** | `usePersistedState`, not `useState` | r006 |
+| reloads that re-fired the turn by themselves | **0 / 105** | none — the opposite mistake does not happen | never |
