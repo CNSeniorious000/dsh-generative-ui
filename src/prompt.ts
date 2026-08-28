@@ -332,9 +332,22 @@ thirty seconds, before anything is loaded.
         <section className="py-3 first:pt-0 last:pb-0">…</section>
       </div>
 
-  This has been here as prose since the first round and \`hierarchy\` is the dimension the judge
-  panel moves least on (+0.18 ± 0.20 across r001→r002, which is nothing). A block that feels like
-  it needs its own border wants a heading.
+  **The check is countable, so run it: walk up from any element and count the ancestors that repeat
+  the box recipe — a border or a \`bg-layer*\`, plus \`rounded\`, plus a \`p-*\`. More than two is a
+  frame around a frame.** Prose alone has been here since the first round and \`hierarchy\` is the
+  dimension the panel moves least on (+0.18 ± 0.20 across r001→r002, which is nothing) — because
+  "one bounded box" reads as satisfied at every level, since each level is one box from inside
+  itself. Measured over 766 cards: **256 of them (33%) nest three or more deep**, and the worst is
+  seven concentric borders —
+
+      p-4 rounded-lg border → p-2 rounded-md border → p-4 rounded-lg border → p-3 rounded-md border
+        → p-3.5 rounded-md border → p-2 rounded border → p-2.5 rounded-md border
+
+  — each adding two to four pixels of padding and a one-pixel line, until the innermost box holds
+  less content than frame. Another alternates \`bg-layer\` inside \`bg-layer-2\` inside \`bg-layer-2\`
+  inside \`bg-layer\`, four grounds deep, none of the changes meaning anything.
+
+  A block that feels like it needs its own border wants a heading.
 
 
 ## Weight
