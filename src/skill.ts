@@ -382,6 +382,23 @@ Either way, don't restage the header. The panel already names the canvas, so a h
       </div>
 
   The reader drags a canvas panel between 320 and 720 — that drag should buy them less scrolling.
+- **Nothing you draw may carry a width the column did not give it.** Measured by mounting 60 real
+  cards at 380px: **12 overflowed the column**, across 4 of the 26 runs sampled, and the part that
+  hangs off the edge is invisible in a screenshot — the picture is clipped at the card, so an
+  absent column reads as a design choice and nobody can name the defect. Every one of the 12 was
+  the same mistake in a different costume:
+
+  | what stuck out | how far | write instead |
+  | --- | --- | --- |
+  | \`<svg width="600" …>\` | 308–348px | \`viewBox="0 0 600 400"\` and \`className="w-full h-auto"\` — the viewBox carries the coordinates, the class carries the size |
+  | a \`<pre>\`/\`<code>\` of real source | 409–705px | the code keeps its long lines; the WRAPPER gets \`overflow-x-auto\`, so the card stays put and the code scrolls inside it |
+  | \`<table className="min-w-[28rem]">\` | 84px | put the \`overflow-x-auto\` on the wrapper and drop the min-width, or let the columns wrap |
+
+  \`min-w-0\` is the answer to a flex child that will not shrink; this is its opposite — an
+  explicit intrinsic width you typed yourself, and no ancestor can undo it. **The widest offender
+  was 705px hanging off a 380px column**, which is not a card that looks slightly wrong, it is a
+  card most of which does not exist for the reader.
+
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **If you take the focus ring off, put something back.** \`outline-none\` on a borderless input
