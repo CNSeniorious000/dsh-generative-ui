@@ -102,6 +102,32 @@ async def harnesses(light: int, dark: int) -> list[subprocess.Popen]:
     return procs
 
 
+async def judge_round(round_dir: pathlib.Path, metas: list[dict]) -> None:
+    """The panel over one round's runs, writing `verdicts.json`.
+
+    Split out so `--judge-only` re-scores a round that already ran. That is not a convenience: the
+    judge's own message changed once already (the image budget), and a round judged before the
+    change cannot be compared with one judged after — the cache keys on the image bytes, so the
+    runs whose content did not change replay for free and only the affected ones cost anything.
+    """
+    print("\njudging…", flush=True)
+    panel = asyncio.Semaphore(4)
+
+    async def score(meta):
+        out = round_dir / meta["case"] / meta["model"]
+        async with panel:
+            try: return {"case": meta["case"], "model": meta["model"], **(await judge.judge_run(out))}
+            except Exception as error: return {"case": meta["case"], "model": meta["model"], "status": f"error: {error}"[:200]}
+
+    verdicts = await asyncio.gather(*[score(m) for m in metas if m["turns"]])
+    (round_dir / "verdicts.json").write_text(json.dumps(verdicts, ensure_ascii=False, indent=1))
+    scored = [v for v in verdicts if v.get("status") == "ok"]
+    print(f"scored {len(scored)}/{len(verdicts)}")
+    if scored:
+        keys = ["trigger", "clarify", "interaction", "hierarchy", "craft", "overall"]
+        print("  " + "  ".join(f"{k}={sum(v['mean'][k] for v in scored) / len(scored):.2f}" for k in keys))
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("round")
@@ -110,6 +136,7 @@ async def main():
     ap.add_argument("--timeout", type=float, default=1500, help="per multi-turn run; single-turn gets a fifth")
     ap.add_argument("--light", type=int, default=47801); ap.add_argument("--dark", type=int, default=47802)
     ap.add_argument("--no-judge", action="store_true")
+    ap.add_argument("--judge-only", action="store_true", help="re-score a round that already ran; runs nothing")
     args = ap.parse_args()
 
     cases = [BY_ID[c] for c in args.cases.split(",")] if args.cases else CASES
@@ -117,6 +144,11 @@ async def main():
     round_dir = ROOT / "rounds" / args.round
     round_dir.mkdir(parents=True, exist_ok=True)
     ROOT.mkdir(parents=True, exist_ok=True)
+    # Before `freeze`, deliberately: freezing copies the CURRENT `lib/` over the snapshot this
+    # round was measured against, so a re-score would quietly rewrite the record of what ran.
+    if args.judge_only:
+        metas = [json.loads(p.read_text()) for p in sorted(round_dir.glob("*/*/meta.json"))]
+        return await judge_round(round_dir, [m for m in metas if m["status"] in ("complete", "timeout")])
     frozen = freeze(round_dir)
     (round_dir / "manifest.json").write_text(json.dumps(
         {"cases": [c["id"] for c in cases], "models": models, "user_agent": drive.USER_AGENT_MODEL,
@@ -173,22 +205,7 @@ async def main():
         if not isinstance(m, dict): print("  FAILED:", repr(m)[:200])
 
     if args.no_judge: return
-    print("\njudging…", flush=True)
-    panel = asyncio.Semaphore(4)
-
-    async def score(meta):
-        out = round_dir / meta["case"] / meta["model"]
-        async with panel:
-            try: return {"case": meta["case"], "model": meta["model"], **(await judge.judge_run(out))}
-            except Exception as error: return {"case": meta["case"], "model": meta["model"], "status": f"error: {error}"[:200]}
-
-    verdicts = await asyncio.gather(*[score(m) for m in ok if m["turns"]])
-    (round_dir / "verdicts.json").write_text(json.dumps(verdicts, ensure_ascii=False, indent=1))
-    scored = [v for v in verdicts if v.get("status") == "ok"]
-    print(f"scored {len(scored)}/{len(verdicts)}")
-    if scored:
-        keys = ["trigger", "clarify", "interaction", "hierarchy", "craft", "overall"]
-        print("  " + "  ".join(f"{k}={sum(v['mean'][k] for v in scored) / len(scored):.2f}" for k in keys))
+    await judge_round(round_dir, ok)
 
 
 if __name__ == "__main__":
