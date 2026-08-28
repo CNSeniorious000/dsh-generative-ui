@@ -312,6 +312,10 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                     record = {"id": card["id"], "kind": card["kind"], "chars": len(card["code"])}
                     state = await driver.cmd(cmd="mount", code=card["code"], width=WIDTHS[0], theme="light")
                     record["painted"], record["errors"] = state.get("painted", False), state.get("errors", [])
+                    # Measured at the NARROWEST width, which is where it happens: a pill or a badge
+                    # that fits at 720 is pushed past the edge at 380, and the screenshot cannot
+                    # show it because the clip ends at the card.
+                    record["overflow"] = state.get("overflow")
                     record["controls"] = len(state.get("controls", []))
                     # Every width and both grounds, because a card is judged on all of them and a
                     # `@container` rule makes 380 and 720 two different designs.

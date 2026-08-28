@@ -83,6 +83,15 @@ def facts(meta: dict) -> dict:
         # 98%->97% while canvases went 100%->86%. Pooled as one rate the two cancel into a vague
         # -5.8pp that points at nothing.
         "painted_canvas": sum(1 for c in cards if c["painted"] and c["kind"] == "canvas"),
+        # Content past the card's right edge, at the narrowest width. Counted rather than left to
+        # the panel because the SHOT cannot show it — the clip ends at the card, so the overflowing
+        # part is absent and absence reads as a design choice.
+        # `measured` separately from `overflowing`: a round taken before this probe existed has no
+        # `overflow` key at all, and reporting that as 0% is the shape §6.4 names — "no failures"
+        # and "nothing was examined" printing the same number.
+        "overflow_measured": sum(1 for c in cards if "overflow" in c),
+        "overflowing": sum(1 for c in cards if c.get("overflow")),
+        "overflow_worst": max((c["overflow"]["px"] for c in cards if c.get("overflow")), default=0),
         "mistagged": sum(1 for c in cards if c["kind"] == "mistagged"),
         "canvases": sum(1 for c in cards if c["kind"] == "canvas"),
         "skill": sum(1 for t in turns if t.get("skill")),
@@ -144,6 +153,11 @@ def summarise(rows: list[dict], label: str) -> None:
     print(f"  cards that actually painted     {pct(sum(r['painted'] for r in rows), claimable)}  of {claimable} claimable cards")
     print(f"    …inline fences                {pct(sum(r['painted_fence'] for r in rows), fences)}  of {fences}")
     print(f"    …canvases                     {pct(sum(r['painted_canvas'] for r in rows), canvases)}  of {canvases}")
+    measured = sum(r["overflow_measured"] for r in rows)
+    if measured == 0:
+        print(f"  cards overflowing at 380px        n/a  (not measured — this round predates the probe)")
+    else:
+        print(f"  cards overflowing at 380px      {pct(sum(r['overflowing'] for r in rows), measured)}  of {measured} measured, worst {max((r['overflow_worst'] for r in rows), default=0)}px past the edge")
     print(f"  blocks the renderer never sees  {sum(r['mistagged'] for r in rows):5}  (```tsx not ```ui4a/tsx — read them, most are not cards)")
     print(f"  clicks that fired the turn      {pct(sum(r['clicks_that_sent'] for r in rows), clicks)}  of {clicks} clicks")
     print(f"  clicks that did nothing at all  {pct(sum(r['dead_clicks'] for r in rows), clicks)}")

@@ -95,7 +95,20 @@ const PROBE = () => {
       box: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
     });
   }
-  return { painted: host.getBoundingClientRect().height > 20, text: (host.innerText || "").trim().slice(0, 4000), controls, sent: window.__sent ?? [] };
+  // Content wider than the card, measured rather than eyeballed. A screenshot is clipped at the
+  // host width, so the overflowing part is simply ABSENT from the picture and an absent column
+  // reads as a design choice — this is the one defect a reader looking at the shot cannot name.
+  // Ported from `shot-card.mjs`, including the reason it takes the single worst offender: one
+  // pass, and the caller wants somewhere to look rather than a list to triage.
+  const right = host.getBoundingClientRect().right;
+  let worst = null;
+  for (const el of host.querySelectorAll("*")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && r.right > right + 1 && (worst === null || r.right - right > worst.px)) {
+      worst = { px: Math.round(r.right - right), tag: el.tagName.toLowerCase(), cls: (el.className || "").toString().slice(0, 60), text: (el.innerText || "").trim().slice(0, 40) };
+    }
+  }
+  return { painted: host.getBoundingClientRect().height > 20, text: (host.innerText || "").trim().slice(0, 4000), controls, sent: window.__sent ?? [], overflow: worst };
 };
 
 const CLICK = (ref) => {
