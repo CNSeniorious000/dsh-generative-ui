@@ -191,6 +191,26 @@ export default function Pick() {
 }
 \`\`\`
 
+**When the two answers need no explaining, they are two buttons in a row — not two cards.** The
+shape to match is in the question: \`Postgres or SQLite?\` / \`公制还是英制？\` / \`要我先跑测试吗？\` are
+answered by the label alone, and a bordered tile with a description under each says the choice is
+weightier than it is. Same \`choose\`, same key, one row:
+
+\`\`\`tsx
+<div className="flex flex-wrap gap-2">
+  {OPTIONS.map((o) => (
+    <button key={o.id} onClick={() => choose(o.id)} aria-pressed={picked === o.id}
+      className="rounded-md border border-line px-3 py-1.5 text-sm hover:bg-hover
+                 aria-pressed:bg-accent aria-pressed:text-white aria-pressed:border-transparent">
+      {o.label}
+    </button>
+  ))}
+</div>
+\`\`\`
+
+Give each option a description and you have built the card version above; the descriptions are
+what earn the tiles. Two labels that stand on their own take the row.
+
 Rules for that move:
 
 - **Do it before you explore.** Listing the workspace tells you what is there, never what the user wants. Stalling in tool calls is not a step.

@@ -155,3 +155,17 @@ test("the first streaming frame emits the preflight block", async () => {
     (globalThis as { document?: unknown }).document = previous;
   }
 });
+
+// Every utility the two prompt recipes hand the model, generated through the real config. A
+// colour name that is not in the map, or a variant presetWind4 does not know, produces NOTHING
+// and the card renders unstyled — the failure §2.5 records, which no screen and no compile
+// catches. A recipe shown as code has to be spellable before it is worth showing.
+test("the tokens the prompt's own recipes write all generate", async () => {
+  const tokens = ["divide-y", "divide-line", "first:pt-0", "last:pb-0", "flex-wrap",
+                  "hover:bg-hover", "aria-pressed:bg-accent", "aria-pressed:text-white", "aria-pressed:border-transparent"];
+  const { css, matched } = await generate(tokens);
+  expect([...matched].sort()).toEqual([...tokens].sort());
+  expect(css).toContain('[aria-pressed="true"]');
+  expect(css).toContain("--dsw-alias-border-l1");
+  expect(css).toContain("--dsw-alias-interactive-bg-hover");
+});
