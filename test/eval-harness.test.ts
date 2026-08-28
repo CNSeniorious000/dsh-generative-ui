@@ -51,7 +51,22 @@ const hasDsh = Bun.spawnSync(["which", "dsh"]).exitCode === 0;
 // rebuild moves the prompt under jobs already in flight. So during a wave the test would fail on
 // its own first line, reporting a guard doing its job as a broken suite. Skip instead, and say so:
 // a skip is visible in the run's output, a red test on a tree nobody changed teaches nothing.
-const waveRunning = Bun.spawnSync(["pgrep", "-f", "run-wave.py"]).exitCode === 0;
+//
+// Read the SAME evidence the build reads — `.wave-running`, holding the wave's own pid — rather
+// than asking `pgrep` a second, differently-worded question. This line used to grep for
+// `run-wave.py`; the script was renamed to `wave.py` and the guard went on answering "no wave" for
+// every wave after that, so the test failed through a whole round with a red that meant nothing.
+// The lock cannot drift out of step with the refusal, because it is what the refusal consults.
+const waveLock = Bun.file(new URL("../.wave-running", import.meta.url).pathname);
+const waveRunning = await (async () => {
+  if (!(await waveLock.exists())) return false;
+  try {
+    process.kill(Number((await waveLock.text()).trim()), 0);
+    return true;
+  } catch {
+    return false; // ESRCH: a dead wave's leftover lock, which the build ignores too
+  }
+})();
 if (waveRunning) console.log("skipping the timeout test: a wave is running, so `bun run build` will refuse");
 
 // Build first, deliberately. The staleness guard exits 4 BEFORE the timeout can fire, and `src/`
