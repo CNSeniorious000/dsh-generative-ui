@@ -1534,6 +1534,21 @@ instruction to do unnecessary work.**
   it is **not** the `:4000` one, and it lives in the shell that launches the wave, nowhere else.
 - **Evals: concurrency ≤3.** The `macaron-v1` family stalls under sustained load and the eval chain
   has no fallback, so it arrives as 900 seconds of silence.
+- **A multi-turn case runs as long as its persona WITHHOLDS, not as long as its script.** Every
+  case in `eval/cases.py` declares `turns: 10` and the median run is **6**; the spread across
+  cases is 3 to 10 and it lines up with one property of the opening line. `cron-read` opens with
+  the whole problem in it (`*/17 3-5 * * 2 这个 cron 到底几点跑？`) and scripts two later forks —
+  median **3 turns, 0% reach 10**, on 8 of 10 models. `resume-fix` opens with `帮我改改简历`,
+  naming neither the job nor the résumé, and scripts one fork — median **10, 74% reach 10**. So
+  the lever is not more scripted beats; it is an opening the assistant cannot act on without
+  asking. The five cases to rewrite are the ones below median: `cron-read` (3), `aa-split` (5),
+  `palette` (6), `sort-learn` (6), `api-shape` (7).
+
+  Two things this also says about the numbers already taken: a per-case turn count is a property
+  of the FIXTURE, so comparing models on it measures nothing — and `later_card` ("a card at turn
+  3+") is scored against conversations that mostly end at 6, which is a much weaker test of the
+  "a new fork deserves its own interface" principle than it reads as.
+
 - **A prompt is not a neutral probe.** `现在到哪一步了` calls dsh's own `get_goal`; a fixture whose
   subject is absent measures the fixture. Whatever a prompt refers to must exist in the workspace
   *before* the run.
