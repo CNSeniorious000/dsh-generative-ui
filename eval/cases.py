@@ -115,9 +115,20 @@ CASES = [
     # every round taken so far, and rewriting a fixture is the one change that makes a paired
     # read meaningless. These start their own series.
     #
-    # `floor: 8` measured on r004: six healthy runs ALL stopped at exactly 8. It is doing its job —
-    # the agent was pushed 12 times across them — but 8 became a ceiling rather than a floor, and
-    # the goal asks for ten. Raise it once this round's baseline is banked, not during.
+    # `floor: 8` measured over ALL of r004's healthy runs on these cases, not the six the first
+    # partial read saw. The distribution is not a tail, it is a spike ON the floor:
+    #
+    #     4:1  6:1  7:3  8:24  9:9  10:2  11:1  12:7
+    #
+    # 24 of 48 stop at exactly 8. A natural stopping point produces a smooth curve; half the mass
+    # sitting on the declared value is the mechanism, and the mechanism is visible in `drive.py`:
+    # the push fires on `index + 1 < floor`, so turn 8 (index 7) is never pushed at all and the
+    # persona is released the moment it is allowed to be. `floor` is doing exactly what it says —
+    # it is a MINIMUM — and a minimum most runs land on is a ceiling in practice.
+    #
+    # The goal asks for ten. Raise it once a round's baseline is banked, NOT during one: these six
+    # are paired across rounds, and this file's own rule is that changing what the model faces
+    # mid-series is the one edit that makes a paired read mean nothing.
     #
     # Each also has a natural result to SHOW — a diagram, a formula, a live layout, a plan, a
     # position, a drawing — because "clicking an option previews what it means, and a separate
