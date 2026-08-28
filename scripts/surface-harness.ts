@@ -187,6 +187,20 @@ Bun.serve({
       return new Response(stream, { headers: { "content-type": "text/plain; charset=utf-8" } });
     },
     "/card": () => (cardPath === undefined ? new Response("no card", { status: 404 }) : new Response(readFileSync(cardPath, "utf8"), { headers: { "content-type": "text/plain" } })),
+    // An extra page on THIS origin, named by `HARNESS_PAGE`. It has to be same-origin or its
+    // `import("/surface.js")` resolves to nothing: the real compiler is what makes a page showing
+    // two cards side by side a comparison rather than a screenshot of one.
+    "/page": () => {
+      const path = process.env.HARNESS_PAGE;
+      if (path === undefined) return new Response("set HARNESS_PAGE", { status: 404 });
+      return new Response(readFileSync(path, "utf8"), { headers: { "content-type": "text/html; charset=utf-8" } });
+    },
+    /** Whatever `HARNESS_DATA` points at, verbatim. The page fetches its own content from here. */
+    "/data": () => {
+      const path = process.env.HARNESS_DATA;
+      if (path === undefined) return new Response("set HARNESS_DATA", { status: 404 });
+      return new Response(readFileSync(path, "utf8"), { headers: { "content-type": "application/json; charset=utf-8" } });
+    },
     "/icons": () => new Response(JSON.stringify(lucideNames), { headers: { "content-type": "application/json" } }),
     [WASM_PATH]: () => new Response(readFileSync(`${REPO_ROOT}node_modules/@esm.sh/tsx/pkg/tsx_bg.wasm`), { headers: { "content-type": "application/wasm" } }),
     "/": () =>
