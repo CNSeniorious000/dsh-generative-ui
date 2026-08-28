@@ -174,12 +174,34 @@ async def main():
     # hand at least once. Turning the signal into an exception is what lets the homes be put back.
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
+    # Read what `dsh` will have to read, before spending anything. macOS revokes a Desktop grant
+    # without warning and without a prompt, and the symptom downstream is not "permission denied"
+    # anywhere useful — it is every model appearing to produce nothing. Twice now a round has been
+    # lost to it (`rounds/r001-POISONED-by-perm-loss` is the other one). Refusing to start costs a
+    # syscall; finding out run by run costs the round.
+    try:
+        drive.PATCH.read_bytes()
+    except OSError as error:
+        sys.exit(f"wave: cannot read {drive.PATCH} ({error.__class__.__name__}: {error}).\n"
+                 f"      dsh reads this file at boot, so every run would die before reaching a model.\n"
+                 f"      On macOS this is usually the Desktop/Documents grant disappearing: re-tick the\n"
+                 f"      terminal under System Settings > Privacy & Security > Files and Folders.")
     servers = await harnesses(args.light, args.dark)
     done, started = 0, time.time()
     total = len(cases) * len(models)
 
+    # ONE dead environment, not N dead runs. A wave lost its Desktop permission grant 42 runs in:
+    # every `dsh` after that died in 0.1s on `EPERM` reading its own overlay, and the wave went on
+    # to burn **173 of 220 slots** producing nothing but `error` rows over three hours. The failure
+    # is not per-run and retrying it 173 times cannot help, so the first few teach us everything.
+    #
+    # Under a second means the model was never reached — a real run cannot finish that fast. Three
+    # in a row is the trip, so a single flaky boot does not stop a wave.
+    tripped: list[str] = []
+    quick_deaths = 0
+
     async def one(case, model):
-        nonlocal done
+        nonlocal done, quick_deaths
         out = round_dir / case["id"] / model
         if (out / "meta.json").exists():
             meta = json.loads((out / "meta.json").read_text())
@@ -188,9 +210,21 @@ async def main():
             if meta.get("status") in ("complete", "timeout"):
                 done += 1
                 return meta
+        if tripped:
+            # Do not even start: the environment is gone, and a queued run that boots anyway just
+            # writes another `error` meta that the next launch has to re-run.
+            return {"case": case["id"], "model": model, "status": "skipped", "turns": [], "elapsed": 0}
         timeout = args.timeout if case["kind"] == "multi" else args.timeout / 5
         async with gates[UPSTREAM[model][0]], inflight:
             meta = await drive.run(case, model, out, (args.light, args.dark), timeout)
+        if meta.get("status") == "error" and (meta.get("elapsed") or 0) < 1:
+            quick_deaths += 1
+            if quick_deaths >= 3 and not tripped:
+                tripped.append(meta.get("error", "")[:300])
+                print(f"\nWAVE ABORTED: three runs died before reaching the model. This is the environment, "
+                      f"not the models — every queued run would fail the same way.\n{tripped[0]}\n", flush=True)
+        else:
+            quick_deaths = 0
         done += 1
         turns, cards = len(meta["turns"]), sum(len(t["cards"]) for t in meta["turns"])
         print(f"[{done}/{total}] {meta['status']:9} {case['id']:12} {model:24} turns={turns} cards={cards} {meta['elapsed']}s", flush=True)
