@@ -293,11 +293,24 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                 clock = time.time()
                 try:
                     result = await agent.turn(next_text)
-                except (httpx.ReadTimeout, httpx.RemoteProtocolError) as error:
-                    # One slow turn must not discard the turns before it. Measured on
+                except (httpx.TransportError, ConnectionResetError, BrokenPipeError) as error:
+                    # One slow OR BROKEN turn must not discard the turns before it. Measured on
                     # glm-5.3-flash: a turn spent 616s inside the model and the exception reached
                     # `run()`, which marked the whole conversation `error` — throwing away another
                     # run's completed first turn AND the card it had already produced.
+                    #
+                    # The list started as `ReadTimeout, RemoteProtocolError` and that was too narrow: a
+                    # machine under load DROPS the channel instead of stalling it, and
+                    # `ConnectionResetError('Connection lost')` — raised by the asyncio transport,
+                    # not by httpx — matched neither. **27 runs in one round** were discarded whole
+                    # for it, each having already produced turns. The reason to keep the turns does
+                    # not depend on which way the connection failed.
+                    #
+                    # `httpx.TransportError` is the base of every httpx connect/read/write/pool
+                    # failure, so it covers the two original names and their siblings. NOT bare
+                    # `OSError`: that would also swallow a failed `meta.json` write and end the run
+                    # looking like a network blip — the same exception meaning two things, which is
+                    # how a real bug hides for a round.
                     turn["reply"], turn["tools"], turn["skill"] = "", [], False
                     turn["reason"] = {"kind": "error", "error": {"code": "TURN_TIMEOUT", "message": f"{type(error).__name__}"}}
                     turn["t_model"] = round(time.time() - clock, 1)
