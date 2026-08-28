@@ -219,7 +219,7 @@ const UNSCREENABLE = [
   // `Sparkles` header this rule exists for. A screen measured at 0.3% would report on the wrong
   // population and read as "the rule does nothing".
   "No decorative icon",
-  "Do not wrap the whole card",
+  "One bounded box, and lines inside it",
 
   // The drawn-structure tells. A screen reads the SOURCE of a card that exists; the violation
   // these three name is a card that does not — the answer went out as a fence full of box
