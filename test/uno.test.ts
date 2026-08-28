@@ -174,3 +174,27 @@ test("the tokens the prompt's own recipes write all generate", async () => {
   expect(css).toContain("isolation:isolate");
   expect(css).toContain("position:sticky");
 });
+
+/**
+ * A `hover:` and a selected-state variant on one element collide, and the fix has to be the one
+ * this generator actually emits.
+ *
+ * `:is()` takes its argument's specificity, so `.cls:hover` and `.cls[aria-pressed="true"]` are
+ * both (0,2,0) — equal, and `hover` is written last in the sheet, so hovering a selected button
+ * repaints it neutral. `aria-pressed:hover:` is (0,3,0) and wins on specificity instead of order.
+ *
+ * The `not-` half of this test is the important half: it is the intuitive fix, this preset matches
+ * neither spelling, and an unmatched token generates NOTHING — the button keeps the bug while the
+ * class list claims it was handled. Locked here so a preset upgrade that starts (or keeps not)
+ * supporting it is a failing test rather than a silent no-op in every generated card.
+ */
+test("the selected-and-hovered pair generates; `not-` generates nothing", async () => {
+  const { css, matched } = await generate(["hover:bg-hover", "aria-pressed:bg-accent", "aria-pressed:hover:bg-accent"]);
+  expect([...matched]).toContain("aria-pressed:hover:bg-accent");
+  expect(css).toContain('.aria-pressed\\:hover\\:bg-accent:hover[aria-pressed="true"]');
+
+  for (const token of ["not-aria-pressed:hover:bg-hover", "hover:not-aria-pressed:bg-hover"]) {
+    const { matched: none } = await generate([token]);
+    expect([...none]).toEqual([]);
+  }
+});

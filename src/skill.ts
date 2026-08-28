@@ -201,7 +201,8 @@ weightier than it is. Same \`choose\`, same key, one row:
   {OPTIONS.map((o) => (
     <button key={o.id} onClick={() => choose(o.id)} aria-pressed={picked === o.id}
       className="rounded-md border border-line px-3 py-1.5 text-sm hover:bg-hover
-                 aria-pressed:bg-accent aria-pressed:text-white aria-pressed:border-transparent">
+                 aria-pressed:bg-accent aria-pressed:text-white aria-pressed:border-transparent
+                 aria-pressed:hover:bg-accent">                    {/* or the selection vanishes under the pointer */}
       {o.label}
     </button>
   ))}
@@ -412,6 +413,25 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   card most of which does not exist for the reader.
 
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
+- **Whatever \`hover:\` changes, the selected state has to claim in its hover form too.** A
+  \`hover:bg-hover\` and an \`aria-pressed:bg-accent\` on the same button generate at the SAME
+  specificity — \`:is()\` takes its argument's, so \`.class:hover\` and \`.class[aria-pressed]\` are
+  both \`(0,2,0)\` — and source order in the generated sheet puts \`hover\` last. So the selected
+  button turns back to neutral grey **while the pointer is on it**, which is exactly when the
+  reader is looking at it. **Measured across 766 generated cards: 308 real collisions in 193 cards
+  across 60 runs** — a quarter of everything written, 256 on \`bg\` and 52 on \`text\`.
+
+  Add the pressed-and-hovered pair. It is \`(0,3,0)\`, so it wins on specificity and does not care
+  where it lands in the sheet:
+
+      hover:bg-hover aria-pressed:bg-accent aria-pressed:hover:bg-accent
+
+  **Do not reach for \`not-\`.** \`not-aria-pressed:hover:bg-hover\` and
+  \`hover:not-aria-pressed:bg-hover\` are the intuitive fix and this generator matches **neither** —
+  they produce no rule at all, so the button keeps the bug and the class list now says it was
+  handled. A ternary works too (\`picked ? "bg-accent" : "hover:bg-hover"\`) because only one branch
+  is ever present; reach for that when the two states differ in more than a couple of properties.
+
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **If you take the focus ring off, put something back.** \`outline-none\` on a borderless input
   is the most common single thing in these cards that breaks keyboard use: **77 of 378 remove the
