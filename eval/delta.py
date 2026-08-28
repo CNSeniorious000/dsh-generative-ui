@@ -39,6 +39,23 @@ COUNTERS = [
 ]
 
 
+def clean(meta: dict) -> bool:
+    """No turn errored and none came back empty, and the run was not cut short.
+
+    A round is not only its prompt: r003 had 24 empty replies against r002's 13, and 11 of the 24
+    were ONE model. An empty reply is a turn with no card, a shorter conversation, and a judge
+    reading an exchange where the assistant said nothing — so it moves every number at once, in
+    the direction that reads as a regression. Pooled, r002->r003 showed trigger -0.80 and overall
+    -0.53, both past 2 SE; on the 122 pairs where neither side had one, nothing cleared 2 SE and
+    the card rate was -0.004. The dirty pairs were the whole result.
+
+    This is reported BESIDE the full read rather than replacing it: dropping runs is how a
+    measurement flatters itself, and the two numbers together say which kind of round it was.
+    """
+    return meta["status"] == "complete" and not any(
+        (turn.get("reason") or {}).get("kind") == "error" or not (turn.get("reply") or "") for turn in meta["turns"])
+
+
 def load(root: pathlib.Path) -> dict[tuple[str, str], dict]:
     out = {}
     for path in sorted(root.glob("*/*/meta.json")):
@@ -46,7 +63,8 @@ def load(root: pathlib.Path) -> dict[tuple[str, str], dict]:
         if meta["status"] not in ("complete", "timeout") or not meta["turns"]: continue
         persisting, collisions, copied = persist_keys(path.parent)
         out[(meta["case"], meta["model"])] = facts(meta) | {
-            "persisting_cards": persisting, "key_collisions": collisions, "copied_example_key": copied}
+            "persisting_cards": persisting, "key_collisions": collisions, "copied_example_key": copied,
+            "clean": clean(meta)}
     verdicts = root / "verdicts.json"
     if verdicts.exists():
         for v in json.loads(verdicts.read_text()):
@@ -71,9 +89,16 @@ def main() -> None:
     print(f"{len(pairs)} paired runs ({len(before)} before, {len(after)} after)\n")
     if not pairs: return
 
+    tidy = [p for p in pairs if before[p]["clean"] and after[p]["clean"]]
     print("panel, paired (← marks a move of at least 2 standard errors):")
     for key in KEYS:
         deltas = [after[p]["panel"][key] - before[p]["panel"][key] for p in pairs
+                  if "panel" in before[p] and "panel" in after[p]]
+        report(key, deltas)
+
+    print(f"\npanel again, over the {len(tidy)} pairs where NEITHER side errored, came back empty, or was cut short:")
+    for key in KEYS:
+        deltas = [after[p]["panel"][key] - before[p]["panel"][key] for p in tidy
                   if "panel" in before[p] and "panel" in after[p]]
         report(key, deltas)
 
