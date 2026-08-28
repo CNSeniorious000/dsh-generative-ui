@@ -115,7 +115,7 @@ The tell is the question "would the user want this again in ten turns?" Yes → 
 
 Two things follow from the lifetime difference:
 
-- An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
+- An **inline** block that the user acts on should *end that step* — see the next entry for WHICH control ends it, because on a card whose options need previewing it is not the one they pick with. Whichever it is, that control does two things: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
 - **Exactly one control ends the step, and the reader must be able to find it.** This is the
   single largest hole in what gets built: across 161 runs where the reader actually clicked
   something, **108 of them — 67% — never once got a result back out of the card**, 468 clicks that
