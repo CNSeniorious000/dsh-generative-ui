@@ -340,7 +340,28 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   (\`#fff\` here) as their colour and no background at all, or a white outline if the shape itself
   has to stay readable.
 - **Keep nesting shallow.** A bordered box inside a bordered box is almost always wrong; a divider line does the job.
-- **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you. No \`position: fixed\`, no \`100vw\`/\`100vh\`, no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
+- **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you until you do it yourself. No \`position: fixed\`, no viewport UNITS (\`vh\`/\`vw\`, at any number — the window is not your box, so \`78vh\` is wrong for the same reason \`100vh\` is), no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
+- **Your root sets no height and no \`overflow\`; the page is what scrolls.** You are inside a
+  column the reader is already scrolling, so a root that sizes itself and grows its own scrollbar
+  puts a second scroll inside the first. Pin with \`sticky\`, which pins against the READER's
+  scroll, and give an inner pane its own bound only when a list genuinely needs one:
+
+  \`\`\`tsx
+  <div className="isolate relative">                                   {/* your own stacking context */}
+    <div className="sticky top-0 z-10 bg-layer border-b border-line">…</div>
+    <div className="max-h-[30rem] overflow-y-auto">…</div>            {/* the list, not the card */}
+  </div>
+  \`\`\`
+
+  **\`overflow\` on ANY ancestor of a \`sticky\` element switches it off, silently** — no error, no
+  warning, it simply scrolls away. Watched happen across one card's revisions: a root grew
+  \`overflow: hidden\` to contain a stacking problem, the pinned header stopped pinning, and the
+  two edits were two turns apart. Nothing between a \`sticky\` element and the page may set it.
+
+  **\`isolate\` is what keeps your \`z-index\` small.** Inside a stacking context you own, \`z-10\`
+  is above everything of yours and below everything of the app's. Without one, a number picked to
+  beat your own siblings also beats the composer the reader types into.
+
 - **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container with \`@container\` and \`@[32rem]:\` variants, which is the ONE responsive tool that works here. "One comfortable column beats two cramped ones" settles what to do at 320px; it is not a licence to ship the same single column at 720. **Judged by a vision panel on 59 cards at three widths, "still one column at 720px, half the card is empty" was the single most common criticism — 91% of verdicts — and "no breakpoint of any kind in the source" was 76%.** A list of items with a name and a description is \`@[30rem]:grid-cols-2\`; a strip of stats is \`@[24rem]:grid-flow-col\`. The reader who widens the panel is asking for less scrolling, and getting a wider version of the same tall column is not an answer.
 
 - **Extra width should make the rows SHORTER, not the card wider — inline as much as in a canvas.**

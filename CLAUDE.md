@@ -1071,6 +1071,7 @@ recognising before trusting any number in this project.
 | 4 of 6 sliders forgot their fill | all four are "pick a value", which must NOT fill | read what the number means |
 | the canvas paint rate fell 100% -> 86% | 5 canvases re-snapshotted 17 times, 2 of them my own harness | dedupe by (run, canvas id) first |
 | a negative control over-fires 30% of the time | two models card on it in every round, eight never do | split a control rate by model before rewording |
+| a rule banned `100vh` and the card obeyed | it wrote `78vh` — the UNIT was the defect, not the number | ban the unit, not the value you saw |
 
 **A canvas is counted once per turn it changes, and three of the five ways to fail are not the
 card's.** Reading r002's 17 unpainted canvases end to end: they are **5 distinct canvases**, each

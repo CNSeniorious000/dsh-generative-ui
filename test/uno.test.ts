@@ -162,10 +162,15 @@ test("the first streaming frame emits the preflight block", async () => {
 // catches. A recipe shown as code has to be spellable before it is worth showing.
 test("the tokens the prompt's own recipes write all generate", async () => {
   const tokens = ["divide-y", "divide-line", "first:pt-0", "last:pb-0", "flex-wrap",
-                  "hover:bg-hover", "aria-pressed:bg-accent", "aria-pressed:text-white", "aria-pressed:border-transparent"];
+                  "hover:bg-hover", "aria-pressed:bg-accent", "aria-pressed:text-white", "aria-pressed:border-transparent",
+                  "isolate", "relative", "sticky", "top-0", "z-10", "max-h-[30rem]", "overflow-y-auto", "border-b", "bg-layer"];
   const { css, matched } = await generate(tokens);
   expect([...matched].sort()).toEqual([...tokens].sort());
   expect(css).toContain('[aria-pressed="true"]');
   expect(css).toContain("--dsw-alias-border-l1");
   expect(css).toContain("--dsw-alias-interactive-bg-hover");
+  // `isolate` is the one that keeps a card's z-index from reaching the app's own chrome, so a
+  // silent miss here is the defect the rule exists to prevent.
+  expect(css).toContain("isolation:isolate");
+  expect(css).toContain("position:sticky");
 });
