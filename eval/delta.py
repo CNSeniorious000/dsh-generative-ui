@@ -31,7 +31,9 @@ COUNTERS = [
     ("preview-then-commit", lambda f: int(f["preview_then_commit"]), lambda f: 1),
     ("committed but not recorded", lambda f: f["did_not_record"], lambda f: f["committed_reloads"]),
     ("recorded but lost on reload", lambda f: f["did_not_persist"], lambda f: f["committed_reloads"]),
-    ("cards that painted", lambda f: f["painted"], lambda f: f["cards"]),
+    ("cards that painted", lambda f: f["painted"], lambda f: f["claimable"]),
+    ("  …inline fences", lambda f: f["painted_fence"], lambda f: f["fences"]),
+    ("  …canvases", lambda f: f["painted_canvas"], lambda f: f["canvases"]),
     ("cards that persist an answer", lambda f: f["persisting_cards"], lambda f: f["cards"]),
     ("list instead of a card", lambda f: f["markdown_instead"], lambda f: f["turns"]),
 ]

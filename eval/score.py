@@ -69,7 +69,20 @@ def facts(meta: dict) -> dict:
         # The principle the old first-turn waves could not see: a NEW fork later in the
         # conversation deserves its own interface.
         "later_card": any(t["cards"] for t in turns[2:]),
-        "painted": sum(1 for c in cards if c["painted"]),
+        # Paint is measured over the blocks the RENDERER WOULD CLAIM. A `mistagged` block never
+        # reaches it, so scoring one as an unpainted card blames the card for a fence-tag miss —
+        # and scoring one as painted is worse. Reading all 13 in r001+r002 found something else
+        # again: 11 belong to ONE model (`minimax-m3`, two runs) writing JSX FRAGMENTS interleaved
+        # with its own prose ("Actually the cleaner approach is…"), which is reasoning debris, not
+        # a card with the wrong tag. Three of those fragments compiled and scored `painted`.
+        "claimable": sum(1 for c in cards if c["kind"] != "mistagged"),
+        "painted": sum(1 for c in cards if c["painted"] and c["kind"] != "mistagged"),
+        "painted_fence": sum(1 for c in cards if c["painted"] and c["kind"] == "fence"),
+        "fences": sum(1 for c in cards if c["kind"] == "fence"),
+        # Split out because the r001->r002 paint drop is almost entirely HERE: fences held at
+        # 98%->97% while canvases went 100%->86%. Pooled as one rate the two cancel into a vague
+        # -5.8pp that points at nothing.
+        "painted_canvas": sum(1 for c in cards if c["painted"] and c["kind"] == "canvas"),
         "mistagged": sum(1 for c in cards if c["kind"] == "mistagged"),
         "canvases": sum(1 for c in cards if c["kind"] == "canvas"),
         "skill": sum(1 for t in turns if t.get("skill")),
@@ -126,9 +139,12 @@ def summarise(rows: list[dict], label: str) -> None:
     print(f"  turns that produced a card      {pct(sum(r['turns_with_card'] for r in rows), turns)}  of {turns} turns")
     print(f"  runs whose FIRST turn did       {pct(sum(r['first_turn_card'] for r in rows), n)}  of {n} runs")
     print(f"  runs with a card at turn 3+     {pct(sum(r['later_card'] for r in rows), n)}  of {n} runs")
-    print(f"  cards that actually painted     {pct(sum(r['painted'] for r in rows), cards)}  of {cards} cards")
-    print(f"  cards written as a canvas       {pct(sum(r['canvases'] for r in rows), cards)}")
-    print(f"  cards with the wrong fence tag  {pct(sum(r['mistagged'] for r in rows), cards)}")
+    claimable = sum(r["claimable"] for r in rows)
+    fences, canvases = sum(r["fences"] for r in rows), sum(r["canvases"] for r in rows)
+    print(f"  cards that actually painted     {pct(sum(r['painted'] for r in rows), claimable)}  of {claimable} claimable cards")
+    print(f"    …inline fences                {pct(sum(r['painted_fence'] for r in rows), fences)}  of {fences}")
+    print(f"    …canvases                     {pct(sum(r['painted_canvas'] for r in rows), canvases)}  of {canvases}")
+    print(f"  blocks the renderer never sees  {sum(r['mistagged'] for r in rows):5}  (```tsx not ```ui4a/tsx — read them, most are not cards)")
     print(f"  clicks that fired the turn      {pct(sum(r['clicks_that_sent'] for r in rows), clicks)}  of {clicks} clicks")
     print(f"  clicks that did nothing at all  {pct(sum(r['dead_clicks'] for r in rows), clicks)}")
     print(f"  runs showing preview-then-commit{pct(sum(r['preview_then_commit'] for r in rows), n)}")
