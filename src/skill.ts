@@ -341,6 +341,18 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   has to stay readable.
 - **Keep nesting shallow.** A bordered box inside a bordered box is almost always wrong; a divider line does the job.
 - **You are a component on someone else's page.** Your root is a normal node inside the chat column or the panel — nothing isolates you until you do it yourself. No \`position: fixed\`, no viewport UNITS (\`vh\`/\`vw\`, at any number — the window is not your box, so \`78vh\` is wrong for the same reason \`100vh\` is), no portals into \`document.body\`, no global listeners you don't remove. Overlays go in a \`relative\` wrapper you own with \`absolute inset-0\`. Effect libraries default to the wrong thing here and have to be pointed at your own element — \`canvas-confetti\` attaches a fullscreen canvas to \`document.body\` unless you pass one, so \`confetti.create(ref.current, { resize: true, useWorker: true })\` with that \`<canvas>\` absolutely positioned inside your container. Same for anything that says "mounts to body" or "fullscreen".
+- **A title or a control sitting above a long list is a \`sticky\` header. Not "could be" — is.**
+  The test is mechanical, so apply it mechanically: *is there anything above the list that the
+  reader will still want once they are deep inside it?* A heading that says what they are looking
+  at, a search box, a row of filter chips, a count that changes as they filter. If yes, that strip
+  pins. Otherwise the reader scrolls into the list, decides to narrow it, and has to scroll back up
+  past everything they were reading to reach the box that narrows it.
+  **Measured on a real session:** one card, 266 lines — \`<h2>最近工作轨迹</h2>\`, a search input
+  reading \`搜项目、作者或提交内容\`, a row of per-repo filter chips, then
+  \`filtered.slice(0, limit).map(…)\` and a "load more" button. **Zero occurrences of \`sticky\`**,
+  in that card and in the second one the same turn produced. Everything needed to steer the list
+  scrolled away the moment the list was worth steering.
+
 - **Your root sets no height and no \`overflow\`; the page is what scrolls.** You are inside a
   column the reader is already scrolling, so a root that sizes itself and grows its own scrollbar
   puts a second scroll inside the first. Pin with \`sticky\`, which pins against the READER's
