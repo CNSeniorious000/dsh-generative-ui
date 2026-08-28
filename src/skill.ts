@@ -115,7 +115,21 @@ The tell is the question "would the user want this again in ten turns?" Yes → 
 
 Two things follow from the lifetime difference:
 
-- An **inline** block that the user acts on should *end that step* — see the next entry for WHICH control ends it, because on a card whose options need previewing it is not the one they pick with. Whichever it is, that control does two things: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
+- An **inline** block that the user acts on should *end that step* — see the next entry for WHICH control ends it, because on a card whose options need previewing it is not the one they pick with. Whichever it is, that control does two things: send the result with \`sendMessage\` **and** record what was chosen in \`usePersistedState\`, so the card still shows it when scrolled back to weeks later.
+
+  **The second half is the one that gets dropped, and it fails in two different ways.** Measured over the 105 turns where a reader actually submitted something: **36 (34%) left the card looking exactly as it had before the click**, and another **20 (19%) showed the choice and then lost it on reload** — 53% between them, and evenly spread across every model, so it is the rule and not a habit. The first is forgetting to record at all (\`sendMessage\` treated as the finish line); the second is recording into \`useState\`, which a reload throws away. Both read to the reader as a form that did not take their answer.
+
+  So the submit handler has three statements, not one:
+
+      const [answer, setAnswer] = usePersistedState<string | null>("<this card>-answer", null)
+      …
+      onClick={() => { setAnswer(pick); sendMessage(…) }}        // record, then send
+      …
+      {answer !== null && <p className="text-muted">已选择：{label(answer)}</p>}   // and SHOW it
+
+  The third line is the one nobody writes. Recording into state that nothing renders is the same as
+  not recording. (Re-firing on reload is the opposite mistake and does not happen — 0 of 105 — so
+  guard the send with the recorded answer, not with anything cleverer.)
 - **Exactly one control ends the step, and the reader must be able to find it.** This is the
   single largest hole in what gets built: across 161 runs where the reader actually clicked
   something, **108 of them — 67% — never once got a result back out of the card**, 468 clicks that
