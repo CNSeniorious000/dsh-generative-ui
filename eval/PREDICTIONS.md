@@ -99,3 +99,31 @@ later as a finished result:
   zero got worse, nineteen unchanged — the right direction with nowhere near the sample to say so.
   This is the same trap as `cards overflowing at 380` earlier today, caught by the same rule:
   **a counter whose denominator differs between the rounds is not a result.**
+
+
+## The prompt budget, and why nothing was trimmed (2026-08-29)
+
+Every round so far has only ADDED rules, and the payload the model carries shows it:
+
+| round | prompt + skill bytes | vs previous | largest block (the skill) |
+|---|--:|--:|--:|
+| r003 | 121,622 | — | 58,896 |
+| r004 | 124,345 | +2.2% | 61,272 |
+| r005 | 130,061 | +4.6% | 63,578 |
+| r006 (current tree) | 136,156 | +4.7% | 68,759 |
+
+That is +12% in three rounds and +16.7% on the skill. A loop that only adds eventually stops
+working, so two things were checked before deciding to carry it:
+
+- **Is any of it duplicated between the layers?** `prompt.ts` rides every request; `skill.ts` loads
+  on demand, so a sentence in both is pure waste. Measured with a similarity sweep over 186 + 306
+  sentences: **2 near-duplicates, 201 characters.** The split is clean. The growth is real content.
+- **Can a rule whose defect now measures at zero be dropped?** No — and this is the trap worth
+  naming. `useEffect` timer cleanup measures **39 of 39 correct**, and the 4,498-character section
+  teaching it is the most likely REASON it does. Absence of a defect is evidence the rule works,
+  not evidence it is unnecessary. Removing it would be an A/B with no control.
+
+So nothing was trimmed. What is recorded instead is the number and the next move: if a round ever
+shows the skill being skimmed rather than followed — a rule near the END of the file failing while
+one near the top holds — that is the signal to spend a round on length, with the trim as the single
+variable and the removed rule's own counter as the read.
