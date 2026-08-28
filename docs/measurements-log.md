@@ -8549,3 +8549,25 @@ produces no rule at all, so the card keeps the bug while its class list claims o
 now a test (`test/uno.test.ts`): every class inside a `className="…"` in a copyable example has to
 generate something. Verified by mutation — inserting `not-aria-pressed:bg-hover` into an example
 turns it red.
+
+### Three failures that looked like the model and were not (2026-08-29)
+
+r005 produced 90 runs that ended `error` with `ConnectionResetError: Connection lost`, clustered on
+the longest cases (`formula-derive` ×4, `css-layout`, `chess-open`). The obvious read — the deep
+cases overrun something upstream — was wrong three separate times, and each wrong read would have
+been "fixed" by weakening the eval until the symptom went away.
+
+| Looked like | Actually was | What made it visible |
+|---|---|---|
+| deep cases overloading the upstream | `eval/card-driver.mjs` resolved playwright from **sibling checkouts** (`../../macaron-genui-demo` …). This tree had been cloned to `/tmp` to dodge a permissions failure, and `/tmp` has no such siblings — so every chromium failed to launch and the dsh channel reset. | reading `chromium.log` instead of `dsh.log`: `no sibling checkout with playwright: tried …` |
+| the circuit breaker not tripping | it tripped, and stopped nothing: the check sat **before** the semaphore acquire, and `asyncio.gather` starts every coroutine at once, so all 30 were already past the check when the first failure landed. | simulating the two orderings: old 30 started / 0 skipped, new 4 started / 26 skipped |
+| harnesses dying under memory pressure | the startup orphan sweep killed the **live** wave's harnesses. `subprocess.Popen` children report `ppid == 1` under asyncio, so "ppid 1 means orphan" is true at startup and false mid-flight. | every card after a fixed instant failing to mount, while the harness ports went quiet |
+
+**The tool that hid all three is `find -newermt`.** This machine's `find` is `bfs`, which rejects
+`-newermt "-10 minutes"` with `Invalid timestamp`; piped into a counter, the error vanishes and the
+count is zero. Three times today "no new errors in the last N minutes" meant "the command did not
+run". Compare `stat -f %m` against a timestamp instead — it cannot fail silently.
+
+The general shape: **an eval that borrows anything from its parent directory measures the shape of
+that directory, not the model.** The playwright lookup now checks this repo's own `node_modules`
+first, so the tree runs the same from anywhere.
