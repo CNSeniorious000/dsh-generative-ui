@@ -63,6 +63,12 @@ def facts(meta: dict) -> dict:
     text_only = [t for t in turns if not t["cards"]]
     return {
         "status": meta["status"], "turns": len(turns), "elapsed": meta.get("elapsed"),
+        # A run whose LAST turn came back empty on an upstream read timeout. `status` says
+        # `complete` for these — the coroutine did return — so without this they average in as
+        # ordinary zero-card runs, and a one-turn run that never got an answer weighs the same as a
+        # twelve-turn one. Derived from the turn's own `reason` rather than `meta["cut"]` so the
+        # rounds already on disk report it too.
+        "cut": bool(turns and (turns[-1].get("reason") or {}).get("kind") == "error"),
         "cards": len(cards),
         "turns_with_card": sum(1 for t in turns if t["cards"]),
         "first_turn_card": bool(turns and turns[0]["cards"]),
@@ -177,6 +183,7 @@ def summarise(rows: list[dict], label: str) -> None:
     print(f"  one key across two DIFFERENT cards {sum(r['key_collisions'] for r in rows)}  (above 0 is a defect)")
     print(f"  cards copying the example key   {sum(r['copied_example_key'] for r in rows)}  (above 0 means the recipe's literal leaked)")
     print(f"  runs cut short by the timeout   {pct(sum(1 for r in rows if r['status'] == 'timeout'), n)}")
+    print(f"  runs the model timed out under  {pct(sum(1 for r in rows if r['cut']), n)}  (last turn came back empty — these are NOT prose judgements)")
 
 
 def main() -> None:

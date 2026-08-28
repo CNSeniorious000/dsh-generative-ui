@@ -441,6 +441,17 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
         try:
             await asyncio.wait_for(conversation(), timeout=timeout)
             meta["status"] = "complete"
+            # `complete` only means the coroutine returned — which it also does when a turn times
+            # out INSIDE the model. Keeping those turns is right (the ones before it are evidence),
+            # labelling the run `complete` is not: measured across r003+r004, **31 of 209 runs**
+            # ended on a `TURN_TIMEOUT` with an empty reply, and every one of them averaged in as a
+            # legitimate zero-card run — a one-turn run that never got an answer sitting beside a
+            # twelve-turn one in the same mean.
+            #
+            # Recorded BESIDE the status, not inside it. `wave.py` caches on the status vocabulary
+            # (`complete`/`timeout`), so widening it mid-series would re-run rounds already banked.
+            if meta["turns"] and (meta["turns"][-1].get("reason") or {}).get("kind") == "error":
+                meta["cut"] = ((meta["turns"][-1]["reason"] or {}).get("error") or {}).get("code", "error")
         except asyncio.TimeoutError:
             # Kept, not discarded. Six turns of a ten-turn case is six turns of evidence, and the
             # alternative is every wave running at the pace of its slowest model.
