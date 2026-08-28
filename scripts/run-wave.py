@@ -36,10 +36,12 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 #
 # Each needs its own eval home (`scripts/eval-home.sh <model>`), because a home carries exactly
 # one default model and they must not share a settings.yaml.
-MODELS = [
-    "macaron-v1-venti", "macaron-v1-coding-venti", "glm-5.2",
-    "gemini-3.7-flash", "grok-4.6", "gpt-5.6-terra",
-]
+DEFAULT_MODELS = ["macaron-v1-venti", "macaron-v1-coding-venti", "glm-5.2", "gemini-3.7-flash", "grok-4.6", "gpt-5.6-terra"]
+# Overridable, because the panel is a QUESTION, not a constant. Comparing the four MoL LoRA arms
+# (`macaron-v1-venti:l0`…`:l3`) asks whether an adapter changes what gets built, which the default
+# six cannot answer and which copying this file to answer would fork the freeze, the gates and the
+# cache. `WAVE_MODELS=a,b,c`; each still needs its own home from `eval-home.py`.
+MODELS = [m.strip() for m in os.environ["WAVE_MODELS"].split(",")] if os.environ.get("WAVE_MODELS") else DEFAULT_MODELS
 # No Anthropic model: the headless profile composes `tool-web`, and every claude-* on this gateway
 # answers a request carrying it with `The use of the web search tool is not supported` (400).
 # Measured on sonnet-5, sonnet-4-6 and opus-4-8 — a gateway capability gap, not a model one, so
