@@ -1069,6 +1069,27 @@ recognising before trusting any number in this project.
 | the wave was not running at all | `find -newermt` errored, piped to `wc` | run the check unpiped, read its exit |
 | a card truncated with 800px to spare | the ellipsis is in the DATA | `scrollWidth > box`, not the pixels |
 | 4 of 6 sliders forgot their fill | all four are "pick a value", which must NOT fill | read what the number means |
+| the canvas paint rate fell 100% -> 86% | 5 canvases re-snapshotted 17 times, 2 of them my own harness | dedupe by (run, canvas id) first |
+
+**A canvas is counted once per turn it changes, and three of the five ways to fail are not the
+card's.** Reading r002's 17 unpainted canvases end to end: they are **5 distinct canvases**, each
+re-snapshotted 3-6 times, so a 14-point "regression" in the pooled paint rate is four numbers wide.
+Of the five, three are genuine model defects (`import { write } from "$dsh/state"` — an export that
+does not exist; `low is not defined`; `@radix-ui/react-tabs` imported as `TabList` when it exports
+`List`/`TabsList`) and **two are the harness**:
+
+- `sort-compare.ui4a` imports `./quicksort-trace.ui4a`. Production inlines sub-pages into child
+  blob URLs (§3); `eval/card-driver.mjs` mounts the source raw, so a split canvas can only ever
+  score unpainted there. One card in three rounds, named here rather than special-cased in code.
+- `diet-log.ui4a` imports `@number-flow/react` and scored unpainted on **four** consecutive turns
+  with `errs=[]` — then painted 1434px within one second when re-mounted later on a machine that
+  reached esm.sh. A bare specifier that fails to fetch kills the module graph silently (§4), which
+  is indistinguishable from a card that renders nothing. **An unpainted card with an empty error
+  list is network-suspect until re-mounted**; one with a message in it is the card's own fault.
+
+So the paint rate splits the way the pooled number cannot: fences 98.3%->97%, canvases the rest. And
+`eval/delta.py` reports the two arms separately for that reason — pooled it reads -0.054 ± 0.024 and
+looks decisive, split it is -0.025 ± 0.023 and -0.137 ± 0.081 and neither arm clears 2 SE on its own.
 
 **A sixth class, found by reading 29 cards' screenshots in one sitting: the pixels are real and
 the intent is inferred.** Five times in a day I read a defect off a shot that did not survive one
