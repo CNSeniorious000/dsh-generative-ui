@@ -455,6 +455,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   | --- | --- | --- |
   | \`<svg width="600" …>\` | 308–348px | \`viewBox="0 0 600 400"\` and \`className="w-full h-auto"\` — the viewBox carries the coordinates, the class carries the size |
   | a \`<pre>\`/\`<code>\` of real source | 409–705px | the code keeps its long lines; the WRAPPER gets \`overflow-x-auto\`, so the card stays put and the code scrolls inside it |
+
+  **A hand-rolled \`<pre>\` is two defects at once, and it is the single commonest thing in this
+  corpus.** Of 766 cards, **194 show code and 182 of them hand-roll a \`<pre>\` — 94%**; only 4 reach
+  for \`shiki\`. Those same blocks are the widest overflows measured above. So the fix is one import,
+  not two patches: \`shiki\` highlights it (see the library table) AND you still put the
+  \`overflow-x-auto\` on the wrapper. Unhighlighted source in a card the reader cannot scroll
+  sideways is code they can neither read nor reach the end of.
   | \`<table className="min-w-[28rem]">\` | 84px | put the \`overflow-x-auto\` on the wrapper and drop the min-width, or let the columns wrap |
 
   \`min-w-0\` is the answer to a flex child that will not shrink; this is its opposite — an
