@@ -149,6 +149,25 @@ async def main():
     if args.judge_only:
         metas = [json.loads(p.read_text()) for p in sorted(round_dir.glob("*/*/meta.json"))]
         return await judge_round(round_dir, [m for m in metas if m["status"] in ("complete", "timeout")])
+    # BEFORE `freeze`/`repoint`, and that ordering is the whole point. The first version of this
+    # check sat after `repoint()` and its `sys.exit` skipped the `finally` that puts the model
+    # homes back — so a guard written to stop a round being lost left every model's plugin symlink
+    # pointing at a probe round that was then deleted, and killed the live wave it was meant to
+    # protect. A pre-flight check must not be able to leave state behind, so it runs before there
+    # is any state to leave.
+    #
+    # What it reads is what `dsh` reads at boot. macOS revokes a Desktop grant without warning and
+    # without a prompt, and the symptom downstream is not "permission denied" anywhere useful — it
+    # is every model appearing to produce nothing. Twice now a round has been lost to it
+    # (`rounds/r001-POISONED-by-perm-loss` is the other). Refusing to start costs one syscall.
+    try:
+        drive.PATCH.read_bytes()
+    except OSError as error:
+        sys.exit(f"wave: cannot read {drive.PATCH} ({error.__class__.__name__}: {error}).\n"
+                 f"      dsh reads this file at boot, so every run would die before reaching a model.\n"
+                 f"      On macOS this is usually the Desktop/Documents grant disappearing: re-tick the\n"
+                 f"      terminal under System Settings > Privacy & Security > Files and Folders.")
+
     frozen = freeze(round_dir)
     (round_dir / "manifest.json").write_text(json.dumps(
         {"cases": [c["id"] for c in cases], "models": models, "user_agent": drive.USER_AGENT_MODEL,
@@ -174,18 +193,6 @@ async def main():
     # hand at least once. Turning the signal into an exception is what lets the homes be put back.
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
-    # Read what `dsh` will have to read, before spending anything. macOS revokes a Desktop grant
-    # without warning and without a prompt, and the symptom downstream is not "permission denied"
-    # anywhere useful — it is every model appearing to produce nothing. Twice now a round has been
-    # lost to it (`rounds/r001-POISONED-by-perm-loss` is the other one). Refusing to start costs a
-    # syscall; finding out run by run costs the round.
-    try:
-        drive.PATCH.read_bytes()
-    except OSError as error:
-        sys.exit(f"wave: cannot read {drive.PATCH} ({error.__class__.__name__}: {error}).\n"
-                 f"      dsh reads this file at boot, so every run would die before reaching a model.\n"
-                 f"      On macOS this is usually the Desktop/Documents grant disappearing: re-tick the\n"
-                 f"      terminal under System Settings > Privacy & Security > Files and Folders.")
     servers = await harnesses(args.light, args.dark)
     done, started = 0, time.time()
     total = len(cases) * len(models)
