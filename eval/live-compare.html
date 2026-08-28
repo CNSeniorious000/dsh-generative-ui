@@ -114,8 +114,8 @@ const pairs = await (await fetch("/data")).json();
 
 // Real lucide when esm.sh answers — a stand-in glyph reads as a defect in the card, which is the
 // one thing a comparison page must not invent. The shim is the offline fallback, not the default.
-const icons = [...new Set(pairs.flatMap((p) => ["before", "after"].flatMap((s) =>
-  [...(p[s].code.match(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/)?.[1] ?? "").matchAll(/[A-Z]\w*/g)].map((m) => m[0]))))];
+const icons = [...new Set(pairs.flatMap((p) => p.cards.flatMap((c) =>
+  [...(c.code.match(/import\s*\{([^}]*)\}\s*from\s*["']lucide-react["']/)?.[1] ?? "").matchAll(/[A-Z]\w*/g)].map((m) => m[0]))))];
 const glyph = React.forwardRef((props, ref) => React.createElement("svg", { ref, width: 16, height: 16, viewBox: "0 0 16 16", "aria-hidden": true, ...props },
   React.createElement("circle", { cx: 8, cy: 8, r: 6, fill: "none", stroke: "currentColor", strokeWidth: 1.5 })));
 const esmReachable = await fetch("https://esm.sh/lucide-react?target=es2022", { mode: "no-cors" }).then(() => true, () => false);
@@ -163,12 +163,15 @@ for (const pair of pairs) {
   const cols = el("div", { className: "cols" });
   const section = el("section", { className: "pair" },
     el("div", { className: "head" }, el("h2", { textContent: pair.title }),
-      el("span", { className: "chip", textContent: pair.case }), el("span", { className: "chip", textContent: pair.model })),
-    el("p", { className: "said", innerHTML: `用户说：<q>${pair.before.user}</q>` }),
+      ...pair.chips.map((c) => el("span", { className: "chip", textContent: c }))),
+    el("p", { className: "said", innerHTML: `用户说：<q>${pair.said}</q>` }),
     cols);
 
-  for (const [side, label, note] of [["before", "改之前 · r001", "刷新后忘记"], ["after", "改之后 · r002", "刷新后记得"]]) {
-    const run = pair[side];
+  // Two columns is the before/after comparison; N columns is one round's models side by side.
+  // The page does not need to know which — a section is a title and a list of cards either way.
+  for (const [index, run] of pair.cards.entries()) {
+    const side = pair.cards.length === 2 ? (index === 0 ? "before" : "after") : "after";
+    const { label, note } = run;
     for (const [, k] of run.code.matchAll(KEY)) storageKeys.add(JSON.parse(k.replace(/'/g, '"')));
     const stage = el("div", { className: "stage" });
     const sent = el("p", { className: "sent none", textContent: "还没点过" });
@@ -194,7 +197,9 @@ const FIGURES = [
   ["−45.0", "记下了却在刷新后丢失", "58.8% → 11.3%，2.3× SE"],
   ["+0.42", "判官给「交互」的分", "四模型评审，1.8× SE"],
 ];
-document.getElementById("figures").append(...FIGURES.map(([n, t, s]) =>
+const isComparison = pairs.every((p) => p.cards.length === 2);
+if (!isComparison) document.querySelector("header.lede").remove();
+if (isComparison) document.getElementById("figures").append(...FIGURES.map(([n, t, s]) =>
   el("div", { className: "fig" }, el("b", { textContent: n }), el("span", { textContent: t }), el("i", { textContent: s }))));
 
 const seg = (id, apply) => {
