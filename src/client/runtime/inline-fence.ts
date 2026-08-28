@@ -221,6 +221,19 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
         code,
       );
       if (segment === undefined) continue;
+      // A DEFERRED block still owns its segment. Deferring means "do not mount this yet", not
+      // "this segment is free" — and the card that gets parked is by definition a settled one far
+      // off screen, which in a live transcript is the oldest card while the reader sits at the
+      // bottom watching a new one arrive. Reserving only on the claim path left that segment
+      // spare, and the new block — still showing nothing but the opening line every generated
+      // card shares — matched it by prefix and painted the OLD card where the new one belonged.
+      //
+      // Reserve BEFORE the deferral check, or the two earlier fixes to this class (the per-claim
+      // reservation, and pruning dead claims before building it) go on missing it: both hold only
+      // what a live claim owns, and a parked block has no claim. Reserving here also covers the
+      // within-one-sweep case a reload presents — every block unclaimed at once, all of them
+      // otherwise matching the same segment.
+      taken.add(segment.code);
       // FAR OFFSCREEN AND NOT YET STREAMING: leave it for later. Claiming a block compiles it,
       // mounts a React root, runs every effect it declares and pulls its third-party imports off
       // esm.sh — a Monaco card costs megabytes and starts a language service. `isConnected` was
@@ -232,6 +245,10 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // is still growing. `defer` also answers false when there is no observer (no
       // IntersectionObserver, or `scope` is detached in a test), so the behaviour without one is
       // exactly what it was before.
+      //
+      // Called ONCE. It has side effects — it consumes the wake flag, parks the block and starts
+      // observing it — so asking twice in one sweep eats the wake and re-parks a block that had
+      // just come into view.
       if (defer(block, segment)) continue;
       block.setAttribute(CLAIMED, "");
       const mount = document.createElement("div");
@@ -267,9 +284,6 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       });
       claim.painted.observe(mount, { childList: true, subtree: true, characterData: true });
       claims.set(block, claim);
-      // Within this sweep too: a reload presents every block unclaimed at once, and without this
-      // they would all match the same segment.
-      taken.add(segment.code);
     }
 
     for (const claim of claims.values()) {

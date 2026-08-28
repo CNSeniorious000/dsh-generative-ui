@@ -494,3 +494,34 @@ test("a code block a card renders is never claimed", async () => {
   expect(inner.attrs["data-ui4a-claimed"]).toBeUndefined();
   stop();
 });
+
+/**
+ * A DEFERRED block still owns its segment.
+ *
+ * `defer` answers "do not mount this yet" for a settled card far off screen — which is exactly the
+ * oldest card in a transcript while the reader sits at the bottom watching a new one stream. The
+ * claim loop returned early on it WITHOUT reserving, so that card's segment stayed free, and the
+ * new block — whose text is still only the opening line every generated card shares — matched it
+ * by prefix and painted the OLD card in full where the new one was arriving.
+ *
+ * Reported from a live session as "a new fence shows the first fence's card instead of its own
+ * streaming source". Two earlier fixes to this class of bug (the per-claim reservation, and
+ * pruning dead claims before building it) both missed it, because both fixtures claimed every
+ * block: with nothing deferred there is no unreserved segment to steal.
+ */
+test("a card parked off screen still holds its segment against a new block", async () => {
+  const shared = 'import { useState } from "react"\n';
+  const older = `${shared}export default () => <div>old</div>`;
+  // Six screens up: `innerHeight` is 800 in this harness, and `defer` parks anything whose whole
+  // box sits beyond one screen in either direction.
+  makeBlock(older, -5000);
+  const { stop, again } = await start(() => [segment(older), segment(shared, false)]);
+  expect(painted).toEqual([]); // the old card is parked, as intended
+  expect(intersections).toHaveLength(1);
+
+  makeBlock(shared, 100); // the new one, on screen, still only the shared opening line
+  again();
+  expect(painted.map((p) => p.code)).not.toContain(older);
+  expect(painted.at(-1)).toEqual({ code: shared, streaming: true });
+  stop();
+});
