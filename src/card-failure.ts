@@ -39,8 +39,21 @@ export const CARD_FAILURE_CONTEXT_ORDER = 250;
 export const failureText = (failure: CardFailure) =>
   `A ui4a card in this session is not rendering. It failed at the ${failure.phase} step:\n\n${failure.message}\n\nThis is current state, not a new event — it is re-read every step and disappears once the card renders. If the error names the correct usage (the available exports, for instance), fix the card and send it again. If it does not, look it up before you change anything.`;
 
-/** The one line that opens a turn. The detail is already in context; this only asks for attention. */
-export const WAKE_TEXT = "A ui4a card you wrote is not rendering — the failure is in the runtime context.";
+/**
+ * The one line that opens a turn. The detail is already in context; this only asks for attention.
+ *
+ * The second sentence is not padding — it closes a race the split design makes possible. The nudge
+ * is an event and cannot be recalled once queued; the detail is state and is re-evaluated when the
+ * turn assembles. A card that recovers in between (a retry succeeding is the common way) clears
+ * the state, so the turn opens with "go read the runtime context" pointing at a context that says
+ * nothing about a card.
+ *
+ * Seen in a real session: two notices, and the SECOND one had no card-failure section anywhere in
+ * the turn that followed it. Without a defined outcome for that, the model has been told something
+ * is broken, cannot find it, and goes looking — in that session it rewrote a card that was fine.
+ */
+export const WAKE_TEXT =
+  "A ui4a card you wrote is not rendering — the failure is in the runtime context. If there is no card failure there, it recovered on its own between this notice and now: say nothing about it and carry on with what you were doing.";
 
 /** Shown as the context row's label in the transcript, so a reader can see what fired without opening it. */
 export const WAKE_SUMMARY = "ui4a card failed to render";

@@ -102,3 +102,19 @@ test("both halves are in English, like the prompt and the skill", () => {
 test("the context says it is current state, not a new event", () => {
   expect(failureText({ message: "boom", phase: "compile" })).toContain("current state");
 });
+
+/**
+ * The nudge has to survive its own detail disappearing.
+ *
+ * `followup` cannot be recalled once queued, and the context provider runs later — so a card that
+ * recovers in between opens a turn whose notice points at a context section that is no longer
+ * there. Measured on a real session: the second of two notices had no card-failure section in the
+ * turn that followed, and the model went looking and rewrote a card that was fine.
+ */
+test("the nudge says what to do when the failure is already gone", () => {
+  const failures = new CardFailures();
+  expect(failures.set("s", { message: "boom", phase: "render" })).toBe(true); // the wake fires here
+  failures.clear("s"); // …and the card recovers before the turn assembles
+  expect(failures.text("s")).toBe(""); // so the context the notice points at is empty
+  expect(WAKE_TEXT).toContain("recovered on its own");
+});
