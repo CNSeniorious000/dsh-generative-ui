@@ -256,7 +256,14 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
     out.mkdir(parents=True, exist_ok=True)
     ws = out / "workspace"; ws.mkdir(exist_ok=True)
     shots = out / "shots"; shots.mkdir(exist_ok=True)
-    meta = {"case": case["id"], "model": model, "started": time.time(), "turns": [], "status": "running"}
+    # BOTH clocks. 13 of r003's runs finished past their budget, one at 7.9x, and the two
+    # explanations — asyncio's deadline not firing, and the machine sleeping so wall time runs
+    # ahead of the loop's — are indistinguishable from `elapsed` alone, which is why that round
+    # cannot say which happened. `asyncio.wait_for` counts in loop time; `time.time()` does not.
+    # A run whose loop_elapsed sits at the budget while elapsed is triple it was asleep; one whose
+    # loop_elapsed is also triple has a deadline that did not fire.
+    meta = {"case": case["id"], "model": model, "started": time.time(), "loop_started": time.monotonic(),
+            "turns": [], "status": "running"}
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
 
     api = httpx.AsyncClient(base_url=GATEWAY, headers={"Authorization": f"Bearer {gateway_key()}"}, timeout=300)
@@ -424,6 +431,7 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
         await api.aclose()
     meta["finished"] = time.time()
     meta["elapsed"] = round(meta["finished"] - meta["started"], 1)
+    meta["loop_elapsed"] = round(time.monotonic() - meta["loop_started"], 1)
     (out / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     return meta
 
