@@ -77,3 +77,25 @@ credit for a rule that shipped before it.
 | submissions that left the card looking untouched | **36 / 105 (34%)** | record-then-show, three statements | r006 |
 | submissions recorded but lost on reload | **20 / 105 (19%)** | `usePersistedState`, not `useState` | r006 |
 | reloads that re-fired the turn by themselves | **0 / 105** | none — the opposite mistake does not happen | never |
+
+### r005 mid-flight, after the TCC block (2026-08-29)
+
+The round lost its Desktop permission grant 42 runs in — `dsh` could not read its own overlay and
+173 of 220 runs died at 0.1s with `EPERM`. Wave stopped, permission restored by hand, relaunched
+from the 42 cached runs. The frozen plugin was verified byte-intact across the interruption.
+
+Two things read on the surviving 42 before the relaunch, recorded here so neither can be quoted
+later as a finished result:
+
+- **The sharp predictor failed: still 0 runs load the skill after turn 2**, in both rounds. But the
+  42 that survived are the wrong population to test it on — the six deep cases where r004's
+  never-loading runs live (`sql-tune` 5, `css-layout` 4, `formula-derive` 2, `arch-draw` 2,
+  `svg-badge` 2, `chess-open` 1 — 16 of 20) had **not run at all**. On those 42, r004's own load
+  rate was 93% against 80% for the whole round: they are the cases where the skill was already
+  being loaded, so the rule has nothing to do there. Not evidence against the rule.
+- **Sticky, pooled, looked like a 10x move** — 0.5% (r003) → 1.3% (r004) → 12.8% (r005). **Paired,
+  it is `+0.059 ± 0.043` on 21 pairs and does not clear 2 SE.** The pooled number is a denominator
+  effect: r005's completed cards come from cases r004 has no completed run for. Two runs improved,
+  zero got worse, nineteen unchanged — the right direction with nowhere near the sample to say so.
+  This is the same trap as `cards overflowing at 380` earlier today, caught by the same rule:
+  **a counter whose denominator differs between the rounds is not a result.**
