@@ -283,12 +283,14 @@ This one runs *opposite* in the two places, and getting it backwards is the most
 
 - **Canvas fills its panel.** It already has a frame and a title bar around it. So take the whole space — \`height: 100%\`, your own padding, backgrounds bleeding to the edges — and do **not** wrap yourself in one more rounded, bordered, tinted box. A card inside the panel is a frame inside a frame.
 - **Inline is the card.** It sits between paragraphs, so one bounded box is what tells the reader where it starts and stops.
-- **But \`bg-base\` is the page's own colour, so a wrapper painted with it is not a box.** Measured
-  from the token table: \`bg-base\` is \`#fff\` on light and \`#151517\` on dark — the same value the
+- **But \`bg-page\` is the page's own colour, so a wrapper painted with it is not a box.** Measured
+  from the token table: \`bg-page\` (that is the CLASS; \`--dsw-alias-bg-base\` is the variable
+  behind it, and the two vocabularies are deliberately different) is \`#fff\` on light and
+  \`#151517\` on dark — the same value the
   transcript behind the card is painted with, on both grounds. A root \`<div>\` with
   \`background: var(--dsw-alias-bg-base); padding: 16px; border-radius: 12px\` therefore draws
   nothing a reader can see: what is left is an invisible 16px inset and a rounded corner nobody
-  can find, while the \`bg-layer-1\` blocks inside it read as the real frame — a frame inside an
+  can find, while the \`bg-layer\` blocks inside it read as the real frame — a frame inside an
   invisible frame. If you want the inline card to be bounded, bound it with \`bg-layer\` **plus**
   \`border-line\` (see the both-spellings rule below). If you don't, drop the wrapper's background
   and radius entirely rather than painting it the colour of the page.
@@ -370,9 +372,9 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   **A control you have FILLED is the opposite case, and the two get confused.** The rule above is
   about separating a surface from the surface under it, where both tokens are deliberately faint —
-  \`border-l1\` is 4% black. Once an element carries a real fill (a selected segment on
+  \`border-line\` is 4% black. Once an element carries a real fill (a selected segment on
   \`state-business-primary\`, a primary button), that fill separates it completely and a leftover
-  \`border-l2\` is a grey ring around a blue block, related to nothing. Drop it — but to
+  \`border-line-2\` is a grey ring around a blue block, related to nothing. Drop it — but to
   \`transparent\`, not to \`none\`, or the selected item loses a pixel of height and the row twitches
   as the reader clicks along it:
 
