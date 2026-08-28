@@ -146,12 +146,14 @@ CASES = [
         "id": "css-layout", "kind": "multi", "turns": 12, "floor": 8,
         "opening": "这个布局我怎么都调不出来",
         "persona": "你要做一个左边固定右边自适应、底部有一条始终贴底的栏。你一开始只说「调不出来」，不贴代码也不说想要什么效果，等对方问才描述。做出来之后你会依次提「手机上要变成上下」「左边那栏要能收起来」「键盘 Tab 过去顺序不对」。每一条都是看到上一版才发现的。",
-        # r004 baseline: gpt-5.6-terra loaded the skill and still produced ZERO cards over 8 turns,
-        # and reading it says the FIXTURE is wrong, not the model. This persona asks how to DO a
-        # layout and pastes the answer into its own project ("我加上试了,能用") — the deliverable is
-        # copyable HTML/CSS, which a card supplements but cannot replace. Contrast `formula-derive`,
-        # where the card REPLACES matrices the model kept truncating. Reword toward wanting to SEE
-        # ("我不确定这几种方案在窄屏下分别长什么样") rather than wanting to TAKE, or drop the case.
+        # r004 baseline, and a warning against reading one run as a verdict on the fixture. On this
+        # exact persona gpt-5.6-terra produced ZERO cards over 8 turns while grok-4.6 produced
+        # EIGHT and step-3.7-flash six. Reading only the first, the persona looks miswritten — it
+        # asks how to DO a layout and pastes the answer into its own project ("我加上试了,能用"),
+        # so the deliverable is copyable CSS. But grok answered the same turns with a card carrying
+        # a live preview and a width control, and the user dragged it narrow and watched the
+        # columns stack ("拖窄确实变成上下堆了") — the code and the demo, not one instead of the
+        # other. The fixture admits both readings, which is what makes it worth keeping.
         "expect": "几种实现方式的差别只有看到才知道；后面三条各自是新的约束，且都能就地演示。",
     },
     {
