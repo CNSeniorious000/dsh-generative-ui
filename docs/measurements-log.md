@@ -8512,7 +8512,7 @@ replaced a pattern that missed something; this one keeps the structural test —
 
 
 
-### Nine corpus sweeps, four of them fake (2026-08-29)
+### Eleven corpus sweeps, six of them fake (2026-08-29)
 
 Mined r003+r004's 766 generated cards for common defects, to write r006's rules from counts rather
 than from single bad cards. Recording the misses as carefully as the hits, because the misses are
@@ -8526,6 +8526,8 @@ crowding out the rules that do work.
 | root element setting height or `overflow` | 94 cards (12%) | **42, of which 29 are `rounded-xl overflow-hidden`** — clipping children to the corner, which is correct. Not a second scrollbar. |
 | `text-base` as a dead colour token | 316 cards (41%) | **Not a defect at all.** `text-base` generates a font-size; the colour token was deliberately named `page` so it would. I put it in the probe list and read the number before checking whether it generates. |
 | every backticked utility in `prompt.ts`/`skill.ts` | 153 of 249 unmatched | **74 of 74 copyable ones generate.** The sweep was matching package names, JS identifiers and CSS *variable* names (`--dsw-alias-border-l1` sits behind the `border-line` class; the two vocabularies differ on purpose). |
+| cards importing server-only packages (`better-sqlite3`, `duckdb`, `hono`, `node:fs`) | 7 cards | **0.** All 18 hits are on `db-choice`, all inside template literals — `code: \`import Database from "better-sqlite3"\`` is a snippet the card SHOWS the reader. Every one of those cards rendered. Counting only the import block at the top of the file drops the class to zero. |
+| painted cards with no interactive control ("looks like UI, does nothing") | 30 of 715 (4.2%) | **Not a defect.** Read in full: `arch-draw` 10 (a static diagram is the right answer there) and `laptop-pick` 6, which are three-laptop comparison tables with colour-coded verdicts — the shape the skill explicitly endorses, and better than prose because a table can be scanned down a column. A rate that small, made entirely of legitimate cases, is what a solved defect looks like. |
 
 The five that held, with the denominator that makes them readable:
 
