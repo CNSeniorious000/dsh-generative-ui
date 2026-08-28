@@ -383,6 +383,24 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                             break
                     turn["done"] = action.get("why", "")
                     break
+                else:
+                    # TEN PREVIEW-ONLY CLICKS AND NOTHING SENT. Falling out of the loop left `said`
+                    # empty, and `if not said: break` below then ended the whole conversation — with
+                    # no `done` recorded, so the transcript looked like a persona that had finished
+                    # rather than a budget that had run out, and `floor` never saw it because the
+                    # push lives on the `done` branch. Measured on chess-open/kimi-k3: a run over at
+                    # turn 3 of a declared 12, the card working correctly the whole time.
+                    #
+                    # A person who has finished poking at a card talks. So ask for words, with
+                    # clicking off the table — and record the exhaustion either way, because a run
+                    # that ends here ended for a reason no other counter shows.
+                    turn["clicks_exhausted"] = True
+                    action = await ask_user_agent(api, case, history + [{"user": turn["user"], "reply": turn["reply"]}], shown, turn["clicks"],
+                                                  f"\n\nYou have clicked {MAX_CLICKS} times this turn and none of it sent anything back. "
+                                                  "Stop clicking — it is not an option now. Say what you want in your own words with "
+                                                  '{"act":"say"}, or answer `done` if you are genuinely finished.')
+                    if action.get("act") == "say": said = action.get("text", "").strip()
+                    else: turn["done"] = action.get("why", "") or f"{MAX_CLICKS} clicks, nothing sent"
 
                 # A second set of shots AFTER the interaction. The first set is what the model
                 # DELIVERED and is what it is graded on; this one is the only way a judge can see
