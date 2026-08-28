@@ -13,12 +13,26 @@ test("the same failure is news once", () => {
   expect(failures.set("s1", { message: "boom", phase: "compile" })).toBe(false);
 });
 
-test("a different failure is news again — one thing was fixed and another broke", () => {
+// The notice carries no detail — it says "go read the runtime context" and nothing else. So a
+// second failure while one is already recorded has nothing new to announce: the context it points
+// at is re-evaluated every step and already holds the newer message. Measured on a real session,
+// the old "is the message different" test produced two byte-identical notices queued in the
+// composer, and would have pointed two turns at one snapshot.
+test("a different failure while one is already open is not a second nudge", () => {
+  const failures = new CardFailures();
+  expect(failures.set("s1", { message: "boom", phase: "compile" })).toBe(true);
+  expect(failures.set("s1", { message: "different", phase: "compile" })).toBe(false);
+  expect(failures.set("s1", { message: "different", phase: "render" })).toBe(false);
+  // …but the model still reads the NEWEST one, because that is what the context serves.
+  expect(failures.text("s1")).toContain("different");
+  expect(failures.text("s1")).toContain("render");
+});
+
+test("recovery re-arms the nudge", () => {
   const failures = new CardFailures();
   failures.set("s1", { message: "boom", phase: "compile" });
-  expect(failures.set("s1", { message: "different", phase: "compile" })).toBe(true);
-  // Same message, different phase: a compile failure and a render failure are different problems.
-  expect(failures.set("s1", { message: "different", phase: "render" })).toBe(true);
+  failures.clear("s1");
+  expect(failures.set("s1", { message: "boom", phase: "compile" })).toBe(true);
 });
 
 test("sessions do not share a failure", () => {

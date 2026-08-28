@@ -58,14 +58,27 @@ export class CardFailures {
   /**
    * Record a failure.
    *
-   * @returns whether this is news — the caller wakes the model only then. Dedup lives here rather
-   * than in the browser half because that half is reloaded by every navigation, and a dedup set
-   * that resets on reload wakes the model again for a card it already knows about.
+   * @returns whether the session went from HEALTHY to failing — the caller wakes the model only
+   * then. Dedup lives here rather than in the browser half because that half is reloaded by every
+   * navigation, and a dedup set that resets on reload wakes the model again for a card it already
+   * knows about.
+   *
+   * **Not "is this a different message".** That was the first version, and it is wrong for a
+   * nudge whose entire payload is *go read the context*: two different failures produce two
+   * BYTE-IDENTICAL notices, so a reader watching a long turn sees the same sentence queued twice
+   * and the model gets two turns pointed at one current-state snapshot. Measured on a real
+   * session — three genuinely different failures (`@react-three/fiber` unresolvable, `maps is not
+   * defined`, `@react-three/cannon` unresolvable) over eighty minutes, each "news" by the old
+   * test, and the third's notice was still sitting unsent in the composer beside the second.
+   *
+   * While a failure is already recorded the model is either about to look or has looked, and the
+   * detail it will read is re-evaluated every step anyway — so a changed message needs no second
+   * nudge. `clear()` on recovery is what re-arms this.
    */
   set(session: string, failure: CardFailure): boolean {
-    const previous = this.bySession.get(session);
+    const wasHealthy = !this.bySession.has(session);
     this.bySession.set(session, failure);
-    return previous?.message !== failure.message || previous.phase !== failure.phase;
+    return wasHealthy;
   }
 
   clear(session: string): void {

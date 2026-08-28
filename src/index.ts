@@ -676,8 +676,10 @@ export async function serveCardError(failures: CardFailures, wake: () => ((sessi
   if (report.message === undefined || report.message === "") {
     failures.clear(session);
   } else if (failures.set(session, { message: report.message, phase: report.phase ?? "compile" })) {
-    // Only on news. A settled card that fails re-renders on every later frame of the transcript,
-    // and a turn per render is a loop the reader has to kill.
+    // Only when the session went from healthy to failing. A settled card that fails re-renders on
+    // every later frame of the transcript, and a turn per render is a loop the reader has to kill
+    // — and a SECOND failure while the first is still open needs no nudge of its own, because the
+    // notice says nothing but "read the context" and the context already holds the newer message.
     wake()?.(session);
   }
   res.writeHead(204).end();
