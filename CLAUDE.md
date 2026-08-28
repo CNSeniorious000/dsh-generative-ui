@@ -1247,7 +1247,17 @@ any real card exercise it (`screens-exercised.test.ts`). **"No failures" has two
 identical** — nothing is wrong, or nothing was examined.
 
 Two rules fall out. **Write the count of what you skipped next to the result**: every gate that
-ever lied did it by omission, never by a wrong answer. And **an exemption should be a consequence
+ever lied did it by omission, never by a wrong answer.
+
+The judge panel's own image budget was a fresh instance, and the worst-shaped one yet: `judge.py`
+took the first `MAX_IMAGES` screenshots in order, so on **12% of r002's runs it dropped 148
+pictures and left 25 turns with none at all** — every one of them a LATE turn (3, 6-9), because
+first-come spends the budget at the start. That is exactly where "a new fork later in the
+conversation deserves its own interface" is judged, and the runs that overflow are the longest
+ones, so the panel saw least evidence where the model had done most work. Neither the judge nor
+the scorer could tell a missing picture from a card that was never built. Fixed by allocating one
+picture per carded turn before filling in order (25 blind turns -> 0) and by telling the judge, in
+the message, which turns are shown at fewer widths. And **an exemption should be a consequence
 of something, not a claim about it** — where that is impossible, print the exempted items, because
 a name can be checked at a glance and a number cannot.
 

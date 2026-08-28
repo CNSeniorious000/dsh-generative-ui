@@ -159,23 +159,45 @@ def build_content(meta: dict, case: dict) -> tuple[list[dict], str]:
             f"The person's situation: {case['persona'] or '(a one-off question, no ongoing context)'}\n"
             f"(This run ended `{meta['status']}` after {len(meta['turns'])} turn(s).)")
     content: list[dict] = [{"type": "text", "text": head}]
-    parts, budget = [], MAX_IMAGES
+    parts: list[tuple[dict, pathlib.Path | None, int]] = []
     turns = meta["turns"]
     with_cards = [t["n"] for t in turns if t["cards"]]
     for turn in turns:
-        parts.append(({"type": "text", "text": turn_text(turn)}, None))
+        parts.append(({"type": "text", "text": turn_text(turn)}, None, turn["n"]))
         edge = bool(with_cards) and turn["n"] in (with_cards[0], with_cards[-1])
         for caption, path in shots_for(turn, edge):
-            parts.append(({"type": "text", "text": caption}, path))
+            parts.append(({"type": "text", "text": caption}, path, turn["n"]))
+
+    # ONE PICTURE PER CARDED TURN FIRST, then fill in order. Taking the first MAX_IMAGES straight
+    # through is what this used to do, and measured on r002 it bound on 12% of runs and dropped
+    # 148 images — always the LAST turns (5 through 9). That is exactly where "a new fork later in
+    # the conversation deserves its own interface" is judged, and the runs that overflow are the
+    # longest ones, so the judge saw least evidence precisely where the model had done most work.
+    imaged = [i for i, (_, path, _) in enumerate(parts) if path is not None]
+    floor: dict[int, int] = {}
+    for i in imaged: floor.setdefault(parts[i][2], i)
+    picked = set(list(floor.values())[:MAX_IMAGES])
+    for i in imaged:
+        if len(picked) >= MAX_IMAGES: break
+        picked.add(i)
+
     raw_bytes: list[bytes] = []
-    for part, path in parts:
+    for index, (part, path, _) in enumerate(parts):
         if path is None:
             content.append(part); continue
-        if budget <= 0: continue
+        if index not in picked: continue
         b64, raw = encode(path)
         content.append(part)
         content.append({"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}})
-        raw_bytes.append(raw); budget -= 1
+        raw_bytes.append(raw)
+    # A missing picture and a card that was never built look identical to a judge. Say which ones
+    # were left out rather than letting the gap be read as evidence.
+    dropped = sorted({parts[i][2] for i in imaged if i not in picked})
+    if dropped:
+        content.append({"type": "text", "text": f"(Note: this conversation had more screenshots than fit. "
+                        f"{len(imaged) - len(picked)} were left out — every turn below still has at least one "
+                        f"picture, but turns {dropped} are shown at fewer widths/themes than the rest. "
+                        f"Do not read a missing width as a card that was not built.)"})
     content.append({"type": "text", "text": "Now score this conversation."})
     digest = hashlib.md5(json.dumps([c for c in content if c["type"] == "text"], ensure_ascii=False).encode()
                          + b"".join(raw_bytes) + RUBRIC.encode()).hexdigest()
