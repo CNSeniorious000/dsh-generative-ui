@@ -89,9 +89,18 @@ def main() -> None:
     print("\nboundary (the controls decide whether the rules improved or just widened):")
     for case in ("cat-names", "mortgage", "closure", "http418"):
         want = "card" if case in ("cat-names", "mortgage") else "prose"
-        rows = [(before[p]["cards"] > 0, after[p]["cards"] > 0) for p in pairs if p[0] == case]
-        if rows:
-            print(f"  {case:11} wants {want:5} — before {sum(b for b, _ in rows)}/{len(rows)} carded, after {sum(a for _, a in rows)}/{len(rows)}")
+        rows = [(p[1], before[p]["cards"] > 0, after[p]["cards"] > 0) for p in pairs if p[0] == case]
+        if not rows: continue
+        # NAMED, not counted. Pooled, `closure` reads "3 of 10 carded" — a rule that over-fires 30%
+        # of the time. Per model it is two models carding on both negative controls in all three
+        # rounds, 6 of 6 each, while the other eight are prose almost every time. Those are
+        # different findings: no rewording fixes a model that builds a card for "什么是闭包？", and
+        # the eight that get it right are evidence the rule is not the problem.
+        flipped = [m for m, b, a in rows if b != a]
+        after_set = [m for m, _, a in rows if a]
+        print(f"  {case:11} wants {want:5} — before {sum(b for _, b, _ in rows)}/{len(rows)} carded, after {sum(a for _, _, a in rows)}/{len(rows)}")
+        if after_set: print(f"              carded after: {', '.join(after_set)}")
+        if flipped: print(f"              changed side: {', '.join(flipped)}")
 
 
 if __name__ == "__main__":

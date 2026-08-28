@@ -1070,6 +1070,7 @@ recognising before trusting any number in this project.
 | a card truncated with 800px to spare | the ellipsis is in the DATA | `scrollWidth > box`, not the pixels |
 | 4 of 6 sliders forgot their fill | all four are "pick a value", which must NOT fill | read what the number means |
 | the canvas paint rate fell 100% -> 86% | 5 canvases re-snapshotted 17 times, 2 of them my own harness | dedupe by (run, canvas id) first |
+| a negative control over-fires 30% of the time | two models card on it in every round, eight never do | split a control rate by model before rewording |
 
 **A canvas is counted once per turn it changes, and three of the five ways to fail are not the
 card's.** Reading r002's 17 unpainted canvases end to end: they are **5 distinct canvases**, each
