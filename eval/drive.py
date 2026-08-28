@@ -103,7 +103,7 @@ class Turns:
     def __init__(self, proc, port, client): self.proc, self.port, self.client = proc, port, client
 
     @classmethod
-    async def boot(cls, model: str, cwd: pathlib.Path, log: pathlib.Path):
+    async def boot(cls, model: str, cwd: pathlib.Path, log: pathlib.Path, deadline: float):
         env = {**os.environ, "DSH_HOME": str(pathlib.Path.home() / f".dsh-ui4a-{model}"), "TURNS_PORT": "0"}
         # stderr to a FILE, never a pipe nobody drains. dsh logs the MCP servers booting and every
         # tool call there; a 64KB pipe buffer fills partway into the first real turn and the whole
@@ -122,7 +122,14 @@ class Turns:
             if text.startswith("TURNS_PORT="): port = int(text.split("=")[1])
         # Nothing reads dsh's stdout after this, and it keeps writing there too.
         asyncio.create_task(_drain(proc.stdout, log))
-        return cls(proc, port, httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}", timeout=600))
+        # ONE deadline, the run's own. This used to be a flat 600s, and a second deadline tighter
+        # than the first buys nothing: the run timeout already bounds the conversation, kills it
+        # honestly (`status="timeout"`) and keeps every turn taken so far, while a turn that
+        # outran the 600 came back empty and the run was labelled `complete`. Measured across
+        # r003+r004: 31 runs died that way and **27 of them at exactly 600.0s** — the cliff, not a
+        # hang. It cut into working turns too: 6 successful turns landed past 590s, and one ran 91
+        # minutes and answered. Slow models now die on the run budget like everything else.
+        return cls(proc, port, httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}", timeout=deadline))
 
     async def turn(self, text: str) -> dict:
         return (await self.client.post("/turn", json={"text": text})).json()
@@ -269,7 +276,7 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
     api = httpx.AsyncClient(base_url=GATEWAY, headers={"Authorization": f"Bearer {gateway_key()}"}, timeout=300)
     agent = driver = None
     try:
-        agent = await Turns.boot(model, ws, out / "dsh.log")
+        agent = await Turns.boot(model, ws, out / "dsh.log", timeout)
         driver = await CardDriver.boot(ports[0], ports[1], shots, out / "chromium.log")
         history, seen_canvases, next_text = [], {}, case["opening"]
 
