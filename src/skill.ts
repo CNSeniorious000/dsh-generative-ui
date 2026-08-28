@@ -380,10 +380,12 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   at, a search box, a row of filter chips, a count that changes as they filter. If yes, that strip
   pins. Otherwise the reader scrolls into the list, decides to narrow it, and has to scroll back up
   past everything they were reading to reach the box that narrows it.
-  **Measured on a real session:** one card, 266 lines — \`<h2>最近工作轨迹</h2>\`, a search input
+  **Measured across 766 generated cards: 356 of them have a heading or a control above a list, and
+  3 pin it — 0.8%.** Not a tendency, an absence: it is every case (60 on one, 54 on the next, 31,
+  26, 23…) and every model (95 for the worst, then 56, 44, 35, 33…), with no model doing better
+  than the rest. One of the 356, read in full: 266 lines — \`<h2>最近工作轨迹</h2>\`, a search input
   reading \`搜项目、作者或提交内容\`, a row of per-repo filter chips, then
-  \`filtered.slice(0, limit).map(…)\` and a "load more" button. **Zero occurrences of \`sticky\`**,
-  in that card and in the second one the same turn produced. Everything needed to steer the list
+  \`filtered.slice(0, limit).map(…)\` and a "load more" button. Everything needed to steer the list
   scrolled away the moment the list was worth steering.
 
 - **Your root sets no height and no \`overflow\`; the page is what scrolls.** You are inside a

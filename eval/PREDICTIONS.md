@@ -21,7 +21,7 @@ Frozen at `rounds/r005/plugin`, verified to contain all three rules before the f
 |---|---|---|---|
 | 1 | Ask every turn whether the answer wants an interface, not once at turn 0 | `prompt.ts` (resident) | 93 of 101 loaders decided at turn 0, 7 at turn 1, 1 at turn 2, **0 later**; 20 of 20 never-loaders produced 0 cards across 179 turns |
 | 2 | Three shapes that hang off the column edge — `<svg width>`, an unwrapped `<pre>`, a `min-w-` table | `skill.ts` | 12 of 60 sampled cards overflowed at 380px, worst 705px |
-| 3 | A title or control above a long list is `sticky` | `skill.ts` | one 266-line card with a heading, a search box and filter chips over a paginated list — `sticky` appeared 0 times |
+| 3 | A title or control above a long list is `sticky` | `skill.ts` | **356 of 766 cards have a heading or control above a list; 3 pin it (0.8%)** — every case, every model. Baseline for r006, since r005 was frozen before this count existed |
 
 Not testable here: the `external` retry fix. The eval mounts each card once and never retries, so the
 failure it repairs (a second React on attempt ≥ 1 → `Minified React error #31`) cannot occur in this
@@ -59,3 +59,16 @@ harness. Its evidence is a real session, not this round. **Do not credit r005 wi
   that most runs land on. Raising it is an r006 change, deliberately not made mid-series.
 - The two negative controls (`closure`, `http418`) will card in the same two models they always do.
   That is a model habit, not a rule that over-fires.
+
+### Baselines measured after r005 was frozen
+
+These are corpus counts over r003+r004's 766 cards. r005 cannot move them (its plugin predates the
+rules that target them); they are what **r006** is read against.
+
+| Metric | Baseline | Rule that targets it |
+|---|---|---|
+| cards with a heading/control above a list that pin it | **3 / 356 (0.8%)** | sticky trigger |
+| `hover:` and a selected-state variant colliding on one property | **308 in 193 cards** | pressed-and-hovered pair |
+| runs where the reader clicked and nothing ever sent | **108 / 161 (67%)** | one control ends the step |
+| `useEffect` timers with no cleanup | **0 / 39** | already correct — do not write a rule for this |
+| cards carrying a `@container` breakpoint | **591 / 766 (77%)** | already landed; was the top panel criticism at 76% |
