@@ -154,6 +154,13 @@ async def main():
         {"cases": [c["id"] for c in cases], "models": models, "user_agent": drive.USER_AGENT_MODEL,
          "judges": judge.JUDGES, "timeout": args.timeout, "started": time.time()}, indent=1))
 
+    # `eval/bin` FIRST on PATH, for every process this wave spawns. It holds a refusing `open`.
+    # The models under test have bash, and one asked to build a layout reasonably decides to look
+    # at what it built — on macOS `open foo.html` launches the machine owner's browser. Measured
+    # during r004: a `css-layout` run opened its own `layout-demo.html` in the face of someone who
+    # was not running the eval. An eval must not reach outside itself.
+    os.environ["PATH"] = f"{REPO / 'eval' / 'bin'}{os.pathsep}{os.environ['PATH']}"
+
     gates = {name: asyncio.Semaphore(size) for name, size in {u: n for u, n in UPSTREAM.values()}.items()}
     inflight = asyncio.Semaphore(RUNS)
     restore = repoint(models, frozen)
