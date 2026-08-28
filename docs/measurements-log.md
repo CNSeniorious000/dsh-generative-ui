@@ -1,4 +1,4 @@
-# Measurement log (2026-08-20 → 2026-08-24)
+# Measurement log (2026-08-20 → 2026-08-29)
 
 Raw session-by-session record, kept for provenance. **`CLAUDE.md` is the design doc; this is not.**
 Every conclusion worth acting on has been lifted into it — read that first, and come here only to
@@ -8510,3 +8510,40 @@ a new failure but about *diagnosing* the ones it already detects. The four previ
 replaced a pattern that missed something; this one keeps the structural test — `turn/end` with
 `reason.kind` — and fixes that its two verdicts were indistinguishable at the output.
 
+
+
+### Nine corpus sweeps, four of them fake (2026-08-29)
+
+Mined r003+r004's 766 generated cards for common defects, to write r006's rules from counts rather
+than from single bad cards. Recording the misses as carefully as the hits, because the misses are
+the more useful half: a crude proxy produced an alarming number four times out of nine, and each
+one would have become a rule treating a disease that does not exist — spending prompt budget and
+crowding out the rules that do work.
+
+| Swept for | Crude count | After reading the hits |
+|---|---|---|
+| `setInterval`/`setTimeout` with no cleanup | 212 cards (28%) | **0 of 39.** Narrowed to "timer started inside a `useEffect` whose body has no `return`", every one cleans up. The 212 were timers in event handlers, which need no cleanup. |
+| root element setting height or `overflow` | 94 cards (12%) | **42, of which 29 are `rounded-xl overflow-hidden`** — clipping children to the corner, which is correct. Not a second scrollbar. |
+| `text-base` as a dead colour token | 316 cards (41%) | **Not a defect at all.** `text-base` generates a font-size; the colour token was deliberately named `page` so it would. I put it in the probe list and read the number before checking whether it generates. |
+| every backticked utility in `prompt.ts`/`skill.ts` | 153 of 249 unmatched | **74 of 74 copyable ones generate.** The sweep was matching package names, JS identifiers and CSS *variable* names (`--dsw-alias-border-l1` sits behind the `border-line` class; the two vocabularies differ on purpose). |
+
+The five that held, with the denominator that makes them readable:
+
+| Defect | Rate | Rule |
+|---|---|---|
+| `hover:` and a selected-state variant colliding on one property | **308 in 193 cards** — `:is()` makes both `(0,2,0)` and `hover` is written last, so the selection repaints neutral under the pointer | add `aria-pressed:hover:*`, which is `(0,3,0)` and wins on specificity rather than order |
+| a heading or control above a list, not pinned | **353 of 356 (99.2%)** — every case, every model | the sticky trigger |
+| the reader clicked and nothing ever sent | **108 of 161 runs (67%)**, 468 dead clicks | exactly one control ends the step |
+| box recipe nested three or more deep | **256 of 766 (33%)**, worst **seven concentric borders** | count the ancestors that repeat border+rounded+padding; more than two is a frame around a frame |
+| a submission the card did not keep | **36 of 105 (34%) looked untouched, 20 (19%) lost it on reload** | record into `usePersistedState` *and render it* — recording into state nothing shows is not recording |
+
+Two things measured as already correct, so deliberately NOT given a rule: reloads that re-fire the
+turn by themselves (**0 of 105**) and `@container` breakpoints (**591 of 766, 77%** — this was the
+top panel criticism at 76% two rounds ago, and it landed).
+
+**The trap that ties them together is silence.** `not-aria-pressed:hover:bg-hover` is the intuitive
+fix for the hover collision and this generator matches neither spelling — an unmatched utility
+produces no rule at all, so the card keeps the bug while its class list claims otherwise. That is
+now a test (`test/uno.test.ts`): every class inside a `className="…"` in a copyable example has to
+generate something. Verified by mutation — inserting `not-aria-pressed:bg-hover` into an example
+turns it red.
