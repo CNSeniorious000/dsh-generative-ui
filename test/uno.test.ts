@@ -198,3 +198,38 @@ test("the selected-and-hovered pair generates; `not-` generates nothing", async 
     expect([...none]).toEqual([]);
   }
 });
+
+/**
+ * Every class in a COPYABLE code example has to generate something.
+ *
+ * A model copies these literally, and an unmatched utility is silent: no error, no warning, the
+ * declaration simply never exists. Measured live on `not-aria-pressed:hover:bg-hover` — the
+ * intuitive fix for the hover/selected collision, matched by nothing, and a card carrying it looks
+ * handled while keeping the bug.
+ *
+ * Scoped to `className="…"` inside the two prompt files rather than every backticked token in the
+ * prose: prose names CSS VARIABLES too (`--dsw-alias-bg-base` is behind the `bg-page` class, and
+ * the two vocabularies are deliberately different), and a sweep over both spellings reports the
+ * variable names as broken classes. It also has to skip the ellipsis these examples use for
+ * elided content.
+ */
+test("every class in a code example generates a rule", async () => {
+  const src = await Promise.all(["../src/prompt.ts", "../src/skill.ts"].map((f) => Bun.file(new URL(f, import.meta.url)).text()));
+  const tokens = new Set<string>();
+  // Not the ones quoted INSIDE backticks: those are prose naming a class, and the prose here
+  // names broken ones on purpose — `className="r"` is quoted from a real card that wrote
+  // `.r { display: grid }` and put it on an `<input type=range>`. A copyable example is written
+  // as `<button className="…">`, so the character before the match discriminates them — a
+  // BACKTICK, because the escape in the source is `\\` followed by the backtick itself.
+  for (const m of src.join("\n").matchAll(/(.)className="([^"$`]+)"/g)) {
+    if (m[1] === "`") continue;
+    for (const t of m[2].split(/\s+/)) if (t && t !== "…") tokens.add(t);
+  }
+  expect(tokens.size).toBeGreaterThan(50);
+  const unmatched: string[] = [];
+  for (const token of tokens) {
+    const { matched } = await generate([token]);
+    if (matched.size === 0) unmatched.push(token);
+  }
+  expect(unmatched.sort()).toEqual([]);
+});
