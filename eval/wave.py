@@ -37,10 +37,16 @@ UPSTREAM = {"macaron-v1-venti": ("mintcn", 3), "macaron-v1-coding-venti": ("mint
             "kimi-k3": ("pi-api", 2), "gpt-5.6-terra": ("copilot", 3), "grok-4.6": ("copilot", 3),
             "gemini-3.7-flash": ("copilot-b", 3)}
 # How many conversations are in flight at once. The binding resource is MEMORY, not rate: each run
-# holds a dsh (node), a chromium with two pages, and a python — about 400MB together. This machine
-# was measured at 27.7 of 29.7GB of swap already in use by other work, so the cap is set by what can
-# be added without making it thrash, not by what the gateways would accept.
-RUNS = int(os.environ.get("UI4A_RUNS", 8))
+# holds a dsh (node), a chromium with two pages, and a python — about 400MB together, so the cap is
+# what can be added without making the machine thrash, not what the gateways would accept.
+#
+# **Thrashing does not look like thrashing.** At 8 the machine ran `vm.swapusage` down to 2.7 of
+# 17.4 GB free and the round filled with `ConnectionResetError: Connection lost` (15) and
+# `dsh exited before announcing a port` (3) — every one of which reads as an upstream or a model
+# fault, and none of which is. No single process was large; the largest was 0.3 GB. The tell is
+# swap, not anything visible in `ps`. Dropping to 5 cleared it, and the run that had just failed
+# at 462s finished in 249s.
+RUNS = int(os.environ.get("UI4A_RUNS", 5))
 
 
 def freeze(round_dir: pathlib.Path) -> pathlib.Path:
@@ -160,6 +166,23 @@ async def main():
     # without a prompt, and the symptom downstream is not "permission denied" anywhere useful — it
     # is every model appearing to produce nothing. Twice now a round has been lost to it
     # (`rounds/r001-POISONED-by-perm-loss` is the other). Refusing to start costs one syscall.
+    # Sweep what the LAST wave left behind, before adding to it. `drive.run` spawns a dsh and a
+    # chromium per run and closes them in its own `finally`; a wave killed hard never reaches that,
+    # and the children are reparented to init and keep their memory. Measured: three killed waves
+    # left **18 orphan dsh processes**, and that — not the gateways — is what produced the
+    # connection-reset storm the `RUNS` note above describes.
+    #
+    # Safe to test by `ppid == 1` HERE and nowhere else: no legitimate wave is running yet, so
+    # anything matching is stale. Mid-flight the same test is WRONG — `subprocess.Popen`'s harness
+    # children also report `ppid 1` under asyncio, and sweeping on it killed the live round's two
+    # servers, after which every card silently failed to mount.
+    stale = [line.split() for line in subprocess.run(["ps", "-axo", "pid=,ppid=,command="], capture_output=True, text=True).stdout.splitlines()
+             if ("dsh --profile headless" in line or "card-driver.mjs" in line) and line.split()[1] == "1"]
+    for pid, *_ in stale:
+        try: os.kill(int(pid), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError): pass
+    if stale: print(f"wave: swept {len(stale)} orphan process(es) from an earlier run", flush=True)
+
     try:
         drive.PATCH.read_bytes()
     except OSError as error:
@@ -217,12 +240,16 @@ async def main():
             if meta.get("status") in ("complete", "timeout"):
                 done += 1
                 return meta
-        if tripped:
-            # Do not even start: the environment is gone, and a queued run that boots anyway just
-            # writes another `error` meta that the next launch has to re-run.
-            return {"case": case["id"], "model": model, "status": "skipped", "turns": [], "elapsed": 0}
         timeout = args.timeout if case["kind"] == "multi" else args.timeout / 5
         async with gates[UPSTREAM[model][0]], inflight:
+            # INSIDE the semaphore, which is the only place this check means anything. It used to
+            # sit above the `async with`, and that version fired its abort and then watched 60 more
+            # runs fail anyway: `asyncio.gather` starts all 220 coroutines at once, so every one of
+            # them ran past the check — finding `tripped` empty, because nothing had failed yet —
+            # and then parked on the semaphore. By the time the trip happened they were all already
+            # through the gate. Here, "the check" and "my turn to run" are the same moment.
+            if tripped:
+                return {"case": case["id"], "model": model, "status": "skipped", "turns": [], "elapsed": 0}
             meta = await drive.run(case, model, out, (args.light, args.dark), timeout)
         if meta.get("status") == "error" and (meta.get("elapsed") or 0) < 1:
             quick_deaths += 1
