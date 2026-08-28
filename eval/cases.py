@@ -129,6 +129,13 @@ CASES = [
         "id": "formula-derive", "kind": "multi", "turns": 12, "floor": 8,
         "opening": "这个公式我怎么看都看不懂",
         "persona": "你在看一篇讲注意力机制的论文，卡在缩放点积那一步。你一开始不贴公式也不说是哪篇，等对方问才给。看懂之后你会问「为什么要除以根号 d」，再后来想代进具体数字自己算一遍，最后想知道多头是怎么拼回去的。你数学基础一般，需要一步一步来。",
+        # r004 baseline, measured before any fix: 3 of 6 models produced ZERO cards across 8, 10
+        # and 12 turns. Reading the 12-turn one settled why, and it was NOT what it looked like:
+        # `skill=False` on every turn — the judgement was never made — and the model answered by
+        # hand-typing matrices into code fences, truncating them three times so the reader had to
+        # ask for the rest. Two changes are aimed at this, both landing after r004: the resident
+        # expression rule now names a formula as the same shape as a cron line, and the skill now
+        # names `katex`. If the card rate here does not move, neither was the reason.
         "expect": "式子本身要能显示出来；后面三问一个比一个具体，最后一问适合能改数字的界面。",
     },
     {
