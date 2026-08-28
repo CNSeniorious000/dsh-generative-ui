@@ -102,6 +102,59 @@ CASES = [
         "persona": "你在投一个偏基础设施的岗位，但一开始不说岗位也不贴简历。等对方问才给。后面你会说「这段经历要不要写进去」，那是一个是否取舍的选择题。",
         "expect": "开场无从下手，必须先问；取舍是第二个需要选择的地方。",
     },
+    # ── deep multi-turn (added after r003) ───────────────────────────────────────────────────
+    # The twelve above were written with a fork scripted for the middle of the conversation, and
+    # they still end at a median of SIX turns. Measured across r001+r002: length tracks how much
+    # the OPENING withholds, not how many forks the persona scripts. `cron-read` hands over the
+    # whole problem in its first line and scripts two later forks — median 3, never reaches 10.
+    # `resume-fix` opens with `帮我改改简历`, naming neither the job nor the CV, and scripts one —
+    # median 10, 74% reach it. So these six open with a premise the assistant cannot act on, and
+    # each carries a STACK of questions that only surface once the previous one is settled.
+    #
+    # They are ADDED rather than replacing the short ones: the twelve above are paired across
+    # every round taken so far, and rewriting a fixture is the one change that makes a paired
+    # read meaningless. These start their own series.
+    #
+    # Each also has a natural result to SHOW — a diagram, a formula, a live layout, a plan, a
+    # position, a drawing — because "clicking an option previews what it means, and a separate
+    # control commits" is the principle with the least evidence behind it so far, and it needs
+    # options whose meaning is worth previewing.
+    {
+        "id": "arch-draw", "kind": "multi", "turns": 12,
+        "opening": "帮我把这套东西画出来",
+        "persona": "你手上是一个已经跑了两年的后端，但你一开始既不说它是什么，也不说要画给谁看。等对方问才会说：一个电商的订单系统，画给新来的同事看。之后你会依次冒出三个新问题——「消息队列那块能不能单独展开」「加上失败重试的路径」「再给我一版给老板看的，别那么细」。每一个都是等前一个画完你才想到的。你倾向于点界面而不是打字。",
+        "expect": "开场无从下手；三个后续要求各自是新的分叉，且每一版的差别只有画出来才看得出。",
+    },
+    {
+        "id": "formula-derive", "kind": "multi", "turns": 12,
+        "opening": "这个公式我怎么看都看不懂",
+        "persona": "你在看一篇讲注意力机制的论文，卡在缩放点积那一步。你一开始不贴公式也不说是哪篇，等对方问才给。看懂之后你会问「为什么要除以根号 d」，再后来想代进具体数字自己算一遍，最后想知道多头是怎么拼回去的。你数学基础一般，需要一步一步来。",
+        "expect": "式子本身要能显示出来；后面三问一个比一个具体，最后一问适合能改数字的界面。",
+    },
+    {
+        "id": "css-layout", "kind": "multi", "turns": 12,
+        "opening": "这个布局我怎么都调不出来",
+        "persona": "你要做一个左边固定右边自适应、底部有一条始终贴底的栏。你一开始只说「调不出来」，不贴代码也不说想要什么效果，等对方问才描述。做出来之后你会依次提「手机上要变成上下」「左边那栏要能收起来」「键盘 Tab 过去顺序不对」。每一条都是看到上一版才发现的。",
+        "expect": "几种实现方式的差别只有看到才知道；后面三条各自是新的约束，且都能就地演示。",
+    },
+    {
+        "id": "sql-tune", "kind": "multi", "turns": 12,
+        "opening": "这条查询慢得离谱",
+        "persona": "你有一张两千万行的订单表，按用户和时间范围查。你一开始既不贴 SQL 也不说表结构，等对方问才给。给了之后你会依次问「这几个索引方案有什么区别」「改写成别的写法会不会更好」「数据再涨十倍还扛得住吗」。你分不清方案之间的差别，需要对方摆出来给你看。",
+        "expect": "索引方案之间的取舍必须展示才说得清；后两问是数据量和写法两个新的分叉。",
+    },
+    {
+        "id": "chess-open", "kind": "multi", "turns": 12,
+        "opening": "教我下这个吧",
+        "persona": "你想学国际象棋，但一开始连这句都没说清——「这个」指什么要对方问了才答。会走子之后你依次想要「常见的开局有哪几种」「我总是很早就丢子，为什么」「给我一个残局练一下」。你是纯新手，看文字规则记不住，需要能点着走一遍。",
+        "expect": "「这个」指代不明，必须先问；后面三个要求分别是枚举、诊断和练习，形状各不相同。",
+    },
+    {
+        "id": "svg-badge", "kind": "multi", "turns": 12,
+        "opening": "帮我弄个图标",
+        "persona": "你要给一个自己写的开源命令行工具做个标识，但一开始不说工具是干什么的，也不说要用在哪。等对方问才说：一个同步文件的小工具，要放在 README 顶部。之后你依次会说「深色背景下看不清」「再给我一个方形的用作头像」「能不能配一句 tagline」。你说不清想要什么风格，看到才知道。",
+        "expect": "开场信息为零；风格只有画出来才选得动，后面三条各是新的用途约束。",
+    },
     # ── single-turn fixed points (CLAUDE.md §4.5) ────────────────────────────────────────────
     # The two positives have flipped before and must stay flipped; the two negatives are the only
     # thing that separates "the rules got better" from "the rules now fire on everything".
