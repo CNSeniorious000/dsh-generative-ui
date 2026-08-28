@@ -373,6 +373,11 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                         shown = await driver.cmd(cmd="click", ref=ref)
                         sent = shown.get("sent", []) if shown.get("ok") else []
                         turn["clicks"].append({"ref": ref, "label": label, "why": action.get("why", "")[:200],
+                                               # The same measurement as the delivered card, taken AFTER the
+                                               # click. A card that fits on arrival and pushes a revealed panel
+                                               # past the edge once someone opens it is the shape the mount-time
+                                               # probe cannot see — and it is the one a reader actually meets.
+                                               "overflow": shown.get("overflow"),
                                                "sent": sent[len(before):], "ok": shown.get("ok", False)})
                         if len(sent) > len(before):
                             said = sent[-1]
