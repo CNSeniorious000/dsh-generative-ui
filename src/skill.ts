@@ -116,6 +116,38 @@ The tell is the question "would the user want this again in ten turns?" Yes → 
 Two things follow from the lifetime difference:
 
 - An **inline** block that the user acts on — picks an option, submits a choice — should *end that step*: send the result with \`sendMessage\` **and** record what was chosen, so the card still shows it when scrolled back to weeks later. Both halves matter: skip the send and the click goes nowhere, skip the record and the card resets to untouched. A form that looks untouched after submitting reads as broken.
+- **Exactly one control ends the step, and the reader must be able to find it.** This is the
+  single largest hole in what gets built: across 161 runs where the reader actually clicked
+  something, **108 of them — 67% — never once got a result back out of the card**, 468 clicks that
+  went nowhere. It is not one model's habit (every one of the ten does it) and not one case's
+  (every case does it). The shape is always the same: a card you can fiddle with forever and never
+  finish. Two endings are correct, and which one depends on whether the options need explaining:
+
+  - **The options speak for themselves** (yes/no, this file or that one) — the click IS the answer.
+    Two plain buttons, no card around them, \`sendMessage\` on click. Nothing to preview.
+  - **The options mean something you have to see to choose between** — then the click SELECTS and
+    shows, and a separate **Submit** sends. Clicking a tab must not fire the turn; a reader
+    comparing three options should be able to look at all three first.
+
+  The preview form is a selector, a result area, and one submit — that is the whole structure, and
+  the result area is where the card earns its existence:
+
+      const [pick, setPick] = useState(OPTIONS[0].id)
+      const [sent, setSent] = usePersistedState<string | null>("migration-plan-choice", null)
+      …
+      <div className="flex flex-wrap gap-2">…one button per option, aria-pressed={pick === o.id}…</div>
+      <div className="mt-3">{OPTIONS.find((o) => o.id === pick)!.preview}</div>
+      <button disabled={sent !== null} onClick={() => { setSent(pick); sendMessage(…) }}>…</button>
+
+  \`preview\` is whatever actually shows the difference: a mermaid graph of the two migration paths,
+  the formula rendered by katex, an SVG of the layout, a working miniature of the thing, a 3D view,
+  a playable board. A paragraph of text describing the option is not a preview — the reader could
+  have read that in the reply.
+
+  **And it fires once.** \`sent\` above is persisted, so a reload shows the answer that was given
+  rather than an untouched form, and the button cannot send a second turn for a question already
+  answered.
+
 - A **canvas** stays interactive. It does not "complete"; it just sits there working.
 - A **canvas outlives the reply that made it**, so data the user puts into it — entries, notes, cards — must survive a reload on its own. Reach for \`usePersistedState\` from \`${capabilityModule("state")}\` — \`useState\`'s signature including a lazy initialiser, with the value kept in \`localStorage\` under a namespaced key, and the read and write already wrapped:
 
