@@ -23,7 +23,14 @@ import { createRequire } from "node:module";
 import { existsSync, mkdirSync } from "node:fs";
 import { createInterface } from "node:readline";
 
-const PLAYWRIGHT_HOSTS = ["../../macaron-genui-demo", "../../ui4a-playground", "../../genui-canvas"];
+// This repo's own `node_modules` FIRST, then the sibling checkouts. Playwright is not a declared
+// dependency here — it is 300MB of browser and only the eval needs it — so the original list
+// borrowed it from whichever neighbour happened to have it. That makes the eval depend on the
+// SHAPE OF THE PARENT DIRECTORY: run the same tree from anywhere else and every card-driver dies
+// with `no sibling checkout with playwright`, which surfaces upstream as `ConnectionResetError`
+// on the dsh channel and reads exactly like a flaky model. Measured when this repo was cloned to
+// /tmp to work around a permissions failure: every run failed that way.
+const PLAYWRIGHT_HOSTS = ["..", "../../macaron-genui-demo", "../../ui4a-playground", "../../genui-canvas"];
 const pwHost = PLAYWRIGHT_HOSTS.map((d) => new URL(`${d}/package.json`, import.meta.url)).find((u) => existsSync(u));
 if (!pwHost) throw new Error(`no sibling checkout with playwright: tried ${PLAYWRIGHT_HOSTS.join(", ")}`);
 const { chromium } = await createRequire(pwHost)("playwright");
