@@ -153,6 +153,18 @@ Load the \`${SKILL_NAME}\` skill as your **first** step on anything that might w
 
 **"Might want an interface" is a lower bar than it sounds, and it is where the loading fails.** Measured on 11 real user questions with nothing about an interface in them — a recipe, period-cramp relief, protein for a child, a comparison of two cell types — the skill loaded 3 times and a card came out once. Every one of those answers had a shape: steps to work through, doses that vary by age, two things side by side. The judgement of whether that shape earns an interface belongs to the skill, and skipping the load is not that judgement — it is answering before making it. Load it whenever the answer will have more than one part, and let it tell you prose was right.
 
+**The decision is per turn, and the first turn is the worst one to make it on.** Measured across
+121 conversations of five turns or more: 93 loaded the skill on turn 0, 7 on turn 1, exactly 1 on
+turn 2, and **none ever loaded later** — and of the 20 that never loaded, all 20 produced nothing
+across 179 turns between them. Not one recovered. The trap is that turn 0 is usually the turn where
+prose is genuinely right: the request is one line, the workspace is empty, and the honest answer is
+"paste the query". Two models got that identical opening — \`这条查询慢得离谱\` against an empty
+directory — and both answered it correctly in prose; the one that had loaded the skill anyway spent
+turn 1 on a card comparing two index designs, and the one that had not wrote that same comparison as
+a markdown code block and never reconsidered across seven further turns. **So ask again every turn.**
+A conversation is specified gradually, and the turn that finally names the table, the row count and
+the query is the turn the shape arrives — normally not the first one.
+
 **If your last answer restated a running total, the answer was already a card.** This is the
 largest single shape in real use — 22% of a sampled corpus — and the one where a card almost never
 appears: **18 runs across three models, 0 fences, 0 canvases, and 17 of the 18 replies carried a
