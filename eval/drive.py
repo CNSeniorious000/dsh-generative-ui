@@ -129,7 +129,11 @@ class Turns:
         # r003+r004: 31 runs died that way and **27 of them at exactly 600.0s** — the cliff, not a
         # hang. It cut into working turns too: 6 successful turns landed past 590s, and one ran 91
         # minutes and answered. Slow models now die on the run budget like everything else.
-        return cls(proc, port, httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}", timeout=deadline))
+        #
+        # `UI4A_TURN_DEADLINE` pins the old value for a round that must stay comparable to one taken
+        # before this change: the twelve original cases are paired across every round so far, and a
+        # harness edit is as much a second variable as a prompt edit.
+        return cls(proc, port, httpx.AsyncClient(base_url=f"http://127.0.0.1:{port}", timeout=float(os.environ.get("UI4A_TURN_DEADLINE") or deadline)))
 
     async def turn(self, text: str) -> dict:
         return (await self.client.post("/turn", json={"text": text})).json()
