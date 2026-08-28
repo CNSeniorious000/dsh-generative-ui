@@ -207,7 +207,7 @@ Rules:
 """
 
 
-def user_prompt(case: dict, history: list[dict], card: dict | None, clicks: list[dict]) -> str:
+def user_prompt(case: dict, history: list[dict], card: dict | None, clicks: list[dict], push: str = "") -> str:
     lines = [f"WHO YOU ARE:\n{case['persona']}\n", "THE CONVERSATION SO FAR:"]
     for h in history:
         # A person never sees the TSX. Showing the source made the agent read 7KB of code as if it
@@ -232,15 +232,16 @@ def user_prompt(case: dict, history: list[dict], card: dict | None, clicks: list
         for c in clicks: lines.append(f"  ref {c['ref']} — {c['why']}")
         lines.append("Do not click the same thing again. Move on: pick the next question, press the")
         lines.append("submit/confirm control if you are happy, or type instead.")
+    if push: lines.append(push)
     return "\n".join(lines)
 
 
-async def ask_user_agent(client: httpx.AsyncClient, case: dict, history: list[dict], card: dict | None, clicks: list[dict]) -> dict:
+async def ask_user_agent(client: httpx.AsyncClient, case: dict, history: list[dict], card: dict | None, clicks: list[dict], push: str = "") -> dict:
     for attempt in range(3):
         try:
             r = await client.post("/chat/completions", json={
                 "model": USER_AGENT_MODEL, "max_tokens": 1200,
-                "messages": [{"role": "system", "content": USER_SYSTEM}, {"role": "user", "content": user_prompt(case, history, card, clicks)}],
+                "messages": [{"role": "system", "content": USER_SYSTEM}, {"role": "user", "content": user_prompt(case, history, card, clicks, push)}],
             })
             text = r.json()["choices"][0]["message"]["content"] or ""
             match = re.search(r"\{.*\}", text, re.S)
@@ -330,6 +331,14 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                 # The user acts. A click that sends ENDS the turn; a click that only previews does
                 # not, which is the distinction the whole suite exists to see.
                 said = None
+                # `floor` refuses ONE early `done` per turn, and only on the cases that declare it. Both
+                # halves matter. USER_SYSTEM has told the agent to raise every persona item before
+                # finishing since the first round, and the median run still ends at six turns of a
+                # declared ten — the prose does not land, exactly as CLAUDE.md 6.2 says prose does
+                # not. And the twelve original cases carry no floor on purpose: they are paired
+                # across every round taken so far, and changing what the model faces mid-series is
+                # the one edit that makes a paired read mean nothing.
+                pushed = False
                 for _ in range(MAX_CLICKS):
                     action = await ask_user_agent(api, case, history + [{"user": turn["user"], "reply": turn["reply"]}], shown, turn["clicks"])
                     if action.get("act") == "click" and shown is not None:
@@ -350,6 +359,17 @@ async def run(case: dict, model: str, out: pathlib.Path, ports: tuple[int, int],
                     if action.get("act") == "say":
                         said = action.get("text", "").strip()
                         break
+                    if not pushed and index + 1 < case.get("floor", 0):
+                        pushed = True
+                        push = ("\n\nYou just answered `done` at turn " + str(index + 1) + ". Re-read WHO YOU ARE: "
+                                "it names things you raise LATER, and at least one of them has not come up yet. "
+                                "Say the next one now, in your own words, with {\"act\":\"say\"}. Answer `done` "
+                                "again only if the assistant is genuinely stuck or repeating itself.")
+                        action = await ask_user_agent(api, case, history + [{"user": turn["user"], "reply": turn["reply"]}], shown, turn["clicks"], push)
+                        if action.get("act") == "say":
+                            said = action.get("text", "").strip()
+                            turn["pushed"] = True
+                            break
                     turn["done"] = action.get("why", "")
                     break
 
