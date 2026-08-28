@@ -125,6 +125,12 @@ async def main():
     gates = {name: asyncio.Semaphore(size) for name, size in {u: n for u, n in UPSTREAM.values()}.items()}
     inflight = asyncio.Semaphore(RUNS)
     restore = repoint(models, frozen)
+    # The same lock `scripts/build.ts` already honours, naming this process so a dead wave's lock
+    # is detectably dead. A round here is protected by its own frozen copy and would survive a
+    # rebuild, but a `bun run build` in another window still churns `lib/` under whatever runs
+    # next, and the pre-push hook rebuilt it mid-round once already.
+    lock = REPO / ".wave-running"
+    lock.write_text(str(os.getpid()))
     # A `finally` does not run when the process is killed, and every wave in this repo has ended by
     # hand at least once. Turning the signal into an exception is what lets the homes be put back.
     for sig in (signal.SIGTERM, signal.SIGINT):
@@ -154,6 +160,7 @@ async def main():
     try:
         metas = await asyncio.gather(*[one(c, m) for c in cases for m in models], return_exceptions=True)
     finally:
+        lock.unlink(missing_ok=True)
         for link, was in restore.items():
             if link.is_symlink(): link.unlink()
             if was: link.symlink_to(was)
