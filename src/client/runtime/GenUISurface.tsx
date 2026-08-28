@@ -251,6 +251,36 @@ export const dispatchError = (action: "ignore" | "retry" | "report", effects: { 
  * fresh, and appending a query to a `blob:` URL makes it unresolvable — which would break every
  * card rather than fixing one.
  */
+/**
+ * The same import map with `bundle`/`external` dropped from every esm.sh entry.
+ *
+ * esm.sh serves two different builds and only one of them can fail: `?bundle` runs esbuild over
+ * the package's whole tree, and a version skew anywhere in it is a hard 500. Measured on
+ * `mermaid`, three attempts, deterministic — `?bundle&target=es2022&external=react,react-dom,scheduler`
+ * answers **500 `esbuild: No matching export in "node_modules/d3/src/index.js" for import
+ * "curveBumpX"`**, while the plain `https://esm.sh/mermaid?target=es2022` answers 200 and the
+ * module imports fine. The card meanwhile renders **completely blank with nothing in the
+ * console**, because an unresolvable import kills the whole module graph.
+ *
+ * So the retry that only busts the query re-requests the same broken build. Unbundling is a
+ * genuinely different artefact on esm.sh's side, which is what makes it a second chance rather
+ * than a second identical failure. It is not the first choice — the bundled build is one request
+ * instead of a waterfall — which is why this is on the retry path and not on the happy one.
+ */
+export const unbundleFetchedImports = (imports: Record<string, string>): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(imports).map(([key, url]) => {
+      if (!url.startsWith("https://esm.sh/")) return [key, url];
+      const parsed = new URL(url);
+      parsed.searchParams.delete("bundle");
+      parsed.searchParams.delete("external");
+      // `bundle` is a valueless flag, and `URLSearchParams` writes it back as `bundle=` — which
+      // esm.sh reads as the flag being present. Deleting is enough; re-serialising is what would
+      // put it back.
+      return [key, parsed.toString()];
+    }),
+  );
+
 export const bustFetchedImports = (imports: Record<string, string>, attempt: number): Record<string, string> => Object.fromEntries(Object.entries(imports).map(([key, url]) => [key, url.startsWith("https://esm.sh/") ? `${url}${url.includes("?") ? "&" : "?"}ui4a-retry=${attempt}` : url]));
 
 export function GenUISurface({ code, streaming = false, preserveState = true, onError, onRendered, className }: GenUISurfaceProps) {
@@ -299,7 +329,10 @@ export function GenUISurface({ code, streaming = false, preserveState = true, on
     const attempt = retriesRef.current;
     void mergeFallbackImports(localImports(), code).then((imports) => {
       // Only the fetched esm.sh entries need busting; the local blob URLs are already fresh.
-      renderer.setImportMap({ imports: bustFetchedImports(imports, attempt) });
+      // From the second attempt the bundled build is dropped as well: if the first failure was a
+      // bundle-side 500 (see `unbundleFetchedImports`) no amount of cache-busting can clear it.
+      const fresh = attempt > 0 ? unbundleFetchedImports(imports) : imports;
+      renderer.setImportMap({ imports: bustFetchedImports(fresh, attempt) });
       renderer.clear({ preserveVisualState: true });
       renderer.render(code);
     });

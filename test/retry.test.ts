@@ -14,7 +14,7 @@
  * agree — which is how `compiler.test.ts` stayed green through six real mutations.
  */
 import { describe, expect, test } from "bun:test";
-import { bustFetchedImports, dispatchError, shouldRetry } from "../src/client/runtime/GenUISurface.tsx";
+import { bustFetchedImports, dispatchError, shouldRetry, unbundleFetchedImports } from "../src/client/runtime/GenUISurface.tsx";
 
 const bust = (url: string, attempt: number) => bustFetchedImports({ x: url }, attempt).x;
 
@@ -105,4 +105,35 @@ test("three retries outlast an esm.sh cold build", () => {
   expect(waits[2]).toBeGreaterThan(waits[1]!);
   // 2.27s was the measured cold build; leave real headroom above it.
   expect(waits.reduce((a, b) => a + b, 0)).toBeGreaterThan(8000);
+});
+
+// esm.sh serves two builds and only one of them can fail on its own: `?bundle` runs esbuild over
+// the package's whole tree, and a version skew inside it is a hard 500. Measured on `mermaid`,
+// three attempts, deterministic — the bundled URL answers `500 esbuild: No matching export in
+// "node_modules/d3/src/index.js" for import "curveBumpX"` while the plain one answers 200. So a
+// retry that only busts the query re-requests the identical broken artefact, and the card stays
+// blank with nothing in the console.
+describe("unbundleFetchedImports", () => {
+  test("drops bundle and external from an esm.sh entry", () => {
+    expect(unbundleFetchedImports({ x: "https://esm.sh/mermaid?bundle&target=es2022&external=react,react-dom,scheduler" }).x)
+      .toBe("https://esm.sh/mermaid?target=es2022");
+  });
+
+  test("leaves a blob URL alone", () => {
+    // Appending to a `blob:` URL makes it unresolvable, which breaks every card rather than one.
+    const blob = "blob:http://localhost/abc-123";
+    expect(unbundleFetchedImports({ x: blob }).x).toBe(blob);
+  });
+
+  test("leaves an already-unbundled entry byte-identical", () => {
+    // Shared-instance packages (three, react-reconciler) are served unbundled ON PURPOSE so their
+    // constructors match a dependent's. Re-serialising one is how that identity would be lost.
+    const three = "https://esm.sh/three?target=es2022";
+    expect(unbundleFetchedImports({ x: three }).x).toBe(three);
+  });
+
+  test("busting composes on top of it", () => {
+    const once = unbundleFetchedImports({ x: "https://esm.sh/mermaid?bundle&target=es2022" });
+    expect(bustFetchedImports(once, 2).x).toBe("https://esm.sh/mermaid?target=es2022&ui4a-retry=2");
+  });
 });
