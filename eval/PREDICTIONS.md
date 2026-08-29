@@ -60,6 +60,31 @@ harness. Its evidence is a real session, not this round. **Do not credit r005 wi
 - The two negative controls (`closure`, `http418`) will card in the same two models they always do.
   That is a model habit, not a rule that over-fires.
 
+### The sticky read at 143 of 220, and why it is not readable yet (2026-08-29)
+
+`eval/sticky.mjs` reads the trigger shape off the syntax tree — a `.map()` list with a heading or
+control above it in the same parent — so "above" is a sibling relation rather than a regex guess.
+Three numbers on the same instrument, and they disagree in a way that matters:
+
+| Read | r004 | r005 (partial) |
+|---|---|---|
+| pooled, any card containing `sticky` | 1.9% | **7.4%** |
+| paired by (case, model), per-card | 1.2% | 4.6% — **+0.047 ± 0.027, 1.7 SE** |
+| paired, restricted to cards that HAVE the shape | 0 / 251 | 2 / 245 — **+0.017 ± 0.017, 1.0 SE** |
+
+The pooled number is four times the paired one and neither clears 2 SE. Reading the hits explains
+the gap: the runs where r005 pins — `diet-log/macaron-v1-venti`, `diet-log/step-3.7-flash`,
+`palette/macaron-v1-coding-venti` — are runs where **r004 produced no cards at all**. r004's
+`diet-log/macaron-v1-venti` directory holds zero `.tsx` files. Those cells are excluded from the
+pairing, correctly, and what is left is the 59 cells where both rounds carded.
+
+So the improvement visible in the pooled number may not be the sticky rule at all: it is equally
+consistent with cells that used to produce nothing now producing something, which is a different
+rule's win. **Do not attribute it until the round completes** and the pairing has the cells back.
+The usages themselves are right — `sticky top-0 z-10 bg-layer border-b`, a pinned header over a
+scrolling list, which is exactly what the rule asks for — so this is a question of attribution, not
+of whether the models understood it.
+
 ### Baselines measured after r005 was frozen
 
 Corpus counts over r003+r004's 766 cards, measured after r005 had already started. The `read`

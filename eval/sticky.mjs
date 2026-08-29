@@ -112,6 +112,45 @@ function inspect(src) {
   return { shape, pinned }
 }
 
+/** Per-run tallies, keyed `case/model`, so two rounds can be read paired. */
+function scan(root) {
+  const runs = new Map()
+  let failed = 0
+  for (const a of readdirSync(root)) {
+    const ad = join(root, a); if (!statSync(ad).isDirectory() || a === "plugin") continue
+    for (const b of readdirSync(ad)) {
+      const bd = join(ad, b); if (!statSync(bd).isDirectory()) continue
+      let shaped = 0, pinned = 0, cards = 0
+      for (const f of readdirSync(bd)) {
+        if (!f.endsWith(".tsx")) continue
+        cards++
+        let r; try { r = inspect(readFileSync(join(bd, f), "utf8")) } catch { failed++; continue }
+        if (r.shape) { shaped++; if (r.pinned) pinned++ }
+      }
+      if (cards) runs.set(`${a}/${b}`, { shaped, pinned, cards })
+    }
+  }
+  return { runs, failed }
+}
+
+if (process.argv.includes("--paired")) {
+  const [A, B] = [scan(process.argv[2]).runs, scan(process.argv[3]).runs]
+  // Only runs that produced the shape on BOTH sides: a run with no list has no pin rate, and
+  // counting it as 0% would let a round win by generating fewer lists.
+  const keys = [...A.keys()].filter(k => B.has(k) && A.get(k).shaped > 0 && B.get(k).shaped > 0)
+  const d = keys.map(k => B.get(k).pinned / B.get(k).shaped - A.get(k).pinned / A.get(k).shaped)
+  const mean = d.reduce((x, y) => x + y, 0) / d.length
+  const sd = Math.sqrt(d.reduce((s, x) => s + (x - mean) ** 2, 0) / (d.length - 1))
+  const se = sd / Math.sqrt(d.length)
+  const [pa, sa] = keys.reduce(([p, s], k) => [p + A.get(k).pinned, s + A.get(k).shaped], [0, 0])
+  const [pb, sb] = keys.reduce(([p, s], k) => [p + B.get(k).pinned, s + B.get(k).shaped], [0, 0])
+  console.log(`配对 ${keys.length} 组（两侧都产出了这个形状的格子）`)
+  console.log(`  钉住率  ${mean >= 0 ? "+" : ""}${mean.toFixed(3)} ± ${se.toFixed(3)}` +
+              `  ${se > 0 && Math.abs(mean) >= 2 * se ? "← 过 2SE" : "(未过 2SE)"}`)
+  console.log(`  同一批格子: 前 ${pa}/${sa} = ${(100 * pa / sa).toFixed(1)}%   后 ${pb}/${sb} = ${(100 * pb / sb).toFixed(1)}%`)
+  process.exit(0)
+}
+
 const root = process.argv[2]
 let total = 0, shaped = 0, pinned = 0, failed = 0
 const pins = []
