@@ -8755,3 +8755,34 @@ the choice in `usePersistedState` and their highlight does come back. The probe 
 diff `aria-pressed` across the reload — and it is not being taught that now, because changing a
 metric between two rounds makes those rounds incomparable on it, which costs more than the
 imprecision. It is registered here as the r007 change, to be made between rounds and not during.
+
+### The overflow probe was measuring KaTeX's own geometry (2026-08-29)
+
+r005's five worst overflows: **7690px, 7479px, 5713px, 5192px**, then a gap down to 978px. All four
+in `formula-derive`, all `<path>` elements, all with `className` reading `[object SVGAnimatedString]`.
+
+`getBoundingClientRect()` on a child of an `<svg>` returns its transformed geometry, and that box is
+not clipped by the SVG viewport. KaTeX draws a stretchy `\sqrt` as a `<path>` whose box extends far
+past what is painted. The formulas rendered correctly, inside a container that scrolled.
+
+The shape of this one is worth keeping: **it was r005's own success arriving as r005's own
+regression.** r003 and r004 produced *zero* measured cards on `formula-derive` — three of six models
+wrote none at all. r005 named `katex` in the skill, the case started producing cards for the first
+time, and those cards brought KaTeX's SVG internals with them. A rule that made a case work showed
+up in the numbers as the rule that broke it.
+
+Corrected rates, filtering by the recorded `tag`: r004 12.6% → 12.2%, r005 14.9% → 13.5%. The
+direction does not flip and the paired delta is unchanged at +0.033 ± 0.045. What changes is the
+"worst offender" the counter reports, from a physically impossible 7690px to 978px.
+
+**And the fix was reverted within the hour, on purpose.** `card-driver.mjs` is spawned per run, so
+patching it while the chain was re-running r005's last 26 cells would have measured those 26 with a
+different instrument from the other 182 — and asymmetrically: under the old probe a real 300px
+overflow sitting behind a KaTeX path is invisible (the probe records only the single worst element,
+and the read-time filter then drops the whole card), while under the new one it is reported. Same
+card, opposite answers. The probe half now lives in the r006 launch script and lands between rounds;
+the read-time filter stays, because it treats all 208 cells alike.
+
+Second time today a correct change was applied at the wrong moment — the first was `bun add` writing
+playwright into `package.json`. Both times the change was right and the test for "is now the moment"
+is not in the diff: it is whether something is currently running against it.
