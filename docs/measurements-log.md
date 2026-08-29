@@ -8700,3 +8700,29 @@ justification was missing: it says hand-placed layout "goes wrong by hand", and 
 hardcoded coordinates, 7.2% carry a hardcoded px dimension. The panel has never criticised these
 diagrams either. A technique nobody reaches for is a striking number; it is not a defect until the
 thing they reach for instead is shown to be worse, and here it is not.
+
+### Checking that what the rules recommend actually exists (2026-08-29)
+
+A rule that names an API is only as good as the API. Six of them were checked against the real
+thing before r006 ships, because the failure mode is silent in every case — an unmatched utility
+generates nothing, a wrong export throws inside an effect, a package that 500s leaves a blank card,
+and none of that reaches a screen the author looks at.
+
+| What a rule tells the model to write | Checked how | Result |
+|---|---|---|
+| `aria-pressed:hover:bg-accent` | the real generator, in `test/uno.test.ts` | generates `:hover[aria-pressed="true"]` |
+| the same trick on the other three spellings | same | `data-[state=active]:`, `checked:`, `aria-selected:` all generate; **`aria-current:` does not**, and appears 0 times in the corpus |
+| `not-aria-pressed:` (the intuitive fix) | same | generates NOTHING, both orderings — locked as a failing-test if that ever changes |
+| `usePersistedState` from `$dsh/state` | the export, and 440 corpus uses | signature matches; **439 of 440 import it correctly** — the one miss is a card that only mentions the word |
+| `shiki`'s `codeToHtml` | esm.sh export chain, then the corpus | exported by shiki@4.4.3; **7 of 7 cards that used it painted, zero errors**, across three rounds, three models, both fence and canvas |
+| `mermaid` | esm.sh | `?bundle` 500s, plain answers 200 — loadable now that only `bundle` is dropped |
+
+The one that changed a rule: **`aria-pressed` is 163 of the 308 measured collisions**, and the other
+145 are `data-[state=active]` (74), `checked` (43) and `aria-selected` (28). The skill showed one
+spelling, so the fix as written covered 53% of the defect while reading as though it covered all of
+it. Naming the other three is seven lines and the generator confirms each.
+
+The shiki check is the one worth copying. The first instinct was to crawl esm.sh's dependency graph
+and reason about transfer size — an hour of work producing an estimate. The corpus already
+contained the answer: cards that used it, and whether they painted. **When a technique has been
+tried in the corpus, that IS the measurement; the estimate is what you do when it has not.**
