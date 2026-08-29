@@ -330,6 +330,25 @@ click actually SENT something, and only **16-24% of runs have one** (r003 18%, r
 Reload frequency is not the cause — `drive.py` reloads after every carded turn already. The cause
 is that most clicking never commits, which is rule 2's target.
 
+**The dead clicks split two ways, and only the big half is the models'.** Of 171 runs where the
+reader clicked, **117 (68%) never sent anything** — and reading the card sources rather than the
+click log says why:
+
+| | count | share of dead |
+|---|---|---|
+| the card's source contains **no `sendMessage` call at all** | **90** | **77%** |
+| it has one, and the reader never reached it | 27 | 23% |
+
+Three quarters of them cannot send because nothing in the card is wired to send. The reader clicks
+`RESTful (JSON)`, `下一步 →`, `2. 尺度缩放 / √d` — real controls that flip internal state and
+nothing else — and the conversation simply stops there. That is the defect rule 2 names, and it is
+not an artefact of the persona: an agent cannot click a control that was never written.
+
+The remaining 23% is a different problem (the card offers a way out and the user agent does not
+take it) and rule 2 does not address it. **If dead clicks fall from 68% to around 16%, that is the
+whole of the addressable half and a complete success** — quoting a target of 0% would be quoting
+the persona's share as the models'.
+
 So the two are linked: **rule 2 succeeding is the precondition for rule 4 being measurable at all.**
 If dead clicks fall, more runs commit, the persistence denominator grows and rule 4 gets its pairs.
 If rule 2 does nothing, rule 4 arrives at ~35 pairs and needs an 18pp move to register — its
