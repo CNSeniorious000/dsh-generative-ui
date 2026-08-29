@@ -310,6 +310,35 @@ sides reached it, so r006 runs with no r005 counterpart are dropped rather than 
    are the same blocks, so if `<pre>` falls and overflow does not, the replacement is also too wide.
 7. **The panel, last.** It has never been the thing that decided a round and is not going to start.
 
+### Which r006 rules can actually be proven, computed before the round
+
+Same exercise as the panel power check, on the deterministic counters. Per-pair spreads are r005's;
+the minimum detectable effect is `2·sd/√n` at the n each counter will realistically have.
+
+| Counter | pairs it will have | per-pair sd | smallest move it can resolve | r004 baseline | rule |
+|---|---|---|---|---|---|
+| clicks that fired the turn | ~120 | 0.312 | **5.7pp** | 11.5% | 2 |
+| cards per turn | ~200 | 0.346 | 4.9pp | 47.8% | 1 (r005's) |
+| cards that painted | ~130 | 0.182 | 3.2pp | 91.6% | — |
+| overflowing at 380px | ~110 | 0.297 | 5.7pp | 13.3% | 5 |
+| preview-then-commit | ~200 | 0.422 | 6.0pp | 17.6% | 2 |
+| **committed but not recorded** | **~35** | 0.530 | **18pp** | 42.5% | 4 |
+| **recorded but lost on reload** | **~35** | 0.461 | **16pp** | 27.5% | 4 |
+
+**Rule 4 is the one at risk, and not because of the round size.** Its denominator is turns where a
+click actually SENT something, and only **16-24% of runs have one** (r003 18%, r004 24%, r005 16%).
+Reload frequency is not the cause — `drive.py` reloads after every carded turn already. The cause
+is that most clicking never commits, which is rule 2's target.
+
+So the two are linked: **rule 2 succeeding is the precondition for rule 4 being measurable at all.**
+If dead clicks fall, more runs commit, the persistence denominator grows and rule 4 gets its pairs.
+If rule 2 does nothing, rule 4 arrives at ~35 pairs and needs an 18pp move to register — its
+registered prediction (34% → under 15%) would just barely clear that, with no margin.
+
+Written down now so the failure mode is named in advance: **a null on rule 4 next to a null on rule
+2 is one result, not two.** Reporting them as two independent failures would double-count a single
+cause.
+
 ### What would make r006 unreadable
 
 - `cut` rate up by more than 2 SE — runtime ate the round; drop `floor` back to 9 and re-run.
