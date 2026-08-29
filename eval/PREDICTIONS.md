@@ -116,6 +116,20 @@ infinite panel the paired sd falls from 2.30 to 2.22 and the n needed drops from
 gain for unbounded cost. Judge count is not the lever; pairs are, and repeated runs per cell would
 be, at double the price. Do not spend the round's budget widening the panel.
 
+**Nor is a composite score.** The other free-looking idea — average the five dimensions instead of
+reading `overall`, on the theory that per-dimension noise partly cancels — makes it worse:
+
+| estimator | r004→r005 effect | SE multiple |
+|---|---|---|
+| `overall` alone | +0.434 ± 0.235 | **1.85** |
+| mean of the five dimensions | +0.378 ± 0.244 | 1.55 |
+| mean of all six | +0.388 ± 0.241 | 1.61 |
+
+Two reasons, both visible in the per-dimension table: the dimensions are strongly correlated, so
+averaging removes little noise, and `clarify` is a null (+0.115, 0.45 SE) that dilutes the signal
+without contributing any. `overall` is already the best single estimator available. **Read it, and
+stop looking for a cleverer summary of the same 105 verdicts.**
+
 ### Read #1 came back, and it retired its own sharp predictor (2026-08-29)
 
 The registered read for the per-turn decision rule was the skill-load rate, with a sharper backup:
