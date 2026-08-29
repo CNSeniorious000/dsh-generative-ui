@@ -8647,3 +8647,42 @@ been quotable, and the first three would each have justified a rule. What separa
 care in writing the regex — it is that the hits were read after each one, and each reading named a
 specific legitimate thing the proxy was catching. **A proxy's number is meaningless until you can
 say what the false positives are made of.**
+
+### What the cards actually draw with, over 1287 sources (2026-08-29)
+
+The goal lists the surfaces a preview area can use — *"mermaid / 用 UI 绘制的流程 / 交互式的 demo /
+svg / LaTeX 公式 / 3D 展品 / 甚至交互式的小游戏"*. Nothing had counted which of them the models
+ever reach for.
+
+| Technique | r003 (355) | r004 (411) | r005 (521) |
+|---|---|---|---|
+| `<svg>` drawn by hand | 0.8% | 16.1% | 4.8% |
+| LaTeX / `katex` | **0** | 0.7% | **2.7%** |
+| keyboard interaction | 6.5% | 2.9% | 6.0% |
+| charts (`recharts`) | 0.6% | 0.5% | 1.5% |
+| `shiki` | 0.3% | 0.7% | 0.8% |
+| 3D (`three`, r3f) | 0.8% | 0.5% | 0.2% |
+| canvas 2d | 0 | 0.7% | 0 |
+| `mermaid` | 0 | 0.2% | 0.2% |
+| `requestAnimationFrame` | **0** | **0** | **0** |
+| drag (`onPointerMove`) | 0 | 0.5% | 0 |
+
+**`mermaid` is 1 card in 1287.** `arch-draw` is a case whose entire premise is "draw me this
+system", and across three rounds and eleven models the answer arrives as hand-placed `<div>`s
+essentially every time. **`requestAnimationFrame` is exactly zero across all three rounds** — no
+card has ever animated anything or run a game loop. 3D and drag round to zero as well.
+
+Two of these are read, not just listed:
+
+**LaTeX moved.** r005's skill names `katex` for the first time, and the technique goes 0 → 0.7% →
+2.7%. Paired on the 51 common cells it is **1.2% → 4.4%, +0.030 ± 0.025** — 1.2 SE, so directional
+and not yet a result, on a round that is two thirds complete.
+
+**The SVG "collapse" was not one.** Pooled, `<svg>` falls 16.1% → 4.8% right after r005 added the
+rule telling models to rewrite `<svg width>` as a `viewBox` — which reads exactly like a rule that
+scared models off the technique instead of fixing it. Paired on the same 51 cells: **7.5% → 7.4%,
++0.014 ± 0.021.** Flat. The pooled move is composition, and the rule caused no avoidance.
+
+The absences are why r006 adds `orbit-3d` (a thing in space), `game-tune` (a loop worth watching)
+and `log-dig` (a card that runs a command): a surface no fixture ever asks for measures the
+fixtures, not the models.
