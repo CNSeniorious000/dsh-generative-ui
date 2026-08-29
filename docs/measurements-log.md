@@ -8608,3 +8608,19 @@ nobody had verified either; it now quotes this one.
 The rule itself stays. 5.4% is small, but unlike the six false positives above these are real
 four-deep stacks, and the rule costs three sentences. What changed is that its evidence is now
 readable off a checked-in script rather than off a number nobody could reproduce.
+
+**The same exercise cleared two other numbers, which is the point of doing it.** Reimplementing the
+hover/pressed counter produced 191 collisions against the shipped 308, and the reflex — after the
+nesting result — was to assume the shipped number was wrong again. It was not: the reimplementation
+had five spellings of "this is the selected one" and the original had nine. Adding `aria-current:`,
+`checked:`, `data-[state=active]:` and `data-[state=checked]:` reproduced **308 in 193 cards** on
+the nose, so the disagreement was the vocabulary and not the counting, and the shipped number
+stands. `focus:` and `active:` were deliberately left out — they describe a state during the
+interaction rather than a selection that outlives it, and they only move the number by 8.
+
+The hand-rolled `<pre>` number came back exactly too: **182** cards, matching the shipped figure
+digit for digit.
+
+So of the three numbers reimplemented, one was wrong by 6x and two were exact. A reimplementation
+that only ever confirms is not a check, and one that always overturns means the second instrument
+is the broken one — this is the mix that says both instruments were built honestly.

@@ -24,7 +24,13 @@ CLASSNAME = re.compile(r'className=(?:"([^"]*)"|\{`([^`]*)`\})')
 # Opening tag, closing tag, or self-closing. Good enough for generated TSX, which is formatted.
 TAG = re.compile(r'<(/?)([A-Za-z][\w.]*)((?:[^<>"\']|"[^"]*"|\'[^\']*\')*?)(/?)>', re.S)
 
-PRESSED = ("aria-pressed:", "data-[state=on]:", "data-active:", "aria-selected:", "data-[selected]:")
+# Every spelling of "this one is the selected one". The first version of this list had five entries
+# and reproduced 191 collisions where the original count said 308; adding the four below matched it
+# exactly, so the disagreement was this list and not the counting. `focus:`/`active:` are
+# deliberately NOT here — they describe a transient state during the interaction, not a selection
+# that persists after it, and adding them only moves the number by 8.
+PRESSED = ("aria-pressed:", "data-[state=on]:", "data-active:", "aria-selected:", "data-[selected]:",
+           "aria-current:", "checked:", "data-[state=active]:", "data-[state=checked]:")
 FAMILY = ("bg-", "text-", "border-", "ring-", "shadow-", "opacity-", "outline-")
 
 
@@ -33,26 +39,45 @@ def family_of(util: str) -> str | None:
     return next((f[:-1] for f in FAMILY if bare.startswith(f)), None)
 
 
-def collisions(src: str) -> list[str]:
-    """`hover:` and a pressed variant setting the same property family at equal specificity.
+TERNARY = re.compile(r'\$\{[^{}]*?\?([^{}:]*?):([^{}]*?)\}')
 
-    `:is()` takes its argument's specificity, so `.c:hover` and `.c[aria-pressed="true"]` are both
-    (0,2,0) and source order decides — `hover` is emitted last, so the selection repaints neutral
-    under the pointer. `aria-pressed:hover:` is (0,3,0) and wins on specificity instead of order,
-    so its presence for the same family clears the hit.
+
+def collisions(src: str) -> list[str]:
+    """A property set by both a hover rule and a selected-state rule that apply at the same time.
+
+    Two spellings, and the second is the common one — missing it is why an earlier count of this
+    said 191 where the real number is larger:
+
+    `hover:bg-hover` + `aria-pressed:bg-accent` — `:is()` gives both (0,2,0) and `hover` is emitted
+    last, so source order decides and the selection repaints neutral under the pointer.
+    `aria-pressed:hover:` is (0,3,0) and wins on specificity instead, so it clears the hit.
+
+    `hover:bg-hover` outside a template's `${sel ? "bg-accent" : ""}` — now the selected colour is a
+    PLAIN utility (0,1,0) and the hover rule is (0,2,0), so hover wins outright, order irrelevant
+    and no variant can fix it. The same two utilities written INSIDE the two branches
+    (`${sel ? "bg-accent" : "hover:bg-hover"}`) are mutually exclusive and are not a hit.
     """
     out = []
     for m in CLASSNAME.finditer(src):
-        classes = (m.group(1) or m.group(2) or "").split()
+        raw = m.group(1) or m.group(2) or ""
+        # The literal part of a template is what applies unconditionally; the truthy branches of its
+        # `${… ? … : …}` are what applies when selected.
+        picked = " ".join(t for t, _ in (mm.groups() for mm in TERNARY.finditer(raw)))
+        always = TERNARY.sub(" ", raw)
         hov, prs, fixed = set(), set(), set()
-        for c in classes:
+        for c in always.replace('"', " ").split():
             fam = family_of(c)
             if not fam: continue
             has_p = any(p in c for p in PRESSED)
             if has_p and "hover:" in c: fixed.add(fam)
             elif has_p: prs.add(fam)
             elif c.startswith("hover:"): hov.add(fam)
-        for fam in sorted((hov & prs) - fixed): out.append(f"{fam}: {' '.join(classes)[:150]}")
+        # A colour in the truthy branch is a selected-state rule with NO variant, so nothing can
+        # raise its specificity above the hover rule — it is a hit whenever hover sets the family.
+        for c in picked.replace('"', " ").split():
+            fam = family_of(c)
+            if fam and not c.startswith(("hover:", "focus", "group-")): prs.add(fam)
+        for fam in sorted((hov & prs) - fixed): out.append(f"{fam}: {' '.join(raw.split())[:150]}")
     return out
 
 
