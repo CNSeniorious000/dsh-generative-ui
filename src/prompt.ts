@@ -333,19 +333,22 @@ thirty seconds, before anything is loaded.
       </div>
 
   **The check is countable, so run it: walk up from any element and count the ancestors that repeat
-  the box recipe — a border or a \`bg-layer*\`, plus \`rounded\`, plus a \`p-*\`. More than two is a
-  frame around a frame.** Prose alone has been here since the first round and \`hierarchy\` is the
-  dimension the panel moves least on (+0.18 ± 0.20 across r001→r002, which is nothing) — because
+  the box recipe — a border or a \`bg-layer*\`, plus \`rounded\`, plus a \`p-*\` — counting the one you
+  are inside. Three is already a frame around a frame; four means one of them is doing nothing.**
+  Prose alone has been here since the first round and \`hierarchy\` is the dimension the panel moves
+  least on (+0.18 ± 0.20 across r001→r002, which is nothing) — because
   "one bounded box" reads as satisfied at every level, since each level is one box from inside
-  itself. Measured over 766 cards: **256 of them (33%) nest three or more deep**, and the worst is
-  seven concentric borders —
+  itself. Read off the syntax tree of 755 cards: **216 (29%) stack three of these boxes**, and 41
+  (5.4%) stack four or more. The deepest is five —
 
-      p-4 rounded-lg border → p-2 rounded-md border → p-4 rounded-lg border → p-3 rounded-md border
-        → p-3.5 rounded-md border → p-2 rounded border → p-2.5 rounded-md border
+      bg-layer border border-line rounded-lg p-4 → bg-page border border-line-2 rounded-md p-3
+        → border border-line rounded bg-layer p-3 → bg-layer-2 border border-line rounded p-2
+        → text-[10px] p-1 rounded bg-page border border-line
 
   — each adding two to four pixels of padding and a one-pixel line, until the innermost box holds
-  less content than frame. Another alternates \`bg-layer\` inside \`bg-layer-2\` inside \`bg-layer-2\`
-  inside \`bg-layer\`, four grounds deep, none of the changes meaning anything.
+  less content than frame. Grounds stack the same way and go deeper: the worst runs \`bg-layer\` →
+  \`bg-page\` → \`bg-layer\` → \`bg-layer\` → \`bg-layer\` → \`bg-page\`, six deep, and the three in the
+  middle are the same colour — a container that changes the ground to the ground it already had.
 
   A block that feels like it needs its own border wants a heading.
 

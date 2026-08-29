@@ -94,6 +94,7 @@
     "react": "^18.2.0"
   },
   "devDependencies": {
+    "@babel/parser": "^8.0.4",
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-client-locale": "0.1.0-rc.8",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",

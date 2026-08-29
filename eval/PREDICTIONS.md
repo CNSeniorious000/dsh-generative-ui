@@ -73,7 +73,7 @@ credit for a rule that shipped before it.
 | runs where the reader clicked and nothing ever sent | **108 / 161 (67%)** | one control ends the step | r006 |
 | `useEffect` timers with no cleanup | **0 / 39** | none — already correct, and a crude regex said 212 | never |
 | cards carrying a `@container` breakpoint | **591 / 766 (77%)** | already landed; was the top panel criticism at 76% | already read |
-| cards nesting the box recipe three or more deep | **256 / 766 (33%)**, worst 7 | countable nesting check | r006 |
+| cards stacking three box recipes | **216 / 755 (29%)**; four or more **41 (5.4%)**, worst 5 | countable nesting check | r006 |
 | submissions that left the card looking untouched | **36 / 105 (34%)** | record-then-show, three statements | r006 |
 | submissions recorded but lost on reload | **20 / 105 (19%)** | `usePersistedState`, not `useState` | r006 |
 | reloads that re-fired the turn by themselves | **0 / 105** | none — the opposite mistake does not happen | never |
@@ -141,7 +141,7 @@ from them or it will be mistaken for them.
 |---|---|---|---|
 | 1 | `aria-pressed:hover:*` in the button recipe | `skill.ts` | **308 collisions in 193 cards** — `:is()` makes `hover` and the pressed variant both `(0,2,0)`, `hover` is written last, so the selection repaints neutral under the pointer |
 | 2 | Exactly one control ends the step | `skill.ts` | **108 of 161 clicking runs (67%) never sent anything**, 468 dead clicks |
-| 3 | The nesting check made countable — walk up and count ancestors repeating border+rounded+padding | `prompt.ts` | **256 of 766 (33%)** nest three or more deep, worst seven concentric borders |
+| 3 | The nesting check made countable — walk up and count ancestors repeating border+rounded+padding | `prompt.ts` | **216 of 755 (29%)** stack three, **41 (5.4%)** stack four or more, worst 5 — read off the syntax tree after two cheaper methods gave 33% and 60.7% |
 | 4 | Record *and render* — three statements, `usePersistedState` | `skill.ts` | **36 of 105 (34%)** looked untouched after submitting, **20 (19%)** lost it on reload |
 | 5 | Hand-rolled `<pre>` named as the thing to stop doing | `skill.ts` | **182 of 194 cards showing code hand-roll a `<pre>` (94%)**; only 4 use `shiki`, and they are the same blocks as the widest overflows |
 | 6 | `drive.py` keeps the turns when the transport drops | `eval/` | not a prompt rule; it stops a dropped channel from being scored as a model that produced nothing |
@@ -193,8 +193,11 @@ sides reached it, so r006 runs with no r005 counterpart are dropped rather than 
 4. **Hover/pressed collisions** (rule 1), counted in the generated CSS rather than the source: a
    card is a hit when one property is set by both a `hover` and a pressed selector of equal
    specificity. 308 → under 50.
-5. **Nesting depth** (rule 3). 33% → under 15%, and the max depth down from 7. A max that stays at
-   7 while the rate falls means one model ignores it, which is a per-model read, not a failure.
+5. **Nesting depth** (rule 3), from `eval/nesting.mjs`, which reads the syntax tree — the regex and
+   indentation versions of this counter were both wrong by more than 5x, in opposite directions.
+   Three-stacks 29% → under 15%; four-or-more 5.4% → under 2%. The second is the one the rule
+   actually names, and it is small enough that 2 SE will be hard to clear — so a null there is not
+   evidence the rule failed, only that this round could not see it.
 6. **Hand-rolled `<pre>`** (rule 5). 94% → under 60%, read together with the overflow counter: these
    are the same blocks, so if `<pre>` falls and overflow does not, the replacement is also too wide.
 7. **The panel, last.** It has never been the thing that decided a round and is not going to start.

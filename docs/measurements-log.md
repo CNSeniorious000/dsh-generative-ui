@@ -8536,7 +8536,7 @@ The five that held, with the denominator that makes them readable:
 | `hover:` and a selected-state variant colliding on one property | **308 in 193 cards** — `:is()` makes both `(0,2,0)` and `hover` is written last, so the selection repaints neutral under the pointer | add `aria-pressed:hover:*`, which is `(0,3,0)` and wins on specificity rather than order |
 | a heading or control above a list, not pinned | **353 of 356 (99.2%)** — every case, every model | the sticky trigger |
 | the reader clicked and nothing ever sent | **108 of 161 runs (67%)**, 468 dead clicks | exactly one control ends the step |
-| box recipe nested three or more deep | **256 of 766 (33%)**, worst **seven concentric borders** | count the ancestors that repeat border+rounded+padding; more than two is a frame around a frame |
+| box recipe nested three or more deep | ~~**256 of 766 (33%)**, worst **seven concentric borders**~~ — **both wrong, see below**; the syntax tree says 216 of 755 (29%) stack three and 41 (5.4%) stack four, worst 5 | count the ancestors that repeat border+rounded+padding |
 | a submission the card did not keep | **36 of 105 (34%) looked untouched, 20 (19%) lost it on reload** | record into `usePersistedState` *and render it* — recording into state nothing shows is not recording |
 
 Two things measured as already correct, so deliberately NOT given a rule: reloads that re-fire the
@@ -8571,3 +8571,40 @@ run". Compare `stat -f %m` against a timestamp instead — it cannot fail silent
 The general shape: **an eval that borrows anything from its parent directory measures the shape of
 that directory, not the model.** The playwright lookup now checks this repo's own `node_modules`
 first, so the tree runs the same from anywhere.
+
+### The nesting counter was wrong three times, and the wrong number had already shipped (2026-08-29)
+
+`prompt.ts` told every request that **33% of cards nest the box recipe three or more deep, and the
+worst is seven concentric borders**, and printed the seven-deep chain. Building `eval/sweep.py` — so
+that r005 and r006 would be measured with the same instrument instead of with whichever throwaway
+script was in `/tmp` — meant implementing that counter a second time, and the second implementation
+disagreed with the first. So did the third.
+
+| Method | Rate | Worst | Why it is wrong |
+|---|---|---|---|
+| regex tag stack | 26.3% | 7 | Cannot tell `<div … />` from `<div …>` across a multi-line attribute list. A pop that never happens leaves a phantom ancestor on the stack for the rest of the file. On the file it named as the corpus worst, the real depth is 3. |
+| indentation | 60.7% | 7 | Inflates through every `{cond ? (…) : (…)}` and `.map(x => (…))`: those add indentation without adding DOM nesting. It called the two branches of one ternary an ancestor and its descendant — verified by reading `diet-log/gemini-3.7-flash` lines 558-575, where the "ancestor" is the empty-state box and the "descendant" is the non-empty branch. |
+| `@babel/parser` syntax tree | **5.4%** four-deep, **29%** three-deep | **5** | `JSXElement` nesting *is* DOM nesting. Nothing to fool. |
+
+Three methods, spread 26.3 / 33 / 60.7 against a true 5.4, and the two that shipped were the two
+that could not be right. The seven-deep chain printed in the prompt was not a quotation either — it
+is a tidy reconstruction, and no card in the corpus contains it.
+
+Two things made this findable, and both are worth keeping:
+
+**Implementing a measurement twice is a test.** Not for its own sake — the second implementation
+existed because the same number had to be read in two rounds, and a number that has to survive a
+round comparison cannot live in `/tmp`. The disagreement fell out of that.
+
+**Verifying a hit means reading the source, not re-running the proxy.** The first "verification"
+here re-derived depth by indentation and agreed with itself. Only opening the file at the line
+numbers and seeing `) : (` between the two elements settled it.
+
+The one that did survive: the deepest **ground** chain is real and worse than the prompt claimed —
+`bg-layer → bg-page → bg-layer → bg-layer → bg-layer → bg-page`, six deep, with three identical
+grounds in the middle. That sentence in the prompt previously described a four-deep alternation
+nobody had verified either; it now quotes this one.
+
+The rule itself stays. 5.4% is small, but unlike the six false positives above these are real
+four-deep stacks, and the rule costs three sentences. What changed is that its evidence is now
+readable off a checked-in script rather than off a number nobody could reproduce.
