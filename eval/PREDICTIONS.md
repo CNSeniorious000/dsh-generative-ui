@@ -127,3 +127,69 @@ So nothing was trimmed. What is recorded instead is the number and the next move
 shows the skill being skimmed rather than followed — a rule near the END of the file failing while
 one near the top holds — that is the signal to spend a round on length, with the trim as the single
 variable and the removed rule's own counter as the read.
+
+---
+
+## r006 (against r005)
+
+Written before the round exists. Six rules, plus a fixture change that has to be read separately
+from them or it will be mistaken for them.
+
+### What changed
+
+| # | Change | Where | Baseline it is aimed at |
+|---|---|---|---|
+| 1 | `aria-pressed:hover:*` in the button recipe | `skill.ts` | **308 collisions in 193 cards** — `:is()` makes `hover` and the pressed variant both `(0,2,0)`, `hover` is written last, so the selection repaints neutral under the pointer |
+| 2 | Exactly one control ends the step | `skill.ts` | **108 of 161 clicking runs (67%) never sent anything**, 468 dead clicks |
+| 3 | The nesting check made countable — walk up and count ancestors repeating border+rounded+padding | `prompt.ts` | **256 of 766 (33%)** nest three or more deep, worst seven concentric borders |
+| 4 | Record *and render* — three statements, `usePersistedState` | `skill.ts` | **36 of 105 (34%)** looked untouched after submitting, **20 (19%)** lost it on reload |
+| 5 | Hand-rolled `<pre>` named as the thing to stop doing | `skill.ts` | **182 of 194 cards showing code hand-roll a `<pre>` (94%)**; only 4 use `shiki`, and they are the same blocks as the widest overflows |
+| 6 | `drive.py` keeps the turns when the transport drops | `eval/` | not a prompt rule; it stops a dropped channel from being scored as a model that produced nothing |
+
+### The fixture also changed, and that is a confound
+
+`floor` 8 → 10 on the six deep cases, and four new cases at `floor: 10`. Raising the floor is what
+the goal asks for and r004's spike says is needed — **24 of 48 healthy runs stopped on exactly 8**,
+so the declared minimum was acting as a ceiling and turns 9-10 barely existed. But turns 9-10 are
+also exactly where a clarification would have to surface a SECOND time, which is what rules 2 and 4
+are about. A rate that moves could be either.
+
+**So the paired read truncates.** r006's six deep cases are compared to r005's on their **first 8
+turns only** — identical floor pressure on both sides, confound removed. The turns past 8 are read
+on their own, against nothing, as description rather than as a delta. Any claim of improvement on
+these six comes from the truncated read; if the two disagree, the truncated one is the result.
+
+The four new cases (`orbit-3d`, `log-dig`, `game-tune`, `shift-plan`) are paired against nothing and
+**cannot show improvement this round**. They exist to reach shapes the first six never ask for: a
+thing in space, a card that runs something, a control whose only verification is playing with it,
+and a list long enough for the sticky rule to bite. Their numbers are r007's baseline.
+
+### The reads, in order
+
+1. **The `cut` rate first.** If runs are being cut by the deadline more than r005, nothing below is
+   readable — a truncated run produces fewer cards for reasons that have nothing to do with a rule.
+   `floor: 10` and four 14-turn cases both push runtime up, so this is the read most likely to
+   invalidate the round.
+2. **Dead clicks per run** (rule 2). The sharp form: share of runs where the reader clicked at least
+   once and nothing ever sent. 67% → below 40% is the win. This is the one metric with a large
+   enough baseline that 2 SE is easy to clear.
+3. **Submissions the card kept** (rule 4), two numbers that must move together: looked-untouched
+   34% → under 15%, and lost-on-reload 19% → under 5%. The second moving without the first means
+   the card is persisting into state nothing renders — the exact failure the rule names.
+4. **Hover/pressed collisions** (rule 1), counted in the generated CSS rather than the source: a
+   card is a hit when one property is set by both a `hover` and a pressed selector of equal
+   specificity. 308 → under 50.
+5. **Nesting depth** (rule 3). 33% → under 15%, and the max depth down from 7. A max that stays at
+   7 while the rate falls means one model ignores it, which is a per-model read, not a failure.
+6. **Hand-rolled `<pre>`** (rule 5). 94% → under 60%, read together with the overflow counter: these
+   are the same blocks, so if `<pre>` falls and overflow does not, the replacement is also too wide.
+7. **The panel, last.** It has never been the thing that decided a round and is not going to start.
+
+### What would make r006 unreadable
+
+- `cut` rate up by more than 2 SE — runtime ate the round; drop `floor` back to 9 and re-run.
+- Any of the six rules missing from `rounds/r006/plugin` — verify before the first run, not after.
+  r005 shipped three rules while the corpus sweep had produced five, and only checking the frozen
+  copy made that visible.
+- The four new cases erroring out at a higher rate than the twelve — a fixture that does not run is
+  not a fixture. `log-dig` is the risk: it is the only case whose expected answer runs a command.
