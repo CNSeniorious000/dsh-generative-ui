@@ -15,7 +15,8 @@ sweeps were false positives (see `docs/measurements-log.md`) and every one of th
 real defect until the hits were read. A number from this file is not evidence until that has
 happened at least once per round.
 
-    uv run eval/sweep.py <round-dir> [--show=collision|nesting|pre] [--limit=5]
+    uv run eval/sweep.py <round-dir> [--show=collision|pre] [--limit=5]
+    node eval/nesting.mjs <round-dir>        ← nesting, which needs a parser
 """
 import pathlib, re, sys, collections
 
@@ -55,37 +56,11 @@ def collisions(src: str) -> list[str]:
     return out
 
 
-def max_nesting(src: str) -> tuple[int, list[str]]:
-    """Deepest chain of ancestors that each repeat border-or-layer + rounded + padding.
-
-    Measured by INDENTATION, not by a tag stack. The tag-stack version of this function was written
-    first and was wrong by more than a factor of two: on the file it named as the worst in the
-    corpus it reported 7, and the real answer read off the source is 3. A regex tag matcher cannot
-    tell a self-closing element from an opening one across a multi-line attribute list, and every
-    miscount inflates — a pop that never happens leaves an ancestor on the stack for the rest of
-    the file. The number it produced ("seven concentric borders") had already reached `prompt.ts`.
-
-    Indentation is an assumption too, so it is a CHECKED one: `unindented` counts files this method
-    cannot read, and they are reported rather than silently counted as depth 0.
-    """
-    lines = src.splitlines()
-    if len(lines) < 5 or max((len(l) for l in lines), default=0) > 400:
-        return -1, []                       # one long line: no indentation to read. -1, not 0.
-    rows = []
-    for line in lines:
-        m = CLASSNAME.search(line)
-        if not m: continue
-        cls = m.group(1) or m.group(2) or ""
-        has_edge = re.search(r'\bborder\b|\bborder-[a-z]', cls) or "bg-layer" in cls
-        if has_edge and re.search(r'\brounded', cls) and re.search(r'\bp[xytrbl]?-', cls):
-            rows.append((len(line) - len(line.lstrip()), cls))
-    stack, best, worst = [], 0, []
-    for indent, cls in rows:
-        while stack and stack[-1] >= indent: stack.pop()
-        stack.append(indent)
-        if len(stack) > best: best, worst = len(stack), [cls]
-    return best, worst
-
+# Nesting is NOT measured here. Two versions of it lived in this file — a regex tag stack and an
+# indentation walk — and both were wrong by more than 5x, in opposite directions, against the same
+# corpus (see docs/measurements-log.md). It needs a real parser, so it lives in `eval/nesting.mjs`.
+# Keeping a second, cheaper implementation next to it would only give a future round two numbers to
+# choose between.
 
 def hand_rolled_pre(src: str) -> bool:
     return "<pre" in src and "shiki" not in src
@@ -96,34 +71,22 @@ def main() -> None:
     show = next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--show=")), "")
     limit = int(next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--limit=")), 5))
 
-    n = coll_cards = coll_total = pre_cards = code_cards = unindented = 0
-    depths = collections.Counter(); samples = collections.defaultdict(list); deepest = (0, None, "")
+    n = coll_cards = coll_total = pre_cards = code_cards = 0
+    samples = collections.defaultdict(list)
     for path in sorted(root.glob("*/*/turn-*.tsx")):
         src = path.read_text(errors="ignore"); n += 1
         hits = collisions(src)
         if hits:
             coll_cards += 1; coll_total += len(hits)
             samples["collision"].append((path, hits[0]))
-        d, worst = max_nesting(src)
-        if d < 0: unindented += 1
-        else:
-            depths[d] += 1
-            if d >= 3: samples["nesting"].append((path, f"深度 {d}: {(worst or [''])[0][:120]}"))
-            if d > deepest[0]: deepest = (d, path, (worst or [""])[0])
         if "<pre" in src or "```" in src or "shiki" in src:
             code_cards += 1
             if hand_rolled_pre(src): pre_cards += 1; samples["pre"].append((path, ""))
 
     print(f"{root.name}: {n} 张卡片源码\n")
     print(f"  hover/pressed 同族碰撞      {coll_cards:4} 张卡片，共 {coll_total} 处")
-    deep = sum(v for k, v in depths.items() if k >= 3); readable = sum(depths.values())
-    print(f"  盒子配方嵌套 ≥3 层          {deep:4} 张 / {readable} 张可读"
-          f"{f' ({deep/readable:.1%})' if readable else ''}，最深 {deepest[0]}"
-          f"{f'；{unindented} 张读不出缩进，未计入' if unindented else ''}")
     print(f"  手搓 <pre>（无 shiki）      {pre_cards:4} 张 / {code_cards} 张带代码的"
           f"{f' ({pre_cards/code_cards:.1%})' if code_cards else ''}")
-    print(f"\n  嵌套深度分布 {dict(sorted(depths.items()))}")
-    if deepest[1]: print(f"  最深的一张: {deepest[1].relative_to(root)}")
 
     if show:
         print(f"\n── {show} 的前 {limit} 个命中（计数之前先读它们）──")
