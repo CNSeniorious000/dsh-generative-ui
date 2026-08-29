@@ -101,6 +101,21 @@ Three things follow, and the third is the one that matters:
 Recorded before r006 runs so that a positive r006 read cannot later be sold as "the rules finally
 started working" when part of it is simply the first round that could see.
 
+**And the obvious fix — more judges — would do nothing.** Splitting r005's 217 verdicts into
+within-run and between-run variance settles where the noise actually lives:
+
+| Dimension | sd between judges on one run | sd between runs | judge noise in the mean of 4 | real run-to-run |
+|---|---|---|---|---|
+| `overall` | 0.82 | 2.26 | 0.41 | **2.22** |
+| `hierarchy` | 1.00 | 2.07 | 0.50 | **2.00** |
+| `trigger` | 0.82 | 2.92 | 0.41 | **2.89** |
+
+The panel agrees with itself. Four judges reduce their own disagreement to 0.41-0.50, and **97-99%
+of what is left is the models genuinely producing different conversations run to run**. With an
+infinite panel the paired sd falls from 2.30 to 2.22 and the n needed drops from 209 to 195 — a 3%
+gain for unbounded cost. Judge count is not the lever; pairs are, and repeated runs per cell would
+be, at double the price. Do not spend the round's budget widening the panel.
+
 ### Read #1 came back, and it retired its own sharp predictor (2026-08-29)
 
 The registered read for the per-turn decision rule was the skill-load rate, with a sharper backup:
