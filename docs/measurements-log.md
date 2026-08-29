@@ -8726,3 +8726,32 @@ The shiki check is the one worth copying. The first instinct was to crawl esm.sh
 and reason about transfer size — an hour of work producing an estimate. The corpus already
 contained the answer: cards that used it, and whether they painted. **When a technique has been
 tried in the corpus, that IS the measurement; the estimate is what you do when it has not.**
+
+### Three rules whose stated mechanism was wrong, and the one thing that caught all three (2026-08-29)
+
+Each of these shipped with a number and an explanation of what the number meant. The numbers were
+mostly real; **the explanations were not**, and an explanation is what a model acts on.
+
+| Rule | What it said | What the corpus says |
+|---|---|---|
+| countable nesting | "33% nest three or more deep, worst is seven concentric borders" | 29% stack three, 5.4% stack four, worst is five. The 33% counted a different threshold than the rule's own wording, and the seven-deep chain does not exist — it was a tidy reconstruction. |
+| the pressed-and-hovered pair | showed `aria-pressed:hover:` as *the* fix | `aria-pressed` is 163 of 308 collisions. `data-[state=active]` (74), `checked` (43) and `aria-selected` (28) needed the same trick and were never named — the fix covered 53% while reading as though it covered all. |
+| record-then-render | "the third line is the one nobody writes — recording into state that nothing renders" | **91 of 93** cards that persist a value DO render it. They render it as `aria-pressed` on the clicked button: **31 of 42** unchanged-after-submit turns mark the choice with a highlight and say nothing in words. They are not failing to render; they are rendering something a returning reader cannot read. |
+
+**All three surfaced while turning a throwaway script into a checked-in instrument, and none while
+reading the numbers.** Re-deriving a measurement forces you to say precisely what counts, and that
+is where a claim that was never quite true stops being sayable. Reading the same number again does
+not do it — the second reading agrees with the first by construction.
+
+The correction that mattered most was the third, because the rule's fix was RIGHT while its reason
+was wrong. Had the reason stayed, the next round would have tested "do models write the third
+line?" — a question whose answer is already yes — instead of "do they say it in words?", which is
+the actual gap.
+
+**A known blind spot, left in place deliberately.** The `recorded` probe compares the card's TEXT
+before and after, so a card that records a choice purely as `aria-pressed` reads as not recording,
+whether or not that highlight survives a reload. That inflates the 34%: of 42 such turns, 23 hold
+the choice in `usePersistedState` and their highlight does come back. The probe could be taught to
+diff `aria-pressed` across the reload — and it is not being taught that now, because changing a
+metric between two rounds makes those rounds incomparable on it, which costs more than the
+imprecision. It is registered here as the r007 change, to be made between rounds and not during.
