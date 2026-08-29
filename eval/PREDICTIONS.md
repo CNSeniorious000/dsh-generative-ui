@@ -60,6 +60,33 @@ harness. Its evidence is a real session, not this round. **Do not credit r005 wi
 - The two negative controls (`closure`, `http418`) will card in the same two models they always do.
   That is a model habit, not a rule that over-fires.
 
+### Read #1 came back, and it retired its own sharp predictor (2026-08-29)
+
+The registered read for the per-turn decision rule was the skill-load rate, with a sharper backup:
+*"whether ANY run loads it after turn 2, which happened 0 times in 101 runs before. One such run is
+qualitative proof the rule landed; none means it did not."*
+
+| | r003 | r004 | r005 |
+|---|---|---|---|
+| runs that load the skill at all | 124 / 155 (80.0%) | 85 / 105 (81.0%) | 147 / 175 (84.0%) |
+| first load on turn 0 / 1 / 2 | 118 / 5 / **1** | 78 / 7 / **0** | 141 / 5 / **1** |
+
+Paired on the 85 common cells, the rate is **+0.059 ± 0.045 — 1.3 SE**, short of the threshold.
+
+And the sharp read does not rescue it, because **the "0 in 101 runs before" was measured on r004
+alone**. r003 has exactly one run loading at turn 2 (`api-shape/macaron-v1-venti`), and r005 has
+exactly one (`sql-tune/macaron-v1-venti`). One versus one versus zero, on n≈1, is not a signal in
+either direction — and a predictor whose whole force came from a baseline of exactly zero loses all
+of it the moment the baseline is one.
+
+**The predictor is retired, not re-scoped.** Widening the denominator to r003+r004 and declaring
+"1 in 260 before, 1 in 175 now" would keep a test that cannot resolve anything at these counts.
+The honest version of this read is the rate, and the rate says the round did not clear 2 SE.
+
+Recorded because the mistake is easy and one-directional: a baseline that happens to be zero on the
+subset in front of you makes any single instance look like proof, and the check that catches it is
+looking at the round BEFORE the one you drew the baseline from.
+
 ### The sticky read at 143 of 220, and why it is not readable yet (2026-08-29)
 
 `eval/sticky.mjs` reads the trigger shape off the syntax tree — a `.map()` list with a heading or
