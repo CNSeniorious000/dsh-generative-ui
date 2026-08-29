@@ -60,6 +60,47 @@ harness. Its evidence is a real session, not this round. **Do not credit r005 wi
 - The two negative controls (`closure`, `http418`) will card in the same two models they always do.
   That is a model habit, not a rule that over-fires.
 
+### r004 → r005 could not have cleared the threshold, whatever the rules did (2026-08-29)
+
+Every registered read came back positive and none reached 2 SE. Before writing that down as "the
+rules did nothing", the obvious question: **could this comparison have detected them?**
+
+| Round | complete + timeout | error |
+|---|---|---|
+| r003 | 160 | 0 |
+| r004 | **105** | **115** |
+| r005 | 179 and rising | 36 left, re-running |
+
+r004 lost 115 of its 220 cells to the environment, so the paired set is capped at 105 and came out
+at 85. From the observed per-pair spread:
+
+| Read | effect | sd across pairs | n needed for 2 SE | n available |
+|---|---|---|---|---|
+| panel `overall` | +0.319 | 2.30 | **209** | 85 |
+| `hierarchy` | +0.370 | 2.53 | **186** | 85 |
+| `interaction` | +0.354 | 2.89 | **266** | 85 |
+
+So the panel half of this comparison was undecidable from the moment r004 finished. Not "the effect
+was too small" — an effect of exactly this size, perfectly real, would still have printed a number
+short of 2 SE. **The correct statement is that r005 is unreadable on the panel, not that it failed.**
+
+Three things follow, and the third is the one that matters:
+
+1. **r004 is not backfilled.** Re-running its 115 dead cells now would run them on today's harness —
+   the playwright fix, the transport retry — while its surviving 105 ran on August's. A round half
+   measured with one instrument and half with another is worse than a round that is honestly small.
+2. **The deterministic counters are not in the same trouble.** `canvas 画出率` needs n≈9 and has 7;
+   the click and persistence counters have spreads an order of magnitude below the panel's. Those
+   are the reads to lean on while the panel is starved, which is what the file already says about
+   reading counters before verdicts.
+3. **r005 → r006 does not inherit this.** Both rounds will have ~215 usable runs on one harness, so
+   the pairing lands near 200 — inside the 186-209 band the panel needs. The r006 read will be the
+   first one with the power to resolve an effect this size, and if r006's changes produce the same
+   +0.3 they will clear it.
+
+Recorded before r006 runs so that a positive r006 read cannot later be sold as "the rules finally
+started working" when part of it is simply the first round that could see.
+
 ### Read #1 came back, and it retired its own sharp predictor (2026-08-29)
 
 The registered read for the per-turn decision rule was the skill-load rate, with a sharper backup:
