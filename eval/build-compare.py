@@ -114,7 +114,12 @@ def main() -> None:
     css = f"<style>{theme_block('body', 'light')}{theme_block('body[data-ds-dark-theme]', 'dark')}</style>"
     html = (REPO / "eval/live-compare.html").read_text().replace("<!--TOKENS-->", css)
     if args.round:
-        html = html.replace("UI4A · R001 → R002 · 现场渲染", f"UI4A · {args.round.upper()} · 现场渲染")
+        # The template spells it lowercase. This replace looked for the uppercase form and so had
+        # never once fired — every gallery ever built said "r001 → r002" above whatever round it
+        # actually showed. Asserted rather than replaced blind: a silent no-op is how it survived.
+        label = "ui4a · r001 → r002 · 现场渲染"
+        assert label in html, "the page template's title bar changed; this replace would be a no-op again"
+        html = html.replace(label, f"ui4a · {args.round} · 现场渲染")
     page.write_text(html)
     cards = sum(len(s["cards"]) for s in sections)
     print(f"{len(sections)} sections / {cards} cards -> {data} ({data.stat().st_size:,} B), page -> {page} ({page.stat().st_size:,} B)")
