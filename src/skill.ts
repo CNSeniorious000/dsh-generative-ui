@@ -483,6 +483,13 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
       hover:bg-hover aria-pressed:bg-accent aria-pressed:hover:bg-accent
 
+  **Whichever attribute you marked the selection with, qualify that one** — the trick is the extra
+  variant, not the word \`aria-pressed\`. Of those 308 collisions, only 163 are on \`aria-pressed\`;
+  the rest are \`data-[state=active]\` (74), \`checked\` (43) and \`aria-selected\` (28), and each has
+  the same fix, verified against this generator:
+
+      data-[state=active]:hover:bg-accent    checked:hover:bg-accent    aria-selected:hover:bg-accent
+
   **Do not reach for \`not-\`.** \`not-aria-pressed:hover:bg-hover\` and
   \`hover:not-aria-pressed:bg-hover\` are the intuitive fix and this generator matches **neither** —
   they produce no rule at all, so the button keeps the bug and the class list now says it was

@@ -197,6 +197,17 @@ test("the selected-and-hovered pair generates; `not-` generates nothing", async 
     const { matched: none } = await generate([token]);
     expect([...none]).toEqual([]);
   }
+
+  // `aria-pressed` is only 163 of the 308 measured collisions; the skill now names the other three
+  // spellings too, so all three have to generate or the rule covers half the corpus and looks like
+  // it covers all of it. `aria-current:hover:` is the one this preset does NOT match — it appears
+  // zero times in the corpus, and it is asserted here so the skill never starts recommending it.
+  for (const token of ["data-[state=active]:hover:bg-accent", "checked:hover:bg-accent",
+                       "aria-selected:hover:bg-accent"]) {
+    const { matched: some } = await generate([token]);
+    expect([...some]).toContain(token);
+  }
+  expect([...(await generate(["aria-current:hover:bg-accent"])).matched]).toEqual([]);
 });
 
 /**
