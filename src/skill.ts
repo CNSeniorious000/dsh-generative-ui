@@ -472,7 +472,11 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   **A hand-rolled \`<pre>\` is two defects at once, and it is the single commonest thing in this
   corpus.** Of 766 cards, **194 show code and 182 of them hand-roll a \`<pre>\` — 94%**; only 4 reach
-  for \`shiki\`. Those same blocks are the widest overflows measured above. So the fix is one import,
+  for \`shiki\`. And they are where the overflow lives: of 107 measured overflows, **35 — a third of
+  everything — are a \`<code>\` element**, at a median of 195px past the edge against 84px for every
+  other tag combined. (Not one is a \`<pre>\`: the wrapper is fine, the \`<code>\` inside it is what
+  hangs off. The single widest overflow in the corpus is a \`<section>\` at 978px, so these are the
+  typical worst rather than the record holder.) So the fix is one import,
   not two patches: \`shiki\` highlights it (see the library table) AND you still put the
   \`overflow-x-auto\` on the wrapper. Unhighlighted source in a card the reader cannot scroll
   sideways is code they can neither read nor reach the end of.
