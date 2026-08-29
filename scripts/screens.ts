@@ -80,7 +80,11 @@ export const SCREENS = {
   // Same line, and the parens must hold a PARAMETER LIST — `cond && (` opening a multi-line JSX
   // block whose body happens to contain a `.map((g) => …)` matched 8 of 39 clean cards otherwise.
   // A parameter list is identifiers, commas, and optional type annotations; JSX is not.
-  "AND-INTO-ARROW": (src: string) => /&&\s*\(\s*\w+(\s*:\s*[\w<>[\]|" ]+)?(\s*,\s*\w+(\s*:\s*[\w<>[\]|" ]+)?)*\s*\)\s*=>/.test(src),
+  // A type token must NOT itself match a trailing space: with ` ` inside the character class,
+  // the run of spaces before a `,` or `)` could be split between it and the following `\s*`,
+  // and the `(, param)*` loop turned that ambiguity exponential — `&& (a: T , a: T …)` with a
+  // dozen params took ~800 ms. Interior spaces (`string | number`) still match, via the group.
+  "AND-INTO-ARROW": (src: string) => /&&\s*\(\s*\w+(\s*:\s*[\w<>[\]|"]+(?: +[\w<>[\]|"]+)*)?(\s*,\s*\w+(\s*:\s*[\w<>[\]|"]+(?: +[\w<>[\]|"]+)*)?)*\s*\)\s*=>/.test(src),
   // Content that arrives asynchronously and never announces it. A sighted reader watches a
   // spinner become a list; a screen reader user is told nothing at all — the focus is still where
   // it was and the new content is somewhere below it, silent.
