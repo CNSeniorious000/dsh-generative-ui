@@ -127,8 +127,14 @@ Two things follow from the lifetime difference:
       …
       {answer !== null && <p className="text-muted">已选择：{label(answer)}</p>}   // and SHOW it
 
-  The third line is the one nobody writes. Recording into state that nothing renders is the same as
-  not recording. (Re-firing on reload is the opposite mistake and does not happen — 0 of 105 — so
+  The third line is the one nobody writes — but not for the reason it first looked like. Of the
+  cards that call \`usePersistedState\`, **91 of 93 do render the value somewhere**; what they render
+  it as is \`aria-pressed\` on the button that was clicked. Reading the turns where a submit left the
+  card unchanged: **31 of 42 mark the choice with a highlight and say nothing in words**, and 19 of
+  those 42 hold it in \`useState\`, so the highlight is gone after a reload. A highlight is a fine
+  way to show which control is active while the reader is still there; it is not an answer to
+  someone coming back to this card next week, who sees one button shaded and no statement of what
+  was decided. Say it in words AND keep it in \`usePersistedState\`. (Re-firing on reload is the opposite mistake and does not happen — 0 of 105 — so
   guard the send with the recorded answer, not with anything cleverer.)
 - **Exactly one control ends the step, and the reader must be able to find it.** This is the
   single largest hole in what gets built: across 161 runs where the reader actually clicked
