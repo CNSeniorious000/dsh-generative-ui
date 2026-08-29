@@ -164,6 +164,20 @@ The four new cases (`orbit-3d`, `log-dig`, `game-tune`, `shift-plan`) are paired
 thing in space, a card that runs something, a control whose only verification is playing with it,
 and a list long enough for the sticky rule to bite. Their numbers are r007's baseline.
 
+### The per-run timeout goes 1800 → 2700, measured rather than guessed
+
+Read off r005's deep cases before launching, because `cut` being the first read is worth nothing if
+the round is launched into a configuration already known to cut. Those six currently time out **0
+times in 26 results**; median 412s, p90 950s against the 1800s cap. Adding two turns at each run's
+OWN measured seconds-per-turn puts p90 at **1610s and 2 of 26 over the cap** — so `floor: 10` at
+1800s would have manufactured an ~8% cut rate on exactly the cases the round is about, and the
+first read would have called the round unreadable for a reason that was set at launch.
+
+2700s clears the projected p90 by 1090s. It cannot bias the paired read in the optimistic
+direction: a longer cap only lets more runs REACH turn 8, and a pair is only read when **both**
+sides reached it, so r006 runs with no r005 counterpart are dropped rather than averaged in.
+`UI4A_TURN_DEADLINE` stays at 600 — it is paired across every round so far and is not a free knob.
+
 ### The reads, in order
 
 1. **The `cut` rate first.** If runs are being cut by the deadline more than r005, nothing below is
