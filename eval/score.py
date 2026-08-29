@@ -55,6 +55,18 @@ def persist_keys(run: pathlib.Path) -> tuple[int, int, int]:
 
 
 
+# Tags whose bounding box is not DOM overflow. Rounds already on disk were measured before
+# `card-driver.mjs` learned to skip them, so the filter has to live here too — otherwise r005 and
+# r006 would be counting different things and the one comparison this metric exists for is void.
+SVG_TAGS = {"path", "svg", "g", "line", "circle", "rect", "polygon", "polyline", "text", "tspan", "ellipse", "use", "defs"}
+
+
+def real_overflow(card: dict) -> bool:
+    over = card.get("overflow")
+    if not over: return False
+    return not (isinstance(over, dict) and over.get("tag") in SVG_TAGS and over.get("tag") != "svg")
+
+
 def facts(meta: dict, upto: int | None = None) -> dict:
     """`upto` truncates to the first N turns, for comparing rounds whose `floor` differs.
 
@@ -107,8 +119,8 @@ def facts(meta: dict, upto: int | None = None) -> dict:
         # `overflow` key at all, and reporting that as 0% is the shape §6.4 names — "no failures"
         # and "nothing was examined" printing the same number.
         "overflow_measured": sum(1 for c in cards if "overflow" in c),
-        "overflowing": sum(1 for c in cards if c.get("overflow")),
-        "overflow_worst": max((c["overflow"]["px"] for c in cards if c.get("overflow")), default=0),
+        "overflowing": sum(1 for c in cards if real_overflow(c)),
+        "overflow_worst": max((c["overflow"]["px"] for c in cards if real_overflow(c)), default=0),
         "mistagged": sum(1 for c in cards if c["kind"] == "mistagged"),
         "canvases": sum(1 for c in cards if c["kind"] == "canvas"),
         "skill": sum(1 for t in turns if t.get("skill")),
