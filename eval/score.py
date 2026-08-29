@@ -55,14 +55,25 @@ def persist_keys(run: pathlib.Path) -> tuple[int, int, int]:
 
 
 
-def facts(meta: dict) -> dict:
-    turns = meta["turns"]
+def facts(meta: dict, upto: int | None = None) -> dict:
+    """`upto` truncates to the first N turns, for comparing rounds whose `floor` differs.
+
+    Raising `floor` lengthens runs, and the turns it adds are exactly where a second clarification
+    would live — so a counter that moves after a floor change could be the rule or could be the
+    extra turns. Truncating both sides to the shorter floor removes that, at the price of not
+    seeing the deep turns at all; the deep half is then read on its own, as description.
+
+    `short` is the guard that makes it honest: a run that never reached N turns is NOT a truncated
+    N-turn run, and averaging it in compares eight turns against five. Callers drop those pairs.
+    """
+    turns = meta["turns"][:upto]
     cards = [c for t in turns for c in t["cards"]]
     clicks = [c for t in turns for c in t["clicks"]]
     reloads = [t["reload"] for t in turns if t.get("reload")]
     text_only = [t for t in turns if not t["cards"]]
     return {
         "status": meta["status"], "turns": len(turns), "elapsed": meta.get("elapsed"),
+        "short": upto is not None and len(meta["turns"]) < upto,
         # A run whose LAST turn came back empty on an upstream read timeout. `status` says
         # `complete` for these — the coroutine did return — so without this they average in as
         # ordinary zero-card runs, and a one-turn run that never got an answer weighs the same as a

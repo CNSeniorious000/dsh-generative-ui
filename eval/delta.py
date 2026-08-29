@@ -15,7 +15,7 @@ The deterministic counters are read the same way, and they are the ones that car
 Nothing here says "significant" below 2 standard errors. That threshold is why the `text-base` fix
 was readable at +0.45 while its own pooled mean said +0.23 and meant nothing.
 
-    uv run eval/delta.py <before-round> <after-round>
+    uv run eval/delta.py <before-round> <after-round> [--upto=N]
 """
 import json, pathlib, statistics, sys
 
@@ -64,13 +64,13 @@ def clean(meta: dict) -> bool:
         (turn.get("reason") or {}).get("kind") == "error" or not (turn.get("reply") or "") for turn in meta["turns"])
 
 
-def load(root: pathlib.Path) -> dict[tuple[str, str], dict]:
+def load(root: pathlib.Path, upto: int | None = None) -> dict[tuple[str, str], dict]:
     out = {}
     for path in sorted(root.glob("*/*/meta.json")):
         meta = json.loads(path.read_text())
         if meta["status"] not in ("complete", "timeout") or not meta["turns"]: continue
         persisting, collisions, copied = persist_keys(path.parent)
-        out[(meta["case"], meta["model"])] = facts(meta) | {
+        out[(meta["case"], meta["model"])] = facts(meta, upto) | {
             "persisting_cards": persisting, "key_collisions": collisions, "copied_example_key": copied,
             "clean": clean(meta)}
     verdicts = root / "verdicts.json"
@@ -92,20 +92,39 @@ def report(label: str, deltas: list[float]) -> None:
 
 
 def main() -> None:
-    before, after = (load(pathlib.Path(p)) for p in sys.argv[1:3])
+    argv = [a for a in sys.argv[1:] if not a.startswith("--upto")]
+    upto = next((int(a.split("=")[1]) for a in sys.argv[1:] if a.startswith("--upto=")), None)
+    before, after = (load(pathlib.Path(p), upto) for p in argv[:2])
     pairs = sorted(set(before) & set(after))
+    if upto:
+        # Dropped, not truncated-to-what-they-have: a run that stopped at turn 5 is a five-turn run,
+        # and reading it as a truncated eight-turn one is the same error as comparing a cut run to a
+        # whole one. How many were dropped is printed because a truncation that throws away half the
+        # round is not a cleaner read, it is a different and much smaller one.
+        full = [p for p in pairs if not before[p]["short"] and not after[p]["short"]]
+        print(f"truncated to the first {upto} turns; {len(pairs) - len(full)} of {len(pairs)} pairs "
+              f"dropped for not reaching it")
+        pairs = full
     print(f"{len(pairs)} paired runs ({len(before)} before, {len(after)} after)\n")
     if not pairs: return
 
     tidy = [p for p in pairs if before[p]["clean"] and after[p]["clean"]]
-    print("panel, paired (← marks a move of at least 2 standard errors):")
-    for key in KEYS:
+    # The panel is NOT truncatable. A verdict is one number for one whole conversation; the judges
+    # read every turn and the deep turns are usually the ones they comment on. Printing it beside
+    # counters that stop at turn N labels it with a range it was never scored over — the counters
+    # would say "first 8 turns" and the panel would silently mean "all of them".
+    if upto:
+        print("panel: not shown — the verdicts scored whole conversations, not the first "
+              f"{upto} turns. Read it from the untruncated run.\n")
+    else:
+        print("panel, paired (← marks a move of at least 2 standard errors):")
+    for key in ([] if upto else KEYS):
         deltas = [after[p]["panel"][key] - before[p]["panel"][key] for p in pairs
                   if "panel" in before[p] and "panel" in after[p]]
         report(key, deltas)
 
-    print(f"\npanel again, over the {len(tidy)} pairs where NEITHER side errored, came back empty, or was cut short:")
-    for key in KEYS:
+    if not upto: print(f"\npanel again, over the {len(tidy)} pairs where NEITHER side errored, came back empty, or was cut short:")
+    for key in ([] if upto else KEYS):
         deltas = [after[p]["panel"][key] - before[p]["panel"][key] for p in tidy
                   if "panel" in before[p] and "panel" in after[p]]
         report(key, deltas)
