@@ -8624,3 +8624,26 @@ digit for digit.
 So of the three numbers reimplemented, one was wrong by 6x and two were exact. A reimplementation
 that only ever confirms is not a check, and one that always overturns means the second instrument
 is the broken one — this is the mix that says both instruments were built honestly.
+
+### The eighth sweep: "a simple binary rendered as two cards" does not happen (2026-08-29)
+
+The goal names it directly — *"如果只是简单的单选题可以就是无背景的两个按钮"* — and `skill.ts:240`
+carries the rule, but nothing had ever counted whether models comply. Four proxies, each one written
+after reading the previous one's hits:
+
+| Proxy | Rate | What the hits actually were |
+|---|---|---|
+| two `<button>` siblings, either carrying a `bg-*` | 77 / 194 (39.7%) | confirm/cancel pairs and icon-button pairs. A primary action is *supposed* to have a ground. |
+| …narrowed to pairs whose `onClick` calls the **same setter** — a real either/or | 21 / 93 (22.6%) | `bg-accent text-white` on one of the two: that is the SELECTED one highlighted, which is the rule working, not failing. |
+| two clickable siblings where either is `border + rounded + p*-3` | 67 / 211 (31.8%) | `px-3 py-1.5 rounded-md border` — an ordinary button. `px-3` is horizontal padding, and the proxy read it as card padding. |
+| …four-sided `p-3`+ **and** internal structure (two or more child elements) | **1 / 211 (0.5%)** | one card, in `closure/kimi-k3`. |
+
+Nothing was added: no rule, no counter, no line of prompt. A defect at 0.5% is the shape a solved
+one has, and the goal's wording is a permission (*"可以就是"*) rather than a prohibition, so even the
+one hit is not clearly wrong.
+
+The useful part is the sequence 39.7 → 22.6 → 31.8 → 0.5. Every one of those numbers would have
+been quotable, and the first three would each have justified a rule. What separates them is not
+care in writing the regex — it is that the hits were read after each one, and each reading named a
+specific legitimate thing the proxy was catching. **A proxy's number is meaningless until you can
+say what the false positives are made of.**
