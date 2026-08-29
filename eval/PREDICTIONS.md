@@ -192,4 +192,8 @@ and a list long enough for the sticky rule to bite. Their numbers are r007's bas
   r005 shipped three rules while the corpus sweep had produced five, and only checking the frozen
   copy made that visible.
 - The four new cases erroring out at a higher rate than the twelve — a fixture that does not run is
-  not a fixture. `log-dig` is the risk: it is the only case whose expected answer runs a command.
+  not a fixture. `log-dig` was the suspected risk, and the suspicion was checked rather than left
+  standing: `$dsh/exec` **is** reachable from the eval homes, and cards already use it in **9 files
+  in r004 and 9 in r005**. That is also the argument for the case. Against `$dsh/chat`'s 256 files
+  and `$dsh/state`'s 294, exec is the least-exercised capability the plugin offers, and until now no
+  fixture asked for it — so its 4% share measured the fixtures, not the models.
