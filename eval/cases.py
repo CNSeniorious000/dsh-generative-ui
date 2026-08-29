@@ -126,22 +126,29 @@ CASES = [
     # persona is released the moment it is allowed to be. `floor` is doing exactly what it says —
     # it is a MINIMUM — and a minimum most runs land on is a ceiling in practice.
     #
-    # The goal asks for ten. Raise it once a round's baseline is banked, NOT during one: these six
-    # are paired across rounds, and this file's own rule is that changing what the model faces
-    # mid-series is the one edit that makes a paired read mean nothing.
+    # Raised to 10 after r005 banked its baseline — deliberately BETWEEN rounds, never during one:
+    # these six are paired across rounds, and changing what the model faces mid-series is the one
+    # edit that makes a paired read mean nothing. r005 itself proved the hazard is real rather than
+    # theoretical: its chained second pass re-ran 85 cells out of the same `cases.py`, so an edit
+    # landed while it was in flight would have split one round across two fixtures with nothing in
+    # the output saying which cell got which.
+    #
+    # What this buys, read off r004's spike (24 of 48 stopping on exactly 8): turns 9 and 10 are
+    # where a clarification would have to surface a SECOND time to count, and at floor 8 almost no
+    # run got there. The prediction is registered in PREDICTIONS.md before the round, not after.
     #
     # Each also has a natural result to SHOW — a diagram, a formula, a live layout, a plan, a
     # position, a drawing — because "clicking an option previews what it means, and a separate
     # control commits" is the principle with the least evidence behind it so far, and it needs
     # options whose meaning is worth previewing.
     {
-        "id": "arch-draw", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "arch-draw", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "帮我把这套东西画出来",
         "persona": "你手上是一个已经跑了两年的后端，但你一开始既不说它是什么，也不说要画给谁看。等对方问才会说：一个电商的订单系统，画给新来的同事看。之后你会依次冒出三个新问题——「消息队列那块能不能单独展开」「加上失败重试的路径」「再给我一版给老板看的，别那么细」。每一个都是等前一个画完你才想到的。你倾向于点界面而不是打字。",
         "expect": "开场无从下手；三个后续要求各自是新的分叉，且每一版的差别只有画出来才看得出。",
     },
     {
-        "id": "formula-derive", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "formula-derive", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "这个公式我怎么看都看不懂",
         "persona": "你在看一篇讲注意力机制的论文，卡在缩放点积那一步。你一开始不贴公式也不说是哪篇，等对方问才给。看懂之后你会问「为什么要除以根号 d」，再后来想代进具体数字自己算一遍，最后想知道多头是怎么拼回去的。你数学基础一般，需要一步一步来。",
         # r004 baseline, measured before any fix: 3 of 6 models produced ZERO cards across 8, 10
@@ -154,7 +161,7 @@ CASES = [
         "expect": "式子本身要能显示出来；后面三问一个比一个具体，最后一问适合能改数字的界面。",
     },
     {
-        "id": "css-layout", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "css-layout", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "这个布局我怎么都调不出来",
         "persona": "你要做一个左边固定右边自适应、底部有一条始终贴底的栏。你一开始只说「调不出来」，不贴代码也不说想要什么效果，等对方问才描述。做出来之后你会依次提「手机上要变成上下」「左边那栏要能收起来」「键盘 Tab 过去顺序不对」。每一条都是看到上一版才发现的。",
         # r004 baseline, and a warning against reading one run as a verdict on the fixture. On this
@@ -168,22 +175,60 @@ CASES = [
         "expect": "几种实现方式的差别只有看到才知道；后面三条各自是新的约束，且都能就地演示。",
     },
     {
-        "id": "sql-tune", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "sql-tune", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "这条查询慢得离谱",
         "persona": "你有一张两千万行的订单表，按用户和时间范围查。你一开始既不贴 SQL 也不说表结构，等对方问才给。给了之后你会依次问「这几个索引方案有什么区别」「改写成别的写法会不会更好」「数据再涨十倍还扛得住吗」。你分不清方案之间的差别，需要对方摆出来给你看。",
         "expect": "索引方案之间的取舍必须展示才说得清；后两问是数据量和写法两个新的分叉。",
     },
     {
-        "id": "chess-open", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "chess-open", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "教我下这个吧",
         "persona": "你想学国际象棋，但一开始连这句都没说清——「这个」指什么要对方问了才答。会走子之后你依次想要「常见的开局有哪几种」「我总是很早就丢子，为什么」「给我一个残局练一下」。你是纯新手，看文字规则记不住，需要能点着走一遍。",
         "expect": "「这个」指代不明，必须先问；后面三个要求分别是枚举、诊断和练习，形状各不相同。",
     },
     {
-        "id": "svg-badge", "kind": "multi", "turns": 12, "floor": 8,
+        "id": "svg-badge", "kind": "multi", "turns": 12, "floor": 10,
         "opening": "帮我弄个图标",
         "persona": "你要给一个自己写的开源命令行工具做个标识，但一开始不说工具是干什么的，也不说要用在哪。等对方问才说：一个同步文件的小工具，要放在 README 顶部。之后你依次会说「深色背景下看不清」「再给我一个方形的用作头像」「能不能配一句 tagline」。你说不清想要什么风格，看到才知道。",
         "expect": "开场信息为零；风格只有画出来才选得动，后面三条各是新的用途约束。",
+    },
+    # ── added for r006 ──────────────────────────────────────────────────────────────────
+    # Four shapes the first six do not reach. The six above are diagram / formula / layout /
+    # comparison / board / drawing; between them they never ask for a THING IN SPACE, never ask the
+    # card to run anything, never hand the reader a box to type into and watch the answer change,
+    # and never produce a list long enough for the sticky rule to matter. Each of those is a rule
+    # with evidence behind it and no fixture that exercises it.
+    #
+    # `floor: 10` from the start. The six above were raised to it; these have no earlier round to
+    # stay comparable with, so they begin at the depth the goal asks for instead of inheriting a
+    # value that was already measured to act as a ceiling.
+    {
+        "id": "orbit-3d", "kind": "multi", "turns": 14, "floor": 10,
+        "opening": "这个我一直想不明白",
+        "persona": "你在看一段讲卫星轨道的科普，卡在「为什么同步轨道只有一条」。一开始你连是哪一段都不说，等对方问才讲。看明白之后你会依次问「倾角改了会怎么样」「三颗星要怎么摆才能覆盖全球」「低轨为什么要那么多颗」。你完全没有空间想象力，平面图看不懂，必须能转着看。",
+        "expect": "开场指代不明；四个问题都是同一个三维物体的不同视角，文字和平面图都说不清,而每一问都要在上一版的基础上改参数再看。",
+    },
+    {
+        "id": "log-dig", "kind": "multi", "turns": 14, "floor": 10,
+        "opening": "线上出问题了，帮我看看",
+        "persona": "你的服务半夜开始报错，但一开始你既不说是什么服务，也不给日志。等对方问才说：一个 Node 写的接口服务，日志在 /tmp/ui4a-fixtures/api.log。之后你会依次要求「按错误类型分个组」「把开始报错那段时间单独拉出来」「看看是不是集中在某个用户身上」「刚才那个分组换成按上游服务再看一遍」。你不会写命令，希望对方直接跑给你看。",
+        # `eval/fixtures.py` writes that file. The last ask is deliberately a RE-RUN with a changed
+        # parameter rather than "还在报吗": the fixture is static, so "is it still happening" reads
+        # the same whether the card re-executes or shows a cached result, and an ask that cannot
+        # tell those apart is not testing the thing this case exists to test.
+        "expect": "排查是一次次收窄，每次收窄的结果都要跑出来才知道；最后一问必须带着新参数重跑,拿上一次的结果糊弄会被看出来。",
+    },
+    {
+        "id": "game-tune", "kind": "multi", "turns": 14, "floor": 10,
+        "opening": "帮我做个小游戏吧",
+        "persona": "你想做个打发时间的小游戏放自己主页上，但一开始既不说什么类型也不说给谁玩。等对方问才说：贪吃蛇那种，手机上也能玩。能玩之后你会依次说「太快了」「撞墙就死太劝退了，能不能从另一边出来」「加个计分」「配色我不喜欢，换一版」。你说不清「太快」是多快，得调着玩才知道。",
+        "expect": "唯一能验收的方式是玩一下；四条反馈都是手感而不是需求，每一条都要在能玩的前一版上改。",
+    },
+    {
+        "id": "shift-plan", "kind": "multi", "turns": 14, "floor": 10,
+        "opening": "帮我排一下班",
+        "persona": "你管着一家店，一开始既不说几个人也不说开几天。等对方问才说：七个人，每周七天两班倒，有两个人只能上白班。排出来之后你会依次提「小李下周三请假」「周末要多加一个人」「谁这个月上得太多了帮我看看」「按人看一遍而不是按天」。人一多你就看不过来，需要能翻能筛。",
+        "expect": "结果是一张长表，标题和筛选必须跟着走；后面四条各自要改一次表并保留前面的改动。",
     },
     # ── single-turn fixed points (CLAUDE.md §4.5) ────────────────────────────────────────────
     # The two positives have flipped before and must stay flipped; the two negatives are the only
