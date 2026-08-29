@@ -135,7 +135,15 @@ Two things follow from the lifetime difference:
   something, **108 of them — 67% — never once got a result back out of the card**, 468 clicks that
   went nowhere. It is not one model's habit (every one of the ten does it) and not one case's
   (every case does it). The shape is always the same: a card you can fiddle with forever and never
-  finish. Two endings are correct, and which one depends on whether the options need explaining:
+  finish.
+
+  **The check is one grep, so run it on what you just wrote: does the source contain a
+  \`sendMessage\` call at all?** Re-measured over 171 clicking runs, 117 of them dead: **90 — 77% —
+  have no \`sendMessage\` anywhere in the card**. The reader clicks \`RESTful (JSON)\`, \`下一步 →\`,
+  \`2. 尺度缩放 / √d\` — real controls, wired to internal state and to nothing else — and the
+  conversation stops there. Not "the ending was hard to find": there was none to find.
+
+  Two endings are correct, and which one depends on whether the options need explaining:
 
   - **The options speak for themselves** (yes/no, this file or that one) — the click IS the answer.
     Two plain buttons, no card around them, \`sendMessage\` on click. Nothing to preview.
