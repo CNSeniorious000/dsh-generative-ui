@@ -8686,3 +8686,17 @@ scared models off the technique instead of fixing it. Paired on the same 51 cell
 The absences are why r006 adds `orbit-3d` (a thing in space), `game-tune` (a loop worth watching)
 and `log-dig` (a card that runs a command): a surface no fixture ever asks for measures the
 fixtures, not the models.
+
+**But mermaid was NOT promoted, and the reason is the point.** The count is even starker than the
+table says: the single r005 "hit" is the word `mermaid` appearing as *text* in a design-system
+reference card, so the real adoption is **0 of 1287**. It is not that the technique fails — the
+`?bundle` build 500s but the plain one answers 200, and dropping only `bundle` (the `external`
+retry fix) makes it loadable, verified against esm.sh. And the skill already spends a whole library
+table row on it, ending "reach for this before hand-placing boxes".
+
+So the obvious move was to promote that row into prose where it would actually be read. The
+justification was missing: it says hand-placed layout "goes wrong by hand", and across 83
+`arch-draw` cards it does not. **0 of 16** measured cards overflow, 2.4% place boxes absolutely with
+hardcoded coordinates, 7.2% carry a hardcoded px dimension. The panel has never criticised these
+diagrams either. A technique nobody reaches for is a striking number; it is not a defect until the
+thing they reach for instead is shown to be worse, and here it is not.
