@@ -569,6 +569,29 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
    landing. Registered so the r007 read cannot claim it: **the change is credited only if the fall
    is larger than r006's, and `changelog` clears its ≤1-of-10 bar.**
 
+### How to read r007: the counters decide, the panel describes
+
+Measured on r005→r006's 217 pairs, per-cell `overall` differences have **sd = 2.30**, and it is
+spread evenly — by case it runs 0.92 (`http418`) to 3.78 (`sort-learn`), by model 1.33 (`kimi-k3`)
+to 3.55 (`grok-4.6`), with no cell dominating. So there is no cheap variance win available: no
+handful of unstable cells to repeat, and dropping the noisy ones would be selecting on the outcome.
+
+What that sd buys at ~250 pairs is **SE ≈ 0.145**, so the panel can only see effects of about 0.3
+and up. The counters are two to three times better on the same round:
+
+| read | r005 → r006 | SNR |
+|---|---|---|
+| panel `overall`, all pairs | +0.208 ± 0.156 | 1.3 SE |
+| panel `overall`, clean pairs | +0.329 ± 0.130 | 2.5 SE |
+| `cards that persist an answer` | +0.195 ± 0.044 | **4.4 SE** |
+| `cards with a hover/pressed collision` | −0.198 ± 0.046 | **4.3 SE** |
+
+Bringing the panel to the counters' power needs each cell run **twice** (sd 2.30 → 1.63, SE → 0.11),
+which doubles an 8.5-hour round to 17. Not worth it while the counters carry the signal — so
+**a round is judged on its counters, and the panel is reported beside them as description.** A
+round whose only evidence is a panel move under 2.5 SE has not shown anything, and this is
+registered here so r007 cannot be declared a success on the panel alone.
+
 ### Not touched, deliberately
 
 The live-region rule quotes **"0 of 64 corpus cards announce their results"** and **"8 of 23"** —
