@@ -422,6 +422,35 @@ highlight and say nothing in words".
 the source at all) and the rule was rewritten into a grep the model can run on itself. It changed
 nothing. The four new cases agree: `orbit-3d` sent 2 of 35 clicks, `game-tune` 6 of 41.
 
+> **Corrected 08-31 — this section read the wrong population, and rule 2 is not flat.**
+> `clicks that fired the turn` pools over CLICKS. Reading the 321 clicks whose card contains no
+> `sendMessage` at all, almost none of them are submits: the reasons the user-agent recorded are
+> "复位视角", "复制命令", "打开导航", "切到用满模式", "先看看内容少的时候", "清空示例". They are
+> preview clicks, and a card that fired the turn on any of them would be interrupting a reader who
+> is still deciding — **the pooled rate penalises exactly the preview-then-commit shape the skill
+> asks for.** No rewrite of the rule can move a denominator.
+>
+> Read over the population the rule's own evidence uses — runs, not clicks — the same 113 pairs say:
+>
+> | read | r005 → r006 | delta | sign test |
+> |---|---|---|---|
+> | `preview-then-commit`, the shape `/goal` asks for | | **+0.074 ± 0.028** | 27↑/11↓ **p = 0.014** |
+> | `runs that ended a step` | 32.7% → 42.5% | +0.097 ± 0.047 | 20↑/9↓ p = 0.061 |
+> | `clicks that fired the turn` (what was read above) | 13.1% → 13.0% | −0.001 ± 0.029 | — |
+>
+> **The right number was already in the table above**, listed under "Cleared 2 SE" as a generic win
+> while the conclusion was drawn from the row beside it. Rule 2 worked; the read did not.
+>
+> Two instrument fixes came out of this and both are in `delta.py`: `runs that ended a step` is now
+> a counter, and every 0-or-1 counter prints an exact sign test beside its SE. `runs that ended a
+> step` marks `←` at 2.1 SE while the sign test says p = 0.061 — the normal approximation is
+> optimistic on binary paired data in exactly the direction that turns "suggestive" into "cleared".
+>
+> Also corrected: **"dead" means two different things in this project.** `score.py`'s `dead_clicks`
+> counts clicks where the driver could not resolve the control — a harness failure. The "117 of 171
+> dead" in the shipped rule 2 counts RUNS that never once sent. r006 has **zero** dead clicks by the
+> first meaning.
+
 **Rule 3 — countable nesting — went the wrong way**, 4.1% → 6.0% of cards stacking four or more.
 
 ### A regression, and why it cannot be attributed
@@ -495,9 +524,14 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
 1. **`sticky` usage recovers to ≥ 4%** on paired cells (r006: 1.1%, r005: 6.5%). Below 2 SE of
    movement, the polarity hypothesis is dead and the r006 regression was something else entirely —
    most likely the 9KB of growth, which r007 does not undo.
-2. **Rule 2 moves at last, or is abandoned.** It has now been rewritten twice and measured flat
-   once. If `clicks that fired the turn` is again inside ±2 SE, the next round stops rewriting it
-   and changes what is asked instead.
+2. **Rule 2 is read on `preview-then-commit` and `runs that ended a step`, never again on
+   `clicks that fired the turn`.** The premise this prediction was first written on — "rewritten
+   twice and measured flat" — was a population error, corrected above: rule 2 landed in r006 at
+   p = 0.014 on the shape `/goal` actually asks for. So the prediction is not "does it move at
+   last" but **does it hold**: `preview-then-commit` stays positive or flat, and `runs that ended a
+   step` clears p < 0.05 on the sign test now that r007 supplies more pairs than r006's 113. A
+   fall on either is the first evidence that rule text can be undone by a round that never touched
+   it.
 3. **Rule 3 stops going the wrong way.** r006 shipped a 6x-wrong figure and nesting got worse;
    r007 ships the measured one. `cards stacking four or more` back under 4.1%.
 4. **Rules 1 and 4 hold.** Both landed decisively and neither had its text weakened. A loss here
