@@ -8786,3 +8786,40 @@ the read-time filter stays, because it treats all 208 cells alike.
 Second time today a correct change was applied at the wrong moment — the first was `bun add` writing
 playwright into `package.json`. Both times the change was right and the test for "is now the moment"
 is not in the diff: it is whether something is currently running against it.
+
+### The playwright fix was wrong in a way only a second machine could show (2026-08-30)
+
+r006 was resumed from a different checkout after `/tmp` was swept, and every run died inside
+chromium with `ERR_MODULE_NOT_FOUND`. The cause was the fix written the day before for the *same*
+symptom:
+
+```js
+const pwHost = PLAYWRIGHT_HOSTS.map((d) => new URL(`${d}/package.json`, import.meta.url))
+                               .find((u) => existsSync(u));
+```
+
+It selects the first host **whose `package.json` exists**, and then requires playwright from it with
+no fallback. `..` — this repo — passes that test always. It worked in the tree where it was written
+only because playwright had been hand-installed there an hour earlier, which made the wrong test and
+the right answer coincide. **The test could not fail in the place it was tested.**
+
+Now it picks by whether `require.resolve("playwright")` succeeds, which is the property actually
+needed. Verified by watching `..` be skipped and `../../macaron-genui-demo` chosen.
+
+Two other things the resume turned up, both from the same root — a frozen round outlives the tree it
+was frozen from:
+
+**The frozen plugin's `node_modules` is a symlink into the original checkout**, by design (700MB is
+not worth copying per round). When that checkout vanished the link dangled and `dsh` exited before
+announcing a port. Re-pointing it at the surviving checkout restores the round without touching
+`lib/`, which is the part that must not move — verified byte-identical (156877 B) across the whole
+interruption.
+
+**The circuit breaker earned its keep.** Three runs died before reaching a model and the wave
+aborted the remaining 49 instead of feeding them all to a broken environment — the fix from the day
+before, where the check moved from above the semaphore to inside it. The 1.4s corpses it did leave
+were deleted rather than kept: an environment failure recorded as `error` reads downstream as a
+model that produced nothing.
+
+And a number corrected: this suite runs **10 models, not 11**, so r005 is 22×10=220 and r006 is
+26×10=260. Several earlier notes said 286.
