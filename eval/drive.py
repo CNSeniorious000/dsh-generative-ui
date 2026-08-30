@@ -104,6 +104,33 @@ class Turns:
 
     @classmethod
     async def boot(cls, model: str, cwd: pathlib.Path, log: pathlib.Path, deadline: float):
+        """Start dsh, retrying a boot that dies before it announces a port.
+
+        **The retry exists because macOS revokes the Desktop grant for seconds at a time.** dsh
+        reads its overlay out of `eval/` at boot; during a revocation that `open` returns EPERM and
+        the process exits in 0.1s. Runs already past boot are untouched — the flap is short — so the
+        only casualties are the handful unlucky enough to start inside the window. r007 lost three
+        that way, twice, and each time the "three quick deaths" guard correctly aborted the whole
+        round on the evidence available to it: three dead runs really is indistinguishable from a
+        broken environment when the first one is not retried.
+
+        Relocating the file would not fix it. `node_modules` is 700MB in the same protected tree,
+        and `turns-runner.mjs` resolves `@deepseek-ai/*` as bare specifiers against it — so
+        everything dsh needs is inside the grant, and the answer is to survive the gap rather than
+        to move out of it.
+        """
+        last: Exception | None = None
+        for attempt in range(4):
+            try: return await cls._boot_once(model, cwd, log, deadline)
+            except RuntimeError as error:
+                last = error
+                if "before announcing a port" not in str(error): raise
+                # Long enough for a TCC flap to pass, negligible against a 1500s run budget.
+                await asyncio.sleep(3 * (attempt + 1))
+        raise RuntimeError(f"{last} (4 attempts)")
+
+    @classmethod
+    async def _boot_once(cls, model: str, cwd: pathlib.Path, log: pathlib.Path, deadline: float):
         env = {**os.environ, "DSH_HOME": str(pathlib.Path.home() / f".dsh-ui4a-{model}"), "TURNS_PORT": "0"}
         # stderr to a FILE, never a pipe nobody drains. dsh logs the MCP servers booting and every
         # tool call there; a 64KB pipe buffer fills partway into the first real turn and the whole
