@@ -17,7 +17,7 @@ was readable at +0.45 while its own pooled mean said +0.23 and meant nothing.
 
     uv run eval/delta.py <before-round> <after-round> [--upto=N]
 """
-import json, pathlib, statistics, sys
+import json, math, pathlib, statistics, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from score import facts, persist_keys
@@ -28,6 +28,14 @@ COUNTERS = [
     ("turns with a card", lambda f: f["turns_with_card"], lambda f: f["turns"]),
     ("card at turn 3+", lambda f: int(f["later_card"]), lambda f: 1),
     ("clicks that fired the turn", lambda f: f["clicks_that_sent"], lambda f: f["clicks"]),
+    # Rule 2's OWN population, and the one to judge it by. The line above pools over clicks, where
+    # a run that explores thirty times and submits once scores 3% — and exploring is what the skill
+    # asks a card to let the reader do. Read r005→r006 both ways: pooled says 13.1%→13.0% and looks
+    # flat; per run says 32.7%→42.5%. The rule's own evidence counts runs ("108 of 161 never once
+    # got a result back out"), so the pooled line was never the read, it was just the one that
+    # existed. `den` is 0 for a run with no clicks, which the loop below skips — a reader who never
+    # clicked did not fail to find the ending.
+    ("runs that ended a step", lambda f: int(bool(f["any_click_sent"])), lambda f: int(f["clicks"] > 0)),
     ("preview-then-commit", lambda f: int(f["preview_then_commit"]), lambda f: 1),
     ("committed but not recorded", lambda f: f["did_not_record"], lambda f: f["committed_reloads"]),
     ("recorded but lost on reload", lambda f: f["did_not_persist"], lambda f: f["committed_reloads"]),
@@ -88,7 +96,24 @@ def report(label: str, deltas: list[float]) -> None:
     # `se == 0` means every pair moved by exactly the same amount — including "not at all", which
     # is the common case and which `abs(0) >= 2*0` was happily marking as a significant result.
     mark = "  ←" if se > 0 and abs(mean) >= 2 * se else ("  (identical)" if mean == 0 else "")
-    print(f"  {label:30} {mean:+6.3f} ± {se:.3f} (n={len(deltas):3}){mark}")
+    print(f"  {label:30} {mean:+6.3f} ± {se:.3f} (n={len(deltas):3}){mark}{sign_test(deltas)}")
+
+
+def sign_test(deltas: list[float]) -> str:
+    """For a counter that is 0-or-1 per run, the exact paired test, printed beside the SE.
+
+    The mean-and-SE above assumes a distribution the data does not have when every pair moved by
+    -1, 0 or +1, and it is optimistic in exactly the direction that matters: `runs that ended a
+    step` read **2.1 SE** on r005→r006, which reads as "cleared the bar", while the 20-up / 9-down
+    split it came from is p = 0.061 — under the bar. Same numbers, and only one of them is a test
+    of the hypothesis. Printed rather than substituted because the effect SIZE is still the SE
+    line's; this only says how much of it to believe.
+    """
+    disc = [d for d in deltas if d]
+    if not disc or any(abs(d) != 1 for d in disc): return ""
+    up, n = sum(1 for d in disc if d > 0), len(disc)
+    p = min(1.0, 2 * sum(math.comb(n, i) for i in range(min(up, n - up) + 1)) / 2 ** n)
+    return f"   [符号检验 {up}↑/{n - up}↓ p={p:.3f}]"
 
 
 def main() -> None:

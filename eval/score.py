@@ -130,6 +130,18 @@ def facts(meta: dict, upto: int | None = None) -> dict:
         # wrong when the options needed explaining first — so this is a rate to read beside the
         # panel's `interaction` score, not a defect count on its own.
         "clicks_that_sent": sum(1 for c in clicks if c["sent"]),
+        # **The population rule 2's own evidence uses, and the one to read it by.** The rule says
+        # "108 of 161 RUNS never once got a result back out of the card"; `clicks_that_sent` pools
+        # over clicks instead, where a run that fiddles thirty times and submits once scores 3%.
+        # Most clicks are exploratory BY DESIGN — read the `why` fields and they are "复位视角",
+        # "打开导航", "看看夜间模式" — so the pooled rate penalises exactly the preview-then-commit
+        # shape the skill asks for. Measured r005→r006 the two disagree completely: pooled says
+        # 13.1%→13.0% (0.0 SE, "flat"), per-run says 32.7%→42.5%. Neither is wrong about its own
+        # population; only one of them is about the rule.
+        #
+        # `None` when the reader never clicked at all, so a run with no clicks is EXCLUDED rather
+        # than counted as a failure to end the step — there was no step to end.
+        "any_click_sent": None if not clicks else any(c["sent"] for c in clicks),
         # The shape the principles ask for: something was previewed, and a later control committed.
         "preview_then_commit": any(c["sent"] for c in clicks) and any(not c["sent"] and c["ok"] for c in clicks),
         "dead_clicks": sum(1 for c in clicks if not c["ok"]),
