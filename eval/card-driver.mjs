@@ -31,9 +31,19 @@ import { createInterface } from "node:readline";
 // on the dsh channel and reads exactly like a flaky model. Measured when this repo was cloned to
 // /tmp to work around a permissions failure: every run failed that way.
 const PLAYWRIGHT_HOSTS = ["..", "../../macaron-genui-demo", "../../ui4a-playground", "../../genui-canvas"];
-const pwHost = PLAYWRIGHT_HOSTS.map((d) => new URL(`${d}/package.json`, import.meta.url)).find((u) => existsSync(u));
-if (!pwHost) throw new Error(`no sibling checkout with playwright: tried ${PLAYWRIGHT_HOSTS.join(", ")}`);
-const { chromium } = await createRequire(pwHost)("playwright");
+// Picked by whether playwright RESOLVES from there, not by whether a package.json exists. The
+// first version tested `existsSync(package.json)` and so always chose `..` — this repo — which
+// passes that test and does not have playwright unless someone installed it by hand. It worked
+// only in the checkout where that had happened, and moving the tree broke every run with
+// `ERR_MODULE_NOT_FOUND` inside chromium, one directory short of the neighbour that had it.
+const resolveFrom = (dir) => {
+  const url = new URL(`${dir}/package.json`, import.meta.url);
+  if (!existsSync(url)) return null;
+  try { const require = createRequire(url); require.resolve("playwright"); return require } catch { return null }
+};
+const pwRequire = PLAYWRIGHT_HOSTS.map(resolveFrom).find(Boolean);
+if (!pwRequire) throw new Error(`playwright resolves from none of: ${PLAYWRIGHT_HOSTS.join(", ")}`);
+const { chromium } = await pwRequire("playwright");
 
 const [lightPort, darkPort, shotDir] = process.argv.slice(2);
 mkdirSync(shotDir, { recursive: true });
