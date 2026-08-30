@@ -431,6 +431,14 @@ Of the 20 canvas prompts: **20/20 loaded the skill**, 19 wrote a correct `ui4a/c
 `height:100%`, and the remaining one ("a chat UI demo") judged it inline — its reasoning quoted the skill verbatim
 ("would the user want this again in ten turns?"), and it judged right.
 
+**That sentence is no longer in the skill**, and this paragraph is kept as the record of what the model read at the
+time rather than as current guidance. The tell it quotes asks whether the CONTENT is worth keeping, which is yes for
+anything reference-shaped: measured on `cron-read` — a lookup with one right answer — models opened a canvas 5 times
+in r005 and 6 in r006, and one did it for "什么是闭包？". A real session, with the skill loaded, wrote
+`claude-code-2-1-251.ui4a.tsx` for "what changed in this release". The skill now asks whether the USER asked for
+something durable, and the resident layer carries the default (§ Canvas in `prompt.ts`): a canvas is a file they own
+and have to close, so it is done TO their workspace, not a richer way to answer.
+
 **Not one of the prompts that skipped the skill produced any UI.** Among the misses were a mortgage calculator, a
 unit converter, BMI, and a three-way comparison — all of which should have been interactive. Their reasoning never
 raised the idea of UI at all; this wasn't a considered rejection. So the problem was **the trigger signal in the
