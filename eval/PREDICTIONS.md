@@ -444,3 +444,74 @@ nothing else.
 | `log-dig` | 11.7 | 39% | 12 / 43 | 2 read the fixture log, 1 called `$dsh/exec` |
 | `game-tune` | 9.1 | 66% | 6 / 41 | 1 used animation |
 | `shift-plan` | 9.6 | 56% | 10 / 23 | — |
+
+## r007 — pre-registered 08-31
+
+### The single-variable round registered above did not happen, and could not have
+
+r006's read ends "Registered for r007 as a single-variable round: restore that sentence, change
+nothing else." That was written without checking what was already committed. By the time r007 was
+composed the tree held **seven** prompt/skill commits made after r006's freeze (`117452d`):
+
+| commit | what it moves |
+|---|---|
+| `8f980b5` | nesting figures: the shipped 33% and its seven-deep example were both wrong (29% / 5.4%, max 5) |
+| `b87b49b` | rule 1: the other three selected-state spellings |
+| `f723e46` | rule 2: rewritten as a grep — 77% have no `sendMessage` at all |
+| `3924bc8` | rule 4: mechanism corrected — 91 of 93 DO render the value |
+| `95fbccc` | rule 5: `<code>` is the element that overflows, a third of all of them |
+| `7d9638b` `bc26009` | canvas/inline: ask whether they wanted a file, not whether the content looks keepable |
+
+Five of those correct statements the shipped prompt makes that measurement showed to be false.
+**Holding a known-false number in the prompt to protect an experiment is not a trade this project
+makes** — the prompt is the product; the round is the instrument. So r007 is a corrections round
+that also carries one designed intervention, and it is registered as such rather than dressed up as
+the clean test it is not.
+
+### The intervention: no rule attaches a small number to the behaviour it is asking for
+
+r006's regression note blamed "concrete anecdote replaced by aggregate". Re-reading `b48e64c`
+against the four rules whose outcome r006 measured gives a sharper candidate — **which side of the
+comparison the small number lands on**:
+
+| rule | how r006 phrased its evidence | number sits on | r006 outcome |
+|---|---|---|---|
+| 4, persist | "36 (34%) left the card unchanged … 20 (19%) lost it on reload — 53%" | the defect | **+0.195**, 4.4 SE |
+| 1, collisions | "raised in 22% of its verdicts" | the defect | **−0.198**, 4.3 SE |
+| 2, ends the step | "108 of them — 67% — never once got a result back out" | the defect | flat |
+| sticky | "356 have the shape, and **3 pin it — 0.8%**" | **the behaviour asked for** | **regressed**, 2.2 SE |
+
+Same corpus, same fact, opposite rhetoric: "3 of 356 pin it" makes pinning look like a three-instance
+curiosity, where "353 of 356 let it scroll away" puts the large number on the defect. `b48e64c` also
+deleted the one bolded clause naming the literal token — **"Zero occurrences of `sticky`"** — which
+was the only place in the paragraph that told the model what to type.
+
+**This is n = 1 and is registered as n = 1.** One rule in one round is a coincidence until it
+repeats; what makes it worth acting on is that the rewrite costs nothing and loses no information.
+Both halves go back: polarity flipped, bolded token restored, corpus statistic kept.
+
+### Predicted, with the threshold that decides each
+
+1. **`sticky` usage recovers to ≥ 4%** on paired cells (r006: 1.1%, r005: 6.5%). Below 2 SE of
+   movement, the polarity hypothesis is dead and the r006 regression was something else entirely —
+   most likely the 9KB of growth, which r007 does not undo.
+2. **Rule 2 moves at last, or is abandoned.** It has now been rewritten twice and measured flat
+   once. If `clicks that fired the turn` is again inside ±2 SE, the next round stops rewriting it
+   and changes what is asked instead.
+3. **Rule 3 stops going the wrong way.** r006 shipped a 6x-wrong figure and nesting got worse;
+   r007 ships the measured one. `cards stacking four or more` back under 4.1%.
+4. **Rules 1 and 4 hold.** Both landed decisively and neither had its text weakened. A loss here
+   is evidence that round-to-round drift swamps rule text, which would put every read above in
+   doubt.
+5. **Panel `overall` does not fall.** r006 gained +0.329 ± 0.130 and r007 adds no new rule — the
+   canvas/inline change is the only thing that could plausibly cost prose quality.
+
+### Not touched, deliberately
+
+The live-region rule quotes **"0 of 64 corpus cards announce their results"** and **"8 of 23"** —
+both the same small-number-on-the-desired-behaviour shape as `sticky`, and both left alone. A new
+counter in `eval/sweep.py` measures *presence* of any live region on a fetching card (r005 1 of 15,
+r006 6 of 33) and that is a **floor on the defect, not the defect rate**: it cannot tell a live
+region on the results container from one on an unrelated toast, and 149 of r006's 943 cards carry
+`aria-live` for other reasons. Rewriting a claim this instrument cannot check would be restating a
+number as if it had been re-measured. It waits for a probe that reads placement.
