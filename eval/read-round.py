@@ -138,7 +138,14 @@ def main() -> None:
     else:
         verdict("9. es-meal-plan 的卡片不夹中文（<20%）", None, "该用例还没跑到，或本轮没有非中文用例")
 
-    print("\n  binary-forks 本轮只收数据：二元双按钮没有检测器（r006 那次 1/211 是一次性脚本）。")
+    # 10. binary-forks. Descriptive, and that is not a hedge: this case has never run, so there is
+    # no prior to set a bar against, and a threshold invented now would be a number picked to be
+    # cleared. What it establishes is the baseline r008 gets compared to. `eval/twobuttons.mjs` was
+    # written before this data existed and verified in both directions on hand-made cards — it
+    # passes a plain two-button card and fails the same card wrapped in `rounded border`.
+    tb = run("node", "eval/twobuttons.mjs", after)
+    print("\n  binary-forks —— 首次测量，只立基线，不设阈值：")
+    for line in tb.strip().split("\n"): print(f"    {line}")
 
 
 if __name__ == "__main__": main()
