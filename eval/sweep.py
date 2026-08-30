@@ -91,12 +91,35 @@ def hand_rolled_pre(src: str) -> bool:
     return "<pre" in src and "shiki" not in src
 
 
+# A card whose content arrives after the first paint. Named by the calls that produce that shape
+# rather than by "is it async", because `useEffect` with a timer is not the case the rule is about:
+# the reader is waiting on something the card asked another system for.
+FETCHES = ("streamText", "generateText", "generateObject", "$dsh/ai", "$dsh/exec", "bash(", "fetch(")
+
+
+def announces(src: str) -> bool | None:
+    """Whether a fetching card has a live region AT ALL. `None` for cards that never fetch.
+
+    **Presence, not placement — so this is a FLOOR on the defect, not the defect rate.** The rule
+    asks for the live region on the container the results land in; this cannot tell that from one
+    on a toast three levels away, and 149 of r006's 943 cards carry `aria-live` for reasons having
+    nothing to do with fetching. A card with none definitely does not announce; a card with one
+    might. The skill's own figure (8 of 23 announce) measured placement and is the stricter number
+    — the two bracket the truth rather than disagreeing, and neither should be restated as the other.
+
+    `--show=silent` prints the population so the first error to look for stays visible: a card
+    counted as silent that never fetched at all.
+    """
+    if not any(f in src for f in FETCHES): return None
+    return "aria-live" in src or 'role="status"' in src or 'role="alert"' in src
+
+
 def main() -> None:
     root = pathlib.Path(sys.argv[1])
     show = next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--show=")), "")
     limit = int(next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--limit=")), 5))
 
-    n = coll_cards = coll_total = pre_cards = code_cards = 0
+    n = coll_cards = coll_total = pre_cards = code_cards = fetch_cards = silent_cards = 0
     samples = collections.defaultdict(list)
     for path in sorted(root.glob("*/*/turn-*.tsx")):
         src = path.read_text(errors="ignore"); n += 1
@@ -107,11 +130,17 @@ def main() -> None:
         if "<pre" in src or "```" in src or "shiki" in src:
             code_cards += 1
             if hand_rolled_pre(src): pre_cards += 1; samples["pre"].append((path, ""))
+        said = announces(src)
+        if said is not None:
+            fetch_cards += 1
+            if not said: silent_cards += 1; samples["silent"].append((path, next(f for f in FETCHES if f in src)))
 
     print(f"{root.name}: {n} 张卡片源码\n")
     print(f"  hover/pressed 同族碰撞      {coll_cards:4} 张卡片，共 {coll_total} 处")
     print(f"  手搓 <pre>（无 shiki）      {pre_cards:4} 张 / {code_cards} 张带代码的"
           f"{f' ({pre_cards/code_cards:.1%})' if code_cards else ''}")
+    print(f"  会取数但无任何 live region {silent_cards:4} 张 / {fetch_cards} 张会取数的"
+          f"{f' ({silent_cards/fetch_cards:.1%}，缺陷下界)' if fetch_cards else ''}")
 
     if show:
         print(f"\n── {show} 的前 {limit} 个命中（计数之前先读它们）──")
