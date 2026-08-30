@@ -1223,6 +1223,21 @@ instruction to do unnecessary work.**
   probes before spending anything, and the probe is a **real turn against each model home**, not a
   stubbed one: the static guards only check that the credential variable is *set*, and a key that
   is set but rejected produces `AUTH: 401` on all 72 runs while the wave still reports DONE.
+
+  **It has to keep refusing after it starts, and that half paid off first.** r007 was 24 runs in
+  when macOS revoked the Desktop grant mid-round: `dsh` could no longer read the overlay file in
+  `eval/`, and three runs died in 0.1s each without reaching a model. `wave.py`'s in-flight guard —
+  three quick deaths in a row aborts the round — stopped it there instead of burning the remaining
+  246 cells into `error`, finished the four runs already in flight, and left 21 cached. Resuming
+  cost nothing: `complete` and `timeout` are cached, so the restart picked up at 21 with the frozen
+  plugin untouched.
+
+  The weak link was the cleanup, not the guard. `finally` ran `lock.unlink()` FIRST, that raised
+  `PermissionError` from the same revocation, and everything after it — restoring ten model homes
+  from the round's frozen plugin — never ran. Two rules follow, both now in the code: **restore in
+  order of what is expensive to get wrong** (a stranded symlink silently changes what every later
+  `dsh` loads; a stranded lock only refuses to start and says why), and **guard each cleanup step
+  separately**, because one raising skips all the rest.
 - **An eval home reads its gateway key from an env var, and unset it hangs rather than fails.**
   `apiKeyEnv: LITELLM_24000_API_KEY` in each `~/.dsh-eval-<model>/settings.yaml`; with it unset,
   dsh starts, opens a session and sits there — process alive, connection open, nothing returned,
