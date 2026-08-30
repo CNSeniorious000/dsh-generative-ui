@@ -8823,3 +8823,20 @@ model that produced nothing.
 
 And a number corrected: this suite runs **10 models, not 11**, so r005 is 22×10=220 and r006 is
 26×10=260. Several earlier notes said 286.
+
+### A quiet monitor and a dead process look identical (2026-08-30)
+
+The r006 resume was reported as stuck. It was not: the wave was alive, five cells were advancing,
+the last write was twelve seconds old. What had stopped was the **monitor**, which was throttled to
+report once per ten completions — a threshold picked to keep 260 cells from flooding the channel.
+
+The tail of the round is the six deep cases at 10-14 turns, six to thirteen minutes each. Ten
+completions at that depth is well over twenty minutes of silence, and silence is exactly what a
+crashed wave produces. The throttle was set against the round's SIZE and should have been set
+against its SLOWEST UNIT: a progress channel has to tick faster than the thing being watched can
+plausibly hang for.
+
+Same family as `find -newermt` failing silently and `pgrep -f` matching its own shell — the
+instrument produced the appearance of a result. This one is the mirror image of those two: they
+said "no problem" when there was one, this said "problem" when there was none, and the cost was the
+same, a person going to look.
