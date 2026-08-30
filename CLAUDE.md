@@ -1212,6 +1212,17 @@ instruction to do unnecessary work.**
   (§6.1), so a copy landing anywhere without the right `node_modules` neighbour fails inside
   chromium, which is the bug that has already been fixed twice.
 
+  **A third gap, found by walking into it: a RESUME re-reads `cases.py`.** The safety above —
+  "`wave.py` imports `cases`, `drive` and `judge` once at start, so editing them mid-round changes
+  nothing" — is true only of the process that is running. r007 died at 24/300 and the process that
+  resumed it imported the case list as it stood then, which by that point had three cases added
+  while the round ran. The round silently became 30 cases instead of 27, and rewrote its own
+  `manifest.json` to agree. Adding was harmless; **changing an existing case would have split the
+  round between two versions of it with nothing in the output naming which cells got which.** So
+  the rule for a resumable round is stricter than the rule for a running one: **the case list is
+  part of the round, and belongs in the freeze beside `lib/`** — until it is, do not edit
+  `cases.py` between a round's start and its final read, not merely while its process is up.
+
   Also still true: **`bun run build` refuses while a wave is running** (`--force` to override). Both later breaks
   were the same shape — an unrelated edit, a reflexive rebuild, and a wave whose verdicts mix two
   prompts. Note the second-order effect the first time you meet it: with the build refused, `lib/`

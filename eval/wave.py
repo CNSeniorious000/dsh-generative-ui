@@ -20,7 +20,7 @@ rate.
 **It keeps partial runs.** A conversation cut off at turn six is six turns of evidence. The runs
 that get discarded are the ones whose text says the process died, never the ones that ran short.
 """
-import argparse, asyncio, json, os, pathlib, shutil, signal, subprocess, sys, time
+import argparse, asyncio, importlib.util, json, os, pathlib, shutil, signal, subprocess, sys, time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from cases import CASES, BY_ID
 import drive, judge
@@ -67,6 +67,31 @@ def freeze(round_dir: pathlib.Path) -> pathlib.Path:
     # mid-run is `src/`, and `node_modules` is 700MB that would be copied per round for nothing.
     (frozen / "node_modules").symlink_to(REPO / "node_modules")
     return frozen
+
+
+def frozen_cases(round_dir: pathlib.Path) -> list[dict]:
+    """The case list this round started with, frozen beside the plugin on first use.
+
+    **The case list defines the round, and a resume used to re-read the live one.** r007 died at
+    24/300 and the process that restarted it imported `cases.py` as it stood by then — three cases
+    newer than the round. Adding was harmless; editing an existing case would have split the round
+    between two versions of it with nothing in the output naming which cells got which. `freeze()`
+    already protects what the MODEL reads; this protects what the round IS.
+
+    Copied rather than dumped as JSON so a later reader can diff it against `eval/cases.py` and see
+    exactly what a round asked, comments and personas included.
+    """
+    frozen = round_dir / "cases.py"
+    if not frozen.exists():
+        shutil.copy2(REPO / "eval" / "cases.py", frozen)
+        return CASES
+    spec = importlib.util.spec_from_file_location(f"cases_{round_dir.name}", frozen)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    if [c["id"] for c in module.CASES] != [c["id"] for c in CASES]:
+        print(f"wave: using the {len(module.CASES)} cases frozen at {frozen}, "
+              f"not the {len(CASES)} in eval/cases.py", flush=True)
+    return module.CASES
 
 
 def repoint(models: list[str], target: pathlib.Path) -> dict[pathlib.Path, str]:
@@ -145,10 +170,10 @@ async def main():
     ap.add_argument("--judge-only", action="store_true", help="re-score a round that already ran; runs nothing")
     args = ap.parse_args()
 
-    cases = [BY_ID[c] for c in args.cases.split(",")] if args.cases else CASES
-    models = args.models.split(",") if args.models else MODELS
     round_dir = ROOT / "rounds" / args.round
     round_dir.mkdir(parents=True, exist_ok=True)
+    cases = [BY_ID[c] for c in args.cases.split(",")] if args.cases else frozen_cases(round_dir)
+    models = args.models.split(",") if args.models else MODELS
     ROOT.mkdir(parents=True, exist_ok=True)
     # Before `freeze`, deliberately: freezing copies the CURRENT `lib/` over the snapshot this
     # round was measured against, so a re-score would quietly rewrite the record of what ran.
