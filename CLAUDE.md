@@ -706,7 +706,7 @@ already below, add its number to that lesson and stop.
 
 ### 6.1 Every measurement lied at least once
 
-Twelve times a metric said something plausible and false. The failures share a shape worth
+Twenty times a metric said something plausible and false. The failures share a shape worth
 recognising before trusting any number in this project.
 
 | what looked true | what was true | the tell |
@@ -730,6 +730,7 @@ recognising before trusting any number in this project.
 | the canvas paint rate fell 100% -> 86% | 5 canvases re-snapshotted 17 times, 2 of them my own harness | dedupe by (run, canvas id) first |
 | a negative control over-fires 30% of the time | two models card on it in every round, eight never do | split a control rate by model before rewording |
 | a rule banned `100vh` and the card obeyed | it wrote `78vh` — the UNIT was the defect, not the number | ban the unit, not the value you saw |
+| rule 2 changed nothing, 0.0 SE | pooled over CLICKS; per RUN it landed at p=0.014 | count what the rule's own evidence counts |
 
 **A canvas is counted once per turn it changes, and three of the five ways to fail are not the
 card's.** Reading r002's 17 unpainted canvases end to end: they are **5 distinct canvases**, each
@@ -801,6 +802,17 @@ Measured across ~300 model runs. The pattern is consistent enough to use as a ch
   does not warrant a card, and 6/6 once the negative was removed. Same defect in a header: `**A
   border or a background, never both**` with the exception in the body was matched on the header
   by five judge models and would be by any reader.
+- **A rule must not attach a small number to the behaviour it is asking for.** The `sticky` rule's
+  evidence was rewritten from a session anecdote ending **"Zero occurrences of `sticky`"** to the
+  corpus figure **"356 have the shape, and 3 pin it — 0.8%"**. The rule text was byte-identical
+  across the two rounds; `sticky` usage fell **6.5% → 1.1%** (2.2 SE). Both sentences carry the
+  same fact, and "353 of 356 let it scroll away" would carry it with the large number on the
+  defect instead. Of the four rules r006 measured, the three phrased as *most cards fail this*
+  landed or held; the one phrased as *almost none do this* is the one that regressed. **n = 1, and
+  registered as n = 1** — but it costs nothing to write the number on the failing side, and a base
+  rate quoted at 0.8% tells the model what 99.2% of cards do. Related to but distinct from the
+  negative-phrasing rule above: that one is about naming the failing SHAPE, this one is about which
+  side of the count the small number lands on.
 - **A recipe is followed as a recipe.** `display: block; width: 100%; text-align: left` was written
   for one layout; cards reaching for `display: flex` took none of the three, including the
   `text-align` that mattered. The rules that transfer name one property and why it is needed.
