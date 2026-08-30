@@ -2,10 +2,10 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""The three corpus counters that `delta.py` cannot compute from `meta.json`.
+"""The corpus counters that `delta.py` cannot compute from `meta.json`.
 
 `score.py` reads what the harness observed — a click sent or did not, a card painted or did not.
-These three are properties of the SOURCE the model wrote, and they were originally measured by
+These are properties of the SOURCE the model wrote, and they were originally measured by
 throwaway scripts. That is fine for deciding a rule is worth writing and useless for deciding it
 worked: r005 and r006 have to be measured with the same instrument, and an instrument that lives
 in `/tmp` among forty other files is not the same instrument twice.
@@ -15,7 +15,7 @@ sweeps were false positives (see `docs/measurements-log.md`) and every one of th
 real defect until the hits were read. A number from this file is not evidence until that has
 happened at least once per round.
 
-    uv run eval/sweep.py <round-dir> [--show=collision|pre] [--limit=5]
+    uv run eval/sweep.py <round-dir> [--show=collision|pre|silent|cjk] [--limit=5]
     node eval/nesting.mjs <round-dir>        ← nesting, which needs a parser
 """
 import pathlib, re, sys, collections
@@ -114,12 +114,19 @@ def announces(src: str) -> bool | None:
     return "aria-live" in src or 'role="status"' in src or 'role="alert"' in src
 
 
+CJK = re.compile(r"[一-鿿]")
+# Cases whose conversation is not in Chinese. Any CJK in their cards is the defect the language
+# rule names — and until one of these existed, that rule had no population in this suite at all:
+# 28 of 28 cases were Chinese, against a real corpus of en 39% / es 31% / fr 12% / zh 0.2%.
+NON_ZH = {"es-meal-plan"}
+
+
 def main() -> None:
     root = pathlib.Path(sys.argv[1])
     show = next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--show=")), "")
     limit = int(next((a.split("=")[1] for a in sys.argv[2:] if a.startswith("--limit=")), 5))
 
-    n = coll_cards = coll_total = pre_cards = code_cards = fetch_cards = silent_cards = 0
+    n = coll_cards = coll_total = pre_cards = code_cards = fetch_cards = silent_cards = foreign_cards = cjk_cards = 0
     samples = collections.defaultdict(list)
     for path in sorted(root.glob("*/*/turn-*.tsx")):
         src = path.read_text(errors="ignore"); n += 1
@@ -134,6 +141,13 @@ def main() -> None:
         if said is not None:
             fetch_cards += 1
             if not said: silent_cards += 1; samples["silent"].append((path, next(f for f in FETCHES if f in src)))
+        if path.parent.parent.name in NON_ZH:
+            foreign_cards += 1
+            # A window around the match, not the character: one 汉字 on its own says nothing about
+            # whether it is a button label the reader cannot use or a comment they never see.
+            if (m := CJK.search(src)):
+                cjk_cards += 1
+                samples["cjk"].append((path, " ".join(src[max(0, m.start() - 60):m.start() + 40].split())))
 
     print(f"{root.name}: {n} 张卡片源码\n")
     print(f"  hover/pressed 同族碰撞      {coll_cards:4} 张卡片，共 {coll_total} 处")
@@ -141,6 +155,8 @@ def main() -> None:
           f"{f' ({pre_cards/code_cards:.1%})' if code_cards else ''}")
     print(f"  会取数但无任何 live region {silent_cards:4} 张 / {fetch_cards} 张会取数的"
           f"{f' ({silent_cards/fetch_cards:.1%}，缺陷下界)' if fetch_cards else ''}")
+    print(f"  非中文对话里出现 CJK      {cjk_cards:4} 张 / {foreign_cards} 张这类卡"
+          f"{f' ({cjk_cards/foreign_cards:.1%})' if foreign_cards else '（本轮没有非中文用例）'}")
 
     if show:
         print(f"\n── {show} 的前 {limit} 个命中（计数之前先读它们）──")

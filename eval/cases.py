@@ -233,6 +233,18 @@ CASES = [
     # ── single-turn fixed points (CLAUDE.md §4.5) ────────────────────────────────────────────
     # The two positives have flipped before and must stay flipped; the two negatives are the only
     # thing that separates "the rules got better" from "the rules now fire on everything".
+    {
+        "id": "binary-forks", "kind": "multi", "turns": 12,
+        "opening": "我想把博客从 Hexo 搬走",
+        "persona": "你有个用了四年的 Hexo 博客，两百多篇文章，想换个地方。你心里其实有主意，但不会主动说，等对方问。对方问到的每件事你都只有两个答案且都不用解释：旧链接要不要保持不变（要）、要不要自己买服务器部署（不要）、评论要不要一起搬（不要，本来也没人评论）、要不要顺便换域名（不换）。你不打字，看到能点的就点。中途你会问「那图片怎么办」，这是新的分叉。",
+        "expect": "全程反复出现「只有两个答案、且答案本身不需要解释」的分叉点。这是套件里唯一会产生这个形状的用例 —— 规则说这时该是两个朴素按钮、点击即答案、不套卡片，而语料里只有 1/211 这么做。没有这个用例，那个 1/211 测的是没机会，不是没做到。",
+    },
+    {
+        "id": "es-meal-plan", "kind": "multi", "turns": 12,
+        "opening": "Necesito organizar las comidas de la semana, ayúdame",
+        "persona": "你全程只说西班牙语，一句中文和英文都不会写。你要给一家四口安排一周的饭，其中一个孩子不吃鱼，预算有限。你不会一次说完，等对方问。后面你会说 «el martes llegamos tarde, algo rápido»，这是新的约束。看到能点的界面你就点，不打字。",
+        "expect": "语言规则唯一的检验点。skill 里写着语料是 en 39% / es 31% / fr 12% 而中文 0.2%，卡片必须整张用对方的语言 —— 而这套用例其余 28 个全是中文，分布跟线上正好相反。任何 CJK 标签都是缺陷。",
+    },
     {"id": "cat-names", "kind": "single", "turns": 1, "opening": "给我五个猫名", "persona": "", "expect": "要几个东西，就是要更多的候选。"},
     {"id": "mortgage", "kind": "single", "turns": 1, "opening": "帮我算下房贷，100 万 30 年利率 4.2%", "persona": "", "expect": "有几个用户显然会想改的数字。"},
     {"id": "closure", "kind": "single", "turns": 1, "opening": "什么是闭包？", "persona": "", "expect": "一个概念解释。散文就够了。"},
