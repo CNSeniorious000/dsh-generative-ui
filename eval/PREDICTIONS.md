@@ -384,3 +384,63 @@ cause.
   in r004 and 9 in r005**. That is also the argument for the case. Against `$dsh/chat`'s 256 files
   and `$dsh/state`'s 294, exec is the least-exercised capability the plugin offers, and until now no
   fixture asked for it — so its 4% share measured the fixtures, not the models.
+
+---
+
+## r006, read (2026-08-30)
+
+260 cells, 257 complete + 3 timeout, zero errors. **217 paired runs** — the first comparison with
+the power the r004→r005 analysis said was needed.
+
+**Read #0 first: the round is readable.** On the shared cases, cut went 13/180 (7.2%) → 20/180
+(11.1%), a difference of 0.039 ± 0.030 — **1.3 SE**, inside the noise and short of the 2 SE that
+was registered as the condition for calling the round invalid.
+
+### Cleared 2 SE
+
+| Read | before → after | delta | SE |
+|---|---|---|---|
+| cards that persist an answer (rule 4) | | **+0.195 ± 0.044** | 4.4 |
+| …the same, truncated to the first 8 turns | | **+0.213 ± 0.061** | 3.5 |
+| committed but not recorded (rule 4) | 42.5% → | **−0.245 ± 0.096** | 2.6 |
+| recorded but lost on reload (rule 4) | 27.5% → | **−0.156 ± 0.073** | 2.1 |
+| cards with a hover/pressed collision (rule 1) | 38.0% → 24.4% | **−0.198 ± 0.046** | 4.3 |
+| panel `interaction`, clean pairs | | **+0.527 ± 0.186** | 2.8 |
+| panel `overall`, clean pairs | | **+0.329 ± 0.130** | 2.5 |
+| preview-then-commit | | +0.074 ± 0.028 | 2.6 |
+| cards that painted | | +0.045 ± 0.020 | 2.3 |
+
+Rule 4 surviving the 8-turn truncation is the load-bearing part: the effect is not the two extra
+turns `floor: 10` bought. And rule 4 is the rule whose *mechanism* was corrected the day before —
+from "nobody writes the third line" (false: 91 of 93 render the value) to "they render it as a
+highlight and say nothing in words".
+
+### Did not move
+
+**Rule 2 — one control ends the step — is flat.** `clicks that fired the turn` is −0.001 ± 0.029 on
+113 pairs. This was the largest baseline in the round (77% of dead clicks have no `sendMessage` in
+the source at all) and the rule was rewritten into a grep the model can run on itself. It changed
+nothing. The four new cases agree: `orbit-3d` sent 2 of 35 clicks, `game-tune` 6 of 41.
+
+**Rule 3 — countable nesting — went the wrong way**, 4.1% → 6.0% of cards stacking four or more.
+
+### A regression, and why it cannot be attributed
+
+`sticky` usage on the 142 paired cells fell **6.5% → 1.1%** (−0.048 ± 0.022, 2.2 SE). The rule's
+text is byte-identical between the two frozen plugins and sits in the same place. What changed is
+its evidence paragraph: a concrete session anecdote containing the literal phrase **"Zero
+occurrences of `sticky`"** was replaced with an aggregate ("356 of 766 have the shape, 3 pin it").
+
+That is a hypothesis and this round cannot test it. **r006 changed six rules and grew the prompt by
+9KB**; any of that could be responsible, and a round that moves six things cannot say which one
+moved a seventh. Registered for r007 as a single-variable round: restore that sentence, change
+nothing else.
+
+### Baselines for r007, from the four new cases (10 runs each, unpaired by design)
+
+| case | mean turns | cards per turn | clicks sent | reached its shape |
+|---|---|---|---|---|
+| `orbit-3d` | 8.6 | 51% | 2 / 35 | 7 of 10 used 3D or animation |
+| `log-dig` | 11.7 | 39% | 12 / 43 | 2 read the fixture log, 1 called `$dsh/exec` |
+| `game-tune` | 9.1 | 66% | 6 / 41 | 1 used animation |
+| `shift-plan` | 9.6 | 56% | 10 / 23 | — |
