@@ -592,6 +592,38 @@ which doubles an 8.5-hour round to 17. Not worth it while the counters carry the
 round whose only evidence is a panel move under 2.5 SE has not shown anything, and this is
 registered here so r007 cannot be declared a success on the panel alone.
 
+### A defect class nothing in the skill addresses, found while r007 ran
+
+Mining r006's 1031 judge `worst` fields turned up a complaint no counter here could see: **a control
+that is there, is clickable, and is wired to nothing.** "Clicking the style filters and 换一批 did
+not actually update or filter the list"; "点击 OAuth 后预览内容完全没有变化"; "the in-card attempt
+to fix 300 never took". This is **not rule 2** — rule 2 is a card with no way to finish; this is a
+card whose controls do not work.
+
+It needs no new probe. The harness already shoots each card before the reader touches it and again
+after, so an inert control is a byte-identical PNG pair. `eval/inert.py` reads it, and the number is
+**stable and untouched by either round**:
+
+| | clicking turns | inert | paired |
+|---|---|---|---|
+| r005 | 352 | 60 (17.0%) | |
+| r006 | 517 | 74 (14.3%) | |
+| the 105 shared cells | 309 → 343 | 15.9% → **16.0%** | −0.016 ± 0.039, **not 2 SE** |
+
+The apparent r005→r006 improvement is the case mix, not a change: on the same cells it is flat.
+About **one clicking turn in six** hands the reader a control that does nothing, and it is spread
+across every model (18 for the worst, then 15, 14, 9, 8…).
+
+**The raw rate is roughly 13% high and that is measured, not assumed.** Four false-positive classes
+were removed by reading hits — a click that sent the turn, a copy button, a click on an input or a
+slider (the driver clicks; it does not type or drag), a card at the screenshot cap — and reading 38
+of the survivors found 5 that are still the third kind. So the defect is near **12%**, and `inert.py`
+says so in its own docstring rather than leaving a future round to quote the headline.
+
+Registered as an **r008 candidate, not an r007 read**: r007's plugin was frozen before this existed,
+so r007 can only supply a third baseline. If it lands near 16% again on paired cells, that is three
+rounds of a defect nothing has addressed, and it earns a rule.
+
 ### Not touched, deliberately
 
 The live-region rule quotes **"0 of 64 corpus cards announce their results"** and **"8 of 23"** —
