@@ -1196,6 +1196,22 @@ instruction to do unnecessary work.**
   guard is on the wrong noun. Guarding the ACTION (building) needed a list of every way to reach
   the artefact; guarding the ARTEFACT (what the run reads) needed one copy.
 
+  **The freeze covers what the MODEL reads, not what the HARNESS reads, and the second gap is
+  still open.** `drive.py` spawns `REPO/eval/card-driver.mjs` — the live file, respawned for every
+  run — so an edit to the probe mid-round measures the remaining cells differently from the ones
+  already done. Met once for real: an SVG-overflow fix landed while r006 was running and had to be
+  reverted, because 26 of 208 cells would have been measured by a different instrument than the
+  rest. Until the driver is frozen too, the rule is simply **do not touch `card-driver.mjs` while a
+  wave runs** — and note which harness files are safe, because most are: `wave.py` imports `cases`,
+  `drive` and `judge` once at start, so Python has them cached and editing those three mid-round
+  changes nothing. Only the file that is *spawned* per run is live.
+
+  The fix is deferred rather than forgotten, and the reason is worth keeping: implementing it means
+  editing `card-driver.mjs`, which is the one file the rule forbids touching while a wave runs. It
+  also cannot be a plain copy — the driver locates playwright relative to its own `import.meta.url`
+  (§6.1), so a copy landing anywhere without the right `node_modules` neighbour fails inside
+  chromium, which is the bug that has already been fixed twice.
+
   Also still true: **`bun run build` refuses while a wave is running** (`--force` to override). Both later breaks
   were the same shape — an unrelated edit, a reflexive rebuild, and a wave whose verdicts mix two
   prompts. Note the second-order effect the first time you meet it: with the build refused, `lib/`
