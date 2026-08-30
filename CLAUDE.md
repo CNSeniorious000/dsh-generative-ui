@@ -1249,6 +1249,21 @@ instruction to do unnecessary work.**
   order of what is expensive to get wrong** (a stranded symlink silently changes what every later
   `dsh` loads; a stranded lock only refuses to start and says why), and **guard each cleanup step
   separately**, because one raising skips all the rest.
+
+  **A fix that slows a failure down disables every guard that keyed on how fast it was.** The
+  in-flight guard above counted a run as stillborn when `elapsed < 1` — true of a dead boot that
+  returned in 0.1s, and the natural way to write it. Then `drive.boot` learned to retry a boot that
+  dies before announcing a port, which turned the same failure into a 30-second one. The guard
+  stopped counting them, and the next Desktop-grant outage — thirteen minutes, not the seconds the
+  retry was sized for — **burned 85 cells with nothing stopping it**. Both halves were mine, an hour
+  apart, and each was correct alone.
+
+  The guard now keys on `turns == 0`: the model was never reached, which is what "stillborn"
+  actually means and is the one thing no retry can change. **When you add a retry, go and read
+  every guard that watches that failure** — a retry does not only change how often a failure
+  happens, it changes its shape, and anything downstream that recognised the old shape is now
+  blind. The retry itself was resized to ~90 seconds, which is the honest split: absorb a flap,
+  and let the guard abort an outage.
 - **An eval home reads its gateway key from an env var, and unset it hangs rather than fails.**
   `apiKeyEnv: LITELLM_24000_API_KEY` in each `~/.dsh-eval-<model>/settings.yaml`; with it unset,
   dsh starts, opens a session and sits there — process alive, connection open, nothing returned,
