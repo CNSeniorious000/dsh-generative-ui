@@ -267,11 +267,23 @@ async def main():
     try:
         metas = await asyncio.gather(*[one(c, m) for c in cases for m in models], return_exceptions=True)
     finally:
-        lock.unlink(missing_ok=True)
+        # Ordered by what is expensive to get wrong, and each step guarded on its own, because a
+        # cleanup that raises leaves every step after it undone. That happened: a TCC revocation
+        # mid-round made `lock.unlink()` raise `PermissionError`, and because the lock came first
+        # the ten model homes stayed pointed at this round's frozen plugin while the NEXT wave
+        # refused to start against a lock whose owner was already dead. Homes first: a stranded
+        # symlink silently changes what every later dsh loads, where a stranded lock only refuses
+        # to start and says so.
         for link, was in restore.items():
-            if link.is_symlink(): link.unlink()
-            if was: link.symlink_to(was)
-        for proc in servers: proc.terminate()
+            try:
+                if link.is_symlink(): link.unlink()
+                if was: link.symlink_to(was)
+            except OSError as error: print(f"  could not restore {link}: {error}", flush=True)
+        for proc in servers:
+            try: proc.terminate()
+            except OSError: pass
+        try: lock.unlink(missing_ok=True)
+        except OSError as error: print(f"  could not remove {lock}: {error} — delete it before the next wave", flush=True)
 
     ok = [m for m in metas if isinstance(m, dict)]
     print(f"\nWAVE {args.round}: {len(ok)}/{total} ran, {sum(1 for m in ok if m['status'] == 'timeout')} cut short, "
