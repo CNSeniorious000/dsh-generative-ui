@@ -1104,12 +1104,15 @@ Both take the bare URL. The pnpm flag is **not** optional — the CLI pulls \`@g
 as well, and pnpm refuses URL-resolved SUBdependencies by default, so without it you get
 \`ERR_PNPM_EXOTIC_SUBDEP\` naming a package you never asked for. Do **not** add
 \`--config.cacheDir\` beside it: pnpm then loses the package's own bin and dies with
-\`spawn cli ENOENT\`, which reads like the package is broken and is not.
+\`spawn cli ENOENT\`, which reads like the package is broken and is not. It needs no cache redirect
+anyway — its store is the one of the three your sandbox lets you write.
 
-The bun and npm forms move their cache out of your home directory, because your commands run
-sandboxed and the default location may not be writable there. That is measured for npm — a bare
-\`npx\` dies with \`EPERM mkdtemp\` and a message about root-owned files that has nothing to do
-with the real cause; for bun it is the same precaution rather than the same measurement.
+**The other two do**, and the reason is worth knowing because it disguises itself. Sandboxed,
+\`touch ~/.npm/_cacache/x\` and \`touch ~/.bun/install/cache/x\` both come back
+\`Operation not permitted\`; the directories exist, they are simply not yours to write from in
+there. npm reports this as \`EPERM mkdtemp\` **and a message about root-owned files**, which sends
+you looking for a permissions problem in your home directory that is not there. \`$TMPDIR\` is
+writable, so pointing each cache at it is the whole fix.
 
 \`check\` includes TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
 

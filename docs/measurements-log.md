@@ -8912,3 +8912,42 @@ r006 的一条评审文本读起来像个真缺陷：game-tune 里「用户第�
 于是"t0→t1 逐字节相同"这个结论取的根本不是同一对文件。game-tune 的 t1 实际上**同时**发了两张卡：
 一张与上轮完全相同的 `snake.ui4a`，外加一个新的 `reaction-game.ui4a`。真相比相似度数字清楚得多，
 而它是从**文件清单**里看出来的，不是从任何统计量里。
+
+## 三个包运行器在沙箱内的实测 (2026-08-31)
+
+skill 从写下那天起就说 `npx`，而且带一句解释：「`npx`, not `bunx` — bun cannot parse a scoped
+package name inside that URL」。**那句话是错的**。bun 不是不能解析，是需要在 URL 前面带包名。
+
+三种写法，每一条的必要部分都由一个具体失败现象钉住：
+
+| 写法 | 少了那部分会怎样 |
+|---|---|
+| `BUN_INSTALL_CACHE_DIR="$TMPDIR/bun-cache" bunx --yes genui@<URL>` | 裸 URL → `unrecognised dependency format: @https://…`；bun 按 `<name>@<spec>` 读，名字成了空的。名字随便取，是标签不是查找 |
+| `pnpx --config.blockExoticSubdeps=false <URL>` | 不关 → `ERR_PNPM_EXOTIC_SUBDEP`，因为 CLI 自己也用 URL 拉 `@genui/unocss`，pnpm 默认禁止 URL 解析的**子**依赖 |
+| `npm_config_cache="$TMPDIR/npm-cache" npx --yes <URL>` | 见本文件前面那条 `EPERM mkdtemp` |
+
+**`--config.cacheDir` 会把 pnpx 弄坏。** 我本来想给三种都加缓存重定向以求一致，加上之后 pnpm
+找不到包自己的 bin，报 `spawn cli ENOENT` —— 看着像包坏了。pnpm 也不需要它。
+
+### 沙箱里真正被挡的是什么
+
+第一版我给 bunx 加缓存重定向是**照 npm 那条类推**的，skill 里还自己写了「for bun it is the same
+precaution rather than the same measurement」。往 shipped 命令里塞没验证的环境变量正是不该做的，
+于是拿 `dsh --profile headless` 进沙箱实测：
+
+```
+ls -d ~/.bun/install/cache        →  /Users/muspi-merol/.bun/install/cache      （存在）
+touch ~/.bun/install/cache/.probe →  Operation not permitted                    （不是 ENOENT）
+touch ~/.npm/_cacache/.probe      →  NPM_BLOCKED                                （对照）
+TMPDIR=/var/folders/…/T/ ; mkdir+touch 于其下 → TMPDIR_WRITABLE
+```
+
+**对照那一行是关键**：npm 若报可写，就说明探针根本没跑在受限沙箱里，bun 的结果也不算数。它报了
+BLOCKED，与本文件前面那条独立的 npm 记录一致，所以探针有效。类推是对的 —— 但现在它是实测。
+
+然后三种 runner 在沙箱内端到端各跑一次真实 `check`，**全部 exit 0**。pnpm 的 store 在
+`~/Library/pnpm`，是三者中唯一沙箱允许写的，所以它不需要重定向也能过。
+
+顺带两条自查：**`--help` 通过不代表 `check` 通过** —— pnpx 加了 `--config.cacheDir` 时
+`--help` 正常、`check` 才炸；以及 `cmd | tail; echo $?` 取的是 `tail` 的退出码，我第一次就是这么
+读出个假的 `exit=0`（CLAUDE.md §6.1 表里已有这条，我照样又踩了一次）。
