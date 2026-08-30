@@ -521,9 +521,21 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
 
 ### Predicted, with the threshold that decides each
 
-1. **`sticky` usage recovers to ≥ 4%** on paired cells (r006: 1.1%, r005: 6.5%). Below 2 SE of
-   movement, the polarity hypothesis is dead and the r006 regression was something else entirely —
-   most likely the 9KB of growth, which r007 does not undo.
+1. **`sticky` recovers — read on `eval/sticky.mjs --paired`, not on a grep.** Two instruments
+   exist and the r006 read above quoted the looser one. Both are registered so the read cannot pick
+   afterwards:
+
+   | instrument | population | r005 → r006 | r007 clears at |
+   |---|---|---|---|
+   | `sticky.mjs --paired` (**the one that decides**) | pinned / cards with a heading-above-a-list | 3.2% → **0.0%** | **≥ 2.0%** |
+   | grep for the token, all cards | any `sticky` / all cards | 6.5% → 1.1% | ≥ 4.0% |
+
+   The AST instrument is the one that matches the rule, and it is the harsher read: **on the 121
+   shared cells r006 pinned nothing at all** — its 16 pinned cards are entirely in cells r005 never
+   ran. The absolute series is r004 0/298 → r005 19/549 → r006 16/703, so r005 is the only round
+   that moved this off the floor and r007 is asking whether the sentence r005 had is why. Below 2 SE
+   of movement on the AST read, the polarity hypothesis is dead and the r006 regression was
+   something else — most likely the 9KB of growth, which r007 does not undo.
 2. **Rule 2 is read on `preview-then-commit` and `runs that ended a step`, never again on
    `clicks that fired the turn`.** The premise this prediction was first written on — "rewritten
    twice and measured flat" — was a population error, corrected above: rule 2 landed in r006 at
