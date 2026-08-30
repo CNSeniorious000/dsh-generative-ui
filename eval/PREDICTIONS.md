@@ -539,6 +539,17 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
    doubt.
 5. **Panel `overall` does not fall.** r006 gained +0.329 ± 0.130 and r007 adds no new rule — the
    canvas/inline change is the only thing that could plausibly cost prose quality.
+6. **The canvas rate falls, and `changelog` is where it should show.** r006 wrote a canvas for
+   **29.2% of cards** and **32.0% of runs**, so there is room to move; `changelog` ("TypeScript 5.9
+   相比 5.8 更新了什么") is new in r007 and designed as the discriminator — a long, well-organised
+   answer to a question that asked for no file. **≤ 1 of its 10 runs should write a canvas.**
+
+   **This round has no control in the other direction, and the read must say so.** Every case in
+   the r007 suite is one where inline is correct or where it does not matter; not one asks for a
+   durable artefact. So a round that simply stopped writing canvases would improve every number
+   here and nothing would catch it — the §6.2 lesson about the sample that was supposed to stay
+   prose, missing. `onboard-doc` ("我要存下来，之后每来一个新人都改改再用") is added for r008 as
+   exactly that control. Until it has run, **a falling canvas rate is suggestive and not a result**.
 
 ### Not touched, deliberately
 

@@ -245,6 +245,15 @@ CASES = [
     {"id": "changelog", "kind": "single", "turns": 1, "opening": "TypeScript 5.9 相比 5.8 更新了什么？挑重要的说",
      "persona": "", "expect": "答案又长又规整，正适合用界面分组和筛选 —— 但用户只问了一个问题，没要文件。inline，不是 canvas。"},
     {"id": "http418", "kind": "single", "turns": 1, "opening": "HTTP 状态码 418 是什么", "persona": "", "expect": "一个事实问题。散文就够了。"},
+    # The control for the canvas/inline default, and the reason it exists: with `changelog` and
+    # `http418` both scored as "should NOT be a canvas" and nothing scored the other way, a round
+    # could improve every canvas number by never writing one, and no counter here would notice.
+    # This case asks for a durable thing in the user's own words — reused next week, kept open,
+    # edited later — so a drop in the canvas rate is only good news while THIS one keeps its file.
+    {"id": "onboard-doc", "kind": "single", "turns": 1,
+     "opening": "帮我做一份新人入职第一周的清单，我要存下来，之后每来一个新人都改改再用",
+     "persona": "",
+     "expect": "用户明确要了一个能留存、能反复改的东西。canvas，不是 inline —— 这是本套用例里唯一一个该出文件的。"},
 ]
 
 BY_ID = {c["id"]: c for c in CASES}
