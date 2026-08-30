@@ -16,7 +16,7 @@ wrong, say so in the read and register a new one for the NEXT round.
 
     uv run eval/read-round.py <before-round-dir> <after-round-dir>
 """
-import re, subprocess, sys, pathlib
+import json, re, subprocess, sys, pathlib
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
@@ -37,6 +37,15 @@ def grab(text: str, pattern: str, what: str) -> list[str]:
     m = re.search(pattern, text)
     if not m: sys.exit(f"could not read {what}; the instrument's output format moved:\n{text[:800]}")
     return list(m.groups())
+
+
+def case_canvases(round_dir: str, case: str) -> tuple[int, int]:
+    """(runs of this case that wrote a canvas, runs of it that finished)."""
+    d = pathlib.Path(round_dir) / case
+    if not d.is_dir(): return (0, 0)
+    runs = [json.loads(p.read_text()) for p in d.glob("*/meta.json")]
+    runs = [m for m in runs if m["status"] in ("complete", "timeout")]
+    return sum(1 for m in runs if any(c["kind"] == "canvas" for t in m["turns"] for c in t["cards"])), len(runs)
 
 
 def verdict(name: str, ok: bool | None, detail: str) -> None:
@@ -91,13 +100,45 @@ def main() -> None:
     verdict("5. panel overall 不下降（干净配对那一行）", float(ov[1][0]) >= -2 * float(ov[1][1]),
             f"Δ {ov[1][0]} ± {ov[1][1]}（全部配对那行是 {ov[0][0]} ± {ov[0][1]}）")
 
-    # 6. canvas. NO control in this suite yet — `onboard-doc` runs from r008 — so a fall here is
-    #    suggestive and the read must say so rather than bank it.
+    # 6. canvas. The control (`onboard-doc`) landed in this round only because a resume re-read the
+    #    case list, so it is read separately at 7 below rather than folded in here; the paired
+    #    canvas rate on its own still cannot tell "stopped writing canvases for questions" from
+    #    "stopped writing canvases".
     cv = re.search(r"…canvases\s+([+-][\d.]+) ± ([\d.]+)", d)
     ch = len(list((pathlib.Path(after) / "changelog").glob("*/turn-*.tsx"))) if (pathlib.Path(after) / "changelog").exists() else 0
     verdict("6. canvas 率下降（无反向对照，仅供参考）", None,
             f"Δ {cv.group(1)} ± {cv.group(2)}" if cv else "无配对（canvas 计数为 0）")
     print(f"         changelog 卡片 {ch} 张 —— 手数其中 canvas 的比例，阈值 ≤1/10 个 run 写文件")
+
+    # 7-9. The three cases a resume folded into this round. Registered here while it was still
+    # running and before any of their data existed — an unregistered read of a case added mid-round
+    # would be indistinguishable from picking the threshold to fit.
+    print("\n── 中途并入本轮的三个新用例，阈值同样先于数据写死 ──\n")
+
+    hit, ran = case_canvases(after, "onboard-doc")
+    # The control for the canvas/inline change, and the only case in the suite that ASKS for a file
+    # ("我要存下来，之后每来一个新人都改改再用"). The rewrite was meant to stop canvases for
+    # questions, not to abolish them; under 4 of 10 means it over-corrected and the canvas numbers
+    # elsewhere are bought with a regression here.
+    verdict("7. onboard-doc 仍然出文件（≥4/10）", hit >= 4 if ran else None,
+            f"{hit}/{ran} 个 run 写了 canvas" + ("" if ran else " —— 该用例还没跑到"))
+
+    hit_c, ran_c = case_canvases(after, "changelog")
+    verdict("8. changelog 不出文件（≤1/10）", hit_c <= 1 if ran_c else None,
+            f"{hit_c}/{ran_c} 个 run 写了 canvas" + ("" if ran_c else " —— 该用例还没跑到"))
+
+    # The language rule is absolute — "every label, every button, every helper line" — but this is
+    # its first measurement ever, so the bar is set on what would make it worth rewriting rather
+    # than on a prior: above 20% and the rule does not survive contact with a Spanish conversation.
+    sw = run("uv", "run", "eval/sweep.py", after)
+    cjk = re.search(r"非中文对话里出现 CJK\s+(\d+) 张 / (\d+) 张", sw)
+    if cjk and int(cjk.group(2)):
+        n, total = int(cjk.group(1)), int(cjk.group(2))
+        verdict("9. es-meal-plan 的卡片不夹中文（<20%）", n / total < 0.2, f"{n}/{total} 张卡带 CJK = {n/total:.0%}")
+    else:
+        verdict("9. es-meal-plan 的卡片不夹中文（<20%）", None, "该用例还没跑到，或本轮没有非中文用例")
+
+    print("\n  binary-forks 本轮只收数据：二元双按钮没有检测器（r006 那次 1/211 是一次性脚本）。")
 
 
 if __name__ == "__main__": main()
