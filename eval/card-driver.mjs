@@ -110,6 +110,13 @@ const PROBE = () => {
   const right = host.getBoundingClientRect().right;
   let worst = null;
   for (const el of host.querySelectorAll("*")) {
+    // Elements INSIDE an <svg> are skipped: `getBoundingClientRect` on an SVG child returns its
+    // transformed geometry, unclipped by the <svg> viewport. KaTeX draws a stretchy \sqrt as a
+    // <path> and it reported 7690px of "overflow" on a formula rendering correctly inside a
+    // scrolling container — four of r005's five worst, all in `formula-derive`, all arriving with
+    // the round that first recommended katex: the rule's own success as the rule's own regression.
+    // The <svg> element itself still counts, because a too-wide drawing IS this defect.
+    if (el.ownerSVGElement) continue;
     const r = el.getBoundingClientRect();
     if (r.width > 0 && r.height > 0 && r.right > right + 1 && (worst === null || r.right - right > worst.px)) {
       worst = { px: Math.round(r.right - right), tag: el.tagName.toLowerCase(), cls: (el.className || "").toString().slice(0, 60), text: (el.innerText || "").trim().slice(0, 40) };
