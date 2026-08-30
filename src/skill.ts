@@ -14,6 +14,10 @@ import { CANVAS_DIR, CANVAS_SUFFIX, CAPABILITY_PREFIX, FENCE_LANG, capabilityMod
 
 /** The checker, from pkg.pr.new: @genui/cli is a private workspace package and not on npm. */
 const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main";
+// How to run `@genui/cli` straight from that URL. One constant because the two places that print a
+// command must not drift apart, and because each runner needs something different from the others —
+// see the paragraph under "Check it before you hand it over", where all three are spelled out.
+const RUN_CLI = `BUN_INSTALL_CACHE_DIR="$TMPDIR/bun-cache" bunx --yes genui@${CLI_URL}`;
 
 export const SKILL_NAME = "generative-ui";
 
@@ -67,7 +71,7 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     `${check} \`build\` and \`dev\` want runnable JS, so they take a different one:`,
     "",
     "```",
-    `npm_config_cache="$TMPDIR/npm-cache" npx --yes ${CLI_URL} build <file> -i ${standaloneMap}`,
+    `${RUN_CLI} build <file> -i ${standaloneMap}`,
     "```",
     "",
     `That second map stubs \`${CAPABILITY_PREFIX}/*\` — the exported page has no dsh around it, so those calls log to`,
@@ -1081,14 +1085,33 @@ A canvas is a file, so you can run a checker over it. \`@genui/cli\` validates e
 kind of TSX:
 
 \`\`\`
-npm_config_cache="$TMPDIR/npm-cache" npx --yes ${CLI_URL} check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
+${RUN_CLI} check <file>${typesMap === undefined ? "" : ` -i ${typesMap}`}
 \`\`\`
 
-\`npx\`, not \`bunx\` — bun cannot parse a scoped package name inside that URL. The
-\`npm_config_cache\` prefix is not optional: your commands run sandboxed and npm's default cache
-under \`~/.npm\` is not writable there, so a bare \`npx\` dies with \`EPERM mkdtemp\` and a message
-about root-owned files that has nothing to do with the real cause. \`check\` includes
-TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
+**\`bunx\` needs the package NAME in front of the URL** — \`genui@https://…\`. Bun reads the whole
+argument as \`<name>@<spec>\`, so a bare URL gives it an empty name and it stops at
+\`unrecognised dependency format\` before fetching anything. Any name works; it is a label, not a
+lookup.
+
+If bun is not there, in order:
+
+\`\`\`
+pnpx --config.blockExoticSubdeps=false ${CLI_URL} check <file>
+npm_config_cache="$TMPDIR/npm-cache" npx --yes ${CLI_URL} check <file>
+\`\`\`
+
+Both take the bare URL. The pnpm flag is **not** optional — the CLI pulls \`@genui/unocss\` by URL
+as well, and pnpm refuses URL-resolved SUBdependencies by default, so without it you get
+\`ERR_PNPM_EXOTIC_SUBDEP\` naming a package you never asked for. Do **not** add
+\`--config.cacheDir\` beside it: pnpm then loses the package's own bin and dies with
+\`spawn cli ENOENT\`, which reads like the package is broken and is not.
+
+The bun and npm forms move their cache out of your home directory, because your commands run
+sandboxed and the default location may not be writable there. That is measured for npm — a bare
+\`npx\` dies with \`EPERM mkdtemp\` and a message about root-owned files that has nothing to do
+with the real cause; for bun it is the same precaution rather than the same measurement.
+
+\`check\` includes TypeScript diagnostics; \`lint\` is the faster syntax-only pass.
 
 ${maps}
 
