@@ -236,6 +236,14 @@ CASES = [
     {"id": "cat-names", "kind": "single", "turns": 1, "opening": "给我五个猫名", "persona": "", "expect": "要几个东西，就是要更多的候选。"},
     {"id": "mortgage", "kind": "single", "turns": 1, "opening": "帮我算下房贷，100 万 30 年利率 4.2%", "persona": "", "expect": "有几个用户显然会想改的数字。"},
     {"id": "closure", "kind": "single", "turns": 1, "opening": "什么是闭包？", "persona": "", "expect": "一个概念解释。散文就够了。"},
+    # A question whose ANSWER is long, structured and reference-shaped — the exact shape that makes
+    # a model reach for a file. Reported from a real session: asked what changed in a version, the
+    # model wrote `claude-code-2-1-251.ui4a.tsx` into the workspace, a file the user now owns and
+    # has to close, for a question they asked once. The corpus could only just see this — `cron-read`
+    # drew 5 canvases in r005 and 6 in r006, `closure` one — because no fixture asked a question with
+    # a big tidy answer. This one does. A card is right here; a FILE is not.
+    {"id": "changelog", "kind": "single", "turns": 1, "opening": "TypeScript 5.9 相比 5.8 更新了什么？挑重要的说",
+     "persona": "", "expect": "答案又长又规整，正适合用界面分组和筛选 —— 但用户只问了一个问题，没要文件。inline，不是 canvas。"},
     {"id": "http418", "kind": "single", "turns": 1, "opening": "HTTP 状态码 418 是什么", "persona": "", "expect": "一个事实问题。散文就够了。"},
 ]
 

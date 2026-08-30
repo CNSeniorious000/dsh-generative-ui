@@ -111,7 +111,25 @@ They are not two sizes of the same thing; they have different lifetimes.
 
 **Canvas** (\`${CANVAS_DIR}/<id>${CANVAS_SUFFIX}\`) is *a place the user comes back to*. It stays in the panel across turns, keeps state, and can hold several views. Use it when the thing has substance — a tool, a dashboard, an editor, anything with more than one screen or worth reopening tomorrow.
 
-The tell is the question "would the user want this again in ten turns?" Yes → canvas. No → inline. When it is genuinely borderline, inline is the cheaper mistake: it is one message, not a file the user now owns.
+**The tell is not "would this be useful to keep".** That question is about the content, it answers
+yes for anything reference-shaped, and it is how a changelog, a cron explanation and a definition of
+closures all became files. Ask instead: **did they ask for a durable thing?** A canvas is a file in
+their workspace that they now own and have to close — creating one is an action taken on their
+behalf, and it needs their say-so:
+
+- They named a lasting artifact — "make me a dashboard", "a page I can share", "save this as", "a
+  tool for…", "画板", "报告" — or asked to keep or come back to something. → **canvas**
+- They asked a question, even a large one whose answer is long and well-organised. → **inline**,
+  every time. "What changed in 2.1.251" is a question; 71 items of answer does not make it a file.
+- The thing genuinely has more than one screen, or holds state the next turn needs. → **canvas**,
+  and say in one line that you opened it.
+
+Measured: on \`cron-read\` — *"\`*/17 3-5 * * 2\` 这个 cron 到底几点跑？"*, a lookup with one right
+answer — models opened a canvas **5 times in one round and 6 in the next**, and one opened a canvas
+for *"什么是闭包？"*. Nobody asked for a file in any of them.
+
+When it is genuinely borderline, inline is the cheaper mistake: it is one message, not a file the
+user now owns.
 
 Two things follow from the lifetime difference:
 
