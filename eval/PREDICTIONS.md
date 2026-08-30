@@ -563,6 +563,12 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
    prose, missing. `onboard-doc` ("我要存下来，之后每来一个新人都改改再用") is added for r008 as
    exactly that control. Until it has run, **a falling canvas rate is suggestive and not a result**.
 
+   **And it was already falling before the change existed.** r005→r006 reads `…canvases` at
+   **−0.053 ± 0.020** (2.6 SE) with nothing in that round touching the canvas decision. So r007
+   inherits a downward drift, and a fall of that size in r007 is the drift continuing, not the rule
+   landing. Registered so the r007 read cannot claim it: **the change is credited only if the fall
+   is larger than r006's, and `changelog` clears its ≤1-of-10 bar.**
+
 ### Not touched, deliberately
 
 The live-region rule quotes **"0 of 64 corpus cards announce their results"** and **"8 of 23"** —
