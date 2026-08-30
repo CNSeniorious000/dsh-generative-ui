@@ -49,6 +49,17 @@ export function disposeCompiler(): void {
   initPromise = null;
 }
 
+/**
+ * Does this source still export a component to mount?
+ *
+ * Deliberately a source test rather than a compile test: the failure being caught is a module that
+ * compiles perfectly and has nothing in it. Matches the two spellings the renderer accepts, and is
+ * written to ignore both comment forms so a `// export default` in prose cannot fake it.
+ */
+const hasDefaultExport = (source: string) =>
+  /^\s*export\s+default\s/m.test(source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "")) ||
+  /\bexport\s*\{[^}]*\bas\s+default\b/.test(source);
+
 export function createBrowserTsxCompiler(): TsxCompiler {
   return {
     async compile(code, options = {}) {
@@ -68,12 +79,23 @@ export function createBrowserTsxCompiler(): TsxCompiler {
       if (options.partial === true) return build(normalizeGeneratedTsx(code, { mode: "streaming" }));
       try {
         return build(normalizeGeneratedTsx(code, { mode: "final" }));
-      } catch {
+      } catch (error) {
         // **The final compile must never be more fragile than a streaming frame.** The only
         // difference between the modes is that `streaming` first cuts back the still-being-typed
         // tail, and some damage (an unterminated string, typically) is only recoverable by
         // cutting. Losing the last half-sentence beats going blank on the last frame.
-        return build(normalizeGeneratedTsx(code, { mode: "streaming" }));
+        const cut = normalizeGeneratedTsx(code, { mode: "streaming" });
+        // **But only if anything is left to render.** The cut is bounded by the FIRST thing it
+        // cannot parse, so a card that puts its data above its component — the common shape when
+        // the data is long — loses the component too, and what comes back is a module of imports
+        // and type aliases. That compiles. It exports nothing, mounts nothing, and the surface
+        // reports no error, so the reader gets a card of zero height and the model is never told.
+        // Measured on a real session: the model wrote `{ name: "questions: "list[...]" }` in the
+        // first array element, `streaming` returned the same 265 characters for all 938 frames
+        // while the source grew to 13693, and the final frame took this fallback and went blank.
+        // The `final` error is the useful one here — it names the line and column of the typo.
+        if (!hasDefaultExport(cut)) throw error;
+        return build(cut);
       }
     },
   };

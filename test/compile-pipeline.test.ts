@@ -54,10 +54,13 @@ describe("createBrowserTsxCompiler", () => {
   });
 
   // The final→streaming fallback. `final` cannot close a truncated type declaration; `streaming`
-  // cuts it off. Measured across every prefix of all 362 corpus cards: this rescues 718 of 13589.
-  test("a prefix only streaming can rescue still compiles when settled", async () => {
-    const { code } = await compile('import { useState } from "react"\n\ntype T');
-    expect(typeof code).toBe("string");
+  // cuts it off. Measured over the 2342 settled corpus cards: 50 reach this branch and 11 come
+  // back as a real card. The input has to be one of those 11 shapes — damage BELOW the component,
+  // so cutting it away leaves something to mount. An input whose damage sits above the component
+  // is rescued into an empty module, which is now a rethrow; see the test further down.
+  test("a card only streaming can rescue still compiles when settled", async () => {
+    const { code } = await compile('export default function A() {\n  return <div>hi</div>\n}\n\ntype T');
+    expect(code).toContain("jsx");
   });
 
   test("changed is false when the output matches previousCode", async () => {
@@ -87,22 +90,38 @@ test("every settled card yields output that compiles", async () => {
 });
 
 /**
- * The fallback's real value is smaller than "718 prefixes rescued" suggests.
+ * An empty rescue is not a rescue, on a card that has settled.
  *
- * `final` failing and `streaming` succeeding happens in 718 of 13589 corpus prefixes — but in
- * 241 of those the rescued module has **no default export left**, because cutting back the
- * half-typed tail cut past everything renderable. `import … type T` is the extreme case: it
- * normalizes to the empty string, compiles fine, and renders nothing.
+ * The measurement that set the old behaviour was taken over 13589 streaming PREFIXES: `final`
+ * failing while `streaming` succeeded happened 718 times, and 241 of those rescued a module with
+ * no default export left. The conclusion drawn — "both beat an exception mid-stream" — is true and
+ * is about the wrong branch. This fallback only runs for `partial: false`; the streaming path
+ * returns above it and never reaches here.
  *
- * So the fallback turns a thrown error into a blank surface 241 times and into a real card 477
- * times. Both beat an exception mid-stream, and this test pins the distinction so the number in
- * CLAUDE.md is not read as "718 cards saved".
+ * Re-measured over the 2342 SETTLED card sources in r003-r006, which is the population this branch
+ * actually sees: `final` compiles directly 2292 times (97.9%). Of the 50 that fall back, **11
+ * rescue a real card, 2 rescue a module that exports nothing**, and 37 fail both ways and throw
+ * regardless. So the guard keeps all 11 — they have a default export and build unchanged — and
+ * turns the 2 silent blanks into the `final` error, which names the line and column of the damage.
+ *
+ * A settled card that renders nothing and reports nothing is the worst of the three outcomes: the
+ * reader gets a zero-height gap, and the model is never told it wrote something broken.
  */
-test("a rescue can be empty, and that is still a rescue", async () => {
-  const { code } = await compile('import { useState } from "react"\n\ntype T');
-  expect(code).not.toContain("export default");
+test("a rescue with nothing left to render rethrows instead", async () => {
+  await expect(compile('import { useState } from "react"\n\ntype T')).rejects.toThrow();
 });
 
+/**
+ * The same input as a streaming frame must still be rescued silently.
+ *
+ * Mid-stream there is nothing worth reporting — the next frame supersedes this one — and the
+ * surface keeps the source block visible on its own (`hasPainted`). Turning that into an
+ * exception is the regression the guard above could easily have introduced.
+ */
+test("mid-stream, an empty rescue is still a rescue", async () => {
+  const { code } = await compile('import { useState } from "react"\n\ntype T', { partial: true });
+  expect(code).not.toContain("export default");
+});
 /**
  * `partial: true` is the streaming path and must not take the settled one.
  *
@@ -135,4 +154,46 @@ test("import.meta.resolve is rewritten against the import map", async () => {
   expect(mapped.code).toContain("https://esm.sh/some-asset");
   // No map, no rewrite: the specifier survives as written rather than being resolved to nothing.
   expect((await compile(source)).code).toContain("some-asset");
+});
+
+/**
+ * A final frame whose data literal is malformed above the component.
+ *
+ * `streaming` normalisation cuts at the FIRST thing it cannot parse. When the model puts a long
+ * data array above its component — the common shape when the data is long — that cut takes the
+ * component with it, and what survives is imports and type aliases. That compiles cleanly and
+ * exports nothing: the surface mounts an empty module, paints zero pixels, reports no error, and
+ * the model is never told anything went wrong.
+ *
+ * Taken verbatim from a real session (the model wrote `{ name: "questions: "list[...]" }`, fusing
+ * `name` and `type` into one broken string). There, `streaming` returned the same 265 characters
+ * for all 938 frames while the source grew past 13000, and the final frame took the fallback and
+ * went blank. The `final` error is the one worth surfacing — it carries the line and column.
+ */
+test("a fallback that would drop the component rethrows instead of compiling to nothing", async () => {
+  const compiler = createBrowserTsxCompiler();
+  const broken = `import { useMemo, useState } from "react"
+
+type Param = { name: string; type: string; default: string | null }
+type Tool = {
+  name: string
+  params: Param[]
+  returns: string
+  kind: "filesystem" | "search" | "exec" | "web" | "github" | "agents" | "goals" | "ui"
+}
+
+const TOOLS: Tool[] = [
+  { name: "questions: "list[dict[str, Any]]", default: null }] },
+]
+
+export default function Answer() {
+  return <div>{TOOLS.length}</div>
+}
+`;
+  await expect(compiler.compile(broken, { partial: false })).rejects.toThrow();
+  // The same source as a STREAMING frame must still succeed — going blank mid-stream is not an
+  // error worth showing, and this path is what keeps the source block visible instead.
+  const partial = await compiler.compile(broken, { partial: true });
+  expect(partial.code).not.toContain("export default");
+  disposeCompiler();
 });
