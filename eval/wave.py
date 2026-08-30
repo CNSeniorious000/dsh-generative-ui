@@ -276,7 +276,13 @@ async def main():
             if tripped:
                 return {"case": case["id"], "model": model, "status": "skipped", "turns": [], "elapsed": 0}
             meta = await drive.run(case, model, out, (args.light, args.dark), timeout)
-        if meta.get("status") == "error" and (meta.get("elapsed") or 0) < 1:
+        # Zero turns means the model was never reached — the signature of a boot that failed, and
+        # the one thing a retry cannot change. This used to test `elapsed < 1`, which was true when
+        # a dead boot returned in 0.1s and became FALSE the moment `drive.boot` learned to retry:
+        # the same failure now takes ~90s, the guard stopped counting it, and **85 cells burned in
+        # one 13-minute Desktop-grant outage with nothing stopping them**. A fix that slows a
+        # failure down silently disables every guard that keyed on how fast it was.
+        if meta.get("status") == "error" and not meta.get("turns"):
             quick_deaths += 1
             if quick_deaths >= 3 and not tripped:
                 tripped.append(meta.get("error", "")[:300])

@@ -120,14 +120,18 @@ class Turns:
         to move out of it.
         """
         last: Exception | None = None
-        for attempt in range(4):
+        # 3+6+12+24+48 ≈ 93s. The first version stopped at 18s, and the outage that followed lasted
+        # THIRTEEN MINUTES — so this is sized to absorb a flap and to give up on an outage, which is
+        # the right split: a wave that keeps trying through a real outage is a wave burning cells.
+        # `wave.py`'s three-dead-runs guard is what handles the long case, and it keys on zero turns
+        # rather than on how fast the death was, so lengthening this cannot switch it off again.
+        for attempt in range(6):
             try: return await cls._boot_once(model, cwd, log, deadline)
             except RuntimeError as error:
                 last = error
                 if "before announcing a port" not in str(error): raise
-                # Long enough for a TCC flap to pass, negligible against a 1500s run budget.
-                await asyncio.sleep(3 * (attempt + 1))
-        raise RuntimeError(f"{last} (4 attempts)")
+                await asyncio.sleep(3 * 2 ** attempt)
+        raise RuntimeError(f"{last} (6 attempts over ~90s)")
 
     @classmethod
     async def _boot_once(cls, model: str, cwd: pathlib.Path, log: pathlib.Path, deadline: float):
