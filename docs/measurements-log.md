@@ -8840,3 +8840,44 @@ Same family as `find -newermt` failing silently and `pgrep -f` matching its own 
 instrument produced the appearance of a result. This one is the mirror image of those two: they
 said "no problem" when there was one, this said "problem" when there was none, and the cost was the
 same, a person going to look.
+
+### A card that went blank while compiling cleanly (2026-08-30)
+
+Reported as "it became unrenderable a few times during streaming and the height collapsed to 0".
+Replayed from the session's 1068 text-chunk frames, and the chain is complete:
+
+The model wrote `{ name: "questions: "list[dict[str, Any]]", default: null }` — `name` and `type`
+fused into one broken string — in the **first element** of a 33-entry data array that sits **above**
+the component. From there:
+
+| step | result |
+|---|---|
+| `normalizeGeneratedTsx(streaming)` | cuts at the first unparseable token → **265 characters, unchanged across all 938 fenced frames** while the source grew 900 → 13693 |
+| that module | imports and two type aliases. **Compiles cleanly.** No `export default`. |
+| the surface | nothing to mount, zero pixels, `hasPainted` false — correct, and why the source block stayed up |
+| the final frame | `final` throws `Expected ',', got 'ident' at 12:107`, the fallback returns the same 265 characters, and the card settles **blank with no error reported** |
+
+The session contains no card-failure event at all, which is the part worth fixing: a settled card
+that renders nothing and reports nothing tells the reader nothing and the model less.
+
+**The near-miss is the lesson.** The existing behaviour was pinned by a test citing a real
+measurement — over 13589 streaming PREFIXES, `final` failing while `streaming` succeeded happened
+718 times, 241 of them rescuing a module with no default export, and "both beat an exception
+mid-stream". True, and about the wrong branch: the fallback only runs for `partial: false`, and the
+streaming path returns before it. **A number measured on prefixes was being used to justify the
+behaviour of settled cards.**
+
+Re-measured on the population the branch actually sees — 2342 settled sources in r003-r006:
+
+| | count |
+|---|---|
+| `final` compiles directly | 2292 (97.9%) |
+| falls back | 50 (2.1%) |
+| └ rescues a real card | **11** |
+| └ rescues an empty module | **2** |
+| └ fails both ways, throws anyway | 37 |
+
+So the fallback is worth keeping — 11 to 2 — and the guard added keeps all 11 while turning the 2
+silent blanks into the `final` error, which carries the line and column. Had the prefix number been
+taken at face value the guard would have looked like a regression; had it been ignored, the
+fallback might have been removed and 11 real cards lost.
