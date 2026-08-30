@@ -15,6 +15,12 @@ import { spawn } from "node:child_process";
 const cardPath = process.argv[2];
 const PORT = Number(process.argv[3] ?? 47925);
 const CHUNKS = Number(process.argv[4] ?? 24);
+// Click at a FIXED frame rather than at the first opportunity. The two causes this probe has to
+// separate live in different parts of the stream: a hook-signature change remounts the boundary
+// early (CLAUDE.md: all three changes inside the first 21%, before `return` exists), while an
+// esm.sh probe for an unregistered import settles whenever the network says so. Clicking "as soon
+// as possible" lands in the first window and cannot see past it.
+const CLICK_AT = Number(process.argv[5] ?? 0);
 const resolveFrom = (dir) => { const url = new URL(`${dir}/package.json`, import.meta.url); if (!existsSync(url)) return null; try { const r = createRequire(url); r.resolve("playwright"); return r } catch { return null } };
 const pwRequire = ["..", "../../macaron-genui-demo"].map(resolveFrom).find(Boolean);
 const { chromium } = await pwRequire("playwright");
@@ -41,11 +47,17 @@ let clickedAt = null, openAfterClick = null;
 // A disclosure counts as open when its panel has rendered content.
 const openCount = () => page.evaluate(() => document.querySelectorAll('[id^="headlessui-disclosure-panel"]').length);
 
+// Every frame streams, INCLUDING the last: production delivers the whole card as a streaming
+// frame and only then settles it, and `deliveryFor` answers `nothing` for that settle because the
+// two differ by trailing whitespace alone. An earlier version of this loop flipped `streaming` to
+// false on the same step that added the final chunk, so the settle saw changed content, returned
+// `replace`, and remounted the card — a remount this probe had manufactured and would have
+// reported as the product's bug.
 for (let i = 1; i <= CHUNKS; i++) {
   const prefix = code.slice(0, Math.min(i * step, code.length));
-  await page.evaluate(({ c, s }) => globalThis.__push(c, s), { c: prefix, s: i < CHUNKS });
+  await page.evaluate(({ c, s }) => globalThis.__push(c, s), { c: prefix, s: true });
   await page.waitForTimeout(400);
-  if (clickedAt === null) {
+  if (clickedAt === null && i >= CLICK_AT) {
     // Only click a control that is FULLY FORMED. A partial frame can paint a `<button>` whose
     // attributes have not arrived yet; clicking that measures the harness, not the card, and the
     // first version of this probe did exactly that (`aria-expanded null -> null` at frame 3).
@@ -64,6 +76,8 @@ for (let i = 1; i <= CHUNKS; i++) {
     }
   }
 }
+// The settle, as production does it: same code, streaming off.
+await page.evaluate((c) => globalThis.__push(c, false), code);
 await page.waitForTimeout(2500);
 const finalOpen = await openCount();
 const finalAria = await page.evaluate(() => document.querySelector('button[id^="headlessui-disclosure-button"]')?.getAttribute("aria-expanded"));

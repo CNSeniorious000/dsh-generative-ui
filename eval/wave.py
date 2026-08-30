@@ -230,12 +230,33 @@ async def main():
 
     gates = {name: asyncio.Semaphore(size) for name, size in {u: n for u, n in UPSTREAM.values()}.items()}
     inflight = asyncio.Semaphore(RUNS)
+    lock = REPO / ".wave-running"
+    # **Read it before writing it, and BEFORE `repoint`.** Two separate lessons in one guard.
+    #
+    # The lock has carried the owner's pid since it was added and nothing ever looked: `wave.py`
+    # overwrote it, so a second wave on the same round started happily and two processes wrote the
+    # same cells. That happened — a watchdog `rm -f`'d what it took for a crash leftover while the
+    # owner was alive and mid-round, and only a `ps` afterwards found the pair. The information
+    # needed to tell live from dead was inside the file the whole time. `ps -p` rather than
+    # `kill -0`, which succeeds for a zombie, and matched against the command line so a recycled
+    # pid belonging to something else does not read as a live wave.
+    #
+    # The placement is the second lesson, and this file already teaches it about the credential
+    # pre-flight: a check whose `sys.exit` skips the `finally` must run before there is any state
+    # to leave behind. The first version of THIS guard sat after `repoint`, and its refusal left
+    # ten model homes pointed at a round's frozen plugin — caught only because the counterfactual
+    # test that proved the guard works also proved it leaked.
+    if lock.exists():
+        owner = lock.read_text().strip()
+        alive = owner.isdigit() and subprocess.run(["ps", "-p", owner, "-o", "command="],
+                                                   capture_output=True, text=True).stdout.find("wave.py") >= 0
+        if alive: sys.exit(f"wave: pid {owner} is already running a wave — refusing to start a second one")
+        print(f"wave: clearing a lock left by dead pid {owner or '?'}", flush=True)
     restore = repoint(models, frozen)
     # The same lock `scripts/build.ts` already honours, naming this process so a dead wave's lock
     # is detectably dead. A round here is protected by its own frozen copy and would survive a
     # rebuild, but a `bun run build` in another window still churns `lib/` under whatever runs
     # next, and the pre-push hook rebuilt it mid-round once already.
-    lock = REPO / ".wave-running"
     lock.write_text(str(os.getpid()))
     # A `finally` does not run when the process is killed, and every wave in this repo has ended by
     # hand at least once. Turning the signal into an exception is what lets the homes be put back.
