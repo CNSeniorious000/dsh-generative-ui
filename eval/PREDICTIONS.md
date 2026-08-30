@@ -556,6 +556,20 @@ Both halves go back: polarity flipped, bolded token restored, corpus statistic k
    相比 5.8 更新了什么") is new in r007 and designed as the discriminator — a long, well-organised
    answer to a question that asked for no file. **≤ 1 of its 10 runs should write a canvas.**
 
+   > **Corrected mid-round: `onboard-doc` IS in r007, and so are the other two new cases.** r007
+   > died at 24/270 when the Desktop grant vanished, and the process that resumed it re-imported
+   > `cases.py` — which by then held the three cases added while it ran. The round is **30 cases ×
+   > 10 models = 300**, its `manifest.json` was rewritten to match, and the paragraph below is
+   > wrong about the control being absent.
+   >
+   > **The effect is benign and the mechanism is not.** Adding cases is additive: the other 27 are
+   > untouched, every case runs against the same frozen plugin, and r006↔r007 pairs are an
+   > intersection so they do not move. Had the edit CHANGED an existing case, r007 would have run
+   > some cells against one version of it and some against another, with nothing in the output
+   > saying which. **The freeze covers what the model reads (`lib/`); it does not cover what the
+   > harness spawns (`card-driver.mjs`) or what defines the round (`cases.py`).** Both gaps are
+   > now recorded in CLAUDE.md; neither is fixed.
+
    **This round has no control in the other direction, and the read must say so.** Every case in
    the r007 suite is one where inline is correct or where it does not matter; not one asks for a
    durable artefact. So a round that simply stopped writing canvases would improve every number
