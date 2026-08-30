@@ -410,7 +410,12 @@ Data visualization is the stated exception — chart series need their own hues 
 - **A settings panel is impossible — right conclusion, wrong reason.** Measured 2026-08-23 in a real `dsh web`: `ctx.inject(["settings"], …)` **never fires its callback**, so the client ctx carries no `settings` service at all and there is nothing to be refused by. Every claim in the old wording was wrong: `settings-not-exposed` appears nowhere in the tree (`dsh-host-apiproxy` has `settings-rejected` and `settings-conflict`), and its `settingsNs` allowlist belongs to the **model provider directory**, not to plugin settings. Built-in plugins (`dsh-client-locale`, `dsh-client-ui-conversation`) do call `settings.register`, so the service exists somewhere — just not on the context a third-party client plugin is given. Configuration goes through `cordis.patch.yml`.
 - **dsh is a developer preview** (devDependencies sat at `0.1.0-rc.8` when this was written; package.json is the source of truth) and openly warns about breaking changes. On every version bump, re-verify the platform table, slot names, and event signatures — rc.7→rc.8 already changed `ChatNodeSeat`'s props (`loadImage` → `renderMessageImages`), we just didn't use them.
 
-## 4.5 Empirical basis for the prompt (2026-08-20, 40 prompts)
+## 4.5 Why the trigger belongs in the resident layer, not the skill
+
+The finding this section exists for: **a skill the model never reads may as well not exist**, so the
+signal that says "this wants an interface" has to sit in the layer that rides every request. The
+evidence is below, kept because the rules it produced are still load-bearing; the per-round narrative
+is in [docs/measurements-log.md](docs/measurements-log.md).
 
 Ran 40 prompts through `dsh --profile headless "<prompt>"` (20 inline, 20 canvas), reading `tool/call` and
 `reasoning-chunks` out of `~/.dsh/sessions/<cwd-key>/session-*/session.jsonl.zstd` to look at the **process**, not
@@ -465,7 +470,7 @@ Three other empirical corrections:
   so the sidebar never opened while the model said "done." 1 of the 40 hit it. The regex exists to prevent directory
   escape, not to enforce ASCII; it's now the exclusion-based `/^[^/\\.\s]+$/`.
 
-### Verified on the failing subset first (11 prompts, 2 of them controls)
+### Every failure flipped, and both controls held
 
 Re-ran the first round's failures verbatim. All flipped, and both controls held rather than being pushed too far:
 
@@ -508,7 +513,7 @@ Backtick counts observed were 3/5/6/8 — **not one prompt wrote exactly four** 
 more and matches the close to the open, so everything rendered fine. That tolerance was the right call. What was
 actually lost was the one that wrote the language as `tsx` (right intent, slipped hand).
 
-### Full re-run after the changes (the same 40)
+### More UI and fewer steps, over the same 40 prompts
 
 After validating on the failing subset, re-ran the **complete 40** unchanged. These are the comparable numbers:
 
@@ -556,7 +561,7 @@ backticks or more (counting four misses 3/5/6/8), and canvas artifacts must be c
 directory (my original `runs/*/ui4a/canvases/*.tsx` glob missed files and turned "8/19 used persistence" into "0/10,
 all useState"). Confirm your baseline numbers are real before changing a prompt.
 
-### What the 2026-08-20…22 rounds established
+### What the rounds established
 
 The rounds themselves are in [docs/measurements-log.md](docs/measurements-log.md) — the numbers, the per-prompt
 tables, and the reasoning traces each conclusion was read out of. What survives them:
@@ -1253,10 +1258,8 @@ styled against a design language nobody measured. The host publishes the answer;
   loaded — the population where the rule fires is the one the corpus does not contain. Do not read
   a low corpus rate as "the rule does nothing" without asking which environment the corpus samples.
 
-### 6.855 The host-matching rules, measured after
-
-The three rules in 6.85 landed together and wave 5 is the after-measurement — 45 verdicts, the
-same corpus questions, the same three models:
+**After the three rules shipped**, wave 5 measured the same corpus questions on the same three
+models — 45 verdicts:
 
 | wave | `font-medium` | `font-semibold` | `font-bold` | semibold share |
 |------|---------------|-----------------|-------------|----------------|
@@ -1277,7 +1280,7 @@ mid-wave (again — see 6.8), so the measurement is 45 verdicts and not 72. And 
 that the old guard would have discarded**: the split stale check reported them as
 `note: src/client/ …`, a render change that leaves the verdict standing.
 
-### 6.857 Sampling more models, and what the gateway will not give you
+### 6.86 Sampling more models, and what the gateway will not give you
 
 A wave sampled three models from two families, which makes every result a claim about those
 families. It now samples six across six upstreams — `macaron-v1-venti`,
@@ -1309,7 +1312,7 @@ Three things this cost, all worth knowing before adding a model:
   `ok`. Same class as the build-vs-test artefact confusion in 6.8 — a plausible result from a
   measurement that never ran. `command -v` the tool before trusting a loop built on it.
 
-### 6.86 Errors that reach only the reader teach the model nothing
+### 6.87 Errors that reach only the reader teach the model nothing
 
 `onError` had no consumer: a card that failed to compile painted a red panel and the model never
 learned anything. Measured on a real session — the surface reported *"'modern-monaco' has no
@@ -1326,7 +1329,7 @@ said nothing). Verified end to end in a browser: the card failed, the `[自动]`
 16.5s later, and the model replied *"its actual exports are Workspace, errors, hydrate, init, and
 lazy … instead of using the named import I assumed existed"*.
 
-### 6.865 A repaint is not a recovery, and a cancelled report must stay reportable
+### 6.88 A repaint is not a recovery, and a cancelled report must stay reportable
 
 The reporting above shipped with two defects that cancelled each other into silence, and both were
 found by review rather than by use — which is the point: the failure mode is *nothing happening*.
@@ -1348,7 +1351,7 @@ identical* — one level down: **a callback named for the happy path will be cal
 too, if the recovery goes through the same code.** Ask what the library does about an error before
 deciding what its success callback means.
 
-### 6.87 What dsh gives you, and one seam that does not fit
+### 6.89 What dsh gives you, and one seam that does not fit
 
 Read `deepseek-ai/deepseek-harness/docs` before hand-rolling: `capability-seams.md` is the index of
 every `ctx.*` service, and `defensive-patterns.md`'s first rule ("report orthogonal outcomes
