@@ -8951,3 +8951,58 @@ BLOCKED，与本文件前面那条独立的 npm 记录一致，所以探针有�
 顺带两条自查：**`--help` 通过不代表 `check` 通过** —— pnpx 加了 `--config.cacheDir` 时
 `--help` 正常、`check` 才炸；以及 `cmd | tail; echo $?` 取的是 `tail` 的退出码，我第一次就是这么
 读出个假的 `exit=0`（CLAUDE.md §6.1 表里已有这条，我照样又踩了一次）。
+
+## 流式期间的点击为什么不作数 (2026-08-31)
+
+用户报告「它在 streaming 过程中点击的都不作数」。最小复现只需要两帧：
+
+```
+第 1/2 帧点击：aria-expanded false → true   （点击确实登记了）
+第 2 帧：只是把剩下的 JSX 追加上去
+结束后：      aria-expanded false           （被擦掉）
+```
+
+**一次会增长 JSX 的流式追加，就足以让卡片内部定义的子组件重挂、state 归零。**
+`scripts/click-midstream.mjs` 复现，`scripts/state-across-frames.mjs` 做机制对照。
+
+### 机制
+
+`partial-react` 的稳定 slot（`src/state.ts`）把生成的组件**当普通函数调用**：
+
+```js
+if (typeof Current === "function" && !isClassComponent(Current)) return Current(props);
+```
+
+所以根组件的 hooks 落在 wrapper 的 fiber 上，跨重编译存活。**但这只保根。** 卡片自己定义的
+`Child` / `Group` 走的是 `createElement(Child, …)`，而每次重编译都是一次新的模块求值，`Child`
+是个全新的函数对象；React 按 `element.type` 的身份比较，身份变了就卸载重挂，子树里的一切 state
+——包括 headlessui `Disclosure` 的 `open`——全部重置。
+
+实测对照证实了这个边界：
+
+| 模式 | 根组件 state | 子组件 state |
+|---|---|---|
+| `push`（流式追加） | 保住 | **丢失** |
+| `render`（replace / redeliver） | 保住 | **丢失** |
+
+### 我第一次把它测成了「没问题」
+
+第一版对照卡的第二帧只追加了一行**注释**。没有 JSX 变化 → 没有实质重编译 → 两个 state 都活下来，
+于是我记下「假设被推翻」，并开始在探测/redeliver 那边找别的解释。**假设是对的，是刺激物太弱。**
+差一点就把一个真缺陷写成「测过了，没这回事」。
+
+一个刺激物如果不会让被测机制动起来，它的阴性结果什么也不说明 —— 这和 §6.1 里
+「construct the trigger, verify it triggers」是同一条。
+
+### 沿途另外两个探针错误，都是自己造的故障
+
+- **点了半成品控件。** 第一版探针「一看到 `<button>` 就点」，而流式帧会画出一个属性还没到齐的
+  按钮，`aria-expanded null → null`。改成只点已经带上该属性的控件。
+- **探针自己制造了重挂。** 循环在同一步里既补上最后一块内容、又把 `streaming` 翻成 `false`，
+  于是 settle 看到内容变了、返回 `replace`、重挂整张卡 —— 而生产是先把完整内容当流式帧推、再
+  settle，两者只差一个换行，`deliveryFor` 返回 `nothing`。差点把探针的故障报成产品根因。
+
+### 还没做的
+
+`rg preserveState test/` 是空的：这个跨重编译保 state 的行为零测试覆盖，这大概就是子组件这个
+边界一直没被发现的原因。修复在 `partial-react` 侧（按名字跨重编译复用子组件身份），不在本仓库。
