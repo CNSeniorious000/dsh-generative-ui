@@ -1485,6 +1485,9 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `surface-harness.ts` | serves one card on the real `GenUISurface`, with the real design tokens |
 | `shot-card.mjs` | screenshots it at 320/440/720, cropped to content, `THEME=dark` for the other |
 | `mount-card.sh` | mounts in Chromium and reports the a11y tree and `localStorage` |
+| `render-card.mjs` | renders one card file on the real surface and says WHICH phase failed — a transcript shows only "it did not work", and transform, compile, import and empty-tree all look the same there |
+| `state-across-frames.mjs` | two frames, `push` vs `render` mode, root state vs child state. The four-cell table that isolates which recompiles cost a reader their click |
+| `click-midstream.mjs` | streams a real card in chunks, clicks partway, and reports whether the click held. `--click-at=N` because the two causes live in different parts of the stream, and clicking at the first opportunity only ever sees the early one |
 | `render-cards.ts` | the browser render sweep (`render-check.md` says why compiling is not painting) |
 | `judge-cards.py` | five vision models grade the screenshots — see §6.6 |
 | `judge-delta.py` | pairs those verdicts before/after a change, per card — the panel's own spread is ~2.0, so only a paired read says anything |
