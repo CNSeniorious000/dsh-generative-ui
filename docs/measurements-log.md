@@ -9002,7 +9002,27 @@ if (typeof Current === "function" && !isClassComponent(Current)) return Current(
   于是 settle 看到内容变了、返回 `replace`、重挂整张卡 —— 而生产是先把完整内容当流式帧推、再
   settle，两者只差一个换行，`deliveryFor` 返回 `nothing`。差点把探针的故障报成产品根因。
 
+### 三向 A/B：什么能免疫，什么不能
+
+同一张卡、同样两帧、同样在第 1 帧点击，每次只动一个变量：
+
+| 卡片形状 | 点击是否存活 |
+|---|---|
+| `useState` 写在卡片自定义的子组件里 | **否** |
+| `useState` 写在默认导出里 | **是** |
+| `usePersistedState` 写在子组件里 | **是** |
+
+第二行是从反面确认诊断：根组件由稳定 slot 保着，所以同样的重挂对它不可见。第三行更有用 ——
+`usePersistedState` 挂载时重读 localStorage，**重挂对它是透明的**，`state.ts` 自己的注释早就
+写了「survives the remount that every canvas revision and every inline transcript re-render
+causes」，只是没人把它和流式点击联系起来。
+
+**所以规则 4 顺手挡住了一部分。** 它要求把读者的答案记进 `usePersistedState`，那些答案因此免疫。
+漏掉的是读者能改、但模型不会想到要「记录」的东西 —— `Disclosure` 的展开、tab 的选中、滑块的位置。
+这些走 `useState` 或库内部 state，会被下一个流式块抹掉。
+
 ### 还没做的
 
 `rg preserveState test/` 是空的：这个跨重编译保 state 的行为零测试覆盖，这大概就是子组件这个
-边界一直没被发现的原因。修复在 `partial-react` 侧（按名字跨重编译复用子组件身份），不在本仓库。
+边界一直没被发现的原因。根治在 `partial-react` 侧（`MindLab-Research/macaron-genui-demo` 的
+`lib/partial-react`，需要按名字跨重编译复用子组件身份），不在本仓库。
