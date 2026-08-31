@@ -212,6 +212,19 @@ Two things follow from the lifetime difference:
   in a label and the user's half-typed row goes with it. Persist what they typed, not just what
   they saved.
 
+  **An inline card is clickable before you have finished writing it, and that is where this bites
+  hardest.** The reader sees the first controls while the rest of the card is still arriving, and
+  **every chunk that adds JSX remounts every component the card defines itself** — so a choice they
+  make mid-stream is wiped by the next chunk, silently, with the control snapping back to its
+  initial state. Measured three ways on the same card, one variable each: state in a
+  card-defined child is lost, the same state in the exported component survives, and
+  \`usePersistedState\` survives in either. **Two chunks is enough** — this is not a rare race.
+
+  So anything the reader can change belongs in \`usePersistedState\`, not only the answer you
+  intend to record. The one case it cannot reach is a third-party component holding its own state:
+  \`<Disclosure defaultOpen>\` reverts to \`defaultOpen\` on every remount, and the only way to keep
+  what the reader did is to control it yourself from persisted state.
+
   **If you write \`setRows(prev => prev.filter(r => r.id !== id))\` behind a button, keep the row.**
   Persisting is what makes that line permanent — before it, a mistaken delete came back on reload.
   Hold the removed row and offer it back:
