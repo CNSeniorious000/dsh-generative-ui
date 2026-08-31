@@ -638,6 +638,31 @@ Registered as an **r008 candidate, not an r007 read**: r007's plugin was frozen 
 so r007 can only supply a third baseline. If it lands near 16% again on paired cells, that is three
 rounds of a defect nothing has addressed, and it earns a rule.
 
+### A rendering change that lands in r008, not r007
+
+Found from a screenshot, not from a counter: a band of empty space above every card's title. The
+scoped preflight normalises `box-sizing`, list markers and form controls, but **not headings or
+paragraphs** — so the browser's own margins were still standing. Measured on the surface:
+
+| tag | UA margin, top and bottom |
+|---|---|
+| h1 / h2 / h3 / h4 | 21.4 / 19.9 / 18.7 / 21.3px |
+| p, blockquote, figure | 16px |
+| pre | 13px |
+| **ul** | **0** |
+
+`ul` reading 0 is what makes the rest evidence rather than a guess: the existing line works, and
+these tags were simply not in it. A card's first child is almost always a heading, so it pushed
+itself down by more than the card's own padding — the real card that prompted this went from a
+**25px** top gap to **12px**, which is exactly its `p-3` and nothing else.
+
+**This changes how every card lays out, so r008 inherits a rendering variable r007 did not have.**
+Two counters could move for reasons that have nothing to do with any rule: `cards overflowing at
+380` (less vertical space consumed, so less chance of a clipped bottom) and the panel's
+`hierarchy`, which is what a judge scores when spacing reads as deliberate. Registered here so
+neither is claimed for a prompt change. `sticky`, the collision counters and rule 4 are untouched
+by it.
+
 ### Not touched, deliberately
 
 The live-region rule quotes **"0 of 64 corpus cards announce their results"** and **"8 of 23"** —
