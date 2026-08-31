@@ -39,8 +39,21 @@ export const unoConfig = (scope: string): UserConfig => ({
       // correct — a grid list has no use for UA markers — and dropping the reset put them back, so
       // a column of stray bullets sits OUTSIDE the card border at every width. Not something to
       // ask the model to write `list-none` for on every list.
+      //
+      // Headings and paragraphs are the same omission, found later and from the other end: a
+      // reader asking why there is ALWAYS a band of empty space above a card's title. Measured on
+      // the surface, the UA margins still standing were h1 21.4px, h2 19.9, h3 18.7, h4 21.3,
+      // p/blockquote/figure 16, pre 13 — while `ul` read 0, which is what proves the line above
+      // works and these tags were simply not in it. A card's first child is almost always a
+      // heading, so it pushes itself down by more than the card's own `p-3`, and `<p>` margins
+      // then fight whatever `gap-*` the layout uses. `important: scope` makes every utility
+      // `.ui4a-root :is(.mt-4)` at (0,2,0), which outranks these (0,1,1) rules — so a card that
+      // asks for a margin still gets one, and only the browser's uninvited ones go.
       getCSS: () => `${scope} *, ${scope} *::before, ${scope} *::after { box-sizing: border-box; }
       ${scope} ul, ${scope} ol { list-style: none; margin: 0; padding: 0; }
+      ${scope} h1, ${scope} h2, ${scope} h3, ${scope} h4, ${scope} h5, ${scope} h6,
+      ${scope} p, ${scope} blockquote, ${scope} figure, ${scope} figcaption,
+      ${scope} dl, ${scope} dd, ${scope} pre, ${scope} hr { margin: 0; }
       ${scope} button, ${scope} input, ${scope} select, ${scope} textarea {
         background: transparent; color: inherit; font: inherit; border: 0 solid; cursor: pointer;
       }
