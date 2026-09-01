@@ -35,7 +35,7 @@
  *   Measured on a real one: the model wrote a card importing `Github` from `lucide-react`
  *   (removed upstream), was told, fixed it to `GitBranch` in its very next reply — and the
  *   failure notice kept coming back from the message it had already superseded. There is nothing
- *   the model can do with that; it cannot edit a reply it has sent. `isNewestCard` is the gate.
+ *   the model can do with that; it cannot edit a reply it has sent. `isLastSegment` is the gate, on both the report and the retraction.
  */
 
 /** Exported for the test: a fresh card in a fresh session should be able to report again. */
@@ -54,6 +54,15 @@ export type ErrorReporter = (report: { message: string; phase: string } | null) 
  */
 const SETTLE_MS = 1000;
 
+/**
+ * The one report waiting out its settle window, and the card it belongs to.
+ *
+ * One slot, not one per card, because only one report can be outstanding host-side. But the slot
+ * being shared is what made the gate below dangerous: a superseded card re-compiles on every later
+ * frame — that is the premise of this whole file — and evicting the newest card's armed timer to
+ * install its own meant the newest card's report died when the superseded one was gated off. So
+ * eviction is now conditional on the incoming card actually being reportable.
+ */
 let pending: { timer: ReturnType<typeof setTimeout>; message: string } | null = null;
 /**
  * Whether the host currently holds a failure for this surface.
@@ -81,9 +90,20 @@ export function cancelPendingReport(): void {
  * edit — showed the reader stale content and told the model nothing. A paint only means the card
  * is fine when it is the NEW code that painted.
  */
-export function cardRendered(restored = false): void {
+/**
+ * @param current whether the painting card is the one the gate would let report. Defaults to
+ *   permissive for the canvas path, which shows one card at a time.
+ */
+export function cardRendered(restored = false, current: () => boolean = () => true): void {
   if (restored) return;
   cancelPendingReport();
+  // **A card may only retract its OWN failure.** The error path is gated on `isLastSegment`; without
+  // the same gate here the asymmetry is that a superseded card cannot report a failure but can
+  // still clear someone else's. That is reachable by scrolling: an old card enters the
+  // IntersectionObserver margin, gets claimed, compiles and paints, and the model's context is
+  // told nothing is broken while the newest card is still a red panel — and it cannot re-report,
+  // because `reportStranded`'s `reportedFor` guard already fired for that code.
+  if (!current()) return;
   // A card that is working again must be taken OUT of the model's context, or it reads about a
   // failure that no longer exists on every step for the rest of the session.
   const send = outstanding;
@@ -93,10 +113,18 @@ export function cardRendered(restored = false): void {
 
 export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string, current: () => boolean = () => true): void {
   if (send === undefined) return;
+  // **Asked twice, and the first time is not redundant.** A superseded card that will be gated off
+  // must not evict an armed report belonging to a card that will not be — otherwise the newest
+  // card, which IS broken, reports nothing: its timer is cleared, the evictor's own timer fires
+  // 1000ms later, `current()` is false, and the slot empties with nothing sent. The newest card
+  // cannot re-arm either, because `reportStranded`'s `reportedFor` guard suppresses a second
+  // report for the same code. Measured: with the old card re-failing every 300ms the newest
+  // card's reporter stayed empty indefinitely.
+  if (!current()) return;
   if (pending !== null) clearTimeout(pending.timer);
-  // Asked when the report is about to be SENT, not when the error is raised. A card is the newest
-  // one in the transcript at the instant it throws and stops being so the moment the model's next
-  // reply lands — which is precisely the second this timer is waiting out.
+  // Asked AGAIN when the report is about to be SENT, because that is the question that matters:
+  // a card is the newest one in the transcript at the instant it throws and stops being so the
+  // moment the model's next reply lands — which is precisely the second this timer waits out.
   pending = { timer: setTimeout(() => {
     pending = null;
     if (!current()) return;

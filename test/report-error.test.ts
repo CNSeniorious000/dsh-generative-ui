@@ -164,3 +164,37 @@ test("the newest card is still reported", async () => {
   await settle();
   expect(sent).toEqual([{ message: "boom", phase: "compile" }]);
 });
+
+// **A superseded card must not evict the newest card's armed report.** The gate made the shared
+// `pending` slot dangerous: the old card re-compiles on every later frame, and clearing the timer
+// before asking the predicate meant the newest card — which IS broken — sent nothing, then could
+// not re-arm, because `reportStranded`'s `reportedFor` guard already fired for that code.
+test("a superseded card's failure does not starve the newest card's report", async () => {
+  const sent: Report[] = [];
+  reportCardError((r) => sent.push(r), "B broke", "render", () => true);
+  reportCardError(() => expect.unreachable("a superseded card must not send"), "A broke", "render", () => false);
+  await settle();
+  expect(sent).toEqual([{ message: "B broke", phase: "render" }]);
+});
+
+// The error path and the recovery path need the SAME gate. Without it a card that may not report a
+// failure may still retract someone else's, which a reader reaches by scrolling: an old card enters
+// the observer margin, is claimed, compiles and paints.
+test("a card that may not report may not retract either", async () => {
+  const sent: Report[] = [];
+  reportCardError((r) => sent.push(r), "A broke", "render", () => true);
+  await settle();
+  expect(sent).toEqual([{ message: "A broke", phase: "render" }]);
+  cardRendered(false, () => false);
+  expect(sent).toEqual([{ message: "A broke", phase: "render" }]);
+});
+
+// And the newest card's own paint still clears it, or the test above would pass on a `cardRendered`
+// that never retracts anything.
+test("the newest card's paint still retracts its failure", async () => {
+  const sent: Report[] = [];
+  reportCardError((r) => sent.push(r), "A broke", "render", () => true);
+  await settle();
+  cardRendered(false, () => true);
+  expect(sent).toEqual([{ message: "A broke", phase: "render" }, null]);
+});
