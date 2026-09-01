@@ -24,7 +24,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { createElement } from "react";
 import { CodeBlock } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { ReactElement } from "react";
-import type { Ui4aSegment } from "./segments.ts";
+import { FENCE_LANG } from "../../contract.ts";
+import { parseUi4aSegments, type Ui4aSegment } from "./segments.ts";
 import { observeTranscript } from "./observe.ts";
 
 const CLAIMED = "data-ui4a-claimed";
@@ -88,8 +89,17 @@ export const hasPainted = (mount: HTMLElement) => {
   return false;
 };
 
+/** A wider Markdown fence leaves the real ui4a opener as the first line of the rendered code. */
+const LEADING_UI4A_FENCE = new RegExp(String.raw`^\s*\x60{3,}${FENCE_LANG.replace("/", "\\/")}(?:[^\n]*)(?:\n|$)`);
+
 /** The block's source. `pre` when the grammar was unknown, the highlighted div otherwise. */
-const codeOf = (block: HTMLElement) => block.querySelector("pre")?.textContent ?? "";
+const codeOf = (block: HTMLElement) => {
+  const rendered = block.querySelector("pre")?.textContent ?? "";
+  if (!LEADING_UI4A_FENCE.test(rendered)) return rendered;
+  // The snapshot parser already owns every malformed-closer tolerance. Reusing it here keeps the
+  // DOM half on the same recovered body instead of growing a second fence grammar.
+  return parseUi4aSegments(rendered)[0]?.code ?? rendered;
+};
 
 /** CodeBlock trims one trailing newline for display, so compare on trimmed ends. */
 export const sameCode = (a: string, b: string) => a.trimEnd() === b.trimEnd();

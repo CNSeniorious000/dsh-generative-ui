@@ -176,6 +176,31 @@ test("a block whose text matches a segment is claimed and rendered", async () =>
   stop();
 });
 
+/**
+ * A wider Markdown fence can leave the real ui4a fence as literal code in the DOM.
+ *
+ * This is the exact geometry in the exported session: six backticks outside, four on the ui4a
+ * opener, then two five-backtick closers. `parseUi4aSegments` still recovers `older` from the raw
+ * assistant message, but the host gives us one code block whose text starts with the inner fence.
+ * Leaving it unmatched also leaves `older` unreserved, so the next card's shared import prefix is
+ * handed the old card in full.
+ */
+test("a wider markdown wrapper owns its inner ui4a segment", async () => {
+  const shared = 'import { useState, useMemo } from "react"\n';
+  const older = `${shared}export default () => <div>old</div>`;
+  const wrapped = `\`\`\`\`ui4a/tsx\n${older}\n\`\`\`\`\`\n\`\`\`\`\``;
+  makeBlock(wrapped);
+  let list = [segment(older)];
+  const { stop, again } = await start(() => list);
+  expect(painted.at(-1)).toEqual({ code: older, streaming: false });
+
+  makeBlock(shared);
+  list = [segment(older), segment(shared, false)];
+  again();
+  expect(painted.at(-1)).toEqual({ code: shared, streaming: true });
+  stop();
+});
+
 test("an unrelated code block is left alone", async () => {
   makeBlock("print('hi')");
   const { stop } = await start(() => [segment("export default () => <div />")]);
