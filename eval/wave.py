@@ -291,6 +291,13 @@ async def main():
             meta = json.loads((out / "meta.json").read_text())
             # A cached run is replayed only if it actually ran. `error`/`running` mean the process
             # died, and caching that reads exactly like the model producing nothing.
+            #
+            # **A cached `timeout` was cut by whatever clock was in force THEN, not the one being
+            # passed now** — and line 228 rewrites `manifest.json` with the new value regardless, so
+            # a round can hold two clocks under a manifest asserting one. `delta.py` never reads the
+            # clock, so nothing refuses the comparison. Raising `--timeout` to un-cut a round means
+            # deleting its `timeout` cells first; this is what happened to r007 (moved aside to
+            # `.r007-cut-at-1500`, not deleted, then re-run).
             if meta.get("status") in ("complete", "timeout"):
                 done += 1
                 return meta
