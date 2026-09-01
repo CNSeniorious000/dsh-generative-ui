@@ -13,7 +13,7 @@ import { disposeCompiler } from "./runtime/compiler.ts";
 import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
 import { registerUi4aHost, releaseBindings, localImports } from "./runtime/bindings.ts";
-import { claimInlineFences } from "./runtime/inline-fence.ts";
+import { claimInlineFences, isNewestCard } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
 import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
@@ -191,7 +191,7 @@ export function apply(ctx: ClientContext): void {
     () =>
       claimInlineFences({
         segments,
-        render: ({ code, streaming }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase), onRendered: cardRendered }),
+        render: ({ code, streaming, mount }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase, () => isNewestCard(mount)), onRendered: cardRendered }),
       }),
     "dsh-generative-ui: inline fences",
   );

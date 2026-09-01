@@ -60,7 +60,7 @@ await Bun.write("/tmp/dsh-harness-dom.js", "const D = globalThis.ReactDOM;\nexpo
 // name makes the second one unlink the first one's entry mid-build.
 const entry = `${tmpdir()}/dsh-surface-entry-${port}.ts`;
 const from = (path: string) => JSON.stringify(resolve(import.meta.dir, "..", path));
-await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, `export { registerUi4aHost } from ${from("src/client/runtime/bindings.ts")};`, ""].join("\n"));
+await Bun.write(entry, [`export { GenUISurface } from ${from("src/client/runtime/GenUISurface.tsx")};`, `export { registerModules } from ${from("src/client/runtime/registry.ts")};`, `export { registerUi4aHost } from ${from("src/client/runtime/bindings.ts")};`, `export { claimInlineFences, isNewestCard } from ${from("src/client/runtime/inline-fence.ts")};`, `export { reportCardError, cardRendered } from ${from("src/client/runtime/report-error.ts")};`, ""].join("\n"));
 
 const bundle = await (
   await Bun.build({

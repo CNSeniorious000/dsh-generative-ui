@@ -8,7 +8,7 @@
  * ends there: `MonacoEditor` appears 6 times in the records after that point and `no export named`
  * zero. The reader saw the answer on screen; the one party who could act on it did not.
  *
- * Three constraints, each of which this got wrong in an obvious first version:
+ * Four constraints, each of which this got wrong in an obvious first version:
  *
  * - **Only errors that survived.** `GenUISurface` already separates a mid-stream prefix failure
  *   and a retryable network blip from a real one — the `report` branch of its error action. That
@@ -30,6 +30,12 @@
  *   sends `null`, and the host drops it out of the model's context. As a chat message that was
  *   impossible, which is why the old body had to carry a paragraph explaining that nobody had
  *   typed it.
+ * - **Only the newest card counts.** An earlier card that cannot render stays in the transcript
+ *   and re-renders on every later frame, so it goes on failing for the rest of the session.
+ *   Measured on a real one: the model wrote a card importing `Github` from `lucide-react`
+ *   (removed upstream), was told, fixed it to `GitBranch` in its very next reply — and the
+ *   failure notice kept coming back from the message it had already superseded. There is nothing
+ *   the model can do with that; it cannot edit a reply it has sent. `isNewestCard` is the gate.
  */
 
 /** Exported for the test: a fresh card in a fresh session should be able to report again. */
@@ -85,11 +91,15 @@ export function cardRendered(restored = false): void {
   send?.(null);
 }
 
-export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string): void {
+export function reportCardError(send: ErrorReporter | undefined, message: string, phase: string, current: () => boolean = () => true): void {
   if (send === undefined) return;
   if (pending !== null) clearTimeout(pending.timer);
+  // Asked when the report is about to be SENT, not when the error is raised. A card is the newest
+  // one in the transcript at the instant it throws and stops being so the moment the model's next
+  // reply lands — which is precisely the second this timer is waiting out.
   pending = { timer: setTimeout(() => {
     pending = null;
+    if (!current()) return;
     outstanding = send;
     send({ message, phase });
   }, SETTLE_MS), message };

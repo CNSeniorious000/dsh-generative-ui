@@ -104,8 +104,28 @@ export const matchSegment = (segments: readonly Ui4aSegment[], rendered: string)
 export type InlineFenceOptions = {
   /** Every ui4a segment currently in the transcript, in document order. */
   segments: () => readonly Ui4aSegment[];
-  render: (props: { code: string; streaming: boolean }) => ReactElement;
+  render: (props: { code: string; streaming: boolean; mount: HTMLElement }) => ReactElement;
   scope?: HTMLElement;
+};
+
+/**
+ * Whether this card is the newest one in the transcript.
+ *
+ * **Only the last block's failure is worth telling the model about.** An earlier card that cannot
+ * render stays in the transcript and re-renders on every later frame, so it fails again, and
+ * again, for the rest of the session — measured on a real one where the model wrote a card
+ * importing `Github` from `lucide-react` (removed upstream), was told, fixed it to `GitBranch` in
+ * the very next reply, and the failure notice kept coming back from the reply it had already
+ * superseded. The model cannot act on it: editing a message it already sent is not a thing it
+ * can do.
+ *
+ * Evaluated when the report is about to be SENT, not when the error is raised. A card is the last
+ * one at the moment it breaks and stops being so as soon as the next card appears, which is
+ * exactly the second in between.
+ */
+export const isNewestCard = (mount: HTMLElement): boolean => {
+  const mounts = document.querySelectorAll(`[${MOUNT}]`);
+  return mounts.length === 0 || mounts[mounts.length - 1] === mount;
 };
 
 /**
@@ -335,7 +355,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       if (code === claim.code && complete === claim.complete) continue;
       claim.code = code;
       claim.complete = complete;
-      claim.root.render(render({ code, streaming: !complete }));
+      claim.root.render(render({ code, streaming: !complete, mount: claim.mount }));
       // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
       // what markdown has painted, so this is the newer text and the one the reader wants while
       // waiting. Dropped the moment the card paints.

@@ -1488,6 +1488,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `render-card.mjs` | renders one card file on the real surface and says WHICH phase failed — a transcript shows only "it did not work", and transform, compile, import and empty-tree all look the same there |
 | `state-across-frames.mjs` | two frames, `push` vs `render` mode, root state vs child state. The four-cell table that isolates which recompiles cost a reader their click |
 | `click-midstream.mjs` | streams a real card in chunks, clicks partway, and reports whether the click held. `--click-at=N` because the two causes live in different parts of the stream, and clicking at the first opportunity only ever sees the early one |
+| `superseded-card.mjs` | drives the real claim path with two cards — one broken, one that replaces it — and reports whether the superseded one keeps telling the model it is broken. DOM order is the whole question, so a hand-built fixture cannot answer it |
 | `render-cards.ts` | the browser render sweep (`render-check.md` says why compiling is not painting) |
 | `judge-cards.py` | five vision models grade the screenshots — see §6.6 |
 | `judge-delta.py` | pairs those verdicts before/after a change, per card — the panel's own spread is ~2.0, so only a paired read says anything |

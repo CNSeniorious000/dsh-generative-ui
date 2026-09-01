@@ -15,6 +15,8 @@ import { resetTranscriptObservers } from "../src/client/runtime/observe.ts";
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 let painted: { code: string; streaming: boolean }[] = [];
+/** The `mount` each render was handed — `report-error` gates on it, so it has to be the real node. */
+let renderedMounts: any[] = [];
 let previews: { code: string; lang?: string }[] = [];
 let unmounts = 0;
 let frames: (() => void)[] = [];
@@ -68,6 +70,7 @@ beforeEach(() => {
   // `querySelectorAll` — one stale listener turns every test here red.
   resetTranscriptObservers();
   painted = [];
+  renderedMounts = [];
   previews = [];
   unmounts = 0;
   frames = [];
@@ -143,7 +146,7 @@ const start = async (segments: () => any[]) => {
   }));
   const { claimInlineFences } = await import(`../src/client/runtime/inline-fence.ts?${Math.random()}`);
   const { scheduleSweep } = await import("../src/client/runtime/observe.ts");
-  const stop = claimInlineFences({ segments, render: (props: any) => ({ props }) });
+  const stop = claimInlineFences({ segments, render: ({ code, streaming, mount }: any) => { renderedMounts.push(mount); return { props: { code, streaming } }; } });
   started.push(stop);
   paint();
   return {
@@ -523,5 +526,21 @@ test("a card parked off screen still holds its segment against a new block", asy
   again();
   expect(painted.map((p) => p.code)).not.toContain(older);
   expect(painted.at(-1)).toEqual({ code: shared, streaming: true });
+  stop();
+});
+
+/**
+ * The node handed to `render` is the mount itself.
+ *
+ * `report-error.ts` gates a failure report on `isNewestCard(mount)`, which compares this node
+ * against `document.querySelectorAll("[data-ui4a-mount]")` — so handing `render` anything but the
+ * marked node makes the gate silently answer "not the newest" for every card, and no failure ever
+ * reaches the model again. `scripts/superseded-card.mjs` is the end-to-end half of this.
+ */
+test("render is handed the marked mount node", async () => {
+  makeBlock("export default () => <div />");
+  const { stop } = await start(() => [segment("export default () => <div />")]);
+  expect(renderedMounts).toHaveLength(1);
+  expect(renderedMounts[0].attrs["data-ui4a-mount"]).toBe("");
   stop();
 });

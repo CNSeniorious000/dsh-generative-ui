@@ -111,3 +111,56 @@ test("teardown drops a pending report without claiming the card is fixed", async
   await settle();
   expect(sent).toEqual([]);
 });
+
+/**
+ * Only the newest card counts.
+ *
+ * An earlier card that cannot render stays in the transcript and re-compiles on every later
+ * frame, so it fails again for the rest of the session. Measured on a real one: the model wrote a
+ * card importing `Github` from `lucide-react` (removed upstream), was told, fixed it to
+ * `GitBranch` in its very next reply — and the badge kept coming back from the message it had
+ * already superseded. `scripts/superseded-card.mjs` is the same thing in a browser; without this
+ * gate it reports the identical error a second time.
+ */
+test("a card the transcript has moved past is not reported", async () => {
+  const sent: Report[] = [];
+  reportCardError(
+    (r) => sent.push(r),
+    "no export named 'Github'",
+    "compile",
+    () => false,
+  );
+  await settle();
+  expect(sent).toEqual([]);
+});
+
+// The predicate is asked when the report is about to be SENT, not when the error is raised: a
+// card is the newest one at the instant it throws and stops being so as soon as the next reply
+// lands — which is exactly the second `SETTLE_MS` is waiting out.
+test("the newest-card check is made at send time, not at throw time", async () => {
+  const sent: Report[] = [];
+  let newest = true;
+  reportCardError(
+    (r) => sent.push(r),
+    "no export named 'Github'",
+    "compile",
+    () => newest,
+  );
+  newest = false; // the model's next reply arrives while the report is still settling
+  await settle();
+  expect(sent).toEqual([]);
+});
+
+// And the ordinary case still goes through, or the two above would pass on a reporter that never
+// fires at all.
+test("the newest card is still reported", async () => {
+  const sent: Report[] = [];
+  reportCardError(
+    (r) => sent.push(r),
+    "boom",
+    "compile",
+    () => true,
+  );
+  await settle();
+  expect(sent).toEqual([{ message: "boom", phase: "compile" }]);
+});
