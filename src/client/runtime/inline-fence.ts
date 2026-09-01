@@ -104,12 +104,13 @@ export const matchSegment = (segments: readonly Ui4aSegment[], rendered: string)
 export type InlineFenceOptions = {
   /** Every ui4a segment currently in the transcript, in document order. */
   segments: () => readonly Ui4aSegment[];
-  render: (props: { code: string; streaming: boolean; mount: HTMLElement }) => ReactElement;
+  /** `last` answers whether this card is still the transcript's newest — asked at report time, not render time. */
+  render: (props: { code: string; streaming: boolean; last: () => boolean }) => ReactElement;
   scope?: HTMLElement;
 };
 
 /**
- * Whether this card is the newest one in the transcript.
+ * Whether this card's code is the last ui4a segment in the transcript.
  *
  * **Only the last block's failure is worth telling the model about.** An earlier card that cannot
  * render stays in the transcript and re-renders on every later frame, so it fails again, and
@@ -122,10 +123,19 @@ export type InlineFenceOptions = {
  * Evaluated when the report is about to be SENT, not when the error is raised. A card is the last
  * one at the moment it breaks and stops being so as soon as the next card appears, which is
  * exactly the second in between.
+ *
+ * **Segments, not mounts.** Comparing DOM nodes was wrong three separate ways, all of them
+ * silent: `release` calls `claim.mount.remove()` on every markdown re-render, so a broken card
+ * followed by any trailing prose compared a detached node and dropped its own report; `defer`
+ * parks a far-offscreen block without ever creating a mount, so a reader scrolled up while the fix
+ * streams left an older card holding the last mount and reporting as though it were newest; and an
+ * empty node list has to mean false, since a session switch inside the settle window empties it
+ * while `sendToModel` reads `currentSession()` at send time — session A's error into session B's
+ * store. The segment list is the transcript's own order and survives all three.
  */
-export const isNewestCard = (mount: HTMLElement): boolean => {
-  const mounts = document.querySelectorAll(`[${MOUNT}]`);
-  return mounts.length === 0 || mounts[mounts.length - 1] === mount;
+export const isLastSegment = (segments: readonly Ui4aSegment[], code: string): boolean => {
+  const last = segments.at(-1);
+  return last !== undefined && (sameCode(last.code, code) || last.code.startsWith(code));
 };
 
 /**
@@ -355,7 +365,9 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       if (code === claim.code && complete === claim.complete) continue;
       claim.code = code;
       claim.complete = complete;
-      claim.root.render(render({ code, streaming: !complete, mount: claim.mount }));
+      // `code` is captured, `segments()` is read at call time: that is exactly the report-time
+      // question, and it stays correct across the re-render that replaces this claim's own block.
+      claim.root.render(render({ code, streaming: !complete, last: () => isLastSegment(segments(), code) }));
       // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
       // what markdown has painted, so this is the newer text and the one the reader wants while
       // waiting. Dropped the moment the card paints.

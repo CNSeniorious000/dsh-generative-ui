@@ -13,7 +13,7 @@ import { disposeCompiler } from "./runtime/compiler.ts";
 import { dropSharedCompiler } from "./runtime/GenUISurface.tsx";
 import { disposeRegistry } from "./runtime/registry.ts";
 import { registerUi4aHost, releaseBindings, localImports } from "./runtime/bindings.ts";
-import { claimInlineFences, isNewestCard } from "./runtime/inline-fence.ts";
+import { claimInlineFences } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
 import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
@@ -191,7 +191,9 @@ export function apply(ctx: ClientContext): void {
     () =>
       claimInlineFences({
         segments,
-        render: ({ code, streaming, mount }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase, () => isNewestCard(mount)), onRendered: cardRendered }),
+        // The SAME gate on both callbacks. A card that may not report a failure may not retract
+        // one either — see `cardRendered`.
+        render: ({ code, streaming, last }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase, last), onRendered: (restored) => cardRendered(restored, last) }),
       }),
     "dsh-generative-ui: inline fences",
   );

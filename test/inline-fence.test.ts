@@ -16,7 +16,7 @@ import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 
 let painted: { code: string; streaming: boolean }[] = [];
 /** The `mount` each render was handed — `report-error` gates on it, so it has to be the real node. */
-let renderedMounts: any[] = [];
+let renderedLast: (() => boolean)[] = [];
 let previews: { code: string; lang?: string }[] = [];
 let unmounts = 0;
 let frames: (() => void)[] = [];
@@ -70,7 +70,7 @@ beforeEach(() => {
   // `querySelectorAll` — one stale listener turns every test here red.
   resetTranscriptObservers();
   painted = [];
-  renderedMounts = [];
+  renderedLast = [];
   previews = [];
   unmounts = 0;
   frames = [];
@@ -109,7 +109,9 @@ beforeEach(() => {
   // them apart reads one `render` as the other.
   const mount = () => {
     const el: any = { tag: "DIV", textContent: "", attrs: {} as Record<string, string>, remove() {}, querySelectorAll: () => [] };
-    el.setAttribute = (k: string, v: string) => { el.attrs[k] = v; };
+    el.setAttribute = (k: string, v: string) => {
+      el.attrs[k] = v;
+    };
     return el;
   };
   (globalThis as any).document = {
@@ -146,7 +148,13 @@ const start = async (segments: () => any[]) => {
   }));
   const { claimInlineFences } = await import(`../src/client/runtime/inline-fence.ts?${Math.random()}`);
   const { scheduleSweep } = await import("../src/client/runtime/observe.ts");
-  const stop = claimInlineFences({ segments, render: ({ code, streaming, mount }: any) => { renderedMounts.push(mount); return { props: { code, streaming } }; } });
+  const stop = claimInlineFences({
+    segments,
+    render: ({ code, streaming, last }: any) => {
+      renderedLast.push(last);
+      return { props: { code, streaming } };
+    },
+  });
   started.push(stop);
   paint();
   return {
@@ -469,7 +477,7 @@ test("a block replaced mid-stream claims without a blank sweep", async () => {
  * and nothing is excluded. Ownership of the NODE is the durable answer.
  */
 test("our own preview is never claimed as a block", async () => {
-  const code = 'export default () => <div />';
+  const code = "export default () => <div />";
   makeBlock(code);
   const { stop, again } = await start(() => [segment(code, false)]);
   expect(painted).toHaveLength(1);
@@ -487,7 +495,7 @@ test("our own preview is never claimed as a block", async () => {
 // Same rule for a card that renders a code block of its own: it lives inside our mount, and
 // claiming it would mount a card inside a card.
 test("a code block a card renders is never claimed", async () => {
-  const code = 'export default () => <div />';
+  const code = "export default () => <div />";
   makeBlock(code);
   const { stop, again } = await start(() => [segment(code, false)]);
   const inner = makeBlock(code);
@@ -530,17 +538,23 @@ test("a card parked off screen still holds its segment against a new block", asy
 });
 
 /**
- * The node handed to `render` is the mount itself.
+ * The predicate handed to `render` answers about THIS card, and answers at call time.
  *
- * `report-error.ts` gates a failure report on `isNewestCard(mount)`, which compares this node
- * against `document.querySelectorAll("[data-ui4a-mount]")` — so handing `render` anything but the
- * marked node makes the gate silently answer "not the newest" for every card, and no failure ever
- * reaches the model again. `scripts/superseded-card.mjs` is the end-to-end half of this.
+ * `report-error.ts` gates both the failure report and the retraction on it, so a predicate that is
+ * wrong in either direction is silent: stuck false and no failure ever reaches the model again,
+ * stuck true and a superseded card reports forever. Reading it at call time is the whole point —
+ * `render` only runs when the code changes, and the question is asked a second later.
  */
-test("render is handed the marked mount node", async () => {
+test("the predicate is true for the only card and false once a later one arrives", async () => {
   makeBlock("export default () => <div />");
-  const { stop } = await start(() => [segment("export default () => <div />")]);
-  expect(renderedMounts).toHaveLength(1);
-  expect(renderedMounts[0].attrs["data-ui4a-mount"]).toBe("");
+  let list = [segment("export default () => <div />")];
+  const { stop } = await start(() => list);
+  expect(renderedLast).toHaveLength(1);
+  expect(renderedLast[0]()).toBe(true);
+  // The model's next reply lands. The captured predicate must now answer false, WITHOUT `render`
+  // having been called again — that is the staleness the report-time evaluation exists to avoid.
+  list = [segment("export default () => <div />"), segment("export default () => <span />")];
+  expect(renderedLast).toHaveLength(1);
+  expect(renderedLast[0]()).toBe(false);
   stop();
 });

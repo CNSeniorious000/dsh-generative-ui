@@ -62,7 +62,7 @@ await page.goto(`http://127.0.0.1:${PORT}/`);
 
 const out = await page.evaluate(
   async ({ broken, fixed }) => {
-    const { GenUISurface, claimInlineFences, isNewestCard, reportCardError, cardRendered, registerModules } = await import("/surface.js");
+    const { GenUISurface, claimInlineFences, reportCardError, cardRendered, registerModules } = await import("/surface.js");
     const React = globalThis.React;
     registerModules({ "lucide-react": { GitBranch: () => React.createElement("span", null, "⎇") } });
 
@@ -84,18 +84,12 @@ const out = await page.evaluate(
     let segments = [];
     const dispose = claimInlineFences({
       segments: () => segments,
-      render: ({ code, streaming, mount }) =>
+      render: ({ code, streaming, last }) =>
         React.createElement(GenUISurface, {
           code,
           streaming,
-          onError: (error, phase) =>
-            reportCardError(
-              (r) => sent.push(r),
-              error.message,
-              phase,
-              () => isNewestCard(mount),
-            ),
-          onRendered: cardRendered,
+          onError: (error, phase) => reportCardError((r) => sent.push(r), error.message, phase, last),
+          onRendered: (restored) => cardRendered(restored, last),
         }),
     });
 

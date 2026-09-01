@@ -1389,12 +1389,15 @@ export named 'MonacoEditor'; module exports: Workspace, errors, hydrate, init, l
 contains the fix, and the records after that point mention `MonacoEditor` six times and
 `no export named` **zero**. The reader saw the answer; the one party who could act on it did not.
 
-`report-error.ts` now sends it back through `conversation.send`, and the three constraints are all
+`report-error.ts` now sends it back through `conversation.send`, and the constraints are all
 load-bearing: only errors that survived settling and retries (`GenUISurface` already separates
 those), **once per message** (a settled card that fails re-renders on every later frame, and a
-message per render is a loop the user has to kill), and **announced as automatic** (the model is
+message per render is a loop the user has to kill), **announced as automatic** (the model is
 about to read a user-role message nobody typed; without saying so it apologises to a person who
-said nothing). Verified end to end in a browser: the card failed, the `[自动]` message appeared
+said nothing), and **only for the transcript's last ui4a segment** — an earlier card that cannot
+render keeps failing for the rest of the session and the model cannot edit a reply it has sent, so
+`isLastSegment` gates both the report and the retraction. Same predicate on both: a card that may
+not report a failure may not clear someone else's either. Verified end to end in a browser: the card failed, the `[自动]` message appeared
 16.5s later, and the model replied *"its actual exports are Workspace, errors, hydrate, init, and
 lazy … instead of using the named import I assumed existed"*.
 
