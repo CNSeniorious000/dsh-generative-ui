@@ -164,7 +164,15 @@ async def main():
     ap.add_argument("round")
     ap.add_argument("--cases", default="", help="comma-separated ids; default all")
     ap.add_argument("--models", default="", help="comma-separated; default all ten")
-    ap.add_argument("--timeout", type=float, default=1500, help="per multi-turn run; single-turn gets a fifth")
+    # 2700, because a round is only comparable to the one before it if the clock is the same.
+    # r006 was run with `--timeout 2700` and r007 took this default of 1500 — the models were not
+    # slower (r007's median run was 417s against r006's 464s), the clock was shorter, so r007
+    # ended 20 runs early against r006's 1. That alone flipped the headline: `delta.py`'s clean
+    # row drops any pair where either side was cut short, and in r006 "cut short" meant a model
+    # producing garbage (28 of 29, mean 2.00) while in r007 it meant a good run hitting the wall
+    # (20 of 24, mean 6.04). Conditioning on it removed 20 of r007's BEST runs and 28 of r006's
+    # worst, and manufactured overall -0.520 +/- 0.161 out of a round that was flat (-0.002).
+    ap.add_argument("--timeout", type=float, default=2700, help="per multi-turn run; single-turn gets a fifth")
     ap.add_argument("--light", type=int, default=47801); ap.add_argument("--dark", type=int, default=47802)
     ap.add_argument("--no-judge", action="store_true")
     ap.add_argument("--judge-only", action="store_true", help="re-score a round that already ran; runs nothing")
