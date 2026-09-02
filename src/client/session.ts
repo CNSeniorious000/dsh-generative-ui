@@ -9,13 +9,20 @@ import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 
 export type ChatNodeView = { readonly kind: string; readonly data: unknown; readonly anchorSeq: number };
 
+type ChatSnapshotLike = { readonly nodes: { values(): Iterable<unknown> } };
+type UiConversationLike = { binding(source: unknown): { target(name: "chat"): { getSnapshot(): ChatSnapshotLike | undefined } } };
+
 /** The current session's chat nodes, or an empty list when no session is open. */
 export function chatNodes(ctx: ClientContext): readonly ChatNodeView[] {
   const sessionId = ctx.sessions.list.getSnapshot().current;
   if (sessionId === undefined) return [];
-  const snapshot = ctx.sessions.binding(sessionId)?.session.getSnapshot();
-  if (snapshot === undefined) return [];
-  return [...snapshot.chat.nodes.values()] as readonly ChatNodeView[];
+  const binding = ctx.sessions.binding(sessionId);
+  if (binding === undefined) return [];
+  // A static inject would disable older hosts, so feature-detect the 0.1.2 service per sweep.
+  const uiConversation = ctx.get("uiConversation") as UiConversationLike | undefined;
+  const chat = uiConversation === undefined ? (binding.session.getSnapshot() as unknown as { readonly chat?: ChatSnapshotLike } | undefined)?.chat : uiConversation.binding(binding).target("chat").getSnapshot();
+  if (chat === undefined) return [];
+  return [...chat.nodes.values()] as readonly ChatNodeView[];
 }
 
 /**

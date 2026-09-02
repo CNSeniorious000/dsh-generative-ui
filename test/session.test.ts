@@ -8,7 +8,13 @@ import type { ChatNodeView } from "../src/client/session.ts";
  * was constrained — the mutation audit could not see this file at all, because its glob listed
  * two directories at one depth and `src/client/` was not one of them.
  */
-const ctxWith = (current: string | undefined, binding: unknown) => ({ sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding } }) as never;
+const ctxWith = (current: string | undefined, binding: unknown, uiConversation?: unknown) => ({ sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding }, get: () => uiConversation }) as never;
+const conversation = (chat: unknown, bind: (source: unknown) => void = () => {}) => ({
+  binding: (source: unknown) => {
+    bind(source);
+    return { target: () => ({ getSnapshot: () => chat }) };
+  },
+});
 
 const node = (kind: string, seq: number): ChatNodeView => ({ kind, data: {}, anchorSeq: seq });
 
@@ -21,15 +27,33 @@ test("a session whose binding has gone yields no nodes", () => {
   // A binding that exists but whose session snapshot does not is the same state, reached
   // differently — the optional chain and the undefined check are two separate guards.
   expect(chatNodes(ctxWith("s1", { session: { getSnapshot: () => undefined } }))).toEqual([]);
+  let called = false;
+  const uiConversation = conversation(undefined, () => (called = true));
+  expect(chatNodes(ctxWith("s1", undefined, uiConversation))).toEqual([]);
+  expect(called).toBe(false);
 });
 
-test("an open session yields its nodes in order", () => {
+test("an rc.8 session yields its nodes in order", () => {
   const nodes = new Map([
     ["a", node("text", 1)],
     ["b", node("tool", 2)],
   ]);
   const ctx = ctxWith("s1", { session: { getSnapshot: () => ({ chat: { nodes } }) } });
   expect(chatNodes(ctx).map((n) => n.kind)).toEqual(["text", "tool"]);
+});
+
+test("an unmaterialized 0.1.2 chat target yields no nodes", () => {
+  expect(chatNodes(ctxWith("s1", { session: { getSnapshot: () => ({}) } }, conversation(undefined)))).toEqual([]);
+});
+
+test("a 0.1.2 session reads uiConversation with the resolved binding", () => {
+  const nodes = [node("text", 1), node("tool", 2)];
+  const binding = { session: { getSnapshot: () => ({}) } };
+  let source: unknown;
+  const uiConversation = conversation({ nodes: { values: () => nodes } }, (value) => (source = value));
+  const ctx = ctxWith("s1", binding, uiConversation);
+  expect(chatNodes(ctx).map((n) => n.kind)).toEqual(["text", "tool"]);
+  expect(source).toBe(binding);
 });
 
 test("perNode reuses a result while the key is unchanged and drops what left the window", () => {
