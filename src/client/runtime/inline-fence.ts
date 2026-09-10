@@ -381,7 +381,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
       // what markdown has painted, so this is the newer text and the one the reader wants while
       // waiting. Dropped the moment the card paints.
-      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx" }));
+      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx", copyLabel: "Copy", copiedLabel: "Copied" }));
     }
   };
 
