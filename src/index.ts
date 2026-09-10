@@ -17,7 +17,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import type { Context } from "@deepseek-ai/cordis";
 import z from "@deepseek-ai/schemastery";
-import { installSettingsSection, settingsNamespace } from "@deepseek-ai/dsh-settings";
+import type {} from "@deepseek-ai/dsh-settings";
 import type {} from "@deepseek-ai/dsh-host-webserver";
 import type {} from "@deepseek-ai/dsh-system-prompt";
 import type {} from "@deepseek-ai/dsh-skill";
@@ -50,7 +50,7 @@ export const name = "dsh-generative-ui";
 export const inject = ["systemPrompt"];
 
 /** The settings section this plugin owns; the key under `dsh-generative-ui:` in settings.yaml. */
-export const SETTINGS_NAMESPACE = settingsNamespace("dsh-generative-ui");
+export const SETTINGS_NAMESPACE = name;
 
 /**
  * Plugin settings. A schemastery schema, not a TypeScript type: the host validates the
@@ -541,16 +541,15 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     void configured?.fiber.dispose();
     configured = { allowExec, fiber: ctx.plugin({ name: "dsh-generative-ui:configured", apply: (scoped: Context) => applyWith(scoped, allowExec) }) };
   };
-  // Called here as well as from `onChange`, and that is not belt-and-braces: the whole of
-  // `installSettingsSection` sits inside `ctx.inject(["settings"])`, so on a host with no settings
-  // service — `dsh --profile headless` is one — `onChange` never fires at all and nothing would
-  // ever mount. The `mounted` check above is what keeps this from double-mounting where it does.
+  // 无 settings 服务时下面的 inject 不执行，必须先用 entry 配置挂载；rebuild 内的值比较避免重复挂载。
   rebuild();
-  installSettingsSection(ctx, SETTINGS_NAMESPACE, Config, config, {
-    setSource: (source) => {
-      current = source;
-    },
-    onChange: rebuild,
+  ctx.inject(["settings"], (sctx) => {
+    sctx.settings.installSection(ctx, SETTINGS_NAMESPACE, Config, config, {
+      setSource: (source) => {
+        current = source;
+      },
+      onChange: rebuild,
+    });
   });
   ctx.effect(() => () => void configured?.fiber.dispose(), "dsh-generative-ui: settings scope");
 }

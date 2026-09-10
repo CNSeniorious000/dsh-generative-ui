@@ -116,6 +116,10 @@ export type InlineFenceOptions = {
   segments: () => readonly Ui4aSegment[];
   /** `last` answers whether this card is still the transcript's newest — asked at report time, not render time. */
   render: (props: { code: string; streaming: boolean; last: () => boolean }) => ReactElement;
+  /** 在预览渲染时读取当前语言，而不是捕获挂载时的翻译。 */
+  t: (key: "copy" | "copied") => string;
+  /** 语言或字典变化只刷新源码预览，不重新挂载卡片。 */
+  subscribeLocale: (refresh: () => void) => () => void;
   scope?: HTMLElement;
 };
 
@@ -158,7 +162,7 @@ export const isLastSegment = (segments: readonly Ui4aSegment[], code: string): b
  */
 const NEAR_VIEWPORT = "100% 0px";
 
-export function claimInlineFences({ segments, render, scope }: InlineFenceOptions): () => void {
+export function claimInlineFences({ segments, render, t, subscribeLocale, scope }: InlineFenceOptions): () => void {
   const claims = new Map<HTMLElement, Claim>();
   const root = scope ?? document.body;
 
@@ -381,14 +385,18 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
       // what markdown has painted, so this is the newer text and the one the reader wants while
       // waiting. Dropped the moment the card paints.
-      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx" }));
+      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx", copyLabel: t("copy"), copiedLabel: t("copied") }));
     }
   };
 
   const stop = observeTranscript(sweep);
+  const stopLocale = subscribeLocale(() => {
+    for (const claim of claims.values()) claim.preview?.root.render(createElement(CodeBlock, { code: claim.code, lang: "tsx", copyLabel: t("copy"), copiedLabel: t("copied") }));
+  });
 
   return () => {
     stop();
+    stopLocale();
     // `disconnect` rather than unobserving each: the observer is going away with us, and a
     // parked block that is never claimed would otherwise keep it alive through its target list.
     nearby?.disconnect();

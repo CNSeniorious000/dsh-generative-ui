@@ -84,6 +84,8 @@ const out = await page.evaluate(
     let segments = [];
     const dispose = claimInlineFences({
       segments: () => segments,
+      t: (key) => key,
+      subscribeLocale: () => () => {},
       render: ({ code, streaming, last }) =>
         React.createElement(GenUISurface, {
           code,
