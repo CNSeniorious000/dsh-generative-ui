@@ -134,7 +134,7 @@ afterEach(() => {
     }
 });
 
-const start = async (segments: () => any[]) => {
+const start = async (segments: () => any[], locale = { t: (key: string) => key, subscribeLocale: (_refresh: () => void) => () => {} }) => {
   mock.module("react-dom/client", () => ({
     createRoot: (node: any) => ({
       render: (el: any) => {
@@ -156,7 +156,7 @@ const start = async (segments: () => any[]) => {
     },
     // Identity, so a preview's labels are traceable to the key they came from rather than to
     // hardcoded copy — the real `t` is `ctx.locale.bind("common")`.
-    t: (key: string) => key,
+    ...locale,
   });
   started.push(stop);
   paint();
@@ -588,4 +588,26 @@ test("the predicate is true for the only card and false once a later one arrives
   expect(renderedLast).toHaveLength(1);
   expect(renderedLast[0]()).toBe(false);
   stop();
+});
+
+test("语言变化只刷新存留的源码预览，卸载后取消订阅", async () => {
+  const code = "export default () => <div />";
+  makeBlock(code);
+  let language = "en";
+  const listeners = new Set<() => void>();
+  const { stop } = await start(() => [segment(code)], {
+    t: (key) => language + ":" + key,
+    subscribeLocale: (refresh) => { listeners.add(refresh); return () => { listeners.delete(refresh); }; },
+  });
+  language = "zh";
+  for (const refresh of listeners) refresh();
+  expect(previews.at(-1)).toEqual({ code, lang: "tsx", copyLabel: "zh:copy", copiedLabel: "zh:copied" });
+  expect(painted).toHaveLength(1);
+  observers.at(-1)?.fire();
+  paint();
+  const count = previews.length;
+  for (const refresh of listeners) refresh();
+  expect(previews).toHaveLength(count);
+  stop();
+  expect(listeners.size).toBe(0);
 });

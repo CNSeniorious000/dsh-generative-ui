@@ -118,6 +118,8 @@ export type InlineFenceOptions = {
   render: (props: { code: string; streaming: boolean; last: () => boolean }) => ReactElement;
   /** 在预览渲染时读取当前语言，而不是捕获挂载时的翻译。 */
   t: (key: "copy" | "copied") => string;
+  /** 语言或字典变化只刷新源码预览，不重新挂载卡片。 */
+  subscribeLocale: (refresh: () => void) => () => void;
   scope?: HTMLElement;
 };
 
@@ -160,7 +162,7 @@ export const isLastSegment = (segments: readonly Ui4aSegment[], code: string): b
  */
 const NEAR_VIEWPORT = "100% 0px";
 
-export function claimInlineFences({ segments, render, t, scope }: InlineFenceOptions): () => void {
+export function claimInlineFences({ segments, render, t, subscribeLocale, scope }: InlineFenceOptions): () => void {
   const claims = new Map<HTMLElement, Claim>();
   const root = scope ?? document.body;
 
@@ -388,9 +390,13 @@ export function claimInlineFences({ segments, render, t, scope }: InlineFenceOpt
   };
 
   const stop = observeTranscript(sweep);
+  const stopLocale = subscribeLocale(() => {
+    for (const claim of claims.values()) claim.preview?.root.render(createElement(CodeBlock, { code: claim.code, lang: "tsx", copyLabel: t("copy"), copiedLabel: t("copied") }));
+  });
 
   return () => {
     stop();
+    stopLocale();
     // `disconnect` rather than unobserving each: the observer is going away with us, and a
     // parked block that is never claimed would otherwise keep it alive through its target list.
     nearby?.disconnect();

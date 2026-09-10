@@ -1510,3 +1510,5 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 ### primitives 依赖检查
 
 `node scripts/primitives-deps.mjs`（已接入 `bun run test`）检查 `dsh-client-ui-primitives@0.1.5-rc.1` 的静态外部导入：该版本漏声明运行时依赖，本仓暂以 devDependencies 补齐；宿主 externalize 的依赖不打进插件。上游补全 manifest 后脚本会提示可检查删除的重复声明。此检查不覆盖动态计算的导入或版本 API 兼容性，仍需运行 build 和 smoke。
+
+已核实 `dsh-web-frontend@0.1.5-rc.1` 发布的是 Vite 构建后的 `dist/`，其静态 bundle 的平台模块表直接提供 primitives 对象；插件不会在生产环境从 npm 解析 primitives 的裸依赖。上述补齐面向本仓开发工具，不是生产依赖完整性检查。
