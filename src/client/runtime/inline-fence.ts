@@ -116,6 +116,8 @@ export type InlineFenceOptions = {
   segments: () => readonly Ui4aSegment[];
   /** `last` answers whether this card is still the transcript's newest — asked at report time, not render time. */
   render: (props: { code: string; streaming: boolean; last: () => boolean }) => ReactElement;
+  /** 在预览渲染时读取当前语言，而不是捕获挂载时的翻译。 */
+  t: (key: "copy" | "copied") => string;
   scope?: HTMLElement;
 };
 
@@ -158,7 +160,7 @@ export const isLastSegment = (segments: readonly Ui4aSegment[], code: string): b
  */
 const NEAR_VIEWPORT = "100% 0px";
 
-export function claimInlineFences({ segments, render, scope }: InlineFenceOptions): () => void {
+export function claimInlineFences({ segments, render, t, scope }: InlineFenceOptions): () => void {
   const claims = new Map<HTMLElement, Claim>();
   const root = scope ?? document.body;
 
@@ -381,7 +383,7 @@ export function claimInlineFences({ segments, render, scope }: InlineFenceOption
       // The preview follows the SEGMENT, not the block: mid-stream the snapshot runs ahead of
       // what markdown has painted, so this is the newer text and the one the reader wants while
       // waiting. Dropped the moment the card paints.
-      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx", copyLabel: "Copy", copiedLabel: "Copied" }));
+      claim.preview?.root.render(createElement(CodeBlock, { code, lang: "tsx", copyLabel: t("copy"), copiedLabel: t("copied") }));
     }
   };
 

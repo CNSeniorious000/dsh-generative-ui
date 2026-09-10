@@ -50,7 +50,7 @@ export const name = "dsh-generative-ui";
 export const inject = ["systemPrompt"];
 
 /** The settings section this plugin owns; the key under `dsh-generative-ui:` in settings.yaml. */
-export const SETTINGS_NAMESPACE = "dsh-generative-ui";
+export const SETTINGS_NAMESPACE = name;
 
 /**
  * Plugin settings. A schemastery schema, not a TypeScript type: the host validates the
@@ -76,7 +76,7 @@ export const SETTINGS_NAMESPACE = "dsh-generative-ui";
  * card, `git log`, and the twenty-`readdir` walks a single `ls -R` replaces. Off, a model reasoning
  * from a five-capability set writes those as file-by-file loops or does not write the card at all.
  */
-export const Config: z<{ allowExec?: boolean }, { allowExec: boolean }> = z.object({
+export const Config = z.object({
   allowExec: z.boolean().default(true).description("Let generated cards run shell commands through `$dsh/exec`, under this session's own sandbox mode. Cards use it to search (`rg`, `fd`), run `lint`/`check`, and read `git`. The sandbox still applies; what does not is the per-command approval prompt, so turn this off for a session where that matters."),
 });
 
@@ -541,12 +541,9 @@ export function apply(ctx: Context, config: Config = Config({})): void {
     void configured?.fiber.dispose();
     configured = { allowExec, fiber: ctx.plugin({ name: "dsh-generative-ui:configured", apply: (scoped: Context) => applyWith(scoped, allowExec) }) };
   };
-  // Called here as well as from `onChange`, and that is not belt-and-braces: the whole of
-  // `installSection` sits inside `ctx.inject(["settings"])`, so on a host with no settings
-  // service — `dsh --profile headless` is one — `onChange` never fires at all and nothing would
-  // ever mount. The `mounted` check above is what keeps this from double-mounting where it does.
+  // 无 settings 服务时下面的 inject 不执行，必须先用 entry 配置挂载；rebuild 内的值比较避免重复挂载。
   rebuild();
-  ctx.inject(["settings"], (sctx: Context) => {
+  ctx.inject(["settings"], (sctx) => {
     sctx.settings.installSection(ctx, SETTINGS_NAMESPACE, Config, config, {
       setSource: (source) => {
         current = source;

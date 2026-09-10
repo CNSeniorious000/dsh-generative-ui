@@ -7,6 +7,7 @@ import { createElement } from "react";
 import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
+import type {} from "@deepseek-ai/dsh-client-locale/client";
 import { GenUISurface } from "./runtime/GenUISurface.tsx";
 import { cancelPendingReport, cardRendered, reportCardError } from "./runtime/report-error.ts";
 import { disposeCompiler } from "./runtime/compiler.ts";
@@ -22,7 +23,7 @@ import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect
 import { canvasIdOf } from "../contract.ts";
 import { CARD_ERROR_PATH } from "../contract-assets.ts";
 
-export const inject = ["sessions"];
+export const inject = ["sessions", "locale"];
 
 /** Re-exported so `bun run smoke` can build the synthesized blob modules and parse them. */
 export { localImports };
@@ -191,6 +192,7 @@ export function apply(ctx: ClientContext): void {
     () =>
       claimInlineFences({
         segments,
+        t: ctx.locale.bind("common"),
         // The SAME gate on both callbacks. A card that may not report a failure may not retract
         // one either — see `cardRendered`.
         render: ({ code, streaming, last }) => createElement(GenUISurface, { code, streaming, onError: (error, phase) => reportCardError(sendToModel, error.message, phase, last), onRendered: (restored) => cardRendered(restored, last) }),

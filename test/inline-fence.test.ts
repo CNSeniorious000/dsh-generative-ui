@@ -17,7 +17,7 @@ import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 let painted: { code: string; streaming: boolean }[] = [];
 /** The `mount` each render was handed — `report-error` gates on it, so it has to be the real node. */
 let renderedLast: (() => boolean)[] = [];
-let previews: { code: string; lang?: string }[] = [];
+let previews: { code: string; lang?: string; copyLabel?: string; copiedLabel?: string }[] = [];
 let unmounts = 0;
 let frames: (() => void)[] = [];
 let blocks: any[] = [];
@@ -154,6 +154,9 @@ const start = async (segments: () => any[]) => {
       renderedLast.push(last);
       return { props: { code, streaming } };
     },
+    // Identity, so a preview's labels are traceable to the key they came from rather than to
+    // hardcoded copy — the real `t` is `ctx.locale.bind("common")`.
+    t: (key: string) => key,
   });
   started.push(stop);
   paint();
@@ -265,6 +268,9 @@ test("a highlighted source preview stands in until the card paints", async () =>
   expect(previews).toHaveLength(1);
   expect(previews[0]?.lang).toBe("tsx");
   expect(previews[0]?.code).toBe("export default () => <div />");
+  // The copy labels come from `t`, not from literals — see the harness's identity `t`.
+  expect(previews[0]?.copyLabel).toBe("copy");
+  expect(previews[0]?.copiedLabel).toBe("copied");
   observers.at(-1)?.fire();
   paint();
   // painted: the preview is torn down, and the host's block stays hidden behind the card
