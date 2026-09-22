@@ -64,6 +64,19 @@ describe("the fence", () => {
 });
 
 describe("streaming", () => {
+  test("card prompts carry a producer-owned source, not human input", async () => {
+    let messages: any[] = [];
+    const ctx = chunks();
+    Object.assign(ctx.llm, {
+      async *stream(request: { messages: any[] }) {
+        messages = request.messages;
+        yield { type: "text-delta", text: "ok" };
+      },
+    });
+    expect((await call({ body: ask, ctx })).written).toBe("ok");
+    expect(messages[0].source).toEqual({ kind: "dsh-generative-ui" });
+  });
+
   test("text deltas are written through", async () => {
     const { status, written } = await call({ body: ask, ctx: chunks({ type: "text-delta", text: "he" }, { type: "text-delta", text: "llo" }) });
     expect(status).toBe(200);
