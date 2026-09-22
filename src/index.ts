@@ -375,6 +375,9 @@ export async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<
     // Kill the command when the caller goes away. A card that runs one command per keystroke
     // has no other way to cancel — `bash()` returns a promise, not a handle — so without this
     // a fast typist leaves a queue of doomed ripgreps competing for the machine.
+    // Body consumption may finish with an already-destroyed response, before `close` fires.
+    // Do not start a command for it; no await separates this check from listener registration.
+    if (res.destroyed) return;
     const controller = new AbortController();
     // A completed request body is not a closed response socket.
     res.on("close", () => {

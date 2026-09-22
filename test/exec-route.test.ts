@@ -29,12 +29,13 @@ const ctxWith = (result: Record<string, unknown> = {}, seen: Spec[] = []) => ({
   },
 });
 
-const call = async (query: string, opts: { method?: string; body?: string; ctx?: any; live?: Set<string>; onReq?: (req: any) => void; started?: Promise<void> } = {}) => {
+const call = async (query: string, opts: { method?: string; body?: string; ctx?: any; live?: Set<string>; onReq?: (req: any) => void; started?: Promise<void>; destroyDuringBody?: boolean } = {}) => {
   let status = 0,
     body = "";
   const handlers: Record<string, () => void> = {};
   const res = {
     writableEnded: false,
+    destroyed: false,
     on(event: string, fn: () => void) {
       handlers[event] = fn;
       return res;
@@ -54,6 +55,8 @@ const call = async (query: string, opts: { method?: string; body?: string; ctx?:
     on() {},
     async *[Symbol.asyncIterator]() {
       if (opts.body !== undefined) yield opts.body;
+      // Model a response destroyed by the time body consumption completes.
+      if (opts.destroyDuringBody === true) res.destroyed = true;
     },
   };
   const promise = serveExec((opts.ctx ?? ctxWith()) as never, () => opts.live ?? new Set(["/w"]), req, res as never);
@@ -189,6 +192,43 @@ describe("running", () => {
     });
     expect(seen[0].signal?.aborted).toBe(true);
   });
+
+  // A destroyed response must prevent execution, not just abort it on a later close event.
+  for (const shape of ["run", "execute"] as const) {
+    test(`a response destroyed during body consumption starts no command (${shape})`, async () => {
+      const seen: Spec[] = [];
+      let executions = 0;
+      const ctx: any = ctxWith({}, seen);
+      ctx.shell = {
+        resolve: (r: Spec) => {
+          seen.push(r);
+          return r;
+        },
+        ...(shape === "run"
+          ? {
+              run: async () => {
+                executions++;
+                return { exitCode: 0, stdout: stream(), stderr: stream() };
+              },
+            }
+          : {
+              run: async () => {
+                throw new Error("legacy run must not be called");
+              },
+              execute: async () => {
+                executions++;
+                return { result: async () => ({ exitCode: 0, stdout: stream(), stderr: stream() }) };
+              },
+            }),
+      };
+      const { status, json } = await call("cwd=%2Fw&session=s1", { body, ctx, destroyDuringBody: true });
+      expect(seen).toEqual([]);
+      expect(executions).toBe(0);
+      // Nothing is written either: the socket is gone, so there is no status to report to anyone.
+      expect(status).toBe(0);
+      expect(json).toBeNull();
+    });
+  }
 
   test("a shell that throws is a 500 with the message, not a crash", async () => {
     const broken = {
