@@ -1,5 +1,11 @@
 # dsh-generative-ui
 
+## DSH 0.1.7 host compatibility
+
+Keep the legacy `settings.installSection` hookup only where that service still exposes it. New hosts own settings through profile `Config`: mark `allowExec` volatile, read the current reference, and rebuild the capability scope on the owning Loader's volatile update. A disabled command route and its prompt/skill documentation must disappear together. Do not change the product default.
+
+The shell route uses `execute(spec).result()` on new hosts and `run(spec)` on old hosts, with explicit `onExpiry: "kill"`. Keep the session sandbox policy and per-stream output contract. Cancellation follows response-socket closure, not request-body completion. Both model requests and repair notices use the producer-owned `dsh-generative-ui` message source; they are not human input.
+
 **This CLAUDE.md is the design doc.** Change it first, then the code — where they disagree, this file wins and the drift is a bug.
 
 ## In one sentence

@@ -21,11 +21,13 @@ import { Config, serveExec } from "../src/index.ts";
 // while the skill described five, and every test stayed green.
 
 test("the product default — a host that configures nothing — is ON", () => {
-  expect(Config({}).allowExec).toBe(true);
+  const value: unknown = Config({}).allowExec;
+  expect(typeof value === "boolean" ? value : (value as { get(): boolean }).get()).toBe(true);
 });
 
 test("an explicit off is still honoured", () => {
-  expect(Config({ allowExec: false }).allowExec).toBe(false);
+  const value: unknown = Config({ allowExec: false }).allowExec;
+  expect(typeof value === "boolean" ? value : (value as { get(): boolean }).get()).toBe(false);
 });
 
 test("an omitted argument documents the SMALLER set, which is the safe direction", () => {
@@ -97,7 +99,7 @@ test("no placeholder survives into either build", () => {
 test("the handler carries no switch of its own — the route is the switch", () => {
   expect(serveExec.toString()).not.toContain("allowExec");
   const source = require("node:fs").readFileSync("src/index.ts", "utf8") as string;
-  expect(source).toContain("if (allowExec) scoped.inject([\"shell\", \"sandboxPolicy\"]");
+  expect(source).toContain('if (allowExec) scoped.inject(["shell", "sandboxPolicy"]');
 });
 
 // The switch must not become a way to lose the plugin. `installSettingsSection` lives entirely
@@ -112,9 +114,14 @@ test("a host with no settings service still mounts the prompt and the skill", ()
     // A headless host: no settings service, no web server, no skills subsystem beyond the one
     // stubbed below. `inject` runs its callback only for services this table actually has, which
     // is what cordis does and what makes `inject(["settings"], …)` a dead branch here.
-    inject: (names: string[], run: (c: unknown) => void) => { if (names.every((n) => n in stub)) run(stub); },
+    inject: (names: string[], run: (c: unknown) => void) => {
+      if (names.every((n) => n in stub)) run(stub);
+    },
     effect: (run: () => unknown) => void run(),
-    plugin: (spec: { apply: (c: unknown) => void }) => { spec.apply(stub); return { dispose: async () => {} }; },
+    plugin: (spec: { apply: (c: unknown) => void }) => {
+      spec.apply(stub);
+      return { dispose: async () => {} };
+    },
     systemPrompt: { section: (s: unknown) => void sections.push(s), context: (c: unknown) => void contexts.push(c) },
     skills: { register: (s: unknown) => void skills.push(s) },
   };

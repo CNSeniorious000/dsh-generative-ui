@@ -23,7 +23,7 @@ import type {} from "@deepseek-ai/dsh-system-prompt";
 import type {} from "@deepseek-ai/dsh-skill";
 // A value import, unlike the others: `llm.stream` rejects a plain `{role, content}` object,
 // and this is the constructor that stamps the identity and source tags it requires.
-import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { createUserMessage, type ContextFormed } from "@deepseek-ai/dsh-llm";
 import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, CARD_ERROR_PATH, EXEC_PATH, FS_PATH, WASM_PATH, WEB_SEARCH_PATH } from "./contract-assets.ts";
 import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { CardFailures, CARD_FAILURE_CONTEXT, CARD_FAILURE_CONTEXT_ORDER, WAKE_SUMMARY, WAKE_TEXT } from "./card-failure.ts";
@@ -43,6 +43,18 @@ import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 declare module "@deepseek-ai/dsh-system-prompt" {
   interface AssembleContext {
     agent?: { readonly id: string };
+  }
+}
+
+declare module "@deepseek-ai/dsh-llm" {
+  interface MessageSourceMap {
+    "dsh-generative-ui": { kind: "dsh-generative-ui" } & ContextFormed;
+  }
+}
+
+declare module "@deepseek-ai/cordis" {
+  interface Events {
+    "loader/volatile-update"(paths: readonly (readonly string[])[]): void;
   }
 }
 
@@ -80,7 +92,14 @@ export const Config = z.object({
   allowExec: z.boolean().default(true).description("Let generated cards run shell commands through `$dsh/exec`, under this session's own sandbox mode. Cards use it to search (`rg`, `fd`), run `lint`/`check`, and read `git`. The sandbox still applies; what does not is the per-command approval prompt, so turn this off for a session where that matters."),
 });
 
-export type Config = ReturnType<typeof Config>;
+// Old schemastery ignores this metadata; new hosts project it into SettingsForms
+// and parse a stable reference. Keep the older peer floor without importing new-only APIs.
+Object.assign(Config.dict!.allowExec!.meta, { volatile: true });
+export type Config = { allowExec: boolean | { get(): boolean } };
+
+type LegacySettings = {
+  installSection?: (owner: Context, ns: string, schema: typeof Config, defaults: Config, options: { setSource: (source: () => Config) => void; onChange: () => void }) => unknown;
+};
 
 // Namespaced by package name because a duplicate (kind, path) throws, and a throw during apply silently fails the whole plugin.
 export { ASSET_PREFIX, WASM_PATH } from "./contract-assets.ts";
@@ -288,11 +307,11 @@ export async function serveFs(ctx: FsCtx, liveWorkspaces: () => ReadonlySet<stri
 }
 
 /** Context shape for the shell route. `resolve` fills the executor's own defaults and caps. */
+type ExecResult = { exitCode: number | null; signal?: string | null; timedOut?: boolean; stdout: { text: string; truncated: boolean }; stderr: { text: string; truncated: boolean } };
 type ExecCtx = {
   shell: {
-    resolve: (request: { command: string; workdir?: string; timeoutMs?: number; sandboxPolicy?: unknown; signal?: AbortSignal }) => unknown;
-    run: (spec: unknown) => Promise<{ exitCode: number | null; signal?: string | null; timedOut?: boolean; stdout: { text: string; truncated: boolean }; stderr: { text: string; truncated: boolean } }>;
-  };
+    resolve: (request: { command: string; workdir?: string; timeoutMs?: number; onExpiry?: "kill"; sandboxPolicy?: unknown; signal?: AbortSignal }) => unknown;
+  } & ({ execute: (spec: unknown) => Promise<{ result: () => Promise<ExecResult> }> } | { run: (spec: unknown) => Promise<ExecResult> });
   sandboxPolicy: { resolve: (request?: { session?: unknown }) => unknown };
   sessions: { list: () => readonly { id?: string; header: { cwd?: string } }[] };
 };
@@ -357,9 +376,12 @@ export async function serveExec(ctx: ExecCtx, liveWorkspaces: () => ReadonlySet<
     // has no other way to cancel — `bash()` returns a promise, not a handle — so without this
     // a fast typist leaves a queue of doomed ripgreps competing for the machine.
     const controller = new AbortController();
-    req.on("close", () => controller.abort());
-    const spec = ctx.shell.resolve({ command, workdir: cwd, timeoutMs: EXEC_TIMEOUT_MS, sandboxPolicy: ctx.sandboxPolicy.resolve({ session }), signal: controller.signal });
-    const result = await ctx.shell.run(spec);
+    // A completed request body is not a closed response socket.
+    res.on("close", () => {
+      if (!res.writableEnded) controller.abort();
+    });
+    const spec = ctx.shell.resolve({ command, workdir: cwd, timeoutMs: EXEC_TIMEOUT_MS, onExpiry: "kill", sandboxPolicy: ctx.sandboxPolicy.resolve({ session }), signal: controller.signal });
+    const result = "execute" in ctx.shell ? await (await ctx.shell.execute(spec)).result() : await ctx.shell.run(spec);
     return json(200, {
       stdout: result.stdout.text,
       stderr: result.stderr.text,
@@ -486,7 +508,7 @@ export async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<str
   // provider, model and replay state, which means a multi-turn API here would be forging
   // turns the model never produced. Anything a card needs from an earlier turn belongs in
   // the prompt it builds.
-  const messages = [createUserMessage({ content: [{ type: "text", text: request.prompt }], source: { kind: "plugin", plugin: "dsh-generative-ui" } })];
+  const messages = [createUserMessage({ content: [{ type: "text", text: request.prompt }], source: { kind: "dsh-generative-ui" } })];
 
   const selection = ctx.agentDefaultModel.currentSelection();
   // Abort the model call when the reader navigates away or the card unmounts; without this
@@ -517,7 +539,7 @@ export async function serveAi(ctx: LlmCtx, liveWorkspaces: () => ReadonlySet<str
 type SessionStoreCtx = { sessions: { list: () => readonly { header: { cwd?: string } }[] } };
 
 // `= Config({})` rather than a bare default: schemastery fills every declared default, so an
-// omitted config is the same object the host would have built, and `allowExec` is false there.
+// omitted config is the same object the host would have built, and `allowExec` is true there.
 // A host that calls `apply(ctx)` is not a hypothetical — the existing profile tests do.
 export function apply(ctx: Context, config: Config = Config({})): void {
   // `current()` rather than a captured boolean: the section is live, and a user who turns
@@ -533,7 +555,8 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   // dedup from what is actually mounted.
   let configured: { allowExec: boolean; fiber: { dispose: () => Promise<void> } } | null = null;
   const rebuild = () => {
-    const allowExec = current().allowExec === true;
+    const value = current().allowExec;
+    const allowExec = (typeof value === "boolean" ? value : value?.get()) === true;
     // `onChange` fires on every write to the section, and the section may grow other keys later.
     // Rebuilding on a value that did not move would tear down the prompt and both routes for
     // nothing — visible to a reader as a card losing its host mid-conversation.
@@ -543,8 +566,11 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   };
   // 无 settings 服务时下面的 inject 不执行，必须先用 entry 配置挂载；rebuild 内的值比较避免重复挂载。
   rebuild();
+  // Profile edits update the reference before this owner-scoped event is emitted.
+  // Legacy plain-boolean hosts keep their existing installSection callback below.
+  if (typeof config.allowExec !== "boolean") ctx.on("loader/volatile-update", rebuild);
   ctx.inject(["settings"], (sctx) => {
-    sctx.settings.installSection(ctx, SETTINGS_NAMESPACE, Config, config, {
+    (sctx.settings as unknown as LegacySettings).installSection?.(ctx, SETTINGS_NAMESPACE, Config, config, {
       setSource: (source) => {
         current = source;
       },
@@ -575,7 +601,7 @@ function applyWith(ctx: Context, allowExec: boolean): void {
       // `source.kind` is what the transcript renders on: anything other than `"user"` is
       // classified as injected context rather than a chat bubble, which is why this can wake the
       // model without putting words in the reader's mouth. `form: "notice"` is the presentation.
-      agent?.followup(createUserMessage({ content: [{ type: "text", text: WAKE_TEXT }], source: { kind: "plugin", plugin: "dsh-generative-ui", form: "notice", summary: WAKE_SUMMARY } }));
+      agent?.followup(createUserMessage({ content: [{ type: "text", text: WAKE_TEXT }], source: { kind: "dsh-generative-ui", form: "notice", summary: WAKE_SUMMARY } }));
     };
     return () => {
       wake = null;

@@ -32,7 +32,13 @@ const ctxWith = (result: Record<string, unknown> = {}, seen: Spec[] = []) => ({
 const call = async (query: string, opts: { method?: string; body?: string; ctx?: any; live?: Set<string>; onReq?: (req: any) => void; started?: Promise<void> } = {}) => {
   let status = 0,
     body = "";
+  const handlers: Record<string, () => void> = {};
   const res = {
+    writableEnded: false,
+    on(event: string, fn: () => void) {
+      handlers[event] = fn;
+      return res;
+    },
     writeHead(code: number) {
       status = code;
       return res;
@@ -42,19 +48,16 @@ const call = async (query: string, opts: { method?: string; body?: string; ctx?:
       return res;
     },
   };
-  const handlers: Record<string, () => void> = {};
   const req: any = {
     method: opts.method ?? "POST",
     url: `/x?${query}`,
-    on(event: string, fn: () => void) {
-      handlers[event] = fn;
-    },
+    on() {},
     async *[Symbol.asyncIterator]() {
       if (opts.body !== undefined) yield opts.body;
     },
   };
   const promise = serveExec((opts.ctx ?? ctxWith()) as never, () => opts.live ?? new Set(["/w"]), req, res as never);
-  // `close` has to be fired while the command is genuinely in flight: the handler is registered
+  // Response `close` has to be fired while the command is genuinely in flight: the handler is registered
   // inside `serveExec` only after it has awaited the request body, and firing before that lands
   // in an empty handler table. `started` resolves when the ctx says `run` was reached — waiting
   // on the real event rather than guessing a number of microtask turns.
@@ -91,6 +94,31 @@ describe("the fence", () => {
 });
 
 describe("running", () => {
+  test("new hosts use execute(spec).result() without calling legacy run", async () => {
+    const seen: Spec[] = [];
+    const ctx = ctxWith({}, seen);
+    let results = 0;
+    Object.assign(ctx.shell, {
+      run: async () => {
+        throw new Error("legacy run must not be called");
+      },
+      execute: async (spec: Spec) => {
+        expect(spec).toBe(seen[0]);
+        return {
+          result: async () => {
+            results++;
+            return { exitCode: 7, stdout: stream("out", true), stderr: stream("err"), timedOut: false };
+          },
+        };
+      },
+    });
+    const { status, json } = await call("cwd=%2Fw&session=s2", { body, ctx });
+    expect(status).toBe(200);
+    expect(results).toBe(1);
+    expect(json).toEqual({ stdout: "out", stderr: "err", exitCode: 7, truncated: { stdout: true, stderr: false }, timedOut: false });
+    expect(seen[0]).toHaveProperty("onExpiry", "kill");
+  });
+
   test("the command runs under the named session's policy, with the timeout", async () => {
     const seen: Spec[] = [];
     await call("cwd=%2Fw&session=s2", { body, ctx: ctxWith({}, seen) });
@@ -98,6 +126,7 @@ describe("running", () => {
     expect(seen[0].workdir).toBe("/w");
     // The card is on the user's page waiting on a fetch, so an unbounded command is a hang.
     expect(seen[0].timeoutMs).toBeGreaterThan(0);
+    expect(seen[0]).toHaveProperty("onExpiry", "kill");
   });
 
   // `bash()` resolves on a non-zero exit and the prompt tells the model to check `exitCode`
