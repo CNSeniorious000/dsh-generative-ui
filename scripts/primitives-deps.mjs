@@ -33,8 +33,8 @@ const declared = new Set([...Object.keys(manifest.devDependencies ?? {}), ...Obj
 const primitivesManifest = JSON.parse(readFileSync(require.resolve("@deepseek-ai/dsh-client-ui-primitives/package.json"), "utf8"));
 const upstreamDeclared = new Set([...Object.keys(primitivesManifest.dependencies ?? {}), ...Object.keys(primitivesManifest.peerDependencies ?? {})]);
 
-const missing = [...required].filter((name) => !declared.has(name) && !upstreamDeclared.has(name)).sort();
-const upstreamFixed = [...required].filter((name) => upstreamDeclared.has(name) && name !== "@deepseek-ai/cordis").sort();
+const missing = [...required].filter((name) => !declared.has(name) && !upstreamDeclared.has(name)).toSorted();
+const upstreamFixed = [...required].filter((name) => upstreamDeclared.has(name) && name !== "@deepseek-ai/cordis").toSorted();
 
 console.log(`primitives requires ${required.size} external package(s); this repo declares ${[...required].filter((n) => declared.has(n)).length}`);
 
