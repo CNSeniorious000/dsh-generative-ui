@@ -7,6 +7,7 @@
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { nonMutatingSort } from "./non-mutating-sort.mjs";
 
 const require = createRequire(import.meta.url);
 const entry = require.resolve("@deepseek-ai/dsh-client-ui-primitives");
@@ -33,8 +34,8 @@ const declared = new Set([...Object.keys(manifest.devDependencies ?? {}), ...Obj
 const primitivesManifest = JSON.parse(readFileSync(require.resolve("@deepseek-ai/dsh-client-ui-primitives/package.json"), "utf8"));
 const upstreamDeclared = new Set([...Object.keys(primitivesManifest.dependencies ?? {}), ...Object.keys(primitivesManifest.peerDependencies ?? {})]);
 
-const missing = [...required].filter((name) => !declared.has(name) && !upstreamDeclared.has(name)).toSorted();
-const upstreamFixed = [...required].filter((name) => upstreamDeclared.has(name) && name !== "@deepseek-ai/cordis").toSorted();
+const missing = nonMutatingSort([...required].filter((name) => !declared.has(name) && !upstreamDeclared.has(name)));
+const upstreamFixed = nonMutatingSort([...required].filter((name) => upstreamDeclared.has(name) && name !== "@deepseek-ai/cordis"));
 
 console.log(`primitives requires ${required.size} external package(s); this repo declares ${[...required].filter((n) => declared.has(n)).length}`);
 
