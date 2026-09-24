@@ -165,7 +165,7 @@ test("the tokens the prompt's own recipes write all generate", async () => {
                   "hover:bg-hover", "aria-pressed:bg-accent", "aria-pressed:text-white", "aria-pressed:border-transparent",
                   "isolate", "relative", "sticky", "top-0", "z-10", "max-h-[30rem]", "overflow-y-auto", "border-b", "bg-layer"];
   const { css, matched } = await generate(tokens);
-  expect([...matched].sort()).toEqual([...tokens].sort());
+  expect([...matched].toSorted()).toEqual(tokens.toSorted());
   expect(css).toContain('[aria-pressed="true"]');
   expect(css).toContain("--dsw-alias-border-l1");
   expect(css).toContain("--dsw-alias-interactive-bg-hover");
@@ -242,5 +242,5 @@ test("every class in a code example generates a rule", async () => {
     const { matched } = await generate([token]);
     if (matched.size === 0) unmatched.push(token);
   }
-  expect(unmatched.sort()).toEqual([]);
+  expect(unmatched.toSorted()).toEqual([]);
 });

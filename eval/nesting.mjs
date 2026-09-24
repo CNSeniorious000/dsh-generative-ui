@@ -18,6 +18,7 @@
 import { parse } from "@babel/parser"
 import { readFileSync, readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
+import { nonMutatingSort } from "../scripts/non-mutating-sort.mjs"
 
 const GROUNDS = process.argv.includes("--grounds")
 const BOX = (c) => GROUNDS ? /\bbg-(page|layer|layer-2|layer-3)\b/.test(c) : (/\bborder\b|\bborder-[a-z]/.test(c) || c.includes("bg-layer")) && /\brounded/.test(c) && /\bp[xytrbl]?-/.test(c)
@@ -79,7 +80,7 @@ const total = Object.values(hist).reduce((a, b) => a + b, 0)
 const deep = Object.entries(hist).filter(([k]) => +k >= 4).reduce((a, [, v]) => a + v, 0)
 console.log(`${files.length} 张卡片；链长≥4（祖先超过两个）${deep} 张 = ${(100 * deep / total).toFixed(1)}%；最深 ${best.n}`)
 if (failed.length) console.log(`解析失败 ${failed.length} 张 — 例: ${failed[0][1]}`)
-console.log(`深度分布 ${JSON.stringify(Object.fromEntries(Object.entries(hist).sort((a, b) => a[0] - b[0])))}`)
+console.log(`深度分布 ${JSON.stringify(Object.fromEntries(nonMutatingSort(Object.entries(hist), (a, b) => a[0] - b[0])))}`)
 if (process.argv.includes("--deepest")) {
   console.log(`\n最深: ${best.f}`)
   best.chain.forEach((c, i) => console.log(`  ${i + 1}. ${c}`))

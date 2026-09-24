@@ -1508,6 +1508,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `mutation-audit.sh` / `invert-ifs.mjs` | inverts one condition at a time; names what no test constrains |
 | `check-exports.ts` | a package's real exports, through the same esm.sh URL the runtime resolves |
 | `platform-table.sh` | re-checks the host's module table (§2.1) — the one note that asks to be re-run |
+| `non-mutating-sort.mjs` | shared `toSorted`/copy-and-sort fallback for direct Node scripts, so the lint-clean non-mutating sort remains usable before Node 20 |
 | `stub-unresolvable.ts` | the `$dsh/*` and icon stubs, read from `types/standalone/` so it cannot go stale |
 | `tsx-node.ts` | `compileSettled` — the pipeline production takes, so checkers cannot diverge |
 | `append-section.py` | inserts a dated section in date order (three hand-inserts landed out of order) |
@@ -1515,6 +1516,6 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 
 ### primitives 依赖检查
 
-`node scripts/primitives-deps.mjs`（已接入 `bun run test`）检查 `dsh-client-ui-primitives@0.1.5-rc.1` 的静态外部导入：该版本漏声明运行时依赖，本仓暂以 devDependencies 补齐；宿主 externalize 的依赖不打进插件。上游补全 manifest 后脚本会提示可检查删除的重复声明。此检查不覆盖动态计算的导入或版本 API 兼容性，仍需运行 build 和 smoke。
+`node scripts/primitives-deps.mjs`（已接入 `bun run test`）检查 `dsh-client-ui-primitives@0.1.5-rc.1` 的静态外部导入：该版本漏声明运行时依赖，本仓暂以 devDependencies 补齐；宿主 externalize 的依赖不打进插件。上游补全 manifest 后脚本会提示可检查删除的重复声明。此检查不覆盖动态计算的导入或版本 API 兼容性，仍需运行 build 和 smoke。`eval/nesting.mjs` 与本脚本都支持直接用旧版 Node 运行：通过 `scripts/non-mutating-sort.mjs` 优先使用 `toSorted()`，旧运行时则对副本调用排序，既不改变输入数组，也不把 Node 20 作为隐含前提。
 
 已核实 `dsh-web-frontend@0.1.5-rc.1` 发布的是 Vite 构建后的 `dist/`，其静态 bundle 的平台模块表直接提供 primitives 对象；插件不会在生产环境从 npm 解析 primitives 的裸依赖。上述补齐面向本仓开发工具，不是生产依赖完整性检查。
