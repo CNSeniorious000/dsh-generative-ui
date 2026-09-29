@@ -6,6 +6,22 @@ Keep the legacy `settings.installSection` hookup only where that service still e
 
 The shell route uses `execute(spec).result()` on new hosts and `run(spec)` on old hosts, with explicit `onExpiry: "kill"`. Keep the session sandbox policy and per-stream output contract. Cancellation follows response-socket closure, not request-body completion; a response that is already destroyed when the body finishes starts no command at all, since there is nobody left to read the output. Both model requests and repair notices use the producer-owned `dsh-generative-ui` message source; they are not human input.
 
+### dsh-v0.2.0-rc.1 (checked 2026-09-28)
+
+Peer ranges widened from `^0.1.5-rc.1` to `^0.1.5-rc.1 || ^0.1.6-0 || ^0.1.7-0 || ^0.2.0-0`. The union shape is deliberate, and it is not the same as `>=0.1.5-rc.1`: a plain `^0.1.5-rc.1` numerically REJECTS `0.2.0-rc.1` (minor bumps break `^` on 0.x), while a bare `>=` leaves every intermediate prerelease `unknown` under the dsh-doctor strict/numeric rule (`unknown is never compatible` — host-peer-declarations.md §4). One anchor per released prerelease line admits each line strictly. Verified against the published versions 0.1.5-rc.1 → 0.2.0-rc.1.
+
+Three things measured for this host, not inferred:
+
+- **`dsh-client-runtime` has no 0.2.0-rc.1** — the package was split (`api-session-controller/client` owns `ctx.sessions` now) and its last publish is `0.1.1-rc.2`. Our two `ClientContext` imports are `import type` only (it is `Context` from cordis), so it stays a type-time peer at `^0.1.1-rc.2` and the dev pin stays `0.1.1-rc.2`. Its `dsh.client.inject` row is tolerated as absent: the browser loader skips inject edges with no matching graph row (`arriveGraphRow` — `if (dependency !== undefined)`), and nothing in the built bundle `require()`s it. Do NOT drop the import or the inject row in the name of cleanup: the import carries `declare module` merges (§2.7) and the row orders factory arrival on the 0.1.5 hosts that still have the package.
+- **PLATFORM_MODULES re-check (the one §2.1 asks for on every dsh upgrade): the table is byte-identical between 0.1.5-rc.1 and 0.2.0-rc.1** — and it GREW since rc.8 to 9 entries (`dsh-client-store`, `dsh-client-ui-dockkit` added). Our 7-entry external list is a subset we actually `require()` (measured in `lib/client.js`: only `react` and `dsh-client-ui-primitives`), so no build change.
+- **The `dsh-generative-ui` message source already passes both writers.** The producer-owned bare kind survives v3 AND v4 `encodeCurrentEvent`, and the v3→v4 migration rewrites only the released `kind:"plugin"` wrapper (`rewriteV3MessageSource` passes direct kinds through with their metadata). No source change needed here — unlike dsh-py-codeact, which historically used the wrapper and has to switch per format generation.
+
+Dev pins moved to `0.2.0-rc.1` as a set (the manifest is a version SET, not ten independent choices — mixing lines is how the primitives gap in the last paragraph stays invisible).
+
+### js-yaml pin (CVE-2026-84375)
+
+`js-yaml` is pinned to `4.3.2` through a bun `overrides` entry. The lock previously resolved `4.3.1`, which is inside the CVE's affected range (fixed in `3.15.2`/`4.3.2` — merge-key `<<` with empty mapping sources burns CPU past `maxTotalMergeKeys`). All four consumers (`cordis-plugin-include`, `dsh-agent-presets` at `^4.1.0`; `dsh-app-boot` at `^4.2.0`; `dsh-config-editor` at `^4.1.0`) admit `4.3.2` — verified with a semver probe — so the fix is range-compatible with everything the host pulls; the override is what makes it land in ONE hoisted resolution and keeps it there. A bare `bun update js-yaml` does the wrong thing: it hoists `5.x` as a phantom direct devDep and nests a still-vulnerable `4.3.1` under each consumer. `4.3.2` is same-major with no API removals (`load`/`dump`/`loadAll`/`DEFAULT_SCHEMA`/`YAMLException` all present); `5.x` would be a breaking jump for those consumers. Remove the override once the upstream packages widen past `4.3.x` or drop `js-yaml`; until then it is the only way to land the fix in one lock.
+
 **This CLAUDE.md is the design doc.** Change it first, then the code — where they disagree, this file wins and the drift is a bug.
 
 ## In one sentence
@@ -1516,6 +1532,6 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 
 ### primitives 依赖检查
 
-`node scripts/primitives-deps.mjs`（已接入 `bun run test`）检查 `dsh-client-ui-primitives@0.1.5-rc.1` 的静态外部导入：该版本漏声明运行时依赖，本仓暂以 devDependencies 补齐；宿主 externalize 的依赖不打进插件。上游补全 manifest 后脚本会提示可检查删除的重复声明。此检查不覆盖动态计算的导入或版本 API 兼容性，仍需运行 build 和 smoke。`eval/nesting.mjs` 与本脚本都支持直接用旧版 Node 运行：通过 `scripts/non-mutating-sort.mjs` 优先使用 `toSorted()`，旧运行时则对副本调用排序，既不改变输入数组，也不把 Node 20 作为隐含前提。
+`node scripts/primitives-deps.mjs`（已接入 `bun run test`）检查当前安装的 `dsh-client-ui-primitives` 静态外部导入：该包两代发布都漏声明运行时依赖，本仓暂以 devDependencies 补齐——`0.1.5-rc.1` 漏一组，`0.2.0-rc.1` 的 bundle 另增 5 个（`dsh-client-store`、`dsh-util-code-language`、`dsh-util-workspace-path`、`diff`、`simple-icons`），dev pin 跟随 `0.2.0-rc.1` 时必须一并提升；宿主 externalize 的依赖不打进插件。上游补全 manifest 后脚本会提示可检查删除的重复声明。此检查不覆盖动态计算的导入或版本 API 兼容性，仍需运行 build 和 smoke。`eval/nesting.mjs` 与本脚本都支持直接用旧版 Node 运行：通过 `scripts/non-mutating-sort.mjs` 优先使用 `toSorted()`，旧运行时则对副本调用排序，既不改变输入数组，也不把 Node 20 作为隐含前提。
 
 已核实 `dsh-web-frontend@0.1.5-rc.1` 发布的是 Vite 构建后的 `dist/`，其静态 bundle 的平台模块表直接提供 primitives 对象；插件不会在生产环境从 npm 解析 primitives 的裸依赖。上述补齐面向本仓开发工具，不是生产依赖完整性检查。

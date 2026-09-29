@@ -95,7 +95,16 @@ export const Config = z.object({
 // Old schemastery ignores this metadata; new hosts project it into SettingsForms
 // and parse a stable reference. Keep the older peer floor without importing new-only APIs.
 Object.assign(Config.dict!.allowExec!.meta, { volatile: true });
-export type Config = { allowExec: boolean | { get(): boolean } };
+// `get(): boolean | undefined`, not `get(): boolean`: the volatile reference type is
+// `Volatile<T | undefined>` when the field is merely `default`ed (schemastery 3.18.4's
+// `SchemaOutput<T, 'volatile'>`, which 0.2.0-rc.1's dsh-settings types reach through), and a
+// reference whose `get()` returns `boolean | undefined` is NOT assignable to one promising
+// `boolean`. Structural widening here — rather than importing `Volatile` — is what keeps this
+// compiling across the schemastery copies the tree can still carry (the manifest is a version
+// SET: the direct dev pin is now `~3.18.4` so the export sits on ONE `Schema` identity, while
+// an older transitive graph may still nest 3.18.2). The runtime already reads it as tri-state
+// (`=== true`), so nothing changes at run time.
+export type Config = { allowExec: boolean | { get(): boolean | undefined } };
 
 type LegacySettings = {
   installSection?: (owner: Context, ns: string, schema: typeof Config, defaults: Config, options: { setSource: (source: () => Config) => void; onChange: () => void }) => unknown;
