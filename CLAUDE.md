@@ -18,6 +18,10 @@ Three things measured for this host, not inferred:
 
 Dev pins moved to `0.2.0-rc.1` as a set (the manifest is a version SET, not ten independent choices — mixing lines is how the primitives gap in the last paragraph stays invisible).
 
+### js-yaml pin (CVE-2026-84375)
+
+`js-yaml` is pinned to `4.3.2` through a bun `overrides` entry. The lock previously resolved `4.3.1`, which is inside the CVE's affected range (fixed in `3.15.2`/`4.3.2` — merge-key `<<` with empty mapping sources burns CPU past `maxTotalMergeKeys`). All four consumers (`cordis-plugin-include`, `dsh-agent-presets` at `^4.1.0`; `dsh-app-boot` at `^4.2.0`; `dsh-config-editor` at `^4.1.0`) admit `4.3.2` — verified with a semver probe — so the fix is range-compatible with everything the host pulls; the override is what makes it land in ONE hoisted resolution and keeps it there. A bare `bun update js-yaml` does the wrong thing: it hoists `5.x` as a phantom direct devDep and nests a still-vulnerable `4.3.1` under each consumer. `4.3.2` is same-major with no API removals (`load`/`dump`/`loadAll`/`DEFAULT_SCHEMA`/`YAMLException` all present); `5.x` would be a breaking jump for those consumers. Remove the override once the upstream packages widen past `4.3.x` or drop `js-yaml`; until then it is the only way to land the fix in one lock.
+
 **This CLAUDE.md is the design doc.** Change it first, then the code — where they disagree, this file wins and the drift is a bug.
 
 ## In one sentence
