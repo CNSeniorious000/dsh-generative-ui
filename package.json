@@ -157,5 +157,8 @@
     "url": "git+https://github.com/CNSeniorious000/dsh-generative-ui.git"
   },
   "homepage": "https://github.com/CNSeniorious000/dsh-generative-ui#readme",
-  "bugs": "https://github.com/CNSeniorious000/dsh-generative-ui/issues"
+  "bugs": "https://github.com/CNSeniorious000/dsh-generative-ui/issues",
+  "overrides": {
+    "js-yaml": "4.3.2"
+  }
 }
