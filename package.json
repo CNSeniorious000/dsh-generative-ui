@@ -144,6 +144,7 @@
     "anser": "^2.3.5",
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
+    "immer": "^10.1.1",
     "katex": "^0.16.47",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
@@ -167,7 +168,8 @@
     "react-dom": "^18.3.1",
     "shiki": "^4.4.3",
     "simple-icons": "^16.33.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "zustand": "~4.4.7"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-host-webserver": {
