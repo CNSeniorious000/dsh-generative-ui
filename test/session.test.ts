@@ -8,7 +8,13 @@ import type { ChatNodeView } from "../src/client/session.ts";
  * was constrained — the mutation audit could not see this file at all, because its glob listed
  * two directories at one depth and `src/client/` was not one of them.
  */
-const ctxWith = (current: string | undefined, binding: unknown, uiConversation?: unknown) => ({ sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding }, get: () => uiConversation }) as never;
+const ctxWith = (current: string | undefined, binding: unknown, uiConversation?: unknown, hasUiSession = true) => ({
+  get uiSession(): never { throw new Error('cannot get property "uiSession" without inject'); },
+  sessions: { list: { getSnapshot: () => ({ current }) }, binding: () => binding },
+  get: (name: string) => name === "uiSession"
+    ? hasUiSession ? { adapter: { current: { getSnapshot: () => ({ key: current }) } } } : undefined
+    : uiConversation,
+}) as never;
 const conversation = (chat: unknown, bind: (source: unknown) => void = () => {}) => ({
   binding: (source: unknown) => {
     bind(source);
@@ -40,6 +46,12 @@ test("an rc.8 session yields its nodes in order", () => {
   ]);
   const ctx = ctxWith("s1", { session: { getSnapshot: () => ({ chat: { nodes } }) } });
   expect(chatNodes(ctx).map((n) => n.kind)).toEqual(["text", "tool"]);
+});
+
+test("a legacy session without uiSession still reads its selected chat", () => {
+  const nodes = new Map([["old", node("text", 1)]]);
+  const ctx = ctxWith("legacy", { session: { getSnapshot: () => ({ chat: { nodes } }) } }, undefined, false);
+  expect(chatNodes(ctx).map((n) => n.kind)).toEqual(["text"]);
 });
 
 test("an unmaterialized 0.1.2 chat target yields no nodes", () => {
