@@ -21,6 +21,7 @@ const applyWithWorkspaces = (workspaces: Record<string, unknown>) => {
   const stub = (): unknown => new Proxy(() => stub(), { get: () => stub(), apply: () => stub() });
   const base: Record<string, unknown> = {
     workspaces,
+    get: (name: string) => name === "workspaces" ? workspaces : stub(),
     effect: (run: () => unknown, label?: string) => {
       // The canvas-column effect mounts a host and sets the `showCanvas` this wrap consults.
       // Whether it SUCCEEDS depends on the global `document` another test file installed, so

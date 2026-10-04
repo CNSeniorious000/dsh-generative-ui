@@ -4,7 +4,9 @@
  * @module dsh-generative-ui/client
  */
 import { createElement } from "react";
-import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
+import type { Context as ClientContext } from "@deepseek-ai/cordis";
+import type { ISessions } from "@deepseek-ai/dsh-api-session-controller/client";
+import type {} from "@deepseek-ai/dsh-client-ui-session/client";
 import type {} from "@deepseek-ai/dsh-client-ui-layout/client";
 import type {} from "@deepseek-ai/dsh-client-ui-conversation/client";
 import type {} from "@deepseek-ai/dsh-client-locale/client";
@@ -17,7 +19,7 @@ import { registerUi4aHost, releaseBindings, localImports } from "./runtime/bindi
 import { claimInlineFences } from "./runtime/inline-fence.ts";
 import { parseUi4aSegments, type Ui4aSegment } from "./runtime/segments.ts";
 import { warmCompiler } from "./runtime/compiler.ts";
-import { chatNodes, perNode, type ChatNodeView } from "./session.ts";
+import { chatNodes, perNode, selectedSessionId, type ChatNodeView } from "./session.ts";
 import { mountCanvasHost } from "./canvas/index.ts";
 import { toolCallsOf, type CallBlock, type ToolCallView } from "./canvas/collect.ts";
 import { canvasIdOf } from "../contract.ts";
@@ -32,6 +34,10 @@ export { localImports };
 type AssistantNodeData = { blocks?: readonly { kind: string; text?: string }[] };
 
 export function apply(ctx: ClientContext): void {
+  // The Host and browser halves share one type-check program but bind different
+  // `sessions` service shapes; the browser uses the Client Controller.
+  const sessions = ctx.sessions as unknown as ISessions;
+  const currentSession = () => selectedSessionId(ctx);
   // Compiling anything pays a ~400 ms wasm init. Doing it now means the first fence the
   // user actually sees does not, and an idle tab is the cheapest possible moment for it.
   void warmCompiler();
@@ -71,15 +77,14 @@ export function apply(ctx: ClientContext): void {
 
   /** The current session's workspace, which canvas file reads resolve against. */
   const cwd = (): string | undefined => {
-    const list = ctx.sessions.list.getSnapshot();
-    return list.current === undefined ? undefined : list.byId[list.current]?.cwd;
+    const id = currentSession();
+    return id === undefined ? undefined : sessions.list.getSnapshot().byId[id]?.cwd;
   };
 
   /**
    * Identity of the open session, so a dismissed canvas stays dismissed only there.
    * Returns the branded `SessionId` rather than a plain string: `sessions.scope()` needs it.
    */
-  const currentSession = () => ctx.sessions.list.getSnapshot().current;
   const sessionId = (): string => currentSession() ?? "";
 
   // Revoking on teardown is safe: a blob module that was already imported keeps working after
@@ -117,7 +122,7 @@ export function apply(ctx: ClientContext): void {
         sessionId,
         send: (text) => {
           const id = currentSession();
-          const session = id === undefined ? undefined : scoped.sessions.scope(id);
+          const session = id === undefined ? undefined : (scoped.sessions as unknown as ISessions).scope(id);
           if (session === undefined) return void console.error("[dsh-generative-ui] $dsh/chat: no session to send into");
           // The scoped context is minted by the host and carries its own inject set, so our
           // outer declaration does not reach it — reading `conversation` off it directly
@@ -169,7 +174,7 @@ export function apply(ctx: ClientContext): void {
   // to the panel and forwards everything else untouched.
   ctx.inject(["workspaces"], (scoped) => {
     scoped.effect(() => {
-      const workspaces = scoped.workspaces as { openPath?: (path: string) => Promise<void> };
+      const workspaces = scoped.get("workspaces") as { openPath?: (path: string) => Promise<void> };
       // Wrapping someone else's method is a bet on its shape. Losing that bet here would
       // throw during registration and take the whole plugin down, so a host without it
       // simply keeps its own behaviour.
