@@ -1,0 +1,245 @@
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { CASES, type Case } from "./cases.ts";
+import { CANCEL, createClock } from "./clock.ts";
+import { centerOf, createCursor, type Cursor } from "./cursor.ts";
+import { advance, reducedMotion, useFlip, useFollowScroll, useFrame, useInView } from "./motion.ts";
+import { createRenderer, prewarm } from "./runtime.ts";
+import { highlight, rate } from "./stream.ts";
+import { Composer, Frame, Header, Sidebar, ToolRow, UserBubble } from "../ui/dsh.tsx";
+import { Icon } from "../ui/icons.tsx";
+
+type Phase = "typing" | "sent" | "tools" | "lead" | "card" | "done";
+type Scene = { n: number; c: Case; phase: Phase; leaving?: boolean; prompt: number; tools: number; lead: number; code: number; painted: number | null; ms: number };
+
+const SPEEDS = [0.5, 1, 2] as const;
+const HOLD_MS = 2600;
+
+/** A height that springs toward its content's, so a card growing line by line never jumps. */
+function Grow({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const outer = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const h = useRef({ x: 0, v: 0 });
+  useFrame((dt) => {
+    if (!inner.current || !outer.current) return;
+    const target = inner.current.offsetHeight;
+    advance(h.current, target, dt, 0.45, 1);
+    if (Math.abs(h.current.x - target) < 0.5 && Math.abs(h.current.v) < 5) h.current.x = target;
+    outer.current.style.height = `${h.current.x}px`;
+  });
+  return <div ref={outer} className={`overflow-hidden ${className}`}><div ref={inner}>{children}</div></div>;
+}
+
+const Line = memo(({ text }: { text: string }) => (
+  <div className="min-h-[18px] whitespace-pre">{highlight(text).map((p, i) => <span key={i} className={p.kind && `hl-${p.kind}`}>{p.text}</span>)}</div>
+));
+
+/** The source as it arrives, followed at the bottom by a spring so the scroll has momentum too. */
+function Source({ scene, speed, setSpeed }: { scene: Scene; speed: number; setSpeed: (s: number) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const reset = useFollowScroll(box);
+  const shown = scene.c.source.slice(0, scene.code);
+  const lines = shown.split("\n");
+  const tokens = Math.round(scene.code / 3.6);
+  useEffect(reset, [scene.n]);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#ffffff1f] bg-[#1b1b1c]">
+      <div className="flex h-10 items-center gap-3 border-b border-[#ffffff0f] bg-[#2c2c2e] px-4 text-[11px] text-[#adb2b8]">
+        <span className="font-mono text-[#cfd3d6]">ui4a/tsx</span>
+        <span className="truncate">{scene.c.surface === "canvas" ? `.dsh/ui4a/canvases/${scene.c.file}` : "inline"}</span>
+        <div role="radiogroup" aria-label="Streaming speed" className="ml-auto flex rounded-full bg-[#1b1b1c] p-0.5">
+          {SPEEDS.map((s) => (
+            <button key={s} type="button" role="radio" aria-checked={speed === s} onClick={() => setSpeed(s)} className={`rounded-full px-2 py-0.5 tabular-nums transition-colors duration-200 ${speed === s ? "bg-[#43454a] text-[#f9fafb]" : "hover:text-[#f9fafb]"}`}>
+              {s}×
+            </button>
+          ))}
+        </div>
+      </div>
+      <div ref={box} className="ui4a-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[18px] text-[#cfd3d6]">
+        {lines.map((l, i) => <Line key={i} text={l} />)}
+        {scene.phase === "card" && <span className="ui4a-caret" />}
+      </div>
+      <div className="flex h-9 items-center gap-4 border-t border-[#ffffff0f] px-4 text-[11px] tabular-nums text-[#81858c]">
+        <span><b className="font-medium text-[#cfd3d6]">{tokens}</b> tokens</span>
+        <span><b className="font-medium text-[#cfd3d6]">{((scene.code ? scene.ms : 0) / 1000).toFixed(1)}</b>s</span>
+        <span className={`ml-auto transition-opacity duration-500 ${scene.painted === null ? "opacity-0" : "opacity-100"}`}>
+          first paint at <b className="font-medium text-[#7aaaff]">{Math.round((scene.painted ?? 0) / 3.6)}</b> tokens
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function Stage() {
+  const stage = useRef<HTMLDivElement>(null);
+  const pointer = useRef<HTMLDivElement>(null);
+  const send = useRef<HTMLButtonElement>(null);
+  const mount = useRef<HTMLDivElement | null>(null);
+  const transcript = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const inView = useInView(stage, "-10% 0px");
+  const [clock] = useState(createClock);
+  const cursor = useRef<Cursor | null>(null);
+  const [scene, setScene] = useState<Scene>(() => ({ n: 0, c: CASES[0], phase: "typing", prompt: 0, tools: 0, lead: 0, code: 0, painted: null, ms: 0 }));
+  const [past, setPast] = useState<string[]>([]);
+  const [speed, setSpeed] = useState(1);
+  const [sent, setSent] = useState<string | null>(null);
+  const jumpTo = useRef<number | null>(null);
+  const live = useRef({ scene, speed, pos: 0, ms: 0, renderer: null as ReturnType<typeof createRenderer> | null });
+  useLayoutEffect(() => { live.current.scene = scene; live.current.speed = speed; });
+
+  useLayoutEffect(() => {
+    cursor.current = createCursor(stage.current!, pointer.current!, clock);
+    prewarm();
+    return () => cursor.current?.dispose();
+  }, [clock]);
+
+  // Text arrives on the frame clock, so pausing the stage pauses the stream mid-token, not mid-sentence.
+  useFrame((dt) => {
+    if (!inView.get() || document.hidden) return;
+    clock.tick(dt * 1000);
+    cursor.current!.step(dt);
+    const l = live.current;
+    const s = l.scene;
+    if (s.phase === "card" && l.renderer) {
+      l.ms += dt * 1000;
+      const before = Math.floor(l.pos);
+      l.pos = Math.min(s.c.source.length, l.pos + rate(s.c.source, l.pos) * l.speed * dt);
+      const next = Math.floor(l.pos);
+      if (next > before) {
+        void l.renderer.then((r) => r.pushCode(s.c.source.slice(before, next)));
+        setScene((p) => (p.n === s.n ? { ...p, code: next, ms: l.ms } : p));
+      }
+    }
+  });
+
+  useEffect(() => {
+    const q = (selector: string, text?: string) => {
+      const all = [...(mount.current?.querySelectorAll<HTMLElement>(selector) ?? [])];
+      return (text ? all.find((el) => el.textContent?.includes(text)) : all[0]) ?? null;
+    };
+    const step = (patch: Partial<Scene>) => setScene((p) => ({ ...p, ...patch }));
+    let n = 0;
+
+    async function play(i: number) {
+      const c = CASES[i % CASES.length];
+      const reduced = reducedMotion();
+      live.current.pos = 0;
+      live.current.ms = 0;
+      setScene({ n: ++n, c, phase: "typing", prompt: 0, tools: 0, lead: 0, code: 0, painted: null, ms: 0 });
+      if (reduced) step({ prompt: c.prompt.length });
+      else for (let k = 1; k <= c.prompt.length; k++) { step({ prompt: k }); await clock.wait(34 + Math.random() * 40); }
+      if (cursor.current?.enabled) await cursor.current.click(centerOf(() => send.current));
+      step({ phase: "sent" });
+      cursor.current?.rest();
+      await clock.wait(450);
+      for (let k = 1; k <= c.tools.length; k++) { step({ phase: "tools", tools: k }); await clock.wait(620); }
+      step({ phase: "lead" });
+      for (let k = 1; k <= c.lead.length; k += 2) { step({ lead: k }); await clock.wait(16); }
+      step({ lead: c.lead.length, phase: "card" });
+      await clock.until(() => live.current.renderer);
+      if (reduced) { live.current.pos = c.source.length; void live.current.renderer!.then((r) => r.render(c.source)); step({ code: c.source.length }); }
+      const acting = cursor.current?.enabled ? c.play({ clock, cursor: cursor.current, q }) : Promise.resolve();
+      await clock.until(() => live.current.pos >= c.source.length);
+      void live.current.renderer!.then((r) => r.finish());
+      step({ phase: "done" });
+      // A script waiting on something the visitor removed would stall the loop; it gets a deadline instead.
+      // Cancelling unwinds only that script's waits; this scene still holds and fades out as usual.
+      if (await Promise.race([acting.then(() => false, () => false), clock.wait(14000).then(() => true)])) clock.cancel();
+      cursor.current?.rest();
+      await clock.wait(HOLD_MS);
+      step({ leaving: true });
+      await clock.wait(420);
+      setSent(null);
+      setPast((p) => [c.session, ...p].slice(0, 3));
+    }
+
+    const onSend = (e: Event) => setSent((e as CustomEvent<string>).detail);
+    addEventListener("ui4a:send", onSend);
+    let i = 0;
+    let stopped = false;
+    (async () => {
+      while (!stopped) {
+        try { await play(i++); } catch (e) { if (e !== CANCEL) console.error(e); i = jumpTo.current ?? i; jumpTo.current = null; }
+      }
+    })();
+    return () => { stopped = true; clock.cancel(); removeEventListener("ui4a:send", onSend); };
+  }, [clock]);
+
+  useFlip(transcript, composer);
+  useFollowScroll(scroller, 0.5);
+
+  const pick = (i: number) => { jumpTo.current = i; clock.cancel(); };
+
+  // One renderer per scene, mounted into that scene's own node so the outgoing one can fade with its card intact.
+  const attach = (node: HTMLDivElement | null) => {
+    if (!node || node === mount.current) return;
+    mount.current = node;
+    const n = scene.n;
+    live.current.renderer?.then((r) => r.detach());
+    // A compiled frame is not a painted one: mid-stream the default export is often an empty shell.
+    live.current.renderer = createRenderer(node, () => (node.textContent?.trim() || node.querySelector("canvas,svg")) && setScene((p) => (p.n === n && p.painted === null ? { ...p, painted: Math.floor(live.current.pos) } : p)));
+  };
+
+  const s = scene;
+  const shown = s.phase !== "typing";
+  const card = s.phase === "card" || s.phase === "done";
+  const canvas = s.c.surface === "canvas" && card && !s.leaving;
+
+  return (
+    <div className="relative">
+      <div ref={stage} data-phase={s.phase} className="ui4a-stage relative flex h-[640px] gap-4 max-lg:h-[600px]">
+        <Frame
+          className="min-w-0 flex-1"
+          sidebar={<Sidebar sessions={shown ? [s.c.session, ...past] : past} active={shown ? 0 : -1} />}
+        >
+          <Header title={shown ? s.c.session : "New session"} />
+          <div className="flex min-h-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div key={s.n} ref={scroller} className={`ui4a-scroll flex ${s.leaving ? "ui4a-leave" : ""} min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pb-4 pt-6 max-sm:px-4`}>
+              <div ref={transcript} className="ui4a-scene relative mt-auto flex flex-col gap-3 [&>*]:shrink-0">
+                {shown && <UserBubble>{s.c.prompt}</UserBubble>}
+                {s.c.tools.slice(0, s.tools).map(([icon, kind, detail], k) => <ToolRow key={kind} icon={icon} kind={kind} detail={detail} done={k < s.tools - 1 || s.lead > 0} />)}
+                {s.lead > 0 && <p className="ui4a-fade text-[14px] leading-6 text-[#f9fafb]">{s.c.lead.slice(0, s.lead)}</p>}
+                {s.c.surface === "inline" && card && (
+                  <Grow className="ui4a-fade">
+                    <div ref={attach} data-ui4a-live className="ui4a-card max-w-[440px]" />
+                  </Grow>
+                )}
+                {sent && <div className="ui4a-fade flex items-center gap-2 self-end rounded-full bg-[#34415b] px-3 py-1.5 text-[12px] text-[#cfd3d6]"><Icon name="send" className="size-3" /> sendMessage → “{sent}”</div>}
+                {s.phase === "done" && <div className="ui4a-fade text-[12px] text-[#81858c]">Completed in {(2 + s.c.source.length / 900).toFixed(0)}s · {s.c.tools.length} tool calls</div>}
+              </div>
+              </div>
+              <div className="px-6 pb-5 max-sm:px-3 max-sm:pb-3"><div ref={composer}><Composer text={s.phase === "typing" ? s.c.prompt.slice(0, s.prompt) : ""} narrow={canvas} sendRef={send} onSend={() => setScene((p) => (p.phase === "typing" ? { ...p, phase: "sent" } : p))} /></div></div>
+            </div>
+            <div className={`ui4a-canvas shrink-0 overflow-hidden border-l border-[#ffffff0f] ${canvas ? "w-[46%]" : "w-0 border-transparent"}`}>
+              <div className="flex h-11 items-center justify-between px-4 text-[14px] font-medium text-[#f9fafb]">
+                orbit
+                <Icon name="close" className="size-3.5 text-[#81858c]" />
+              </div>
+              {canvas && <div key={s.n} ref={attach} data-ui4a-live className="ui4a-card px-4" />}
+            </div>
+          </div>
+        </Frame>
+        <div className="hidden w-[340px] shrink-0 flex-col xl:flex"><Source scene={s} speed={speed} setSpeed={setSpeed} /></div>
+        <div ref={pointer} aria-hidden className="ui4a-pointer pointer-events-none absolute left-0 top-0 z-20 opacity-0">
+          <svg width="22" height="24" viewBox="0 0 22 24"><path d="M2 1.5 19.5 13l-7.6 1.6L7.6 22z" fill="#f9fafb" stroke="#151517" strokeWidth="1.6" strokeLinejoin="round" /></svg>
+        </div>
+      </div>
+      <div role="tablist" aria-label="Demos" className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 md:grid-cols-4">
+        {CASES.map((c, i) => {
+          const active = c.id === s.c.id;
+          return (
+            <button key={c.id} type="button" role="tab" aria-selected={active} onClick={() => pick(i)} className="group text-left">
+              <span className="block h-[2px] overflow-hidden rounded-full bg-[#ffffff1f]">
+                <span className="block h-full origin-left rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" style={{ transform: `scaleX(${active ? (s.phase === "done" ? 1 : (s.code / s.c.source.length) * 0.9 + (shown ? 0.1 : 0)) : 0})` }} />
+              </span>
+              <span className={`mt-3 block text-[14px] font-medium transition-colors duration-300 ${active ? "text-[#f9fafb]" : "text-[#81858c] group-hover:text-[#cfd3d6]"}`}>{c.tab}</span>
+              <span className={`mt-1 block text-[13px] leading-5 transition-colors duration-300 ${active ? "text-[#adb2b8]" : "text-[#5d6066]"}`}>{c.point}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
