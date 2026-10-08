@@ -1,7 +1,6 @@
 # dsh-generative-ui
 
 [![npm](https://img.shields.io/npm/v/dsh-generative-ui)](https://www.npmjs.com/package/dsh-generative-ui)
-[![pkg.pr.new](https://pkg.pr.new/badge/MindLab-Research/dsh-generative-ui)](https://pkg.pr.new/~/MindLab-Research/dsh-generative-ui)
 [![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
 Generative UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent answers with a live React interface instead of prose. It streams — the component renders while the model is still typing it.
@@ -21,15 +20,9 @@ The `ui4a` in that fence is the harness this implements — **UI for Agent**, fr
 dsh plugin --profile web add dsh-generative-ui
 ```
 
-Every release is published from CI over OIDC, so the tarball carries npm provenance. For an
-unreleased commit there is a preview build of every push:
-
-```sh
-dsh plugin --profile web add https://pkg.pr.new/MindLab-Research/dsh-generative-ui@main
-```
-
-And working on it locally, point the profile at your checkout — `lib/` is built by `prepare`, so
-the profile does not care that this package uses bun and dsh uses pnpm:
+Published npm releases carry provenance. To try an unreleased commit while preview publishing
+is unavailable for the transferred repository, point the profile at a local checkout — `lib/` is
+built by `prepare`, so the profile does not care that this package uses bun and dsh uses pnpm:
 
 ```sh
 dsh plugin --profile web add link:/path/to/dsh-generative-ui
