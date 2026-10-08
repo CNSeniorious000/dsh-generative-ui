@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820">
+  <rect width="1440" height="820" fill="#f7f7f8"/>
+  <text x="72" y="78" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="700" fill="#171719">dsh UI primitives vs native HTML</text>
+  <text x="72" y="116" font-family="Inter,Arial,sans-serif" font-size="18" fill="#77777e">Button, Input and Switch compared with browser defaults</text>
+
+  <rect x="60" y="158" width="650" height="590" rx="20" fill="#ffffff" stroke="#e4e4e8"/>
+  <text x="92" y="208" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="700" fill="#171719">dsh primitives</text>
+  <text x="92" y="239" font-family="Inter,Arial,sans-serif" font-size="15" fill="#87878e">theme tokens · compact controls · explicit focus states</text>
+
+  <text x="92" y="292" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">BUTTON</text>
+  <rect x="92" y="312" width="154" height="42" rx="11" fill="#2457e6"/>
+  <text x="169" y="339" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600" fill="#fff">Primary</text>
+  <rect x="262" y="312" width="154" height="42" rx="11" fill="#fff" stroke="#d1d1d6"/>
+  <text x="339" y="339" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600" fill="#303036">Outline</text>
+  <rect x="432" y="312" width="154" height="42" rx="11" fill="#fff"/>
+  <text x="509" y="339" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="600" fill="#303036">Ghost</text>
+  <text x="92" y="380" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">36px high · rounded · variants share the same token system</text>
+
+  <text x="92" y="438" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">INPUT</text>
+  <rect x="92" y="458" width="332" height="40" rx="10" fill="#fbfbfc" stroke="#cfcfd5"/>
+  <text x="108" y="484" font-family="Inter,Arial,sans-serif" font-size="16" fill="#a1a1a8">Search workspace</text>
+  <rect x="442" y="458" width="220" height="40" rx="10" fill="#fbfbfc" stroke="#2457e6" stroke-width="2"/>
+  <text x="458" y="484" font-family="Inter,Arial,sans-serif" font-size="16" fill="#2d2d33">Focused</text>
+  <text x="92" y="524" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">32px high · subtle border · blue focus ring</text>
+
+  <text x="92" y="584" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">SWITCH</text>
+  <rect x="92" y="603" width="72" height="40" rx="20" fill="#2457e6"/>
+  <circle cx="144" cy="623" r="16" fill="#fff"/>
+  <text x="181" y="630" font-family="Inter,Arial,sans-serif" font-size="16" fill="#303036">On</text>
+  <rect x="252" y="603" width="72" height="40" rx="20" fill="#c9c9cf"/>
+  <circle cx="272" cy="623" r="16" fill="#fff"/>
+  <text x="341" y="630" font-family="Inter,Arial,sans-serif" font-size="16" fill="#303036">Off</text>
+  <text x="92" y="680" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">36×20px track · animated thumb · visible focus ring</text>
+
+  <rect x="730" y="158" width="650" height="590" rx="20" fill="#ffffff" stroke="#e4e4e8"/>
+  <text x="762" y="208" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="700" fill="#171719">native HTML</text>
+  <text x="762" y="239" font-family="Inter,Arial,sans-serif" font-size="15" fill="#87878e">browser and OS decide the default appearance</text>
+
+  <text x="762" y="292" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">&lt;button&gt;</text>
+  <rect x="762" y="312" width="154" height="42" rx="3" fill="#efefef" stroke="#8c8c8c"/>
+  <text x="839" y="339" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111">Default</text>
+  <rect x="932" y="312" width="190" height="42" rx="3" fill="#efefef" stroke="#8c8c8c"/>
+  <text x="1027" y="339" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111">Browser chrome</text>
+  <text x="762" y="380" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">usually gray · native border · varies across platforms</text>
+
+  <text x="762" y="438" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">&lt;input&gt;</text>
+  <rect x="762" y="458" width="332" height="40" rx="2" fill="#fff" stroke="#777"/>
+  <text x="778" y="484" font-family="Arial,sans-serif" font-size="16" fill="#888">Search workspace</text>
+  <rect x="1112" y="458" width="220" height="40" rx="2" fill="#fff" stroke="#777"/>
+  <text x="1128" y="484" font-family="Arial,sans-serif" font-size="16" fill="#222">Focused</text>
+  <text x="762" y="524" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">white field · default border · browser focus treatment</text>
+
+  <text x="762" y="584" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="#626269">switch</text>
+  <text x="762" y="630" font-family="Inter,Arial,sans-serif" font-size="16" fill="#555">No native switch element exists; it must be built from checkbox or button.</text>
+  <text x="762" y="680" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9999a0">dsh supplies the interaction and accessibility semantics here</text>
+</svg>
