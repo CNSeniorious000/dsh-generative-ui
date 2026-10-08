@@ -15,3 +15,7 @@ src/client/canvas/panel-css.ts
 __pycache__/
 eval/.turns.patch.generated.yml
 eval/turns.patch.yml
+
+# Vercel project link
+.vercel
+.env*
