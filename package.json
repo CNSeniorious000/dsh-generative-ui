@@ -3,7 +3,7 @@
   "version": "0.0.6",
   "description": "Generative UI for DeepSeek Harness — the agent writes TSX, dsh web renders it live, inline in chat and in a canvas panel",
   "type": "module",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "main": "lib/index.js",
   "exports": {
     ".": {
@@ -20,7 +20,8 @@
     "lib",
     "src",
     "types",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "NOTICE"
   ],
   "keywords": [
     "generative-ui",
@@ -181,10 +182,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CNSeniorious000/dsh-generative-ui.git"
+    "url": "git+https://github.com/MindLab-Research/dsh-generative-ui.git"
   },
-  "homepage": "https://github.com/CNSeniorious000/dsh-generative-ui#readme",
-  "bugs": "https://github.com/CNSeniorious000/dsh-generative-ui/issues",
+  "homepage": "https://github.com/MindLab-Research/dsh-generative-ui#readme",
+  "bugs": "https://github.com/MindLab-Research/dsh-generative-ui/issues",
   "overrides": {
     "js-yaml": "4.3.2"
   }
