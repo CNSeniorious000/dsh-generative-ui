@@ -71,6 +71,8 @@
     "cards": "bun scripts/compile-cards.ts",
     "paint": "bun scripts/paint-cards.ts",
     "cross-tab": "bun scripts/cross-tab.ts",
+    "site": "bun scripts/site.ts",
+    "site:dev": "bun scripts/site.ts --dev",
     "inject": "bun scripts/inject.ts",
     "hollow": "bun scripts/hollow.ts",
     "test:shuffled": "sh scripts/test-shuffled.sh"

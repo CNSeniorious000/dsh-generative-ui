@@ -1495,6 +1495,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | **eval** | |
 | `eval.sh` | one prompt → `skill= fence= canvas= bytes= tools=[]`, with crash and staleness guards |
 | `run-fixtures.sh` / `trigger-cases.txt` | the fixture grid; lowercase marks a run that never loaded the skill |
+| `triggers.sh` | the nine trigger rules, against real model turns — the only way to ask "should there have been a card at all". Pass a repeat count: one run per case is a smoke test, not a measurement |
 | `make-seed.sh` | a workspace a prompt can refer to (a repo with real history, files) |
 | `loads.sh` | boots dsh and asks for a string only this plugin could supply |
 | `pickup.sh` | resumes a session for a second turn |
@@ -1522,6 +1523,7 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `card-height.py` | how tall they render, in CSS pixels, against the viewport fraction the prompt asks them to fit. Measured on wave 15: at 320px wide, **90% run past 60vh and 23% past two screens** — the density rule had no measurement behind it until this |
 | **maintenance** | |
 | `mutation-audit.sh` / `invert-ifs.mjs` | inverts one condition at a time; names what no test constrains |
+| `inject.ts` | the other direction, for the screens: one defect injected per card, reporting whether that screen notices. A long clean streak has two explanations — the rules work, or the checker went blind — and they look identical from outside |
 | `check-exports.ts` | a package's real exports, through the same esm.sh URL the runtime resolves |
 | `platform-table.sh` | re-checks the host's module table (§2.1) — the one note that asks to be re-run |
 | `non-mutating-sort.mjs` | shared `toSorted`/copy-and-sort fallback for direct Node scripts, so the lint-clean non-mutating sort remains usable before Node 20 |
@@ -1529,6 +1531,8 @@ Everything under `scripts/`. `bun run check` chains the gates; the rest are run 
 | `tsx-node.ts` | `compileSettled` — the pipeline production takes, so checkers cannot diverge |
 | `append-section.py` | inserts a dated section in date order (three hand-inserts landed out of order) |
 | `flaky-dep-server.py`, `flaky-dep-new.html`, `flaky-dep-old.html` | a dependency that 503s twice then works — the only way to show the import retry does anything |
+| **site** | |
+| `site.ts` | the landing page. `genui build` renders `website/index.genui.tsx` into one self-contained `.site/index.html`; `.github/workflows/pages.yml` deploys it. It is the one script outside every gate — `website/` is not in tsconfig's `include`, and the build asserts only that the page server-rendered something. `bun run site:dev` serves it for iteration, on the CLI's own dev shell rather than the artifact |
 
 ### primitives 依赖检查
 

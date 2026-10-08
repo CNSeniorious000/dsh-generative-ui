@@ -12,8 +12,8 @@
  */
 import { CANVAS_DIR, CANVAS_SUFFIX, CAPABILITY_PREFIX, FENCE_LANG, capabilityModule } from "./contract.ts";
 
-/** The checker, from pkg.pr.new: @genui/cli is a private workspace package and not on npm. */
-const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main";
+/** The checker, from pkg.pr.new: @genui/cli is a private workspace package and not on npm. Exported for `scripts/site.ts`, which builds the landing page with the same CLI. */
+export const CLI_URL = "https://pkg.pr.new/MindLab-Research/macaron-genui-demo/@genui/cli@main";
 // How to run `@genui/cli` straight from that URL. One constant because the two places that print a
 // command must not drift apart, and because each runner needs something different from the others —
 // see the paragraph under "Check it before you hand it over", where all three are spelled out.

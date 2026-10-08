@@ -6,6 +6,9 @@ lib/
 # Generated from panel.css at build time.
 src/client/canvas/panel-css.ts
 
+# The landing page, built by `bun run site`.
+.site/
+
 # Raw brainstorm output — the curated set lives in docs/examples.md
 .research/
 .wave-running
