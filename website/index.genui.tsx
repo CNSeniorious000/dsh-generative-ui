@@ -10,8 +10,8 @@ import * as Tabs from "@radix-ui/react-tabs";
 const REPO = "https://github.com/MindLab-Research/dsh-generative-ui";
 const NPM = "https://www.npmjs.com/package/dsh-generative-ui";
 // Not `macaron.im/mindlab/research/…`: that path 301s to the Mind Lab homepage for every user
-// agent, so it reads as a link to nowhere. This is the page the old one's content moved into.
-const UI4A = "https://macaron.im/blog/macaron-ui4a-interactive-ai";
+// agent, so the original link reads as one to nowhere. The paper itself lives at the new path.
+const UI4A = "https://www.mindlab.im/updates/ui4a-a-component-native-harness-for-generative-ui";
 const INSTALL = "dsh plugin --profile web add dsh-generative-ui";
 
 const page = "mx-auto w-full max-w-5xl px-6";
@@ -353,7 +353,7 @@ const Footer = () => (
     <div className="flex gap-5">
       <a className="transition-colors hover:text-[#c9c9d1]" href={REPO}>GitHub</a>
       <a className="transition-colors hover:text-[#c9c9d1]" href={NPM}>npm</a>
-      <a className="transition-colors hover:text-[#c9c9d1]" href={UI4A}>What UI4A is</a>
+      <a className="transition-colors hover:text-[#c9c9d1]" href={UI4A}>UI4A paper</a>
     </div>
   </footer>
 );
