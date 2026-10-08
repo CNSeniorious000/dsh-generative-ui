@@ -18,6 +18,7 @@ import type * as Chat from "$dsh/chat";
 import type * as Exec from "$dsh/exec";
 import type * as Web from "$dsh/web";
 import type * as Fs from "$dsh/fs";
+import type * as Ui from "$dsh/ui";
 import type { bind } from "../src/client/runtime/bindings.ts";
 
 type Bound = ReturnType<typeof bind>;
@@ -29,6 +30,7 @@ type Declared = {
   exec: { bash: typeof Exec.bash };
   web: { search: typeof Web.search };
   state: { usePersistedState: <T>(key: string, initial: T | (() => T)) => [T, import("react").Dispatch<import("react").SetStateAction<T>>] };
+  ui: typeof Ui;
 };
 
 // Both directions: a declaration narrower than the implementation hides capability, and one

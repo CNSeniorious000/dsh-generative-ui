@@ -323,6 +323,7 @@ owns the prefix; nothing else should spell it out.
 | `$dsh/state` | **declined** | it would be a naming convention over `$dsh/fs`, which a card can already call directly; private UI state belongs in `localStorage` and the skill teaches that |
 | `$dsh/ai` | **implemented** | not through a client gateway — there is none — but through a route on our Node half onto `ctx.llm.stream()`, on the session's own model selection, so the card never sees a key |
 | `$dsh/exec` | **implemented**, ours | not in the playground's set under that name — its `bash` lives inside `$ui4a/fs`. Split out here because running a command is not reading a file, and because the two carry different risks. `ctx.shell` takes the same `sandboxPolicy` `$dsh/fs` resolves, so it opens no door the model's own bash tool has not |
+| `$dsh/ui` | **implemented**, direct host namespace | Re-exports the host's `@deepseek-ai/dsh-client-ui-primitives` namespace as-is. No local components, copied CSS, wrapper props, or renamed exports |
 
 The mechanism, ported from `ui4a-playground/src/runtime/bindings.ts`: the real implementation
 is ordinary TypeScript in our bundle, registered under `$dsh/internal`, and each
@@ -330,6 +331,15 @@ is ordinary TypeScript in our bundle, registered under `$dsh/internal`, and each
 The indirection exists because **a blob URL cannot carry a query string** — anything the
 module needs to know about its caller has to be compiled into the body. The playground binds
 per surface for that reason; we have one global host, so one shim set is enough.
+
+**`$dsh/ui` is a direct alias of the host's `@deepseek-ai/dsh-client-ui-primitives` namespace.**
+It is deliberately not a second component library and has no wrapper props, copied styles, or
+curated re-exports. Generated code imports the upstream names it needs (`Button`, `Input`,
+`MarkdownText`, icons, and so on) and receives the same React singleton and implementation the
+shell uses. Adding a wrapper here would make the generated-code contract drift from dsh web and
+would turn an upstream API change into two APIs to maintain. The standalone import map bundles
+the same upstream package for previews outside dsh; the in-host path always uses the platform
+module.
 
 **`conversation` is scope-addressed, and the scope is a fresh context.** Reading it off the
 plugin's own context rejects with `requires a session scope — address one via

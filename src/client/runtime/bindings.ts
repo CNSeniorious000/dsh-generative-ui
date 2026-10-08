@@ -14,6 +14,7 @@ import { AI_STREAM_PATH, EXEC_PATH, FS_PATH, WEB_SEARCH_PATH } from "../../contr
 import { capabilityModule } from "../../contract.ts";
 import { registerRuntimeModules } from "./register.ts";
 import { usePersistedState } from "./state.ts";
+import * as DshUi from "@deepseek-ai/dsh-client-ui-primitives";
 
 /** What the plugin's client half lends to generated code. Registered once, at apply. */
 export type Ui4aHost = {
@@ -150,7 +151,12 @@ export function bind() {
   // with it, so the card renders blank.
   const state = { usePersistedState };
 
-  return { chat, ai, fs, exec, web, state };
+  // This is intentionally the upstream namespace itself. `$dsh/ui` is an import seam for
+  // generated code, not a second component library: props, styles, and newly added primitives
+  // must stay exactly those of dsh web.
+  const ui = DshUi;
+
+  return { chat, ai, fs, exec, web, state, ui };
 }
 
 /** What one search returns. Mirrors the seam's `WebSearchResult`, which is what the route forwards. */

@@ -74,9 +74,9 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     `${RUN_CLI} build <file> -i ${standaloneMap}`,
     "```",
     "",
-    `That second map stubs \`${CAPABILITY_PREFIX}/*\` — the exported page has no dsh around it, so those calls log to`,
+    `That second map stubs harness calls under \`${CAPABILITY_PREFIX}/*\` — the exported page has no dsh around it, so those calls log to`,
     "the console and return empty instead of working. The layout, the styling and everything that",
-    "does not touch the harness are real; anything that does is inert. Useful for showing someone a",
+    "does not touch the harness is real (including `$dsh/ui`); anything that does is inert. Useful for showing someone a",
     "snapshot, not for testing the interactive parts.",
   ].join("\n");
 }
@@ -1175,6 +1175,8 @@ worth acting on name a *mechanism* that is wrong (a conflicting declaration, a d
 name that does not exist, a comma operator), not a type that could be narrower.
 
 ## Imports
+
+**DSH web UI primitives.** \`$dsh/ui\` directly exposes the host's \`@deepseek-ai/dsh-client-ui-primitives\` exports. Import the upstream component by its original name, for example \`import { Button, Input, Switch, MarkdownText, FileTypeIcon } from "$dsh/ui"\`. These are the same components and CSS the dsh web shell uses. Pass their upstream props; there is no local styling wrapper or separate component API. \`MarkdownText\` requires its upstream \`labels\` prop.
 
 Bare specifiers resolve from npm at render time — there is no install step, so never tell the user to install anything and never hold back an import because it "isn't available". Importing it *is* installing it.
 

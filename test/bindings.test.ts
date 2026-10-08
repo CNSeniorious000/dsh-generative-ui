@@ -11,6 +11,7 @@ import { restoreGlobals } from "./globals.ts";
 import { beforeEach, afterEach, expect, test } from "bun:test";
 import { EXEC_PATH, FS_PATH } from "../src/contract-assets.ts";
 import { bind, bindingImports, registerUi4aHost, releaseBindings } from "../src/client/runtime/bindings.ts";
+import * as DshUi from "@deepseek-ai/dsh-client-ui-primitives";
 
 let release: (() => void) | undefined;
 // Before, not only after. The module-level host is shared with every other test FILE — bun
@@ -101,6 +102,13 @@ test("the binding blobs are built once and revoked on release", () => {
   expect(bindingImports()).toBe(first);
   releaseBindings();
   expect(bindingImports()).not.toBe(first);
+});
+
+test("$dsh/ui exposes the host's primitive namespace without replacing components", () => {
+  expect(bind().ui).toBe(DshUi);
+  expect(bind().ui.Button).toBe(DshUi.Button);
+  expect(bind().ui.MarkdownText).toBe(DshUi.MarkdownText);
+  expect(bind().ui.FileTypeIcon).toBe(DshUi.FileTypeIcon);
 });
 
 // The teardown returned by `registerUi4aHost` must not unbind a host that replaced it.

@@ -5,6 +5,7 @@
     "$dsh/fs": "./fs.d.ts",
     "$dsh/exec": "./exec.d.ts",
     "$dsh/state": "./state.d.ts",
-    "$dsh/web": "./web.d.ts"
+    "$dsh/web": "./web.d.ts",
+    "$dsh/ui": "./ui.d.ts"
   }
 }

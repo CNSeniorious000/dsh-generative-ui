@@ -52,12 +52,13 @@ const ASYNC = new Set(["readFile", "readdir", "readBytes", "writeFile", "bash", 
 /**
  * Groups that need no harness, and therefore ship their real implementation rather than a stub.
  *
- * `$dsh/state` is `localStorage` and React, both present outside dsh. Stubbing it would remove
+ * `$dsh/state` is `localStorage` and React, both present outside dsh. `$dsh/ui` imports the
+ * upstream primitives package directly. Stubbing either would remove
  * working behaviour instead of standing in for missing behaviour — and it would break outright:
  * `usePersistedState` is a hook, so a stub returning `undefined` both crashes the destructuring
  * and changes the hook count on every render after it.
  */
-const SELF_SUFFICIENT = new Set(["state"]);
+const SELF_SUFFICIENT = new Set(["state", "ui"]);
 
 const groups = bind() as Record<string, Record<string, unknown>>;
 const imports: Record<string, string> = {};
@@ -89,6 +90,13 @@ if (unlisted.length > 0) {
 for (const [group, members] of Object.entries(groups)) {
   const specifier = capabilityModule(group);
   if (SELF_SUFFICIENT.has(group)) {
+    if (group === "ui") {
+      // A standalone preview has no shell module table; resolve the same upstream package
+      // from the plugin install. This file is an import alias, not a local component layer.
+      await writeFile(resolve(out, "ui.js"), 'export * from "@deepseek-ai/dsh-client-ui-primitives";\nimport * as Ui from "@deepseek-ai/dsh-client-ui-primitives";\nexport default Ui;\n');
+      imports[specifier] = "./ui.js";
+      continue;
+    }
     const built = await Bun.build({ entrypoints: [resolve(import.meta.dir, `../src/client/runtime/${group}.ts`)], target: "browser", external: ["react"] });
     await writeFile(resolve(out, `${group}.js`), await built.outputs[0].text());
     imports[specifier] = `./${group}.js`;

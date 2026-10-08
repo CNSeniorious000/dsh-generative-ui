@@ -5,6 +5,7 @@
     "$dsh/fs": "./fs.js",
     "$dsh/exec": "./exec.js",
     "$dsh/web": "./web.js",
-    "$dsh/state": "./state.js"
+    "$dsh/state": "./state.js",
+    "$dsh/ui": "./ui.js"
   }
 }

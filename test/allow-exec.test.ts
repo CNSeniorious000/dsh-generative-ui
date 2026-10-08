@@ -52,12 +52,12 @@ test("with commands off, nothing in either half suggests running one", () => {
   }
 });
 
-// The closed-set sentence is what stops the model reasoning its way to a plausible sixth import,
-// so it has to name the set that exists — claiming five while documenting four is worse than not
+// The closed-set sentence is what stops the model reasoning its way to a plausible extra import,
+// so it has to name the set that exists — claiming six while documenting five is worse than not
 // claiming a number at all.
 test("the closed-set sentence counts the capabilities that exist", () => {
-  expect(inlinePrompt(false)).toContain("These five are the whole set");
-  expect(inlinePrompt(true)).toContain("These six are the whole set");
+  expect(inlinePrompt(false)).toContain("These six are the whole set");
+  expect(inlinePrompt(true)).toContain("These seven are the whole set");
   expect(inlinePrompt(false)).not.toContain("`exec`");
 });
 
