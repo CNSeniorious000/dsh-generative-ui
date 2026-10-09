@@ -9,7 +9,9 @@ import { Composer, Frame, Header, Sidebar, ToolRow, UserBubble } from "../ui/dsh
 import { Icon } from "../ui/icons.tsx";
 
 type Phase = "typing" | "sent" | "tools" | "lead" | "card" | "done";
-type Scene = { n: number; c: Case; phase: Phase; leaving?: boolean; prompt: number; tools: number; lead: number; code: number; painted: number | null; ms: number };
+type Scene = { n: number; c: Case; phase: Phase; leaving?: boolean; prompt: number; tools: number; lead: number; painted: number | null };
+/** What the frame loop advances: read by the few things that move per character, so the stage does not re-render for each. */
+type Live = { pos: number; ms: number };
 
 const SPEEDS = [0.5, 1, 2] as const;
 const HOLD_MS = 2600;
@@ -29,17 +31,29 @@ function Grow({ children, className = "" }: { children: React.ReactNode; classNa
   return <div ref={outer} className={`overflow-hidden ${className}`}><div ref={inner}>{children}</div></div>;
 }
 
+/** The active tab's bar, written straight to the style each frame. */
+function Progress({ scene, live }: { scene: Scene; live: { current: Live } }) {
+  const bar = useRef<HTMLSpanElement>(null);
+  useFrame(() => {
+    const f = scene.phase === "done" ? 1 : (live.current.pos / scene.c.source.length) * 0.9 + (scene.phase === "typing" ? 0 : 0.1);
+    bar.current?.style.setProperty("transform", `scaleX(${f})`);
+  });
+  return <span ref={bar} className="block h-full origin-left scale-x-0 rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" />;
+}
+
 const Line = memo(({ text }: { text: string }) => (
   <div className="min-h-[18px] whitespace-pre">{highlight(text).map((p, i) => <span key={i} className={p.kind && `hl-${p.kind}`}>{p.text}</span>)}</div>
 ));
 
 /** The source as it arrives, followed at the bottom by a spring so the scroll has momentum too. */
-function Source({ scene, speed, setSpeed }: { scene: Scene; speed: number; setSpeed: (s: number) => void }) {
+function Source({ scene, live, speed, setSpeed }: { scene: Scene; live: { current: Live }; speed: number; setSpeed: (s: number) => void }) {
   const box = useRef<HTMLDivElement>(null);
   const reset = useFollowScroll(box);
-  const shown = scene.c.source.slice(0, scene.code);
+  const [{ code, ms }, setView] = useState({ code: 0, ms: 0 });
+  useFrame(() => { const next = Math.floor(live.current.pos); setView((v) => (v.code === next ? v : { code: next, ms: live.current.ms })); });
+  const shown = scene.c.source.slice(0, code);
   const lines = shown.split("\n");
-  const tokens = Math.round(scene.code / 3.6);
+  const tokens = Math.round(code / 3.6);
   useEffect(reset, [scene.n]);
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#ffffff1f] bg-[#1b1b1c]">
@@ -60,7 +74,7 @@ function Source({ scene, speed, setSpeed }: { scene: Scene; speed: number; setSp
       </div>
       <div className="flex h-9 items-center gap-4 border-t border-[#ffffff0f] px-4 text-[11px] tabular-nums text-[#81858c]">
         <span><b className="font-medium text-[#cfd3d6]">{tokens}</b> tokens</span>
-        <span><b className="font-medium text-[#cfd3d6]">{((scene.code ? scene.ms : 0) / 1000).toFixed(1)}</b>s</span>
+        <span><b className="font-medium text-[#cfd3d6]">{((code ? ms : 0) / 1000).toFixed(1)}</b>s</span>
         <span className={`ml-auto transition-opacity duration-500 ${scene.painted === null ? "opacity-0" : "opacity-100"}`}>
           first paint at <b className="font-medium text-[#7aaaff]">{Math.round((scene.painted ?? 0) / 3.6)}</b> tokens
         </span>
@@ -80,7 +94,7 @@ export function Stage() {
   const inView = useInView(stage, "-10% 0px");
   const [clock] = useState(createClock);
   const cursor = useRef<Cursor | null>(null);
-  const [scene, setScene] = useState<Scene>(() => ({ n: 0, c: CASES[0], phase: "typing", prompt: 0, tools: 0, lead: 0, code: 0, painted: null, ms: 0 }));
+  const [scene, setScene] = useState<Scene>(() => ({ n: 0, c: CASES[0], phase: "typing", prompt: 0, tools: 0, lead: 0, painted: null }));
   const [past, setPast] = useState<string[]>([]);
   const [speed, setSpeed] = useState(1);
   const [sent, setSent] = useState<string | null>(null);
@@ -106,10 +120,7 @@ export function Stage() {
       const before = Math.floor(l.pos);
       l.pos = Math.min(s.c.source.length, l.pos + rate(s.c.source, l.pos) * l.speed * dt);
       const next = Math.floor(l.pos);
-      if (next > before) {
-        void l.renderer.then((r) => r.pushCode(s.c.source.slice(before, next)));
-        setScene((p) => (p.n === s.n ? { ...p, code: next, ms: l.ms } : p));
-      }
+      if (next > before) void l.renderer.then((r) => r.pushCode(s.c.source.slice(before, next)));
     }
   });
 
@@ -126,7 +137,7 @@ export function Stage() {
       const reduced = reducedMotion();
       live.current.pos = 0;
       live.current.ms = 0;
-      setScene({ n: ++n, c, phase: "typing", prompt: 0, tools: 0, lead: 0, code: 0, painted: null, ms: 0 });
+      setScene({ n: ++n, c, phase: "typing", prompt: 0, tools: 0, lead: 0, painted: null });
       if (reduced) step({ prompt: c.prompt.length });
       else for (let k = 1; k <= c.prompt.length; k++) { step({ prompt: k }); await clock.wait(34 + Math.random() * 40); }
       if (cursor.current?.enabled) await cursor.current.click(centerOf(() => send.current));
@@ -138,7 +149,7 @@ export function Stage() {
       for (let k = 1; k <= c.lead.length; k += 2) { step({ lead: k }); await clock.wait(16); }
       step({ lead: c.lead.length, phase: "card" });
       await clock.until(() => live.current.renderer);
-      if (reduced) { live.current.pos = c.source.length; void live.current.renderer!.then((r) => r.render(c.source)); step({ code: c.source.length }); }
+      if (reduced) { live.current.pos = c.source.length; void live.current.renderer!.then((r) => r.render(c.source)); }
       const acting = cursor.current?.enabled ? c.play({ clock, cursor: cursor.current, q }) : Promise.resolve();
       await clock.until(() => live.current.pos >= c.source.length);
       void live.current.renderer!.then((r) => r.finish());
@@ -221,7 +232,7 @@ export function Stage() {
             </div>
           </div>
         </Frame>
-        <div className="hidden w-[340px] shrink-0 flex-col xl:flex"><Source scene={s} speed={speed} setSpeed={setSpeed} /></div>
+        <div className="hidden w-[340px] shrink-0 flex-col xl:flex"><Source scene={s} live={live} speed={speed} setSpeed={setSpeed} /></div>
         <div ref={pointer} aria-hidden className="ui4a-pointer pointer-events-none absolute left-0 top-0 z-20 opacity-0">
           <svg width="22" height="24" viewBox="0 0 22 24"><path d="M2 1.5 19.5 13l-7.6 1.6L7.6 22z" fill="#f9fafb" stroke="#151517" strokeWidth="1.6" strokeLinejoin="round" /></svg>
         </div>
@@ -232,7 +243,7 @@ export function Stage() {
           return (
             <button key={c.id} type="button" role="tab" aria-selected={active} onClick={() => pick(i)} className="group text-left">
               <span className="block h-[2px] overflow-hidden rounded-full bg-[#ffffff1f]">
-                <span className="block h-full origin-left rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" style={{ transform: `scaleX(${active ? (s.phase === "done" ? 1 : (s.code / s.c.source.length) * 0.9 + (shown ? 0.1 : 0)) : 0})` }} />
+                {active ? <Progress scene={s} live={live} /> : <span className="block h-full origin-left scale-x-0 rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" />}
               </span>
               <span className={`mt-3 block text-[14px] font-medium transition-colors duration-300 ${active ? "text-[#f9fafb]" : "text-[#81858c] group-hover:text-[#cfd3d6]"}`}>{c.tab}</span>
               <span className={`mt-1 block text-[13px] leading-5 transition-colors duration-300 ${active ? "text-[#adb2b8]" : "text-[#5d6066]"}`}>{c.point}</span>
