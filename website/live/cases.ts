@@ -21,6 +21,11 @@ export type Case = {
   session: string;
   prompt: string;
   tools: [IconName, string, string][];
+  /**
+   * Later turns of the same conversation: the reader asks for more, the model edits the file, and the
+   * new source lands in the surface that is already running — same mount, state and motion intact.
+   */
+  turns?: { prompt: string; edit: string; reply: string; source: string }[];
   lead: string;
   file: string;
   source: string;
@@ -30,6 +35,13 @@ export type Case = {
 };
 
 /** React Aria nests the range input in a visually-hidden div inside the thumb; the thumb is two levels up. */
+/** `src` with everything from `from` up to `to` removed, and every line starting with one of `tags`. */
+const without = (src: string, from: string, to: string, tags: string[]) =>
+  (src.slice(0, src.indexOf(from)) + src.slice(src.indexOf(to))).split("\n").filter((l) => !tags.some((t) => l.trimStart().startsWith(t))).join("\n");
+
+/** The atom in three passes: the nucleus alone, then the shells, then the dust — each a real edit of the last. */
+const ATOM = [without(orbit, "function Shell", "export default", ["<Shell", "<Dust"]), without(orbit, "function Dust", "export default", ["<Dust"]), orbit];
+
 const thumb = (q: Ctx["q"]) => () => q("input[type=range]")?.parentElement?.parentElement ?? null;
 /** A point `f` of the way along the knob's track — where a drag should end. */
 const along = (knob: () => HTMLElement | null, f: number) => () => {
@@ -41,7 +53,7 @@ export const CASES: Case[] = [
   {
     id: "breakout",
     tab: "Playable while streaming",
-    point: "The board, then the paddle, then the bricks row by row, then physics — it is a game from the third line on.",
+    point: "The board, the paddle and the ball arrive before the bricks do — it is playable before the file is finished.",
     session: "Something fun",
     prompt: "bored. make me a tiny game",
     tools: [["skill", "Skill", "generative-ui"]],
@@ -76,33 +88,38 @@ export const CASES: Case[] = [
     async play({ clock, cursor, q }) {
       await clock.until(() => q("input[type=range]"));
       const knob = thumb(q);
-      await cursor.drag(centerOf(knob), along(knob, 0.72), () => knob()?.parentElement ?? null);
+      const track = () => knob()?.parentElement ?? null;
+      // Swept twice on purpose: NumberFlow is only interesting while the value is moving.
+      await cursor.drag(centerOf(knob), along(knob, 0.88), track);
+      await clock.wait(450);
+      await cursor.drag(centerOf(knob), along(knob, 0.22), track);
+      await clock.wait(450);
+      await cursor.drag(centerOf(knob), along(knob, 0.55), track);
       await clock.until(() => q("button", "ryokan"));
       await cursor.click(centerOf(() => q("button", "ryokan")));
-      await clock.wait(500);
+      await clock.wait(550);
       await cursor.click(centerOf(() => q("button", "hostel")));
     },
   },
   {
     id: "orbit",
-    tab: "Declarative 3D",
-    point: "`@react-three/fiber` from esm.sh, no install. A whole file in the canvas panel, not a reply.",
-    session: "Earth–Moon model",
-    prompt: "make me a little earth–moon model I can keep open",
+    tab: "Edits land in a running scene",
+    point: "`@react-three/fiber` from esm.sh. Two follow-ups rewrite the file while the atom keeps spinning — nothing restarts.",
+    session: "Atom model",
+    prompt: "make me a little atom model I can keep open",
     tools: [["skill", "Skill", "generative-ui"], ["edit", "Write", ".dsh/ui4a/canvases/orbit.ui4a.tsx"]],
+    turns: [
+      { prompt: "give it electron shells", edit: "orbit.ui4a.tsx · add three shells", reply: "Three shells on their own tilts — the nucleus never stopped.", source: ATOM[1] },
+      { prompt: "and some dust drifting around it", edit: "orbit.ui4a.tsx · add two dust layers", reply: "Two layers, drifting opposite ways.", source: ATOM[2] },
+    ],
     lead: "Opened it in the canvas — it stays there while we talk.",
     file: "orbit.ui4a.tsx",
-    source: orbit,
+    source: ATOM[0],
     surface: "canvas",
     async play({ clock, cursor, q }) {
       await clock.until(() => q("canvas") && q("input[type=range]"));
       const knob = thumb(q);
-      await cursor.drag(centerOf(knob), along(knob, 0.9), () => knob()?.parentElement ?? null);
-      await clock.until(() => q("label", "Orbit"));
-      await clock.wait(900);
-      await cursor.click(centerOf(() => q("label", "Orbit"), 0.2));
-      await clock.wait(700);
-      await cursor.click(centerOf(() => q("label", "Orbit"), 0.2));
+      await cursor.drag(centerOf(knob), along(knob, 0.7), () => knob()?.parentElement ?? null);
     },
   },
   {
@@ -119,9 +136,15 @@ export const CASES: Case[] = [
     async play({ clock, cursor, q }) {
       await clock.until(() => q("input[type=range]"));
       const knob = thumb(q);
-      await cursor.drag(centerOf(knob), along(knob, 0.62), () => knob()?.parentElement ?? null);
+      const track = () => knob()?.parentElement ?? null;
+      // Long sweeps so the odometer actually rolls — a single short drag barely moves the total.
+      await cursor.drag(centerOf(knob), along(knob, 0.92), track);
+      await clock.wait(500);
+      await cursor.drag(centerOf(knob), along(knob, 0.18), track);
+      await clock.wait(500);
+      await cursor.drag(centerOf(knob), along(knob, 0.62), track);
       await clock.until(() => q("button", "Spend the interest"));
-      await clock.wait(600);
+      await clock.wait(550);
       await cursor.click(centerOf(() => q("button", "Spend the interest")));
     },
   },

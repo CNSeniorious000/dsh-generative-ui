@@ -1,15 +1,16 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CASES, type Case } from "./cases.ts";
 import { CANCEL, createClock } from "./clock.ts";
 import { centerOf, createCursor, type Cursor } from "./cursor.ts";
 import { advance, reducedMotion, useFlip, useFollowScroll, useFrame, useInView } from "./motion.ts";
 import { createRenderer, prewarm } from "./runtime.ts";
-import { highlight, rate } from "./stream.ts";
+import { highlight, rate, reveal } from "./stream.ts";
 import { Composer, Frame, Header, Sidebar, ToolRow, UserBubble } from "../ui/dsh.tsx";
 import { Icon } from "../ui/icons.tsx";
 
-type Phase = "typing" | "sent" | "tools" | "lead" | "card" | "done";
-type Scene = { n: number; c: Case; phase: Phase; leaving?: boolean; prompt: number; tools: number; lead: number; painted: number | null };
+type Phase = "typing" | "sent" | "tools" | "lead" | "card" | "edit" | "done";
+/** `turn` counts the follow-ups sent so far; `draft` is whatever the composer holds. */
+type Scene = { n: number; c: Case; phase: Phase; leaving?: boolean; draft: string; tools: number; lead: number; turn: number; painted: number | null };
 /** What the frame loop advances: read by the few things that move per character, so the stage does not re-render for each. */
 type Live = { pos: number; ms: number };
 
@@ -35,24 +36,30 @@ function Grow({ children, className = "" }: { children: React.ReactNode; classNa
 function Progress({ scene, live }: { scene: Scene; live: { current: Live } }) {
   const bar = useRef<HTMLSpanElement>(null);
   useFrame(() => {
-    const f = scene.phase === "done" ? 1 : (live.current.pos / scene.c.source.length) * 0.9 + (scene.phase === "typing" ? 0 : 0.1);
+    const f = scene.phase === "done" || scene.turn > 0 ? 1 : (live.current.pos / scene.c.source.length) * 0.9 + (scene.phase === "typing" ? 0 : 0.1);
     bar.current?.style.setProperty("transform", `scaleX(${f})`);
   });
   return <span ref={bar} className="block h-full origin-left scale-x-0 rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" />;
 }
 
-const Line = memo(({ text }: { text: string }) => (
-  <div className="min-h-[18px] whitespace-pre">{highlight(text).map((p, i) => <span key={i} className={p.kind && `hl-${p.kind}`}>{p.text}</span>)}</div>
+const Line = memo(({ text, fresh }: { text: string; fresh?: boolean }) => (
+  <div className={`min-h-[18px] whitespace-pre ${fresh ? "-mx-4 bg-[#7aaaff14] px-4" : ""}`}>{highlight(text).map((p, i) => <span key={i} className={p.kind && `hl-${p.kind}`}>{p.text}</span>)}</div>
 ));
 
 /** The source as it arrives, followed at the bottom by a spring so the scroll has momentum too. */
 function Source({ scene, live, speed, setSpeed }: { scene: Scene; live: { current: Live }; speed: number; setSpeed: (s: number) => void }) {
   const box = useRef<HTMLDivElement>(null);
-  const reset = useFollowScroll(box);
+  const mark = useRef<HTMLDivElement>(null);
+  // While an edit is being typed, follow the lines it adds rather than the bottom of the file.
+  const reset = useFollowScroll(box, 0.6, (el) => (mark.current ? Math.max(0, Math.min(el.scrollHeight - el.clientHeight, mark.current.offsetTop - el.clientHeight * 0.55)) : null));
   const [{ code, ms }, setView] = useState({ code: 0, ms: 0 });
   useFrame(() => { const next = Math.floor(live.current.pos); setView((v) => (v.code === next ? v : { code: next, ms: live.current.ms })); });
-  const shown = scene.c.source.slice(0, code);
-  const lines = shown.split("\n");
+  const turns = scene.c.turns ?? [];
+  const target = scene.turn ? turns[scene.turn - 1].source : scene.c.source;
+  const lines = scene.turn
+    ? reveal(scene.turn > 1 ? turns[scene.turn - 2].source : scene.c.source, target, scene.phase === "sent" ? 0 : scene.phase === "edit" ? code : Infinity)
+    : scene.c.source.slice(0, code).split("\n").map((text) => ({ text, fresh: false }));
+  const last = lines.findLastIndex((l) => l.fresh);
   const tokens = Math.round(code / 3.6);
   useEffect(reset, [scene.n]);
   return (
@@ -68,8 +75,8 @@ function Source({ scene, live, speed, setSpeed }: { scene: Scene; live: { curren
           ))}
         </div>
       </div>
-      <div ref={box} className="ui4a-scroll min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[18px] text-[#cfd3d6]">
-        {lines.map((l, i) => <Line key={i} text={l} />)}
+      <div ref={box} className="ui4a-scroll relative min-h-0 flex-1 overflow-y-auto px-4 py-3 font-mono text-[11.5px] leading-[18px] text-[#cfd3d6]">
+        {lines.map((l, i) => <div key={i} ref={i === last ? mark : undefined}><Line text={l.text} fresh={l.fresh} /></div>)}
         {scene.phase === "card" && <span className="ui4a-caret" />}
       </div>
       <div className="flex h-9 items-center gap-4 border-t border-[#ffffff0f] px-4 text-[11px] tabular-nums text-[#81858c]">
@@ -94,12 +101,12 @@ export function Stage() {
   const inView = useInView(stage, "-10% 0px");
   const [clock] = useState(createClock);
   const cursor = useRef<Cursor | null>(null);
-  const [scene, setScene] = useState<Scene>(() => ({ n: 0, c: CASES[0], phase: "typing", prompt: 0, tools: 0, lead: 0, painted: null }));
+  const [scene, setScene] = useState<Scene>(() => ({ n: 0, c: CASES[0], phase: "typing", draft: "", tools: 0, lead: 0, turn: 0, painted: null }));
   const [past, setPast] = useState<string[]>([]);
   const [speed, setSpeed] = useState(1);
   const [sent, setSent] = useState<string | null>(null);
   const jumpTo = useRef<number | null>(null);
-  const live = useRef({ scene, speed, pos: 0, ms: 0, renderer: null as ReturnType<typeof createRenderer> | null });
+  const live = useRef({ scene, speed, pos: 0, ms: 0, edit: 0, renderer: null as ReturnType<typeof createRenderer> | null });
   useLayoutEffect(() => { live.current.scene = scene; live.current.speed = speed; });
 
   useLayoutEffect(() => {
@@ -122,6 +129,11 @@ export function Stage() {
       const next = Math.floor(l.pos);
       if (next > before) void l.renderer.then((r) => r.pushCode(s.c.source.slice(before, next)));
     }
+    // An edit is one tool call: its lines are typed into the source pane, and the file lands whole when it is done.
+    if (s.phase === "edit") {
+      l.ms += dt * 1000;
+      l.pos = Math.min(l.edit, l.pos + 700 * l.speed * dt);
+    }
   });
 
   useEffect(() => {
@@ -132,32 +144,72 @@ export function Stage() {
     const step = (patch: Partial<Scene>) => setScene((p) => ({ ...p, ...patch }));
     let n = 0;
 
+    /** Types word by word while the cursor is already on its way to Send, and presses it as the last word lands. */
+    async function type(text: string) {
+      // Runs beside the typing, so a cancel mid-word would leave its rejection with no one awaiting it.
+      const aim = cursor.current?.enabled ? cursor.current.glide(centerOf(() => send.current), { maxMs: 2400 }).catch(() => {}) : null;
+      if (reducedMotion()) step({ draft: text });
+      else {
+        let at = 0;
+        for (const w of text.split(/(?<=\s)/)) {
+          at += w.length;
+          step({ draft: text.slice(0, at) });
+          await clock.wait(/[.?!]\s?$/.test(w) ? 150 : 55 + Math.random() * 40);
+        }
+      }
+      if (aim) { await aim; await cursor.current!.click(centerOf(() => send.current)); }
+      step({ draft: "" });
+    }
+
+    async function lead(text: string) {
+      for (let k = 1; k <= text.length; k += 2) { step({ lead: k }); await clock.wait(16); }
+      step({ lead: text.length });
+    }
+
     async function play(i: number) {
       const c = CASES[i % CASES.length];
       const reduced = reducedMotion();
+      const inline = c.surface === "inline";
       live.current.pos = 0;
       live.current.ms = 0;
-      setScene({ n: ++n, c, phase: "typing", prompt: 0, tools: 0, lead: 0, painted: null });
-      if (reduced) step({ prompt: c.prompt.length });
-      else for (let k = 1; k <= c.prompt.length; k++) { step({ prompt: k }); await clock.wait(34 + Math.random() * 40); }
-      if (cursor.current?.enabled) await cursor.current.click(centerOf(() => send.current));
+      setScene({ n: ++n, c, phase: "typing", draft: "", tools: 0, lead: 0, turn: 0, painted: null });
+      await type(c.prompt);
       step({ phase: "sent" });
       cursor.current?.rest();
       await clock.wait(450);
       for (let k = 1; k <= c.tools.length; k++) { step({ phase: "tools", tools: k }); await clock.wait(620); }
-      step({ phase: "lead" });
-      for (let k = 1; k <= c.lead.length; k += 2) { step({ lead: k }); await clock.wait(16); }
-      step({ lead: c.lead.length, phase: "card" });
+      // Inline, the reply leads into the card; a canvas is the Write itself, and the reply follows it.
+      if (inline) { step({ phase: "lead" }); await lead(c.lead); }
+      step({ phase: "card" });
       await clock.until(() => live.current.renderer);
       if (reduced) { live.current.pos = c.source.length; void live.current.renderer!.then((r) => r.render(c.source)); }
-      const acting = cursor.current?.enabled ? c.play({ clock, cursor: cursor.current, q }) : Promise.resolve();
+      const acting = (cursor.current?.enabled ? c.play({ clock, cursor: cursor.current, q }) : Promise.resolve()).catch(() => {});
       await clock.until(() => live.current.pos >= c.source.length);
       void live.current.renderer!.then((r) => r.finish());
+      if (!inline) await lead(c.lead);
       step({ phase: "done" });
       // A script waiting on something the visitor removed would stall the loop; it gets a deadline instead.
       // Cancelling unwinds only that script's waits; this scene still holds and fades out as usual.
-      if (await Promise.race([acting.then(() => false, () => false), clock.wait(14000).then(() => true)])) clock.cancel();
+      if (await Promise.race([acting.then(() => false), clock.wait(14000).then(() => true)])) clock.cancel();
       cursor.current?.rest();
+      let prev = c.source;
+      for (const [k, t] of (c.turns ?? []).entries()) {
+        await clock.wait(700);
+        await type(t.prompt);
+        step({ phase: "sent", turn: k + 1 });
+        cursor.current?.rest();
+        await clock.wait(520);
+        live.current.pos = 0;
+        live.current.ms = 0;
+        live.current.edit = reveal(prev, t.source, Infinity).reduce((sum, l) => sum + (l.fresh ? l.text.length + 1 : 0), 0);
+        step({ phase: "edit" });
+        await clock.until(() => live.current.pos >= live.current.edit);
+        // Same renderer, same mount: the new file swaps in under a scene that never stops moving.
+        void live.current.renderer!.then((r) => r.render(t.source));
+        prev = t.source;
+        await clock.wait(380);
+        step({ phase: "done" });
+      }
       await clock.wait(HOLD_MS);
       step({ leaving: true });
       await clock.wait(420);
@@ -194,7 +246,7 @@ export function Stage() {
 
   const s = scene;
   const shown = s.phase !== "typing";
-  const card = s.phase === "card" || s.phase === "done";
+  const card = s.phase === "card" || s.phase === "edit" || s.phase === "done" || s.turn > 0;
   const canvas = s.c.surface === "canvas" && card && !s.leaving;
 
   return (
@@ -210,7 +262,7 @@ export function Stage() {
               <div key={s.n} ref={scroller} className={`ui4a-scroll flex ${s.leaving ? "ui4a-leave" : ""} min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pb-4 pt-6 max-sm:px-4`}>
               <div ref={transcript} className="ui4a-scene relative mt-auto flex flex-col gap-3 [&>*]:shrink-0">
                 {shown && <UserBubble>{s.c.prompt}</UserBubble>}
-                {s.c.tools.slice(0, s.tools).map(([icon, kind, detail], k) => <ToolRow key={kind} icon={icon} kind={kind} detail={detail} done={k < s.tools - 1 || s.lead > 0} />)}
+                {s.c.tools.slice(0, s.tools).map(([icon, kind, detail], k) => <ToolRow key={k} icon={icon} kind={kind} detail={detail} done={k < s.tools - 1 || s.lead > 0} />)}
                 {s.lead > 0 && <p className="ui4a-fade text-[14px] leading-6 text-[#f9fafb]">{s.c.lead.slice(0, s.lead)}</p>}
                 {s.c.surface === "inline" && card && (
                   <Grow className="ui4a-fade">
@@ -218,15 +270,25 @@ export function Stage() {
                   </Grow>
                 )}
                 {sent && <div className="ui4a-fade flex items-center gap-2 self-end rounded-full bg-[#34415b] px-3 py-1.5 text-[12px] text-[#cfd3d6]"><Icon name="send" className="size-3" /> sendMessage → “{sent}”</div>}
-                {s.phase === "done" && <div className="ui4a-fade text-[12px] text-[#81858c]">Completed in {(2 + s.c.source.length / 900).toFixed(0)}s · {s.c.tools.length} tool calls</div>}
+                {(s.c.turns ?? []).slice(0, s.turn).map((t, k) => {
+                  const over = k < s.turn - 1 || s.phase === "done";
+                  return (
+                    <Fragment key={`t${k}`}>
+                      <UserBubble>{t.prompt}</UserBubble>
+                      {(over || s.phase === "edit") && <ToolRow icon="edit" kind="Edit" detail={t.edit} done={over} />}
+                      {over && <p className="ui4a-fade text-[14px] leading-6 text-[#f9fafb]">{t.reply}</p>}
+                    </Fragment>
+                  );
+                })}
+                {s.phase === "done" && s.turn === (s.c.turns?.length ?? 0) && <div className="ui4a-fade text-[12px] text-[#81858c]">Completed in {(2 + s.c.source.length / 900).toFixed(0)}s · {s.c.tools.length + (s.c.turns?.length ?? 0)} tool calls</div>}
               </div>
               </div>
-              <div className="px-6 pb-5 max-sm:px-3 max-sm:pb-3"><div ref={composer}><Composer text={s.phase === "typing" ? s.c.prompt.slice(0, s.prompt) : ""} narrow={canvas} sendRef={send} onSend={() => setScene((p) => (p.phase === "typing" ? { ...p, phase: "sent" } : p))} /></div></div>
+              <div className="px-6 pb-5 max-sm:px-3 max-sm:pb-3"><div ref={composer}><Composer text={s.draft} narrow={canvas} sendRef={send} onSend={() => setScene((p) => (p.phase === "typing" ? { ...p, phase: "sent" } : p))} /></div></div>
             </div>
             <div className={`ui4a-canvas shrink-0 overflow-hidden border-l border-[#ffffff0f] ${canvas ? "w-[46%]" : "w-0 border-transparent"}`}>
-              <div className="flex h-11 items-center justify-between px-4 text-[14px] font-medium text-[#f9fafb]">
-                orbit
-                <Icon name="close" className="size-3.5 text-[#81858c]" />
+              <div className="flex h-11 items-center justify-between gap-2 px-4 text-[14px] font-medium text-[#f9fafb]">
+                <span className="truncate">orbit</span>
+                <Icon name="close" className="size-3.5 shrink-0 text-[#81858c]" />
               </div>
               {canvas && <div key={s.n} ref={attach} data-ui4a-live className="ui4a-card px-4" />}
             </div>
@@ -241,7 +303,7 @@ export function Stage() {
         {CASES.map((c, i) => {
           const active = c.id === s.c.id;
           return (
-            <button key={c.id} type="button" role="tab" aria-selected={active} onClick={() => pick(i)} className="group text-left">
+            <button key={c.id} type="button" role="tab" aria-selected={active} onClick={() => pick(i)} className="group self-start text-left">
               <span className="block h-[2px] overflow-hidden rounded-full bg-[#ffffff1f]">
                 {active ? <Progress scene={s} live={live} /> : <span className="block h-full origin-left scale-x-0 rounded-full bg-[#7aaaff] transition-transform duration-300 ease-out" />}
               </span>

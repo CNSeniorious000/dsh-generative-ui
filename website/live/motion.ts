@@ -49,9 +49,9 @@ export function useInView(ref: { current: Element | null }, margin = "0px") {
 /**
  * Keeps a scroll box pinned to its bottom on a spring, but only until the reader takes it: a wheel,
  * touch or drag hands the scroll over, and following resumes from wherever they left it once they
- * scroll back to the bottom or let go for a moment.
+ * scroll back to the bottom or let go for a moment. `to` overrides the bottom while it returns a value.
  */
-export function useFollowScroll(ref: { current: HTMLElement | null }, response = 0.6) {
+export function useFollowScroll(ref: { current: HTMLElement | null }, response = 0.6, to?: (el: HTMLElement) => number | null) {
   const y = useRef({ x: 0, v: 0 });
   const held = useRef(-Infinity);
   // On window, not the element: a box remounted per scene would drop listeners attached to the old one.
@@ -66,7 +66,7 @@ export function useFollowScroll(ref: { current: HTMLElement | null }, response =
     if (!el) return;
     const bottom = Math.max(0, el.scrollHeight - el.clientHeight);
     if (now - held.current < 2200 && bottom - el.scrollTop > 4) { y.current = { x: el.scrollTop, v: 0 }; return; }
-    advance(y.current, bottom, dt, response, 1);
+    advance(y.current, to?.(el) ?? bottom, dt, response, 1);
     el.scrollTop = y.current.x;
   });
   return () => { y.current = { x: 0, v: 0 }; held.current = -Infinity; };

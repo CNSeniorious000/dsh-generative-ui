@@ -26,3 +26,20 @@ export function highlight(line: string): Piece[] {
   if (last < line.length) out.push({ text: line.slice(last), kind: "" });
   return out;
 }
+
+/**
+ * `b` as it looks `k` characters into the edit that turns `a` into it: kept lines whole, added lines
+ * typed out in order. An edit here only ever adds lines, so `a`'s lines are a subsequence of `b`'s.
+ */
+export function reveal(a: string, b: string, k: number) {
+  const old = a.split("\n");
+  let i = 0;
+  const out: { text: string; fresh?: boolean }[] = [];
+  for (const line of b.split("\n")) {
+    if (old[i] === line) { i++; out.push({ text: line }); continue; }
+    if (k <= 0) continue;
+    out.push({ text: line.slice(0, k), fresh: true });
+    k -= line.length + 1;
+  }
+  return out;
+}
