@@ -14,18 +14,22 @@
 # "command not found" reported as a failing check, on a machine where every local run passed
 # because macOS ships zsh. Nothing here needs a shell beyond sh.
 #
-# Usage: scripts/test-shuffled.sh [runs]   (default 20)
+# Usage: [JOBS=<cores>] scripts/test-shuffled.sh [runs]   (default 20)
 set -e
 cd "$(dirname "$0")/.."
 runs=${1:-20}
+# Each seed is its own process, so they run side by side; outputs land in files and are read in order.
+out=$(mktemp -d)
+seq 1 "$runs" | xargs -P "${JOBS:-$(getconf _NPROCESSORS_ONLN)}" -I{} sh -c 'bun test --randomize --seed={} >"$0/{}" 2>&1 || touch "$0/{}.failed"' "$out"
 failed=0
-for seed in $(seq 1 $runs); do
-  if ! out=$(bun test --randomize --seed=$seed 2>&1); then
+for seed in $(seq 1 "$runs"); do
+  if [ -e "$out/$seed.failed" ]; then
     failed=$((failed + 1))
     echo "seed $seed FAILED — reproduce with: bun test --randomize --seed=$seed"
-    printf '%s\n' "$out" | grep -E '\(fail\)' | head -5
+    grep -E '\(fail\)' "$out/$seed" | head -5
   fi
 done
+rm -rf "$out"
 if [ "$failed" -gt 0 ]; then
   printf '\n%s of %s shuffled orders failed\n' "$failed" "$runs"
   exit 1
