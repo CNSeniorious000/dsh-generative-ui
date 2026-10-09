@@ -28,7 +28,11 @@ function Nucleus() {
 // the canvas, and anything they counted for themselves would start again from zero.
 function Tick({ speed }) {
   useFrame((state, dt) => {
-    const t = (state.scene.userData.t = (state.scene.userData.t ?? 0) + dt * speed);
+    // A frame can arrive with the attribute the normalizer dropped (`<Tick />`), and one NaN here
+    // would poison this shared total for good: every `userData.spin` group would rotate to NaN and
+    // vanish, while the shells around them kept drawing. Step 0 on a frame that cannot be trusted.
+    const step = Number.isFinite(dt) && Number.isFinite(speed) ? dt * speed : 0;
+    const t = (state.scene.userData.t = (state.scene.userData.t ?? 0) + step);
     state.scene.traverse((o) => {
       const s = o.userData.spin;
       if (s) o.rotation.set(s[0] * t, s[1] * t, s[2] * t);
