@@ -147,7 +147,7 @@
     "anser": "^2.3.5",
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
-    "immer": "^10.1.1",
+    "immer": "^11.0.0",
     "katex": "^0.19.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
