@@ -22,10 +22,10 @@ export const compileCard = (filename: string, code: string) => transform({ filen
  * Compile a settled card the way `compiler.ts` does: normalize `final`, and on failure normalize
  * `streaming` and compile that.
  *
- * The fallback is not defensive padding. `normalizeGeneratedTsx` sometimes APPENDS to a card
- * that was already complete and breaks it (`test/normalize-complete.test.ts`), and the streaming
- * mode's cut-back recovers it — so a checker without the fallback reports FAIL on a card every
- * reader would have seen render. Shared because it was duplicated into two scripts and a third
+ * The fallback is not defensive padding: the two modes cut the same source differently, so a card
+ * that fails under one can compile under the other. (`partial-tsx` 0.0.5 removed the `final`-mode
+ * over-repair that first motivated this — `test/normalize-complete.test.ts` now pins that it does
+ * not append to a complete card.) Shared because it was duplicated into two scripts and a third
  * would have drifted.
  */
 export const compileSettled = (filename: string, source: string) => {

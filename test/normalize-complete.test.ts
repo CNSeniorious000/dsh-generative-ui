@@ -7,17 +7,17 @@ await initTsxFromDisk();
 
 /**
  * `normalizeGeneratedTsx` exists to make a HALF-WRITTEN card parseable. On a card that is
- * already complete it must be a no-op — and on one real card it is not: it appends
+ * already complete it must be a no-op.
+ *
+ * It once was not: on this 243-line regex tester (a rare, construct-specific shape — a `<style>`
+ * block whose CSS braces the tracker read as JSX braces) it appended
  *
  *     ]</span></div></div>);})}</div></div>)}</div>)}
  *
- * to a 243-line regex tester that compiles perfectly without it, turning it into
- * `Expression expected at 243:1`. The card is fine; the repair breaks it.
- *
- * Zero of the 374 corpus cards that compile raw hit this, so it is rare and construct-specific
- * (a `<style>` block whose CSS braces the tracker appears to read as JSX braces). Kept as a
- * fixture because it was found by generating cards rather than by reading them, and the next
- * person to see `Expression expected` on a card that looks complete should find this first.
+ * and turned a card that compiles perfectly into `Expression expected at 243:1`. `partial-tsx`
+ * 0.0.5 stopped doing that. The fixture stays as the regression guard — it was found by generating
+ * cards rather than by reading them, and the next person to see `Expression expected` on a card
+ * that looks complete should find this first.
  */
 test("the fixture compiles on its own — the card is not the problem", () => {
   const src = readFileSync(`${import.meta.dir}/fixtures/over-repaired.tsx`, "utf8");
@@ -25,17 +25,19 @@ test("the fixture compiles on its own — the card is not the problem", () => {
 });
 
 /**
- * Pinned as the CURRENT behaviour rather than the desired one.
+ * The notification this test was written to give, arrived.
  *
- * A permanently-red test breaks `bun run check` and teaches everyone to read past failures,
- * which costs more than this bug does. Asserting what actually happens means the day upstream
- * fixes it, this fails and says so — which is the notification we want.
+ * It used to pin the bug as the CURRENT behaviour — a permanently-red test would have broken
+ * `bun run check` and taught everyone to read past failures, so the day upstream fixed it this
+ * would fail and say so. `partial-tsx` 0.0.5 is that day: `final` mode now leaves a complete card
+ * alone apart from dropping the trailing newline, and the result compiles. Asserted as the desired
+ * behaviour from here on.
  */
-test("known upstream: normalize appends to this complete card and breaks it", () => {
+test("normalize leaves this complete card alone", () => {
   const src = readFileSync(`${import.meta.dir}/fixtures/over-repaired.tsx`, "utf8");
   const normalized = normalizeGeneratedTsx(src, { mode: "final" });
-  expect(normalized.length).toBeGreaterThan(src.length);
-  expect(() => compileCard("normalized.tsx", normalized)).toThrow();
+  expect(normalized.trimEnd()).toBe(src.trimEnd());
+  expect(() => compileCard("normalized.tsx", normalized)).not.toThrow();
 });
 
 /**

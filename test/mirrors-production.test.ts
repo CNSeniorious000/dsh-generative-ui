@@ -26,7 +26,7 @@ test("no script compiles a settled card without production's normalize fallback"
 test("the shared path really does fall back", async () => {
   const { compileSettled, initTsxFromDisk } = await import("../scripts/tsx-node.ts");
   await initTsxFromDisk();
-  // The fixture normalize breaks in `final` mode and recovers in `streaming`.
+  // A complete card: whichever normalize mode production reaches for, it must stay compilable.
   const src = readFileSync(`${import.meta.dir}/fixtures/over-repaired.tsx`, "utf8");
   expect(() => compileSettled("x.tsx", src)).not.toThrow();
 });
