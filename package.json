@@ -189,6 +189,6 @@
   "homepage": "https://github.com/MindLab-Research/dsh-generative-ui#readme",
   "bugs": "https://github.com/MindLab-Research/dsh-generative-ui/issues",
   "overrides": {
-    "js-yaml": "4.3.2"
+    "js-yaml": "5.4.3"
   }
 }
