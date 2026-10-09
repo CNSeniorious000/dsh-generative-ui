@@ -28,24 +28,17 @@ export const SKILL_DESCRIPTION = `How to decide between an inline ${FENCE_LANG} 
  *
  * A function of the import-map path because that path is only known at runtime — the plugin
  * lives wherever the profile installed it, and the model runs the checker from the workspace.
- * Without the map, `check` reports `Cannot find module "$dsh/chat"` on every card that uses
- * one, and a false error is worse than no check: the model goes and "fixes" it.
+ * The map lets the checker resolve the host capability imports used by the card.
  */
 /**
  * The paragraph about which import map serves which command.
  *
- * Built here rather than inline: nesting one template interpolation inside another inside the
- * body is how this file broke twice, and the two maps have genuinely different lifetimes —
- * the type one may exist while the stub one does not.
+ * Built here rather than inline so the two maps can be described independently.
  */
-/** Exported for `test/skill.test.ts`: three states, and this file has broken on them twice. */
+/** Exported for `test/skill.test.ts`. */
 export function mapNotes(typesMap: string | undefined, standaloneMap: string | undefined): string {
   if (typesMap === undefined) return "";
   const check = [
-    // A card is created BY its path. Checking a draft somewhere else therefore produces a card
-    // nothing will ever mount — measured once in wave 8: a complete 150-line routine written to
-    // `rutina.tsx` in the workspace root, because the model planned "write a temp file, then run
-    // the checker" and the checker step never finished. It reads as the model declining to build.
     `**Check the canvas file itself, at \`${CANVAS_DIR}/<id>${CANVAS_SUFFIX}\`.** Writing that path is what creates the`,
     "canvas, so there is no draft stage to check first: a `.tsx` anywhere else is a file the user",
     "will never see, however correct it is. Write it where it belongs, then check it there and fix",
@@ -54,10 +47,9 @@ export function mapNotes(typesMap: string | undefined, standaloneMap: string | u
     `The \`-i\` is not optional when the card imports \`${CAPABILITY_PREFIX}/*\`: without it every one of those lines`,
     "is reported as `Cannot find module`, and there is nothing to fix — they resolve at render time.",
     "",
-    "**It silences that error rather than typing the calls.** Measured: a map pointing at a file",
-    "that does not exist reports `OK` just the same, so `$dsh/*` ends up `any` and a wrong",
-    "argument or a misspelt result field passes the check. Everything else in the card is really",
-    "type-checked; the capability calls are on you.",
+    "**It silences that error rather than typing the calls.** The map only supplies declarations:",
+    "it does not validate capability names or arguments. Everything else in the card is type-checked;",
+    "the capability calls are on you.",
     "",
     "",
     "One more diagnostic never to skim past: *referenced directly or indirectly in its own initializer*. It means",
@@ -128,10 +120,6 @@ behalf, and it needs their say-so:
 - The thing genuinely has more than one screen, or holds state the next turn needs. → **canvas**,
   and say in one line that you opened it.
 
-Measured: on \`cron-read\` — *"\`*/17 3-5 * * 2\` 这个 cron 到底几点跑？"*, a lookup with one right
-answer — models opened a canvas **5 times in one round and 6 in the next**, and one opened a canvas
-for *"什么是闭包？"*. Nobody asked for a file in any of them.
-
 When it is genuinely borderline, inline is the cheaper mistake: it is one message, not a file the
 user now owns.
 
@@ -139,7 +127,7 @@ Two things follow from the lifetime difference:
 
 - An **inline** block that the user acts on should *end that step* — see the next entry for WHICH control ends it, because on a card whose options need previewing it is not the one they pick with. Whichever it is, that control does two things: send the result with \`sendMessage\` **and** record what was chosen in \`usePersistedState\`, so the card still shows it when scrolled back to weeks later.
 
-  **The second half is the one that gets dropped, and it fails in two different ways.** Measured over the 105 turns where a reader actually submitted something: **36 (34%) left the card looking exactly as it had before the click**, and another **20 (19%) showed the choice and then lost it on reload** — 53% between them, and evenly spread across every model, so it is the rule and not a habit. The first is forgetting to record at all (\`sendMessage\` treated as the finish line); the second is recording into \`useState\`, which a reload throws away. Both read to the reader as a form that did not take their answer.
+  **The second half is easy to drop, and it fails in two different ways.** Forgetting to record at all (\`sendMessage\` treated as the finish line) leaves the card unchanged; recording into \`useState\` loses the choice on reload. Both read to the reader as a form that did not take their answer.
 
   So the submit handler has three statements, not one:
 
@@ -149,27 +137,16 @@ Two things follow from the lifetime difference:
       …
       {answer !== null && <p className="text-muted">已选择：{label(answer)}</p>}   // and SHOW it
 
-  The third line is the one nobody writes — but not for the reason it first looked like. Of the
-  cards that call \`usePersistedState\`, **91 of 93 do render the value somewhere**; what they render
-  it as is \`aria-pressed\` on the button that was clicked. Reading the turns where a submit left the
-  card unchanged: **31 of 42 mark the choice with a highlight and say nothing in words**, and 19 of
-  those 42 hold it in \`useState\`, so the highlight is gone after a reload. A highlight is a fine
-  way to show which control is active while the reader is still there; it is not an answer to
-  someone coming back to this card next week, who sees one button shaded and no statement of what
-  was decided. Say it in words AND keep it in \`usePersistedState\`. (Re-firing on reload is the opposite mistake and does not happen — 0 of 105 — so
-  guard the send with the recorded answer, not with anything cleverer.)
-- **Exactly one control ends the step, and the reader must be able to find it.** This is the
-  single largest hole in what gets built: across 161 runs where the reader actually clicked
-  something, **108 of them — 67% — never once got a result back out of the card**, 468 clicks that
-  went nowhere. It is not one model's habit (every one of the ten does it) and not one case's
-  (every case does it). The shape is always the same: a card you can fiddle with forever and never
-  finish.
+  A highlight is a fine way to show which control is active while the reader is still there; it is
+  not an answer to someone coming back to this card later, who sees one button shaded and no
+  statement of what was decided. Say it in words AND keep it in \`usePersistedState\`. Guard the send
+  with the recorded answer, not with anything cleverer.
+- **Exactly one control ends the step, and the reader must be able to find it.** A card the reader
+  can fiddle with forever without a result has no useful ending.
 
   **The check is one grep, so run it on what you just wrote: does the source contain a
-  \`sendMessage\` call at all?** Re-measured over 171 clicking runs, 117 of them dead: **90 — 77% —
-  have no \`sendMessage\` anywhere in the card**. The reader clicks \`RESTful (JSON)\`, \`下一步 →\`,
-  \`2. 尺度缩放 / √d\` — real controls, wired to internal state and to nothing else — and the
-  conversation stops there. Not "the ending was hard to find": there was none to find.
+  \`sendMessage\` call at all?** A control can update local state and still leave the conversation
+  without a result. Not "the ending was hard to find": there was none to find.
 
   Two endings are correct, and which one depends on whether the options need explaining:
 
@@ -216,9 +193,8 @@ Two things follow from the lifetime difference:
   hardest.** The reader sees the first controls while the rest of the card is still arriving, and
   **every chunk that adds JSX remounts every component the card defines itself** — so a choice they
   make mid-stream is wiped by the next chunk, silently, with the control snapping back to its
-  initial state. Measured three ways on the same card, one variable each: state in a
-  card-defined child is lost, the same state in the exported component survives, and
-  \`usePersistedState\` survives in either. **Two chunks is enough** — this is not a rare race.
+  initial state. State in the exported component or in \`usePersistedState\` survives the remount;
+  state in a card-defined child does not.
 
   So anything the reader can change belongs in \`usePersistedState\`, not only the answer you
   intend to record. The one case it cannot reach is a third-party component holding its own state:
@@ -243,8 +219,7 @@ Two things follow from the lifetime difference:
   no way back once it is answered.
 
   **The reason this is missed is not that undo is hard to write — it is that the line does not
-  look like a delete.** Measured across 36 cards that destroy something: 10 shipped no way back,
-  and every one of them had written one of these without recognising it:
+  look like a delete.** These shapes all destroy user data without an obvious \`remove\` name:
 
   - \`setRows(prev => prev.filter(r => r.id !== id))\` — 6 of the 10
   - \`delete obj[key]\` on a persisted map — the other 4, and the one that reads least like a
@@ -258,15 +233,13 @@ Two things follow from the lifetime difference:
   Anything the user cannot type back in under five seconds needs a way back.
 
   **A running clock is state too**, and the least obvious kind: a stopwatch or a timer mid-count
-  reads 0 again after one edit. Measured — the interval itself is cleaned up correctly, nothing
-  stacks up, but the elapsed value is gone. Store the *start timestamp* rather than the elapsed
-  count, so the display is derived and survives a remount by arithmetic.
+  reads 0 again after an edit. Store the *start timestamp* rather than the elapsed count, so the
+  display is derived and survives a remount by arithmetic.
 
   **Reaching for \`localStorage\` by hand is where this goes wrong.** A full quota, or storage
-  disabled entirely, and \`setItem\` raises — from inside an effect, where it reaches the error
-  boundary and takes the whole card down over a saved preference. Persistence went from 1 corpus
-  card to 20 fresh ones once this section asked for it, and **10 of those 29 writes were bare**.
-  \`usePersistedState\` has the \`try\` on both sides; use it and the question does not arise.
+  disabled entirely, and \`setItem\` raises from inside an effect and can take the whole card down
+  over a saved preference. \`usePersistedState\` has the \`try\` on both sides; use it and the
+  question does not arise.
 
 ## Ask with an interface when the request is underspecified
 
@@ -324,7 +297,7 @@ A reply that is nothing but an interface reads like a document that is nothing b
 
 Both short. Two or three sentences total. Don't narrate tooling ("now I'll write the file") — say what the user gets.
 
-**Write the card in the language they wrote to you in — every label, every button, every helper line.** This is not a preference, it is whether they can use it: a Spanish speaker handed a card labelled 日常休闲 / 户外运动 got no answer at all. It is easy to miss because the card is a separate act of writing from the reply, and the reply is usually right; measured, a card for \`Suggest an outfit that matches the occasion and weather\` came back entirely in Chinese. The corpus is **en 39% / es 31% / fr 12% / it 9% / pt 5%, and Chinese 0.2%** — so Chinese is the wrong default in almost every turn, and if you find yourself typing a CJK label, check what language the question was in.
+**Write the card in the language they wrote to you in — every label, every button, every helper line.** It is easy to miss because the card is a separate act of writing from the reply. Check the user's language before writing its labels.
 
 ## Framing
 
@@ -332,8 +305,8 @@ This one runs *opposite* in the two places, and getting it backwards is the most
 
 - **Canvas fills its panel.** It already has a frame and a title bar around it. So take the whole space — \`height: 100%\`, your own padding, backgrounds bleeding to the edges — and do **not** wrap yourself in one more rounded, bordered, tinted box. A card inside the panel is a frame inside a frame.
 - **Inline is the card.** It sits between paragraphs, so one bounded box is what tells the reader where it starts and stops.
-- **But \`bg-page\` is the page's own colour, so a wrapper painted with it is not a box.** Measured
-  from the token table: \`bg-page\` (that is the CLASS; \`--dsw-alias-bg-base\` is the variable
+- **But \`bg-page\` is the page's own colour, so a wrapper painted with it is not a box.**
+  \`bg-page\` (that is the CLASS; \`--dsw-alias-bg-base\` is the variable
   behind it, and the two vocabularies are deliberately different) is \`#fff\` on light and
   \`#151517\` on dark — the same value the
   transcript behind the card is painted with, on both grounds. A root \`<div>\` with
@@ -344,7 +317,7 @@ This one runs *opposite* in the two places, and getting it backwards is the most
   \`border-line\` (see the both-spellings rule below). If you don't, drop the wrapper's background
   and radius entirely rather than painting it the colour of the page.
 
-Either way, don't restage the header. The panel already names the canvas, so a heading repeating that name is the second copy of it — measured, **22 of the 24 canvases that carried a heading had written their own filename back out**: \`liste-courses\` headed "Liste de courses", \`waist-routine\` headed "Rutina de Cintura", \`bone-routine\` headed "Rutina para fortalecer los huesos". Translating the id into the user's language does not make it a different line. The two that got it right show what the slot is actually for: one headed a **section** (\`Ingredienti\`), the other **spoke to the reader** (\`Hasna, ya toca el almuerzo\`). If a heading is not naming a part of the page or saying something to the person reading it, delete it; a small-caps kicker above the heading plus a subtitle under it is three lines of chrome before anything happens. **And on Chinese text an uppercase kicker is decoration that does not even render**: measured, 15 of the 19 kickers in 378 real cards set \`textTransform: "uppercase"\` over CJK, where it does nothing at all — the letter-spacing survives and the transform is a no-op, so what is left is a small grey line the layout did not need. One heading at most, often none. A chip in the top right has to be something the user actually tracks, not decoration to balance the layout.
+Either way, don't restage the header. The panel already names the canvas, so a heading repeating that name is the second copy of it. If a heading is not naming a part of the page or saying something to the person reading it, delete it; a small-caps kicker above the heading plus a subtitle under it is three lines of chrome before anything happens. On Chinese text, \`textTransform: "uppercase"\` does nothing, leaving only an unnecessary small grey line. One heading at most, often none. A chip in the top right has to be something the user actually tracks, not decoration to balance the layout.
 
 ## Layout
 
@@ -354,40 +327,24 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
       <div className="grid gap-4">
 
-  Measured on a card written before this syntax: the root's layout was \`.r { display: grid; gap:
-  12px }\` in a \`<style>\` block, the class landed on an \`<input>\` twenty lines away, and the two
-  blocks below ended up flush — no border between them, no space, reading as one block with a
-  stray heading in the middle. Nothing failed; the gap simply never applied. A class written on
-  the element it governs cannot come apart from it, which is most of why the styling here is
+  A class written on the element it governs cannot come apart from it, which is most of why the styling here is
   classes. Inside a block the same \`gap\` separates its rows; a \`mb-4\` on one child while its
   siblings rely on the gap is what produces one odd space and eleven equal ones.
 
 - **A collapse whose rows all start open is decoration, and a filter that starts at "everything"
-  has not filtered.** Measured on two generated cards, two models, two weeks apart, both with the
-  mechanism written correctly: a symptom card with one-panel-at-a-time \`aria-expanded\` shipped all
-  six panels open at 3369px, and a 41-question study canvas — which also built a topic filter, a
-  to-learn/mastered toggle AND a search box — rendered every question expanded with the filter on
-  "All", repeating its two buttons 82 times down **12000px**. The model knew the list needed
-  narrowing in both cases; what it did not do was choose the initial state. If the list is longer
+  has not filtered.** Choose the initial state: if the list is longer
   than a screen, the first render shows labels and the filter starts somewhere narrower than
   everything.
 
 - **A list of options collapses the prose, not the facts — and folding the wrong half is the
-  common way to end up with a card nobody can scan.** Measured on a real card recommending six
-  ways to manage a symptom: each entry kept three lines of description permanently on screen and
-  hid one line — \`Onset: 15 min\` — behind a "Show details" link, repeated six times. The
-  mechanism was right (one panel open at a time, \`aria-expanded\` on every trigger); the choice
-  of what went inside it was backwards, and the card came out 3369px tall at every width. What
+  common way to end up with a card nobody can scan.** What
   earns a permanent line is what the reader compares the options **by** — the name, the one
   number that distinguishes it. The paragraph explaining why it works is what folds. A list of
   more than about four options where every entry carries a paragraph is not a list any more, and
   the fix is not a smaller font.
 
 - **A comparison table is read down a column, so its text cells are left-aligned and only its
-  numbers are right-aligned.** Measured on a real card comparing two cell types over 12 rows:
-  every cell was centred, so at 440px eight of the twelve rows wrapped to two lines and each
-  line started at a different x — there is no straight edge for the eye to run down, and the
-  two columns being compared no longer line up with each other row by row. Centring looks tidy
+  numbers are right-aligned.** Centring looks tidy
   in a mock where every cell is one short word and falls apart the moment one cell is a phrase.
   Numbers are the exception in both directions: right-align them and add
   \`font-variant-numeric: tabular-nums\`, so the digits stack. Header cells take the alignment of
@@ -395,28 +352,20 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
   **An unknown is not a zero.** A row the reader has not reported yet shows \`—\` and contributes
   nothing to the total. \`0\` is a measurement: it says the value was taken and came out zero, and it
-  drags every average and running total down silently. Measured on one wave, one turn, one
-  context: one card rendered the not-yet-eaten dinner as \`Cena · pendiente   —\` and another
-  rendered the same row as \`kcal 0 / Prot 0 / Carb 0\`. Same question, so this is a coin flip
-  rather than a blind spot — which is what makes it worth one line. The em dash takes
+  drags every average and running total down silently. The em dash takes
   \`text-muted\`, and if a total is shown beside incomplete rows, say what it is a total OF.
 
-- **Write both the border and the background, and let the theme decide which one shows.** Measured on this app's own tokens, not assumed: light paints \`bg-page\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Rendered side by side, background-only vanishes on light and border-only is indistinguishable from both-together on dark — so both is the one spelling that works on both grounds, and it is **not** the "border and background are redundant" anti-pattern you know from elsewhere. That anti-pattern assumes a background you can see. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
+- **Write both the border and the background, and let the theme decide which one shows.** Light paints \`bg-page\`, \`bg-layer-1\` and \`bg-layer-2\` all \`#fff\`, so a block with only a background is **invisible** there and the border is the sole thing separating it; dark gives the layers real values (\`#151517\` / \`#232324\` / \`#2c2c2e\`) and carries it on the background alone. Both tokens work on both grounds. Floating surfaces (modals, dropdowns) keep both regardless — they have to occlude.
 
   **And a field you type into is not a surface — it is a hole in one.** \`bg-page\` is the colour
   of the ground everything else sits on, so an \`<input>\` painted with it is the same white as the
-  card in light theme and reads as a faint outline. Measured on a card generated after the rule
-  above landed: nine inputs, all \`bg-page border-line\`, on a card that used \`bg-layer-2\`
-  correctly exactly once elsewhere — the model knows the token and still reaches for the ground
-  colour. An input takes \`bg-layer-2\` (a step further from the ground than its container, not
+  card in light theme and reads as a faint outline. An input takes \`bg-layer-2\` (a step further from the ground than its container, not
   back towards it) with \`border-line-2\`, and the placeholder takes \`text-muted\`.
 
   **A thing you can tap needs more than the divider colour.** The rule above is about separating a
   block from the surface below it, and \`border-line\` — 4% black — is right for that. It is not
-  enough for a control sitting on a surface that already has the same background: measured on a
-  real card, four tappable option boxes drawn with \`border-line\` on a \`bg-layer\` parent read
-  clearly on dark and were nearly invisible on light, where every layer is \`#fff\` and 4% black is
-  the only thing left. A tappable thing takes \`bg-layer-2\` or \`border-line-2\`, and the hairline
+  enough for a control sitting on a surface that already has the same background: on light, every
+  layer is \`#fff\` and 4% black is the only thing left. A tappable thing takes \`bg-layer-2\` or \`border-line-2\`, and the hairline
   stays for dividers.
 
   **A control you have FILLED is the opposite case, and the two get confused.** The rule above is
@@ -429,10 +378,8 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
       border: selected ? "1px solid transparent" : "1px solid var(--dsw-alias-border-l2)"
 
-  **And once a row is filled, everything inside it has to move off that fill too.** Measured on a
-  real card: a step row filled with \`state-business-primary\` when ticked, and the checkbox inside
-  it took \`background: state-business-primary\` for its own checked state — the same token, so the
-  box vanished into the row and left a white tick floating on blue with nothing around it. The
+  **And once a row is filled, everything inside it has to move off that fill too.** A step row filled with \`state-business-primary\` and a checked box inside it using the same background make the
+  box vanish into the row and leave a white tick floating on blue with nothing around it. The
   same happens to a chip, a count, an icon tile: any child that had a background of its own is now
   sitting on a background that matches it. On a filled row the children want the fill's foreground
   (\`#fff\` here) as their colour and no background at all, or a white outline if the shape itself
@@ -445,15 +392,6 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   at, a search box, a row of filter chips, a count that changes as they filter. If yes, that strip
   pins. Otherwise the reader scrolls into the list, decides to narrow it, and has to scroll back up
   past everything they were reading to reach the box that narrows it.
-  **Measured across 766 generated cards: 356 have a heading or a control above a list, and 353 of
-  them let it scroll away.** Not a tendency, an absence: the shape is in every case (60 on one, 54
-  on the next, 31, 26, 23…) and every model (95 for the worst, then 56, 44, 35, 33…), and no model
-  pins it more than the rest. One of the 353, read in full: 266 lines — \`<h2>最近工作轨迹</h2>\`, a
-  search input reading \`搜项目、作者或提交内容\`, a row of per-repo filter chips, then
-  \`filtered.slice(0, limit).map(…)\` and a "load more" button. **Zero occurrences of \`sticky\`**,
-  in that card and in the second one the same turn produced. Everything needed to steer the list
-  scrolled away the moment the list was worth steering.
-
 - **Your root sets no height and no \`overflow\`; the page is what scrolls.** You are inside a
   column the reader is already scrolling, so a root that sizes itself and grows its own scrollbar
   puts a second scroll inside the first. Pin with \`sticky\`, which pins against the READER's
@@ -467,23 +405,16 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   \`\`\`
 
   **\`overflow\` on ANY ancestor of a \`sticky\` element switches it off, silently** — no error, no
-  warning, it simply scrolls away. Watched happen across one card's revisions: a root grew
-  \`overflow: hidden\` to contain a stacking problem, the pinned header stopped pinning, and the
-  two edits were two turns apart. Nothing between a \`sticky\` element and the page may set it.
+  warning, it simply scrolls away. Nothing between a \`sticky\` element and the page may set it.
 
   **\`isolate\` is what keeps your \`z-index\` small.** Inside a stacking context you own, \`z-10\`
   is above everything of yours and below everything of the app's. Without one, a number picked to
   beat your own siblings also beats the composer the reader types into.
 
-- **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container with \`@container\` and \`@[32rem]:\` variants, which is the ONE responsive tool that works here. "One comfortable column beats two cramped ones" settles what to do at 320px; it is not a licence to ship the same single column at 720. **Judged by a vision panel on 59 cards at three widths, "still one column at 720px, half the card is empty" was the single most common criticism — 91% of verdicts — and "no breakpoint of any kind in the source" was 76%.** A list of items with a name and a description is \`@[30rem]:grid-cols-2\`; a strip of stats is \`@[24rem]:grid-flow-col\`. The reader who widens the panel is asking for less scrolling, and getting a wider version of the same tall column is not an answer.
+- **The width is not the viewport's.** The same component lands in a narrow chat column *and* in a wide panel, so a media query tells you nothing useful — measure your own container with \`@container\` and \`@[32rem]:\` variants, which is the ONE responsive tool that works here. "One comfortable column beats two cramped ones" settles what to do at 320px; it is not a licence to ship the same single column at 720. A list of items with a name and a description is \`@[30rem]:grid-cols-2\`; a strip of stats is \`@[24rem]:grid-flow-col\`. The reader who widens the panel is asking for less scrolling, and getting a wider version of the same tall column is not an answer.
 
 - **Extra width should make the rows SHORTER, not the card wider — inline as much as in a canvas.**
-  This entry read "In a canvas" for a while and that scope was wrong: a vision panel grading
-  **inline** cards raised it in 27% of verdicts, on cards that *did* carry breakpoints. Measured across
-  one wave, height at 320 divided by height at 720: the five inline cards shrink 1.26–1.52x, and
-  the six canvases shrink **1.02–1.18x** — one is 1100px tall at 320 and still 1076px at 720. It
-  is not for want of the technique; 8 of those 9 canvases carry a container query or an intrinsic
-  grid. They spend it *inside* a row — a stat strip, a chip group — and never on the row itself.
+  Apply this to inline cards and canvases. Spend the extra width on rows themselves, not only on a stat strip or chip group inside them.
   The shape that costs the most is a three-band row: a name, a right-aligned number, then a
   control on its own full-width line, so at 720 the name and its number sit 1100px apart with a
   rail between them. At that width the three fit on ONE line:
@@ -495,33 +426,21 @@ Either way, don't restage the header. The panel already names the canvas, so a h
       </div>
 
   The reader drags a canvas panel between 320 and 720 — that drag should buy them less scrolling.
-- **Nothing you draw may carry a width the column did not give it.** Measured by mounting 60 real
-  cards at 380px: **12 overflowed the column**, across 4 of the 26 runs sampled, and the part that
-  hangs off the edge is invisible in a screenshot — the picture is clipped at the card, so an
-  absent column reads as a design choice and nobody can name the defect. Every one of the 12 was
-  the same mistake in a different costume:
+- **Nothing you draw may carry a width the column did not give it.** Content hanging off the edge
+  can be clipped at the card, hiding the defect. Watch for these shapes:
 
-  | what stuck out | how far | write instead |
-  | --- | --- | --- |
-  | \`<svg width="600" …>\` | 308–348px | \`viewBox="0 0 600 400"\` and \`className="w-full h-auto"\` — the viewBox carries the coordinates, the class carries the size |
-  | a \`<pre>\`/\`<code>\` of real source | 409–705px | the code keeps its long lines; the WRAPPER gets \`overflow-x-auto\`, so the card stays put and the code scrolls inside it |
+  | what sticks out | write instead |
+  | --- | --- |
+  | \`<svg width="600" …>\` | \`viewBox="0 0 600 400"\` and \`className="w-full h-auto"\` — the viewBox carries the coordinates, the class carries the size |
+  | a \`<pre>\`/\`<code>\` of real source | the code keeps its long lines; the WRAPPER gets \`overflow-x-auto\`, so the card stays put and the code scrolls inside it |
+  | \`<table className="min-w-[28rem]">\` | put the \`overflow-x-auto\` on the wrapper and drop the min-width, or let the columns wrap |
 
-  **A hand-rolled \`<pre>\` is two defects at once, and it is the single commonest thing in this
-  corpus.** Of 766 cards, **194 show code and 182 of them hand-roll a \`<pre>\` — 94%**; only 4 reach
-  for \`shiki\`. And they are where the overflow lives: of 107 measured overflows, **35 — a third of
-  everything — are a \`<code>\` element**, at a median of 195px past the edge against 84px for every
-  other tag combined. (Not one is a \`<pre>\`: the wrapper is fine, the \`<code>\` inside it is what
-  hangs off. The single widest overflow in the corpus is a \`<section>\` at 978px, so these are the
-  typical worst rather than the record holder.) So the fix is one import,
-  not two patches: \`shiki\` highlights it (see the library table) AND you still put the
-  \`overflow-x-auto\` on the wrapper. Unhighlighted source in a card the reader cannot scroll
-  sideways is code they can neither read nor reach the end of.
-  | \`<table className="min-w-[28rem]">\` | 84px | put the \`overflow-x-auto\` on the wrapper and drop the min-width, or let the columns wrap |
+  For code, \`shiki\` highlights it (see the library table) AND the wrapper still needs
+  \`overflow-x-auto\`. Unhighlighted source in a card the reader cannot scroll sideways is code
+  they can neither read nor reach the end of.
 
   \`min-w-0\` is the answer to a flex child that will not shrink; this is its opposite — an
-  explicit intrinsic width you typed yourself, and no ancestor can undo it. **The widest offender
-  was 705px hanging off a 380px column**, which is not a card that looks slightly wrong, it is a
-  card most of which does not exist for the reader.
+  explicit intrinsic width you typed yourself, and no ancestor can undo it.
 
 - **Layout breaks late, controls break early.** A row of buttons can reflow at a small width; a grid of content cards cannot, because each column has to stay wide enough to read.
 - **Whatever \`hover:\` changes, the selected state has to claim in its hover form too.** A
@@ -529,8 +448,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   specificity — \`:is()\` takes its argument's, so \`.class:hover\` and \`.class[aria-pressed]\` are
   both \`(0,2,0)\` — and source order in the generated sheet puts \`hover\` last. So the selected
   button turns back to neutral grey **while the pointer is on it**, which is exactly when the
-  reader is looking at it. **Measured across 766 generated cards: 308 real collisions in 193 cards
-  across 60 runs** — a quarter of everything written, 256 on \`bg\` and 52 on \`text\`.
+  reader is looking at it.
 
   Add the pressed-and-hovered pair. It is \`(0,3,0)\`, so it wins on specificity and does not care
   where it lands in the sheet:
@@ -538,9 +456,8 @@ Either way, don't restage the header. The panel already names the canvas, so a h
       hover:bg-hover aria-pressed:bg-accent aria-pressed:hover:bg-accent
 
   **Whichever attribute you marked the selection with, qualify that one** — the trick is the extra
-  variant, not the word \`aria-pressed\`. Of those 308 collisions, only 163 are on \`aria-pressed\`;
-  the rest are \`data-[state=active]\` (74), \`checked\` (43) and \`aria-selected\` (28), and each has
-  the same fix, verified against this generator:
+  variant, not the word \`aria-pressed\`. \`data-[state=active]\`, \`checked\` and \`aria-selected\`
+  have the same fix:
 
       data-[state=active]:hover:bg-accent    checked:hover:bg-accent    aria-selected:hover:bg-accent
 
@@ -552,8 +469,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 - **Icons must name the thing beside them.** \`Sparkles\`, \`WandSparkles\`, \`Wand2\`, \`Stars\`, \`Bot\`, \`BrainCircuit\`, \`Zap\` as decoration say "an AI made this" and nothing else — \`Copy\` on a copy button, \`Languages\` on a translate tab, and nothing on a heading that reads fine without one. Prefer no icon to a decorative one.
 - **If you take the focus ring off, put something back.** \`outline-none\` on a borderless input
-  is the most common single thing in these cards that breaks keyboard use: **77 of 378 remove the
-  ring and 0 replace it**, so tabbing through the card moves an invisible cursor. The
+  makes tabbing through the card move an invisible cursor. The
   browser's default ring is ugly next to a custom input, which is why it goes — the fix is a
   ring you like, not no ring:
 
@@ -564,23 +480,18 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 - **The rules below share one cause, and knowing it is worth more than the list.** A card gets
   written as a *picture* of an interface — the slider looks right, the number reads right, the
   ring is visual noise so it goes. Every one of them is correct through a mouse and an eye, and
-  broken through a keyboard or a screen reader. Measured: the two most common pairs of defects
-  in 378 cards are a stripped focus ring beside an unlabelled slider (8 cards) and an unlabelled
-  slider beside an unguarded number field (6) — the same card, treating its controls as decoration
-  three times over. When you add a control, ask what it announces and what happens on Tab.
-- **A control the keyboard cannot reach is not a control.** Two shapes, both measured across 378
-  real cards and neither mentioned here before: **17 cards put \`onClick\` on a \`<div>\`**, which
-  takes no focus and answers no Enter or Space, and **31 buttons whose only content is an icon
-  carry no \`aria-label\`**, so a screen reader announces "button" and nothing else. Both are one
-  word to fix and invisible to you, since a mouse works either way:
+  broken through a keyboard or a screen reader. The mistake is treating its controls as decoration.
+  When you add a control, ask what it announces and what happens on Tab.
+- **A control the keyboard cannot reach breaks keyboard use.** An \`onClick\` on a \`<div>\` takes no
+  focus and answers no Enter or Space, and a button whose only content is an icon needs an
+  \`aria-label\`; without it, a screen reader announces "button" and nothing else. Both are invisible to you when a mouse works either way:
 
       <button aria-label="复制" onClick={copy}><Copy size={14} /></button>
 
   If it does something when clicked, it is a \`<button type="button">\`. A \`div\` with an
   \`onClick\` is a div.
 
-  **A clickable row is the case that survives this rule** — 13 of the 17 are a list row, a table
-  cell, or a card, where wrapping each one in a \`<button>\` feels wrong. It is not: a \`<button>\`
+  **A clickable row is the case that survives this rule** — a list row, table cell, or card can be a \`<button>\` styled to look like the row. It is not: a \`<button>\`
   with \`display: block; width: 100%; text-align: left\` looks exactly like the row and is
   reachable. **\`textAlign: "left"\` is the part that gets dropped, and it is needed whatever the
   display is.** A row laid out as \`display: flex\` (to push a trailing action right with
@@ -591,21 +502,17 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   then \`role="button" tabIndex={0}\` and an \`onKeyDown\` for Enter and Space, all three, because
   any one alone leaves it half-reachable.
 
-  **A slider is the same problem with no visible text to fall back on.** 61 range inputs across
-  the corpus carry no label of any kind, and unlike a text field there is no placeholder and
-  nothing inside the control to read — a screen reader announces "slider, 40" and stops.
+  **A slider is the same problem with no visible text to fall back on.** Unlike a text field there
+  is no placeholder and nothing inside the control to read — a screen reader announces "slider, 40" and stops.
 
-  Almost every one of them HAS a visible name: **38 of 54 put it in a \`<span>\` directly above
-  the control**, which looks labelled and announces as nothing. A \`<span>\` is not a label, and
+  A visible name in a \`<span>\` directly above the control looks labelled and announces as nothing. A \`<span>\` is not a label, and
   neither is the number beside it — both are separate elements, connected to nothing:
 
       <input type="range" aria-label="音量" min={0} max={100} value={v} onChange={…} />
 
   **And a bare \`<input type="range">\` is the loudest thing on the card.** The browser paints its
-  own track in the OS accent — a thick, fully saturated blue that ignores your theme, is identical
-  on light and dark, and outshouts the number beside it. **43 of the 52 corpus cards with a slider
-  ship it untouched**, including all three reference cards. \`accent-color\` does not fix it:
-  measured side by side, it swaps one blue band for another. The track and the thumb are
+  own track in the OS accent — a thick, fully saturated blue that ignores your theme and outshouts
+  the number beside it. \`accent-color\` does not fix it. The track and the thumb are
   pseudo-elements, which utilities reach through a bracketed selector on the input itself:
 
       <input type="range" className="flex-1 min-w-0 appearance-none bg-transparent
@@ -638,8 +545,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
 
 - **And when the content arrives on its own, say so where it lands.** A card that fetches shows a
   spinner becoming a list; someone using a screen reader gets nothing — focus has not moved, and
-  the new content is silent below it. **0 of 64 corpus cards that fetch anything announce their
-  results**, the one defect a fresh batch still gets wrong too. One attribute on the container
+  the new content is silent below it. Put one attribute on the container
   the results land in:
 
       <div aria-live="polite">{loading ? <Spinner /> : <List items={rows} />}</div>
@@ -650,26 +556,22 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   **This is the one rule whose effect you cannot see.** A missing focus ring is visible the moment
   you tab; an unlabelled icon reads wrong the moment you look. A card with no live region looks
   exactly like one that has it, in every state, so the only way it gets written is on purpose.
-  Measured: **8 of 23** cards that fetch anything announce the result, against 88-94% for every
-  other rule in this section.
 
   **And when it fails, say so where the results would have been.** \`} catch {}\` around a
   \`streamText\` or a \`bash\`, then \`setLoading(false)\`: the spinner stops, the card is empty, and
-  nothing tells the reader whether it failed or simply found nothing. **15 of 378 corpus cards do
-  this, 14 of them calling the model** — where a request failing is the likeliest thing worth
-  explaining. Rendering \`stderr\` counts; so does letting it throw to the surface's error
+  nothing tells the reader whether it failed or simply found nothing. Rendering \`stderr\` counts;
+  so does letting it throw to the surface's error
   boundary. An empty \`catch\` around the call itself does not.
 
   A \`<label>\` BESIDE the control names nothing. \`<label>音量</label><input type="range" …/>\` is
-  the shape two corpus cards took, and it is worse than no label: it reads as done. A label only
+  is worse than no label: it reads as done. A label only
   associates when it wraps the control or carries \`htmlFor\` matching its \`id\`:
 
       <label>音量 <input type="range" value={v} onChange={…} /></label>   // wrapping, so it names it
 
   **A \`<select>\` has the same problem for the same reason** — its options are its value, not its
   name, so an unlabelled one announces "combo box, 每天" and the reader never learns what it
-  selects. Six corpus cards, and the same two fixes. The screen catches these; nothing said so
-  until now, which is why they are still here after the slider rule landed.
+  selects, and the same two fixes apply.
 - **Selected state is not a colour.** A group of choices where the picked one differs only by \`background\` or \`border\` reads as three identical buttons to anything that is not looking at it — a screen reader, a keyboard user checking where they are, a browser's own find. Put the state on the element:
 
   \`\`\`tsx
@@ -681,9 +583,7 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   </div>
   \`\`\`
 
-  **The tell is the ternary you are about to write.** Measured across 378 cards: 95 of the 114 that
-  get this wrong express the selection as \`background: picked === x ? … : …\` — one shape, whatever
-  the array is called (\`PRESETS\`, \`options\`, \`ranges\`, \`STYLES\`, \`MODES\` all appear). If you are
+  **The tell is the ternary you are about to write.** If you express the selection as \`background: picked === x ? … : …\` while mapping choices, the attribute belongs on the
   writing a conditional \`background\` inside a \`.map\` over choices, the attribute belongs on the
   same element, and it is the same condition you already typed. The className spelling needs it just
   as much — moving the ternary into a string changes nothing about what is announced:
@@ -692,64 +592,42 @@ Either way, don't restage the header. The panel already names the canvas, so a h
   <button className={\`btn\${picked === x ? " active" : ""}\`} aria-pressed={picked === x}>
   \`\`\`
 
-  **A disabled control should say why, in its own label.** Two wave-2 cards gate the same form.
-  One writes a greyed-out \`Calcular mi plan\` and leaves the reader to guess which field is
-  missing; the other swaps the label to **"Completa tus datos para continuar"**. Same disabled
-  state, no extra element, and the button explains itself. When a precondition disables a control,
+  **A disabled control should say why, in its own label.** When a precondition disables a control,
   put the precondition in the label.
 
-  **The row of presets is where this gets dropped.** Measured: three cards answering the same \`chmod\` question, months apart, each wrote \`aria-pressed\` on its permission-bit grid and then nothing at all on the preset row twenty lines below — 755, 644, 700 shown as pills, the active one differing only by \`background\`. \`PRESETS.map\` is the commonest shape this fires on across 378 cards. A grid of toggles looks like state and a preset row looks like decoration; they are the same widget, and the one that looks like decoration is the one that gets it wrong.
+  **The row of presets is where this gets dropped.** A grid of toggles and a preset row are the same widget; put the state attribute on both.
 
   \`aria-pressed\` for a standalone toggle, the shape above for a pick-one. It is one attribute beside the ternary you already wrote — and the group wrapper, which is what tells a screen reader these three belong together.
 
-- **Getting the attribute right and the pixels wrong is the commoner half.** A vision panel reading
-  59 cards raised this in **22% of its verdicts**, in one recurring form: \`aria-checked\` correctly
-  set, and the selected chip differing from its siblings **only by background colour**. That is one
+- **Getting the attribute right and the pixels wrong is the commoner half.** A selected chip differing
+  from its siblings **only by background colour** has one
   channel, and it is the channel that fails first — greyscale, a dim screen, or the 8% of men with
   a colour vision deficiency. The fix is a second channel on the same ternary, and it costs a
   class: \`font-medium\` on the selected one, or a \`✓\` before its label, or a ring the unselected
   ones do not carry. **Colour may be the loudest signal; it may not be the only one.**
-  (No screen for this one, deliberately: a prototype matching the template-literal ternary found
-  **7 selections across three waves and zero colour-only ones**, against 22% in the verdicts — the
-  shapes a card writes this in are too many for a regex, and a detector that narrow reports a
-  clean sweep on a defect that is everywhere.)
 
   **Write the state and the style it produces as one token, and this whole class of bug stops
   existing.** \`aria-checked:bg-accent\` is a single string: there is no second place for it to
-  disagree with. Measured on a card written before that was possible — the CSS said
-  \`.sev-btn[aria-pressed="true"]\`, the JSX twenty lines below wrote \`aria-checked={o.id ===
-  severity}\`, both correct on their own, and they simply never met. All three buttons rendered
-  identically at every width while the card carried a full selected-state block it never used. It
-  compiled, it rendered, no checker fired, and only a screenshot showed it. The same card's
-  \`<style>\` also opened with \`.r { display: grid; gap: 12px }\` and put \`className="r"\` on an
-  \`<input type=range>\`: the slider became a grid, every slider override addressed an input inside
-  an input, and the root never got its \`gap\`, so the blocks below sat flush. One misplaced class,
-  three symptoms, none of them where the class was.
+  disagree with.
 
   So: a state variant (\`aria-checked:\`, \`data-[open=true]:\`, \`hover:\`, \`focus-visible:\`) rather
   than a selector that has to go and find the element.
 
   This is about state that *persists* after the interaction. A key that lights while held, a row that highlights on hover — those are momentary feedback and want nothing announced; a state that is over before it is read is worse than none.
 - **Every visual change is continuous.** No jump cuts: enter from where the element is, and let exits finish.
-- **A card that animates needs the \`motion-reduce:\` variant on whatever moves.** Measured across
-  378 real cards: 131 animate and **7** honour the preference. It is not a preference about taste
+- **A card that animates needs the \`motion-reduce:\` variant on whatever moves.** It is not a preference about taste
   — people turn it on for vestibular disorders and migraine, and a looping demo is exactly what it
   is for. It is one more token beside the transition you already wrote:
 
       <div className="transition-transform duration-150 motion-reduce:transition-none" />
 
-  For a keyframe animation the pair is \`animate-… motion-reduce:animate-none\`. The old spelling
-  of this rule needed a \`<style>\` block for the media query, which is why 59 of those 131 cards
-  could not follow it at all: they styled inline, and a media query has nowhere to live in a
-  style object. A variant has nowhere it cannot live.
+  For a keyframe animation the pair is \`animate-… motion-reduce:animate-none\`. A variant works
+  where a media query in a style object cannot.
 
   Where the motion IS the explanation — a packet crossing a diagram, a sort swapping two bars —
   shorten it rather than removing it (\`animation-duration: .01s\`), so the card still steps.
 
 ## Sound
-
-Every fact here was measured in a real browser, not recalled — the failure modes are silent
-ones, so guessing costs a card that looks fine and makes no noise.
 
 **A context built before any click is born suspended, and starting an oscillator on it throws
 nothing.** It schedules against a clock that never advances: no error, no sound. Worse,
@@ -781,12 +659,7 @@ An inline card is recompiled on every streamed frame and the renderer keeps its 
 while the **hook signature** is unchanged; add a hook and the tree remounts, so a chart drawn
 so far starts again from nothing.
 
-This is normally invisible, and measuring a real card shows why: across 53 streamed frames the
-hook count changed three times — **all three inside the first 21%, before the \`return\` existed at
-all.** Remounting an empty card costs nothing, and for the remaining 79% the signature held
-steady while the chart filled in.
-
-That free ride depends on writing them in the ordinary order: **all \`useState\` / \`useMemo\` /
+Write them in the ordinary order: **all \`useState\` / \`useMemo\` /
 \`useEffect\` at the top of the component, none of them conditional, and none added after the
 markup is on screen.** A hook introduced late — or one behind an \`if\` that flips — lands the
 remount in the middle of a visible card, and the reader watches it blank and rebuild.
@@ -795,13 +668,11 @@ remount in the middle of a visible card, and the reader watches it blank and reb
 
 A game loop, an AutoPlay demo, a metronome, a clock, a progress animation — anything on
 \`requestAnimationFrame\`, \`setInterval\` or a \`MediaStream\` — **must be returned from its
-effect's cleanup.** Measured: after the card is unmounted, a loop with a \`cancelAnimationFrame\`
-cleanup stops dead, and one without keeps ticking for as long as the tab is open.
+effect's cleanup.**
 
 This matters here more than in an ordinary app, because **a card is replaced every time the
-user asks for a change.** Ten revisions of a Snake card leaves ten loops running, each still
-painting into a canvas nobody can see, and the symptom is not a broken card — it is the whole
-conversation getting slower for reasons that look like someone else's fault.
+user asks for a change.** A stale loop can keep painting into a canvas nobody can see and slow the
+conversation down.
 
 \`\`\`tsx
 useEffect(() => {
@@ -817,8 +688,8 @@ someone, give it a visible pause as well — a demo you cannot stop is a demo yo
 **A handler the reader can start twice needs the same discipline, and an effect's cleanup does
 not cover it.** Clicking "生成" while the last stream is still arriving runs both loops at once:
 they interleave their \`setState\` calls, and whichever started FIRST usually finishes last, so
-the answer the reader is looking at gets overwritten by the one they replaced. Measured across
-378 cards: 23 do this, and the majority of them await \`bash\`, which has no time bound at all.
+the answer the reader is looking at gets overwritten by the one they replaced. This is especially
+important when awaiting \`bash\`, which has no time bound by default.
 
 Bump a ref on entry and let a superseded run return:
 
@@ -842,7 +713,7 @@ use whichever the surrounding code already uses.
 with \`{stdout, stderr, exitCode, truncated, timedOut}\`. It runs under the session's own sandbox
 mode, so it opens nothing your own bash tool has not already opened.
 
-**Fetch the first screen from a \`useEffect(…, [])\`.** Defining the loader and never calling it renders your skeleton forever — measured, on a card whose \`load\` appeared exactly once in the file, at its own definition. It compiled, it painted, and a browser showed \`加载中…\` before a click, after a click, and after a remount. The whole shape:
+**Fetch the first screen from a \`useEffect(…, [])\`.** Defining the loader and never calling it renders your skeleton forever. The whole shape:
 
 \`\`\`tsx
 const [loading, setLoading] = useState(true)
@@ -854,10 +725,6 @@ useEffect(() => { void load(path) }, [path])   // ← the line that is missing w
 keystroke, stacks a second command on top of a slow first — and the panel then paints whichever
 finishes last, which is not necessarily the newest. Pass an \`AbortController\`'s signal and abort
 the previous run: it kills the command itself, not just your wait.
-
-Measured across 378 real cards: 11 poll or re-run a command and **0** pass a signal, while the
-rule immediately below — check \`exitCode\` — is followed by 18 of 19. The difference is that one
-of them names a field you can see and the other describes a shape. So, the shape:
 
 \`\`\`tsx
 useEffect(() => {
@@ -917,19 +784,18 @@ watches, serves, or waits. And the card is on the user's page — a command runs
 look at a spinner, so keep it to one round trip per interaction rather than one per row.
 
 **A timeout is not an empty result, and the two arrive as the same value.** A killed command
-resolves — 200, \`stdout: ""\`, \`timedOut: true\` — so \`bash()\` does not throw and a card that
-renders \`stdout\` shows the reader **"no matches"** for a search that never finished. Check
-\`timedOut\` before you report emptiness. Measured on a real card: a workspace search that
-reported no matches for \`*.ts\` under a directory holding 5,327 of them.
+resolves — \`stdout: ""\`, \`timedOut: true\` — so \`bash()\` does not throw and a card that renders
+\`stdout\` can show the reader **"no matches"** for a search that never finished. Check \`timedOut\`
+before you report emptiness.
 
 **And in \`find\`, exclude by pruning, not by filtering.** \`-not -path '*/node_modules/*'\` is a
 predicate: \`find\` still descends into every excluded directory and stats every file inside
-before discarding it. \`-prune\` stops the walk. Same tree, same 5,327 results, measured:
+before discarding it. \`-prune\` stops the walk. For example:
 
     find . -type f -not -path '*/node_modules/*' …          # 55-65s -> killed at 15s, 0 rows
     find . \\( -name node_modules -o -name .git \\) -prune -o -type f … -print   # 6.3s, 5327 rows
 
-The filtering spelling is the one that reads more naturally and it is the one that times out.
+Use the pruning spelling for bounded searches.
 
 ## Searching the web
 
@@ -971,8 +837,7 @@ the user the session is read-only.
 **Anything that is not text goes through \`readBytes\`.** \`readFile\` decodes as UTF-8, so a png, a wav
 or a \`.mid\` read that way comes back with every byte above 0x7f replaced by U+FFFD — corrupt, and
 silently so. And there is **no HTTP route that serves workspace files**: \`<img src={\`/\${path}\`}>\`
-resolves against the app, 404s, and the reader gets a page of broken icons. Measured on a real
-canvas that found 357 images and showed none of them. The whole shape is three lines:
+resolves against the app, 404s, and the reader gets a page of broken icons. The whole shape is three lines:
 
 \`\`\`tsx
 const [url, setUrl] = useState<string>()
@@ -1023,9 +888,7 @@ that knowing the subject feels like the same thing as the data being fixed. It i
 
 > "I know Tokyo, so the attractions are fixed knowledge — I don't need \`streamText\` here."
 
-That sentence is from a real generation, and it produced five hardcoded itineraries. The
-error is not the knowledge claim; it is that *three-day Tokyo itineraries* is not a set of
-five. Writing them out samples the space and presents the sample as the whole. Ask **could I
+Hardcoding a few itineraries samples the space and presents the sample as the whole. Ask **could I
 enumerate every answer**, not *do I know this topic*:
 
 | | Closed — no model call | Open — \`streamText\` |
@@ -1046,10 +909,6 @@ It inherits the app's model, so there is no key to ask for and no setup.
 button, means two generations in flight and the reader sees whichever finishes last — not the
 newest. Pass an \`AbortController\`'s signal in the options and abort the previous one; that
 stops the generation itself, not just your reading of it.
-
-Measured across 378 real cards: 24 stream from the model and **1** passes a signal. So here it
-is as code, since the rule beside it — parse the buffer as it grows — is followed by 22 of the
-same 24, and the only difference between them is that one shows the lines:
 
 \`\`\`tsx
 const running = useRef<AbortController | null>(null);
@@ -1133,8 +992,7 @@ ${maps}
 
 Either way, the way to see your work actually run is to write the canvas and look at the panel.
 
-**Two mistakes it reports that do not blow up**, both found in real cards written here, and both
-the kind you never notice because the thing still works:
+**Two mistakes it reports that do not blow up**, and both are easy to miss because the thing still works:
 
 - **Two utilities that set the same property.** \`className="grid … flex"\` does not merge and does
   not error — which of them wins is decided by the order the rules were generated in, not by the
@@ -1147,9 +1005,8 @@ the kind you never notice because the thing still works:
   an effect. A long-running AutoPlay is exactly where this bites, because the loop outlives the
   render that set it.
 
-It is worth the round trip because it catches the mistakes that cost the most here — the ones
-that otherwise reach the user as a blank card with nothing in the console. Each of these was
-run through it and the message is quoted as it actually comes back:
+It is worth the round trip because it catches mistakes that otherwise reach the user as a blank
+card with nothing in the console. Examples:
 
 - \`<META[key].icon />\` — JSX allows the member form \`<a.b />\` but not a subscript.
   "JSX element type '<the object>' does not have any construct or call signatures".
@@ -1168,9 +1025,8 @@ yours to get right.
 Skip it for a small inline block you can read in one screen. Run it on anything long, and on
 anything you are about to leave in the workspace as a canvas.
 
-**Read the report, do not obey it.** Run over 378 real cards it reported something on 136 of
-them, and 97 of those were \`implicitly has an 'any' type\` on a lambda parameter — a card that
-runs perfectly. Annotating every parameter to quiet it costs lines and buys nothing. The lines
+**Read the report, do not obey it.** An \`implicitly has an 'any' type\` warning can still describe
+a card that runs perfectly. Annotating every parameter to quiet it costs lines and buys nothing. The lines
 worth acting on name a *mechanism* that is wrong (a conflicting declaration, a duplicate key, a
 name that does not exist, a comma operator), not a type that could be narrower.
 
@@ -1187,12 +1043,12 @@ Five that are easy not to think of, each with the one thing to get right:
 | a running total, score, or counter the user watches change | \`@number-flow/react\` | \`import NumberFlow from "@number-flow/react"\` — a **default** import; there is no named \`NumberFlow\` export, and \`import { NumberFlow }\` is \`undefined\` and a blank card. Then \`<NumberFlow value={n} />\` in place of \`{n}\` |
 | a panel that slides in, especially on a narrow card | \`vaul\` | \`<Drawer.Portal container={hostEl}>\` — without \`container\` it portals to \`document.body\`, outside your card |
 | a transient confirmation | \`sonner\` | import **both** \`toast\` and \`Toaster\`, and render \`<Toaster />\` in your tree — \`toast()\` alone is silent, with no error anywhere. Worth reaching for rather than hand-rolling: a hand-written toast is almost always \`position: fixed\`, which floats it over the whole app instead of your card |
-| form controls — a switch, a select, a combobox, a modal, tabs, a disclosure | \`@headlessui/react\` | \`Field\` + \`Label\` around \`Switch\`/\`Listbox\`/\`Combobox\` — labelling comes with them. Its \`Disclosure\` and \`Tab\` are also the cheapest correct way to build the folding a dense card needs. **The container components render a \`Fragment\`, so a \`className\` on one throws and takes the whole card with it** — \`<Disclosure className=…>\` dies with *Passing props on "Fragment"!* and the reader gets that sentence instead of the card. Measured: 1 of the 4 cards in a wave that reached for this library. Write \`<Disclosure as="div" className=…>\`; same for \`Tab.Group\`, \`Listbox\`, \`Menu\`, \`RadioGroup\`. The leaves (\`Disclosure.Button\`, \`.Panel\`) are real elements and take \`className\` as they are, which is why the failure looks like the library rejecting a style it accepts everywhere else. |
+| form controls — a switch, a select, a combobox, a modal, tabs, a disclosure | \`@headlessui/react\` | \`Field\` + \`Label\` around \`Switch\`/\`Listbox\`/\`Combobox\` — labelling comes with them. Its \`Disclosure\` and \`Tab\` are also the cheapest correct way to build the folding a dense card needs. **The container components render a \`Fragment\`, so a \`className\` on one throws and takes the whole card with it** — \`<Disclosure className=…>\` dies with *Passing props on "Fragment"!* and the reader gets that sentence instead of the card. Write \`<Disclosure as="div" className=…>\`; same for \`Tab.Group\`, \`Listbox\`, \`Menu\`, \`RadioGroup\`. The leaves (\`Disclosure.Button\`, \`.Panel\`) are real elements and take \`className\` as they are, which is why the failure looks like the library rejecting a style it accepts everywhere else. |
 | the same, when you want arrow-key roving between tabs or menu items | \`@radix-ui/react-tabs\`, \`@radix-ui/react-accordion\`, \`@radix-ui/react-dialog\` | one package per primitive, so import only what you use. **This is the one that gives arrow-key navigation**: Radix's \`Tabs\` moves focus with ←/→ and Home/End, Headless UI's does not — a real user asked for exactly that and was right to notice it missing. Compose from \`Tabs.Root\`/\`List\`/\`Trigger\`/\`Content\`; they render unstyled, so every class is yours |
 | a formula the reader is trying to READ, not just the number it comes out as | \`katex\` | \`katex.renderToString(tex, { throwOnError: false })\` into \`dangerouslySetInnerHTML\`; it has both a default and a named \`renderToString\`, so either import works. \`throwOnError: false\` is the load-bearing half — a half-typed \`\\\\frac{a}\` renders as \`<span class="katex-error">\` instead of throwing during render and taking the card with it, and half-typed is what streaming produces. The glyph metrics come from its stylesheet: append \`<link rel="stylesheet" href="https://esm.sh/katex@0/dist/katex.min.css">\` in an effect and REMOVE it in the cleanup, the same way you would a listener |
 | a flow, a sequence, a state machine — anything whose content is *which box points at which* | \`mermaid\` | \`mermaid.initialize({ startOnLoad: false })\` once, then \`await mermaid.render(id, "graph LR; A-->B")\` which resolves \`{ svg }\` for \`dangerouslySetInnerHTML\` — it is async and returns a string, it does not mount itself. Give each render a unique id or the second one collides with the first. Reach for this before hand-placing boxes: you write the edges and it does the layout, which is the part that goes wrong by hand |
 | a diagram whose POSITIONS carry meaning — a system laid out the way the reader pictures it, a floor plan, an annotated screenshot | your own \`<svg>\`, or boxes and CSS | This is the one case where hand-drawing IS the answer, and the rule above does not contradict it: \`recharts\` renders DATA, and there is no library that knows what your boxes are or which arrow goes where. Asked to draw something, draw it — a card that answers "画出来" with a bulleted list of the parts has changed the question. Nodes as positioned boxes with \`<svg>\` lines between them, or a grid of boxes with borders for the edges, both read fine |
-| showing code, a diff, or a config file | \`shiki\` | \`await codeToHtml(src, { lang, theme })\` in an effect, then \`dangerouslySetInnerHTML\` — it is async, so render a \`<pre>\` of the raw text first and swap. A hand-rolled \`<pre>\` with no highlighting is the tell that this was skipped, and for a diff the red/green is the whole point. **\`@monaco-editor/react\` only when the reader will TYPE into it.** Measured on a real card that used it for two read-only tabs: Monaco's language service spent **22 seconds** in its worker running TypeScript analysis on code nobody was editing, \`_registerLanguages\` cost another 571ms at startup, and a tab switch took **132ms** where the same card's other buttons took 4ms. Everything the reader wanted from it — line numbers, colours, two files — \`shiki\` renders as static HTML |
+| showing code, a diff, or a config file | \`shiki\` | \`await codeToHtml(src, { lang, theme })\` in an effect, then \`dangerouslySetInnerHTML\` — it is async, so render a \`<pre>\` of the raw text first and swap. A hand-rolled \`<pre>\` with no highlighting is the tell that this was skipped, and for a diff the red/green is the whole point. **\`@monaco-editor/react\` only when the reader will TYPE into it.** Everything the reader wanted from it — line numbers, colours, two files — \`shiki\` renders as static HTML |
 
 
 Names you half-remember are the main failure mode: a wrong export is not a typo, it is an \`undefined\` component and a blank render, with nothing in the console naming it. So look a name up *before* you write the code, not after it breaks — for lucide, fetching \`https://lucide.dev/icons/<kebab-name>\` answers it outright, since a 404 means the name does not exist. Icons you have actually watched render are fine to reuse from memory.
