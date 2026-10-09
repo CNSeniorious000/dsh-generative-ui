@@ -17,7 +17,7 @@ export function StreamedHeadline({ lines }: { lines: string[] }) {
   }, n < text.length);
   const starts = lines.map((_, i) => lines.slice(0, i).reduce((a, l) => a + l.length + 1, 0));
   return (
-    <h1 aria-label={lines.join(" ")} className="text-[clamp(40px,7vw,84px)] font-semibold leading-[1.02] tracking-[-0.035em] text-[#f9fafb]">
+    <h1 aria-label={lines.join(" ")} className="text-[clamp(36px,6vw,80px)] font-semibold leading-[1.02] tracking-[-0.035em] text-[#f9fafb]">
       {lines.map((line, i) => {
         const left = n - starts[i];
         const shown = line.slice(0, Math.max(0, left));

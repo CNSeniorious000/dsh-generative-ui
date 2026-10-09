@@ -89,9 +89,9 @@ const Nav = () => (
 function Hero({ live }: { live: boolean }) {
   return (
     <header className={`${page} pb-14 pt-16 md:pt-24`}>
-      <div className="grid items-end gap-10 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid items-end gap-10 lg:grid-cols-[1.35fr_1fr]">
         <div className={col}>
-          <StreamedHeadline lines={["The answer", "is an interface."]} />
+          <StreamedHeadline lines={["Streams like text.", "Works like software."]} />
         </div>
         <div className={`${col} flex flex-col gap-6 lg:pb-3`}>
           <p className={lede}>
