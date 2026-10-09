@@ -87,7 +87,7 @@ jobs:
       # release commit and tag had already been pushed.
       #
       # Four things all have to hold, and the first is not in this file:
-      #   1. npmjs.com → the package → Settings → Trusted Publisher: owner `CNSeniorious000`,
+      #   1. npmjs.com → the package → Settings → Trusted Publisher: owner `MindLab-Research`,
       #      repo `dsh-generative-ui`, workflow filename `publish.yml` (filename only, with the
       #      extension), environment `npm`. All case-sensitive, and npm does NOT validate them
       #      when saved — a typo only shows up as ENEEDAUTH at publish time.
