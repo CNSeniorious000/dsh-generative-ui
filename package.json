@@ -172,7 +172,7 @@
     "shiki": "^4.4.3",
     "simple-icons": "^16.33.0",
     "typescript": "^7.0.2",
-    "zustand": "~4.4.7"
+    "zustand": "~4.5.0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-host-webserver": {
