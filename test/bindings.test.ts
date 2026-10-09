@@ -142,3 +142,8 @@ test("capability modules resolve without a host registered", async () => {
     expect(await (await fetch(internalUrl!)).text()).toContain("bind");
   }
 });
+
+test("capability blobs do not emit the namespace default as an invalid binding", async () => {
+  const source = await (await fetch(bindingImports()["$dsh/ui"])).text();
+  expect(source).not.toContain("export const default");
+});

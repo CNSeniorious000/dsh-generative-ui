@@ -270,7 +270,7 @@ export function bindingImports(): Record<string, string> {
   // missed here would simply have no blob module, and a card importing it renders blank with
   // nothing in the console — the failure mode this project spends the most effort on.
   for (const [group, members] of Object.entries(bound)) {
-    const names = Object.keys(members);
+    const names = Object.keys(members).filter((name) => name !== "default" && /^[A-Za-z_$][\w$]*$/.test(name));
     // One `export const` per name: ESM export names must be statically visible.
     const source = [`import { bind } from ${JSON.stringify(internal)};`, `const g = bind().${group};`, ...names.map((name) => `export const ${name} = g.${name};`), "export default g;"].join("\n");
     imports[capabilityModule(group)] = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
