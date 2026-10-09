@@ -79,7 +79,7 @@
         "oxfmt": "^0.72.0",
         "oxlint": "^1.80.0",
         "picomatch": "^4.0.7",
-        "pkg-pr-new": "^0.0.88",
+        "pkg-pr-new": "^0.0.91",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "shiki": "^4.4.3",
@@ -657,7 +657,7 @@
 
     "picomatch": ["picomatch@4.0.7", "", {}, "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA=="],
 
-    "pkg-pr-new": ["pkg-pr-new@0.0.88", "", { "bin": { "pkg-pr-new": "bin/cli.js" } }, "sha512-Xc6PMJ2gher0WZP+rtjefFk26hIb7V1PTLL30bmy1Z2vsRmSvqiss7Ag1XUdyplTGYzIlFNJp4L3vMNmK44N6g=="],
+    "pkg-pr-new": ["pkg-pr-new@0.0.91", "", { "bin": { "pkg-pr-new": "bin/cli.js" } }, "sha512-FQPmjspKRKYV4MlHQnun9snJqlYm6Yhmo12x1O3pgE2Akim/y/BZjMOppK//BFdh222WOj6WGqlmeZfrtUtfgQ=="],
 
     "property-information": ["property-information@7.2.0", "", {}, "sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg=="],
 
