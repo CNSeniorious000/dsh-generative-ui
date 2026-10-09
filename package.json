@@ -18,6 +18,7 @@
   },
   "files": [
     "lib",
+    "skill",
     "src",
     "types",
     "cordis.patch.yml",
