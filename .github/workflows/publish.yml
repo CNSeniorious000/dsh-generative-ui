@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.repository == 'CNSeniorious000/dsh-generative-ui'
+    if: github.repository == 'MindLab-Research/dsh-generative-ui'
     runs-on: ubuntu-latest
     environment: npm
     steps:
