@@ -8,7 +8,9 @@ const FORMULA = katex.renderToString("A = P\\left(1 + \\frac{r}{n}\\right)^{nt}"
 
 export default function CompoundInterest() {
   // Persisted: scroll back to this card next week and it still shows the plan you settled on.
-  const [years, setYears] = usePersistedState("interest.years", 8);
+  // `?? 8` because a recompile mid-stream can briefly hand back no value, and 0 ** NaN is a blank total.
+  const [stored, setYears] = usePersistedState("interest.years", 8);
+  const years = Number.isFinite(stored) ? stored : 8;
   const principal = 2000;
   const total = principal * (1 + 0.05 / 12) ** (12 * years);
   return (
@@ -26,7 +28,7 @@ export default function CompoundInterest() {
         </SliderTrack>
       </Slider>
       <div className="flex items-end justify-between">
-        <NumberFlow className="text-[32px] font-medium text-[#7aaaff]" value={total} format={{ style: "currency", currency: "USD", maximumFractionDigits: 0 }} />
+        <NumberFlow className="text-[32px] font-medium text-[#7aaaff]" value={total} format={{ style: "currency", currency: "USD", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 }} />
         <span className="pb-2 text-[13px] text-[#adb2b8]">+{Math.round((total / principal - 1) * 100)}%</span>
       </div>
       <button onClick={() => sendMessage(`Plan a Tokyo trip with the $${Math.round(total - principal)} it earns`)} className="rounded-xl bg-[#34415b] py-2.5 text-[14px] font-medium text-[#f9fafb] transition-colors hover:bg-[#3d4d6b]">

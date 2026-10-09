@@ -1,13 +1,21 @@
 /**
- * The page's hand-written CSS: keyframes, the syntax palette and the cursor's sparks. Everything
- * else is UnoCSS classes. Every entrance is a short rise-and-fade on one curve, and every one of
- * them collapses to an opacity change under reduced motion.
+ * The page's hand-written CSS: the sky behind everything, keyframes, the syntax palette and the
+ * cursor's sparks. Everything else is UnoCSS classes. Every entrance is a short rise-and-fade on one
+ * curve, and every one of them collapses to an opacity change under reduced motion.
  */
 export const CSS = `
 :root{color-scheme:dark}
 html,body{background:#0e0e10}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
-.dsh-frame{--dsw-alias-label-primary-inverted:#151517;box-shadow:0 40px 120px -40px #7aaaff26}
+.ui4a-sky{position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(1080px 560px at 50% -10%,rgba(72,120,225,.22),transparent 62%),
+  radial-gradient(720px 460px at 86% 2%,rgba(118,88,225,.14),transparent 62%),
+  radial-gradient(760px 520px at 6% 16%,rgba(40,92,190,.12),transparent 58%),
+  linear-gradient(180deg,#0e0e10 0%,#0c0d13 44%,#0e0e10 100%)}
+.ui4a-sky::after{content:"";position:absolute;inset:0;background:radial-gradient(140% 90% at 50% 30%,transparent 52%,#0e0e10 96%)}
+.ui4a-rule{height:1px;border:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.11) 14%,rgba(255,255,255,.11) 86%,transparent)}
+.ui4a-glow{position:absolute;left:50%;bottom:-26%;width:94%;height:68%;transform:translateX(-50%);pointer-events:none;filter:blur(60px);opacity:.95;background:radial-gradient(52% 62% at 50% 32%,rgba(102,152,255,.40),rgba(70,110,220,.12) 55%,transparent 74%)}
+.dsh-frame{--dsw-alias-label-primary-inverted:#151517;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 20px 50px -24px rgba(0,0,0,.66),0 72px 150px -52px rgba(74,127,214,.32)}
 @keyframes ui4a-rise{from{opacity:0;transform:translateY(8px)}}
 @keyframes ui4a-fade{from{opacity:0}}
 @keyframes ui4a-leave{to{opacity:0;transform:translateY(-12px)}}

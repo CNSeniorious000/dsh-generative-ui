@@ -23,8 +23,11 @@ const UI4A = "https://www.mindlab.im/updates/ui4a-a-component-native-harness-for
 const INSTALL = "dsh plugin --profile web add dsh-generative-ui";
 
 const page = "mx-auto w-full max-w-[1240px] px-6";
+// `min-w-0` on every grid child: without it a grid item's min-width is its content's, and the
+// headline's invisible placeholder widens the whole column past the viewport on a phone.
+const col = "min-w-0";
 const h2 = "text-[clamp(30px,4vw,48px)] font-semibold leading-[1.08] tracking-[-0.03em] text-[#f9fafb]";
-const lede = "text-[16px] leading-[26px] text-[#adb2b8]";
+const lede = "text-[16px] leading-[26px] text-[#b6bcc4]";
 
 /**
  * The page's React is the cards' React: everything partial-react compiles imports `react` through
@@ -54,10 +57,18 @@ function Install() {
   const [copied, setCopied] = useState(false);
   const copy = () => void navigator.clipboard?.writeText(INSTALL).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); });
   return (
-    <div className="flex max-w-full items-center gap-3 rounded-2xl border border-[#ffffff1f] bg-[#1b1b1c] py-2 pl-4 pr-2 font-mono text-[13px]">
-      <span className="text-[#81858c]">$</span>
-      <code className="min-w-0 flex-1 truncate text-[#cfd3d6]">{INSTALL}</code>
-      <button type="button" onClick={copy} aria-live="polite" className="shrink-0 rounded-xl bg-[#2c2c2e] px-3 py-1.5 font-sans text-[12px] text-[#cfd3d6] transition-[background-color,transform] duration-200 hover:bg-[#353638] active:scale-[.96]">
+    // One signal only: a barely-there wash, no stroke. The palette is the same white at four opacities.
+    <div className="flex max-w-full items-center gap-3 rounded-xl bg-white/[0.035] py-2.5 pl-4 pr-1.5">
+      <code className="min-w-0 flex-1 truncate font-mono text-[13px]">
+        <span className="text-white/25">$</span>{" "}
+        <span className="text-white/90">dsh</span>{" "}
+        <span className="text-white/55">plugin</span>{" "}
+        <span className="text-white/35">--profile</span>{" "}
+        <span className="text-white/70">web</span>{" "}
+        <span className="text-white/55">add</span>{" "}
+        <span className="text-white/90">dsh-generative-ui</span>
+      </code>
+      <button type="button" onClick={copy} aria-live="polite" className="shrink-0 rounded-lg px-3 py-1.5 font-sans text-[12px] text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/85">
         {copied ? "Copied" : "Copy"}
       </button>
     </div>
@@ -79,8 +90,10 @@ function Hero({ live }: { live: boolean }) {
   return (
     <header className={`${page} pb-14 pt-16 md:pt-24`}>
       <div className="grid items-end gap-10 lg:grid-cols-[1.2fr_1fr]">
-        <StreamedHeadline lines={["The answer", "is an interface."]} />
-        <div className="flex flex-col gap-6 lg:pb-3">
+        <div className={col}>
+          <StreamedHeadline lines={["The answer", "is an interface."]} />
+        </div>
+        <div className={`${col} flex flex-col gap-6 lg:pb-3`}>
           <p className={lede}>
             A plugin for DeepSeek Harness. The model writes a React component into its reply and dsh web runs it as the tokens arrive — sliders you can drag
             before the card is finished, 3D, games, any package on npm.
@@ -88,9 +101,10 @@ function Hero({ live }: { live: boolean }) {
           <Install />
         </div>
       </div>
-      <div className="mt-14">
+      <div className="relative mt-16">
         {/* The stage box is reserved before the runtime loads, so the page below never shifts. */}
-        {live ? <Stage /> : <div className="h-[640px] rounded-2xl border border-[#ffffff1f] bg-[#151517] max-lg:h-[600px]" />}
+        <div aria-hidden className="ui4a-glow" />
+        <div className="relative">{live ? <Stage /> : <div className="h-[640px] rounded-2xl border border-[#ffffff1f] bg-[#151517] max-lg:h-[600px]" />}</div>
       </div>
     </header>
   );
@@ -104,29 +118,44 @@ const POINTS = [
 ] as const;
 
 const Points = () => (
-  <section className={`${page} grid gap-x-10 gap-y-10 py-20 md:grid-cols-2 lg:grid-cols-4`}>
-    {POINTS.map((p) => (
-      <div key={p.title} className="flex flex-col gap-3">
-        <Icon name={p.icon} className="size-5 text-[#7aaaff]" />
-        <h3 className="text-[16px] font-medium text-[#f9fafb]">{p.title}</h3>
-        <p className="text-[14px] leading-[22px] text-[#adb2b8]">{p.text}</p>
-      </div>
-    ))}
+  <section className={`${page} pt-10 pb-20`}>
+    <hr className="ui4a-rule" />
+    <div className="grid gap-x-10 gap-y-10 pt-14 md:grid-cols-2 lg:grid-cols-4">
+      {POINTS.map((p) => (
+        <div key={p.title} className="flex flex-col gap-3">
+          <span className="flex size-9 items-center justify-center rounded-[11px] bg-[#7aaaff1a]">
+            <Icon name={p.icon} className="size-[18px] text-[#8ab4ff]" />
+          </span>
+          <h3 className="mt-1 min-h-[2.95em] text-[16px] font-medium text-[#f9fafb]">{p.title}</h3>
+          <p className="text-[14px] leading-[22px] text-[#a8aeb6]">{p.text}</p>
+        </div>
+      ))}
+    </div>
   </section>
 );
 
+/** A full-bleed hairline that fades out at both ends, so a divider never cuts the page in half. */
+const Rule = () => (
+  <div className={page}>
+    <hr className="ui4a-rule" />
+  </div>
+);
+
 const Race = () => (
-  <section className={`${page} grid gap-12 border-t border-[#ffffff14] py-24 lg:grid-cols-[1fr_1.4fr]`}>
-    <div className="flex flex-col gap-5">
-      <h2 className={h2}>Half the tokens. On screen from the first tenth.</h2>
-      <p className={lede}>
-        A component is shorter than the page that would draw it — about 45% fewer output tokens across the 48-case gallery in the UI4A report — and it can render
-        long before it is complete. HTML has nothing to show until it parses.
-      </p>
-      <a href={UI4A} className="text-[14px] text-[#7aaaff] transition-colors hover:text-[#a5c4ff]">Read the UI4A report →</a>
-    </div>
-    <FirstPaintRace />
-  </section>
+  <>
+    <Rule />
+    <section className={`${page} grid gap-12 py-24 lg:grid-cols-[1fr_1.4fr]`}>
+      <div className={`${col} flex flex-col gap-5`}>
+        <h2 className={h2}>Half the tokens. On screen from the first tenth.</h2>
+        <p className={lede}>
+          A component is shorter than the page that would draw it — about 45% fewer output tokens across the 48-case gallery in the UI4A report — and it can
+          render long before it is complete. HTML has nothing to show until it parses.
+        </p>
+        <a href={UI4A} className="text-[14px] text-[#7aaaff] transition-colors hover:text-[#a5c4ff]">Read the UI4A report →</a>
+      </div>
+      <div className={col}><FirstPaintRace /></div>
+    </section>
+  </>
 );
 
 const NATIVE = [
@@ -137,46 +166,56 @@ const NATIVE = [
 ];
 
 const Native = () => (
-  <section className={`${page} grid gap-12 border-t border-[#ffffff14] py-24 lg:grid-cols-[1fr_1.4fr]`}>
-    <div className="flex flex-col gap-5">
-      <h2 className={h2}>A dsh plugin, not a widget in an iframe.</h2>
-      <p className={lede}>One install. The cards render in the host's React tree, under the host's styles and the session's permissions.</p>
-      <Install />
-    </div>
-    <dl className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
-      {NATIVE.map(([title, text]) => (
-        <div key={title} className="border-t border-[#ffffff14] pt-5">
-          <dt className="text-[15px] font-medium text-[#f9fafb]">{title}</dt>
-          <dd className="mt-2 text-[14px] leading-[22px] text-[#adb2b8]">{text}</dd>
-        </div>
-      ))}
-    </dl>
-  </section>
+  <>
+    <Rule />
+    <section className={`${page} grid gap-12 py-24 lg:grid-cols-[1fr_1.4fr]`}>
+      <div className={`${col} flex flex-col gap-5`}>
+        <h2 className={h2}>A dsh plugin, not a widget in an iframe.</h2>
+        <p className={lede}>One install. The cards render in the host's React tree, under the host's styles and the session's permissions.</p>
+        <Install />
+      </div>
+      <dl className={`${col} grid gap-x-10 gap-y-8 sm:grid-cols-2`}>
+        {NATIVE.map(([title, text]) => (
+          // No rule per item: the section already has one, and two layers of lines read as noise.
+          <div key={title}>
+            <dt className="min-h-[3.1em] text-[15px] font-medium text-[#f9fafb]">{title}</dt>
+            <dd className="mt-2 text-[14px] leading-[22px] text-[#a8aeb6]">{text}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  </>
 );
 
 const Footer = () => (
-  <footer className={`${page} flex flex-wrap items-center justify-between gap-4 border-t border-[#ffffff14] py-10 text-[13px] text-[#81858c]`}>
-    <span>Apache-2.0 · Mind Lab</span>
-    <div className="flex gap-5">
-      <a className="transition-colors hover:text-[#cfd3d6]" href={REPO}>GitHub</a>
-      <a className="transition-colors hover:text-[#cfd3d6]" href={NPM}>npm</a>
-      <a className="transition-colors hover:text-[#cfd3d6]" href={UI4A}>UI4A report</a>
-    </div>
-  </footer>
+  <>
+    <Rule />
+    <footer className={`${page} flex flex-wrap items-center justify-between gap-4 py-10 text-[13px] text-[#81858c]`}>
+      <span>Apache-2.0 · Mind Lab</span>
+      <div className="flex gap-5">
+        <a className="transition-colors hover:text-[#cfd3d6]" href={REPO}>GitHub</a>
+        <a className="transition-colors hover:text-[#cfd3d6]" href={NPM}>npm</a>
+        <a className="transition-colors hover:text-[#cfd3d6]" href={UI4A}>UI4A report</a>
+      </div>
+    </footer>
+  </>
 );
 
 export default function Site() {
   const live = useMounted();
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-[#f9fafb] antialiased">
+    <div className="relative min-h-screen bg-[#0e0e10] text-[#f9fafb] antialiased">
+      <div aria-hidden className="ui4a-sky" />
       <ImportMap />
       <style>{CSS}</style>
-      <Nav />
-      <Hero live={live} />
-      <Points />
-      <Race />
-      <Native />
-      <Footer />
+      <div className="relative z-10">
+        <Nav />
+        <Hero live={live} />
+        <Points />
+        <Race />
+        <Native />
+        <Footer />
+      </div>
     </div>
   );
 }

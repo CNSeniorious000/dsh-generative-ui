@@ -48,22 +48,40 @@ function Lane({ label, tokens, firstPaint, at, accent }: { label: string; tokens
   const written = Math.min(tokens, at * 200);
   const painted = written >= firstPaint;
   const grown = tokens === firstPaint ? 1 : ease((written - firstPaint) / (tokens - firstPaint));
+  const done = written >= tokens;
   return (
-    <div className="grid grid-cols-[120px_1fr] items-center gap-5 max-sm:grid-cols-1 max-sm:gap-2">
+    <div className="grid grid-cols-[176px_1fr] items-center gap-6 max-sm:grid-cols-1 max-sm:gap-3">
       <div>
-        <div className={`text-[14px] font-medium ${accent ? "text-[#f9fafb]" : "text-[#adb2b8]"}`}>{label}</div>
-        <div className="text-[12px] tabular-nums text-[#81858c]">{Math.round(written)} / {tokens} tokens</div>
+        <div className={`text-[12px] font-medium uppercase tracking-[0.06em] ${accent ? "text-[#7aaaff]" : "text-[#81858c]"}`}>{label}</div>
+        <div className="mt-1.5 flex items-baseline gap-1.5">
+          <span className={`text-[32px] font-semibold tabular-nums tracking-[-0.035em] ${accent ? "text-[#f9fafb]" : "text-[#6a6f77]"}`}>{Math.round(written)}</span>
+          <span className="text-[12px] tabular-nums text-[#81858c]">/ {tokens} tok</span>
+        </div>
+        <div className="mt-1 text-[12px]" style={{ color: accent ? "#a8c4ff" : done ? "#cfd3d6" : "#6a6f77" }}>
+          {accent ? "usable — still streaming" : done ? "ready — after every token" : "nothing until it parses"}
+        </div>
       </div>
-      <div className="relative h-[92px] overflow-hidden rounded-2xl border border-[#ffffff14] bg-[#1b1b1c]">
-        <div className={`absolute inset-y-0 left-0 ${accent ? "bg-[#7aaaff1f]" : "bg-[#ffffff0d]"}`} style={{ width: `${(written / HTML_TOKENS) * 100}%` }} />
-        <div className="absolute inset-y-0 border-l border-dashed border-[#ffffff29]" style={{ left: `${(firstPaint / HTML_TOKENS) * 100}%` }} />
-        <div className="absolute inset-3 flex items-center gap-3" style={{ opacity: painted ? 1 : 0, transform: `translateY(${painted ? 0 : 6}px)`, transition: "opacity .35s, transform .45s cubic-bezier(.2,.9,.3,1)" }}>
-          <div className="h-full rounded-xl bg-[#2c2c2e]" style={{ width: `${30 + grown * 40}%` }}>
-            <div className="m-3 h-2 w-1/2 rounded-full bg-[#43454a]" />
-            <div className="mx-3 h-[2px] rounded-full bg-[#43454a]"><div className="h-full rounded-full bg-[#7aaaff]" style={{ width: `${20 + grown * 60}%` }} /></div>
-            <div className="m-3 h-2 w-1/3 rounded-full bg-[#43454a]" style={{ opacity: grown }} />
+      <div>
+        {/* A well in the page: fill only. The card inside answers with a stroke of its own — one signal each. */}
+        <div className="relative h-[118px] overflow-hidden rounded-2xl bg-[#131316]">
+          {/* How far the writer has got — the same for both lanes, so the gap below is the whole point. */}
+          <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[#ffffff0a]" />
+          <div className="absolute bottom-0 left-0 h-[3px] rounded-full" style={{ width: `${(written / HTML_TOKENS) * 100}%`, background: accent ? "#7aaaff" : "#4a4e55" }} />
+          <div className="absolute inset-y-0 border-l border-dashed border-[#ffffff2e]" style={{ left: `${(firstPaint / HTML_TOKENS) * 100}%` }} />
+          {/* The card itself: UI4A grows it in place, HTML only ever shows the finished one. */}
+          <div className="absolute inset-3 transition-[opacity,transform] duration-500" style={{ opacity: painted ? 1 : 0, transform: `translateY(${painted ? 0 : 12}px) scale(${painted ? 1 : 0.94})` }}>
+            <div className={`flex h-full flex-col gap-2 rounded-xl border-2 p-2.5 ${accent ? "border-[#7aaaff]" : "border-[#5a5e66]"}`}>
+              <div className="h-2 rounded-full" style={{ width: "62%", background: accent ? "#7aaaff99" : "#5a5e66" }} />
+              <div className="min-h-0 flex-1 rounded-lg" style={{ background: accent ? "linear-gradient(180deg,#7aaaff2e,#7aaaff12)" : "#232326", opacity: 0.35 + grown * 0.65 }} />
+              <div className="h-2 rounded-full" style={{ width: `${28 + grown * 38}%`, background: accent ? "#7aaaff66" : "#5a5e66" }} />
+            </div>
           </div>
-          <span className="whitespace-nowrap text-[12px] text-[#adb2b8]">{accent ? "usable — still streaming" : "nothing until it parses"}</span>
+          {/* Until it parses, HTML has an outline and nothing inside — which is the comparison. */}
+          {!accent && !painted && (
+            <div className="absolute inset-3 rounded-xl border border-dashed border-[#ffffff24]">
+              <div className="ui4a-pulse m-2.5 h-2 w-3/5 rounded-full bg-[#ffffff14]" />
+            </div>
+          )}
         </div>
       </div>
     </div>
