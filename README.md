@@ -72,7 +72,7 @@ The package is one plugin with two halves, which is how dsh plugins reach the br
 The model is taught in two layers, split by what each costs:
 
 - **`src/prompt.ts`** rides in every request, so it carries only the trigger, the fence syntax, the canvas path, and the colour tokens.
-- **`src/skill.ts`** is registered through `ctx.skills.register()` and loads only when the model reaches for it. It carries the judgement: whether the answer wants an interface at all, inline or canvas, how to frame and lay one out.
+- **`skill/SKILL.md`** is registered through `ctx.skills.register()` and loads only when the model reaches for it. It carries the UI and inline/canvas decisions, then points to topic-specific files in `skill/references/` for the authoring details.
 
 That split is measured, not assumed — see [CLAUDE.md](./CLAUDE.md) §4.5 for the 40-prompt evaluation behind it.
 

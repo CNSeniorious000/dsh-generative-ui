@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { Context } from "@deepseek-ai/cordis";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { apply, Config } from "../src/index.ts";
 import { CARD_ERROR_PATH, EXEC_PATH } from "../src/contract-assets.ts";
 
@@ -9,7 +11,7 @@ async function host(settings: object, config: Parameters<typeof apply>[1]) {
   const ctx = new Context();
   const routes = new Map<string, any>();
   const prompts = new Set<string>();
-  const skills = new Set<string>();
+  const skills = new Set<{ content: string; resourceBase: { kind: "directory"; path: string } }>();
   const messages: any[] = [];
   ctx.provide("systemPrompt", {
     section({ text }: { text: string }) {
@@ -32,9 +34,9 @@ async function host(settings: object, config: Parameters<typeof apply>[1]) {
   ctx.provide("shell", {} as never);
   ctx.provide("sandboxPolicy", {} as never);
   ctx.provide("skills", {
-    register({ content }: { content: string }) {
-      skills.add(content);
-      return () => skills.delete(content);
+    register(skill: { content: string; resourceBase: { kind: "directory"; path: string } }) {
+      skills.add(skill);
+      return () => skills.delete(skill);
     },
   } as never);
   ctx.provide("agents", { get: () => ({ followup: (message: unknown) => messages.push(message) }) } as never);
@@ -51,7 +53,11 @@ async function host(settings: object, config: Parameters<typeof apply>[1]) {
     expect(prompts.size).toBe(1);
     expect(skills.size).toBe(1);
     expect([...prompts][0].includes("$dsh/exec")).toBe(enabled);
-    expect([...skills][0].includes("$dsh/exec")).toBe(enabled);
+    const skill = [...skills][0];
+    expect(skill.content.includes("references/commands.md")).toBe(enabled);
+    expect(skill.content).not.toContain("## Running a command");
+    expect(skill.resourceBase.kind).toBe("directory");
+    expect(readFileSync(join(skill.resourceBase.path, "references/commands.md"), "utf8")).toContain("$dsh/exec");
   };
   const settled = async (enabled: boolean) => {
     // Parent fiber.await() does not await unloading descendants in older Cordis.

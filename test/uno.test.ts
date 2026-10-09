@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createGenerator } from "@unocss/core";
 import { presetWind4 } from "@unocss/preset-wind4";
 import { unoConfig } from "../src/client/runtime/uno-config.ts";
+import { skillBody } from "../src/skill.ts";
 
 const generate = async (tokens: string[], scope = ".ui4a-root") => {
   const uno = await createGenerator(unoConfig(scope));
@@ -225,7 +226,7 @@ test("the selected-and-hovered pair generates; `not-` generates nothing", async 
  * elided content.
  */
 test("every class in a code example generates a rule", async () => {
-  const src = await Promise.all(["../src/prompt.ts", "../src/skill.ts"].map((f) => Bun.file(new URL(f, import.meta.url)).text()));
+  const src = [await Bun.file(new URL("../src/prompt.ts", import.meta.url)).text(), skillBody("types.json", "standalone.json", true)];
   const tokens = new Set<string>();
   // Not the ones quoted INSIDE backticks: those are prose naming a class, and the prose here
   // names broken ones on purpose — `className="r"` is quoted from a real card that wrote
