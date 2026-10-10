@@ -36,6 +36,8 @@ writable, so pointing each cache at it is the whole fix.
 
 `check` includes TypeScript diagnostics; `lint` is the faster syntax-only pass.
 
+Either way, the way to see your work actually run is to write the canvas and look at the panel.
+
 **Two mistakes it reports that do not blow up**, both found in real cards written here, and both
 the kind you never notice because the thing still works:
 
