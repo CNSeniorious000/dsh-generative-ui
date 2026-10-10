@@ -49,7 +49,24 @@ export const unoConfig = (scope: string): UserConfig => ({
       // then fight whatever `gap-*` the layout uses. `important: scope` makes every utility
       // `.ui4a-root :is(.mt-4)` at (0,2,0), which outranks these (0,1,1) rules — so a card that
       // asks for a margin still gets one, and only the browser's uninvited ones go.
-      getCSS: () => `${scope} *, ${scope} *::before, ${scope} *::after { box-sizing: border-box; }
+      //
+      // `border: 0 solid` is the last half of that reset, and leaving it out made every bordered box
+      // invisible. Wind4's `border` utility emits `border-width: 1px` and expects the vendor reset to
+      // have set the style; nothing else in the document does. Measured live in dsh web (2026-10-11):
+      // a plain `div` with `border-width: 1px` computes `border-style: none`, and none of the 143
+      // stylesheets on the page carries a universal border rule — the host's own CSS is CSS Modules
+      // and spells `border: .5px solid var(--dsw-alias-border-l*)` on every rule. So
+      // `bg-layer border border-line`, the spelling the skill tells every card to write, computed
+      // `border-width: 0px` / `border-style: none`. In light theme, where all three layer tokens are
+      // `#fff`, that is a box with neither fill nor edge — a card that reads as stray padding, which
+      // is how it was reported. `divide-*` and `ring-*` were unaffected because they set the style
+      // themselves, and the form controls below kept a `border: 0 solid` of their own, so buttons and
+      // inputs had borders while every container `<div>` did not — which is why a corpus of cards
+      // that looks right in dark hid it for so long.
+      //
+      // It has to be the shorthand. `border-style: solid` alone would leave the UA's initial
+      // `border-width: medium` in place, i.e. a 3px border on every element inside the scope.
+      getCSS: () => `${scope} *, ${scope} *::before, ${scope} *::after { box-sizing: border-box; border: 0 solid; }
       ${scope} ul, ${scope} ol { list-style: none; margin: 0; padding: 0; }
       ${scope} h1, ${scope} h2, ${scope} h3, ${scope} h4, ${scope} h5, ${scope} h6,
       ${scope} p, ${scope} blockquote, ${scope} figure, ${scope} figcaption,
