@@ -8,8 +8,11 @@
  * then "fixes" imports that were correct.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { renderSkillContent } from "@deepseek-ai/dsh-skill";
 import { CAPABILITY_PREFIX } from "../src/contract.ts";
-import { mapNotes } from "../src/skill.ts";
+import { CLI_URL, mapNotes, skillEntry, skillPath, skillResourceBase, SKILL_DESCRIPTION, SKILL_NAME } from "../src/skill.ts";
 
 describe("mapNotes", () => {
   // No type map means no `-i` advice at all: telling the model to pass a flag pointing at a
@@ -43,4 +46,15 @@ describe("mapNotes", () => {
       expect(notes).not.toContain("[object Object]");
     }
   });
+});
+
+test("the packaged entrypoint and reference base agree with the registration", () => {
+  const source = readFileSync(skillPath, "utf8");
+  expect(source).toContain(`name: ${SKILL_NAME}`);
+  expect(source).toContain(`description: ${SKILL_DESCRIPTION}`);
+  expect(readFileSync(join(skillResourceBase.path, "references/checking.md"), "utf8")).toContain(CLI_URL);
+  const rendered = renderSkillContent({ name: SKILL_NAME, provider: "runtime", resourceBase: skillResourceBase, content: skillEntry("types.json", "standalone.json", true) });
+  expect(rendered).toContain(`Base directory for this skill: ${skillResourceBase.path}`);
+  expect(rendered).toContain("references/layout.md");
+  expect(rendered).not.toContain("## Layout");
 });

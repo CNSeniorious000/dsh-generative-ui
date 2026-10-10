@@ -16,7 +16,9 @@ import { inlinePrompt } from "../src/prompt.ts";
 const PROMPT = inlinePrompt(true);
 // Same reason every `skillBody(…, true)` below passes the flag: these phrases live in sections a
 // host without commands does not get.
-import { skillBody } from "../src/skill.ts";
+import { skillBody, skillEntry, skillResourceBase } from "../src/skill.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /**
  * Every rule here exists because a real corpus card failed without it. Matched on a short
@@ -83,6 +85,7 @@ const SKILL_RULES = [
   ["the shared cause behind the control rules", "treating its controls as decoration"],
   ["calling a repeated piece instead of rendering it", '<ol>{row(1, "Ferry Building", photos[0])}'],
   ["a map in a child React never renders", 'box = el.appendChild(document.createElement("div"))'],
+  ["the checker leads back to the live panel", "write the canvas and look at the panel"],
 ] as const;
 
 for (const [name, phrase] of SKILL_RULES) {
@@ -96,6 +99,8 @@ const SECTIONS = [
   "Inline or canvas",
   "Ask with an interface when the request is underspecified",
   "Say something before it and something after",
+  "Read the relevant reference before writing TSX",
+  "Checker import maps",
   "Framing",
   "Layout",
   "Sound",
@@ -117,6 +122,20 @@ test("the skill body carries every section, in order", () => {
       .filter((line) => line.startsWith("## "))
       .map((line) => line.slice(3)),
   ).toEqual(SECTIONS);
+});
+
+test("the registered entrypoint routes to real files without loading their bodies", () => {
+  const entry = skillEntry("types.json", "standalone.json", true);
+  expect(entry).toContain("references/layout.md");
+  expect(entry).toContain("references/commands.md");
+  expect(entry).not.toContain("## Layout");
+  expect(entry).not.toContain("## Running a command");
+  for (const [, relative] of entry.matchAll(/\]\((references\/[^)]+\.md)\)/g)) {
+    const path = join(skillResourceBase.path, relative);
+    expect(existsSync(path)).toBe(true);
+    expect(readFileSync(path, "utf8").length).toBeGreaterThan(100);
+  }
+  expect(skillEntry(undefined, undefined, false)).not.toContain("references/commands.md");
 });
 
 // The two maps have genuinely different lifetimes, and the body is built for all four

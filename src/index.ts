@@ -28,7 +28,7 @@ import { AI_STREAM_PATH, ASSET_PREFIX, CANVAS_READ_PATH, CARD_ERROR_PATH, EXEC_P
 import { CANVAS_DIR, canvasChildPath, canvasIdOf, canvasPath, isCanvasId } from "./contract.ts";
 import { CardFailures, CARD_FAILURE_CONTEXT, CARD_FAILURE_CONTEXT_ORDER, WAKE_SUMMARY, WAKE_TEXT } from "./card-failure.ts";
 import { inlinePrompt, PROMPT_SECTION_NAME, PROMPT_SECTION_ORDER } from "./prompt.ts";
-import { skillBody, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
+import { skillEntry, skillPath, skillResourceBase, SKILL_DESCRIPTION, SKILL_NAME } from "./skill.ts";
 
 /**
  * The one field of the assembling agent this plugin reads: its id, which IS the session id.
@@ -668,11 +668,11 @@ function applyWith(ctx: Context, allowExec: boolean): void {
   // subsystem is disabled. Nested, only the skill goes missing.
   // Model-only: `/generative-ui` as a user command would just print the guidance at the user.
   ctx.inject(["skills"], (scoped) => {
-    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, // `allowExec` is the third argument and was omitted, so the skill dropped its whole
+    scoped.effect(() => scoped.skills.register({ name: SKILL_NAME, description: SKILL_DESCRIPTION, path: skillPath, resourceBase: skillResourceBase, // `allowExec` is the third argument and was omitted, so the skill dropped its whole
     // "Running a command" section even where the route IS registered: the prompt said six
     // capabilities and the skill described five. Same rule as the prompt — the docs have to
     // name the set that exists, in both directions.
-    content: skillBody(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url), allowExec), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
+    content: skillEntry(typesImportMap(import.meta.url), standaloneImportMap(import.meta.url), allowExec), source: "runtime", invocation: { modelInvocable: true, userInvocable: false } }), "dsh-generative-ui: skill");
   });
 }
 
