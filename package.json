@@ -162,7 +162,7 @@
     "micromark-util-symbol": "^2.0.1",
     "micromatch": "^4.0.8",
     "minimatch": "^10.2.6",
-    "motion": "^13.1.1",
+    "motion": "^14.0.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.80.0",
     "picomatch": "^4.0.7",
