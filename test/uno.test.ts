@@ -88,6 +88,21 @@ test("box-sizing is border-box inside the scope, and not outside it", async () =
   expect(css).not.toMatch(/(^|[};])\s*\*[^{]*\{[^}]*box-sizing/m);
 });
 
+// Wind4's `border` emits `border-width` and nothing else, expecting the vendor reset to have set
+// `border-style: solid`. With `preflights: { reset: false }` nothing did, so `bg-layer border
+// border-line` — the spelling the skill tells every card to write — computed `border-width: 0px` /
+// `border-style: none` in a real dsh web (measured 2026-10-11, via `getComputedStyle` on a mounted
+// card). In light theme, where all three layer tokens are `#fff`, that is a box with neither fill
+// nor edge. `divide-*` and `ring-*` set the style themselves and the form-control rule below
+// carried its own `border: 0 solid`, so both hid it.
+test("the border reset is restored inside the scope, and not outside it", async () => {
+  const { css } = await generate(["border", "border-line"]);
+  // The utility half was always there, and on its own paints nothing.
+  expect(css).toContain("border-width:1px");
+  expect(css).toMatch(/\.ui4a-root[^{]*\*[^{]*\{[^}]*border:\s*0\s*solid/);
+  expect(css).not.toMatch(/(^|[};])\s*\*[^{]*\{[^}]*border:\s*0\s*solid/m);
+});
+
 // A colour name that collides with a Wind4 utility WINS, silently. `base` did: `text-base` is the
 // body font size and the commonest way to write body text, and with a colour called `base` it
 // resolved to `color: var(--dsw-alias-bg-base)` — #ffffff in light theme. Measured live on a wave-2

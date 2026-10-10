@@ -160,7 +160,7 @@ that just arrived. A build-time pass cannot do it: those classes are typed by th
 ago and exist in no stylesheet of ours. Responsive is where that shows worst — a build-time sweep
 generates no `@container` breakpoint at all, so every card is single-column at any width.
 
-Four things about that setup are load-bearing, each measured rather than assumed:
+Five things about that setup are load-bearing, each measured rather than assumed:
 
 - **`important` takes a SELECTOR STRING, and that is the scoping mechanism.** Every rule comes out
   `.ui4a-root :is(.gap-4){…}`. The runtime sheet is appended to `<head>` last, so an unscoped
@@ -173,6 +173,20 @@ Four things about that setup are load-bearing, each measured rather than assumed
 - **Form controls need their own scoped reset.** With the vendor reset gone, a `<button>` keeps the
   UA's `buttonface`, which is not theme-aware: measured in dark mode, two unselected buttons
   rendered as light grey blocks with black text while the rest of the card was dark.
+- **`border: 0 solid` is the rest of that reset, and leaving it out made every bordered box
+  invisible.** Wind4's `border` utility emits `border-width: 1px` and nothing else — it expects the
+  vendor reset to have set the style. Nothing else in the document does: measured live in dsh web
+  (2026-10-11), a plain `div` with `border-width: 1px` computes `border-style: none`, and none of
+  the 143 stylesheets on that page carries a universal border rule (the host's own CSS is CSS
+  Modules and spells `border: .5px solid var(--dsw-alias-border-l*)` on every rule). So
+  `bg-layer border border-line` — the spelling §3.7 tells every card to write — computed
+  **`border-width: 0px`, `border-style: none`**. In light theme, where all three layer tokens are
+  `#fff`, that is a box with neither fill nor edge, which is what a reader reports as stray padding.
+  `divide-*` and `ring-*` were immune because both set the style themselves, and form controls kept
+  the `border: 0 solid` from the bullet above — which is why buttons and inputs had borders while
+  every container `<div>` did not, and why a corpus of cards that looks right in dark hid it. It has
+  to be the shorthand: a bare `border-style: solid` would leave the UA's initial
+  `border-width: medium`, i.e. a 3px border on every element inside the scope.
 - **A merged vendor rule has to be split, or Chromium drops the half it understands.** UnoCSS
   merges selectors that share a declaration, so a card styling a slider for both engines produces
   `…::-moz-range-thumb, …::-webkit-slider-thumb { height: … }` as ONE rule — and one unrecognised
