@@ -4,6 +4,8 @@
 
 Keep the legacy `settings.installSection` hookup only where that service still exposes it. New hosts own settings through profile `Config`: mark `allowExec` volatile, read the current reference, and rebuild the capability scope on the owning Loader's volatile update. A disabled command route and its prompt/skill documentation must disappear together. Do not change the product default.
 
+Give the exported `Config` schema an explicit type from the direct schemastery import: hosts can install another schemastery version whose global declarations otherwise leak a nested package path into declaration emit.
+
 The shell route uses `execute(spec).result()` on new hosts and `run(spec)` on old hosts, with explicit `onExpiry: "kill"`. Keep the session sandbox policy and per-stream output contract. Cancellation follows response-socket closure, not request-body completion; a response that is already destroyed when the body finishes starts no command at all, since there is nobody left to read the output. Both model requests and repair notices use the producer-owned `dsh-generative-ui` message source; they are not human input.
 
 The command result forwards the executor's terminating `signal`, normalizing an omitted value to `null`. `exitCode: null` means no exit code was reported, and `signal: null` means no signal was reported; neither implies the other. `timedOut` remains independent: a deadline can expire before a process starts, so it does not promise a signal.
