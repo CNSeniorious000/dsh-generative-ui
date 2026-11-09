@@ -22,6 +22,8 @@ Generated code imports anything on npm (resolved from esm.sh at render time), sh
 
 The `ui4a` in that fence is the harness this implements — **UI for Agent**, from Mind Lab: rather than coaxing an agent into a fixed UI schema, let it write ordinary frontend code and have the runtime enforce the boundaries. The reasoning, and the benchmarks behind it, are in [UI4A: A Component-Native Harness for Generative UI](https://www.mindlab.im/updates/ui4a-a-component-native-harness-for-generative-ui). This package is that harness wired into dsh's web client.
 
+> I ([Muspi Merol](https://github.com/CNSeniorious000 "Yihui Zhuang, 庄毅辉")) developed [this project](https://github.com/MindLab-Research/dsh-generative-ui) through v0.2.0 while at [Mind Lab](https://github.com/MindLab-Research) and began maintaining it independently after leaving.
+
 ## Install
 
 ```sh
