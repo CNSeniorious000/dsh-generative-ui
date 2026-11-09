@@ -1,7 +1,15 @@
-# dsh-generative-ui
+<h1 align="center">dsh-generative-ui</h1>
 
-[![npm](https://img.shields.io/npm/v/dsh-generative-ui)](https://www.npmjs.com/package/dsh-generative-ui)
-[![Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-generative-ui"><img src="https://img.shields.io/npm/v/dsh-generative-ui" alt="npm"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache-2.0"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/MindLab-Research/dsh-generative-ui">
+    <img src="assets/mindlab-project.svg" width="264" height="48" alt="A MindLab project">
+  </a>
+</p>
 
 Generative UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent answers with a live React interface instead of prose. It streams — the component renders while the model is still typing it.
 
