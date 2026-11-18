@@ -30,7 +30,6 @@ jobs:
           && (github.event_name == 'pull_request_target' || github.event.sender.type != 'Bot'))
     uses: promplate/code-review/.github/workflows/review.yml@main
     with:
-      # The catalog names `tool_mode`, the context window and the workspace features.
-      model-catalog-file: .github/codex-models.json
+      model-catalog: ${{ vars.CODEX_MODEL_CATALOG }}
     secrets:
       codex-config: ${{ vars.CODEX_CONFIG }}
