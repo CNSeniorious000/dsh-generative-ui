@@ -17,7 +17,6 @@ permissions:
   actions: read
   id-token: write
 
-
 jobs:
   review:
     # Same-repository PRs, plus pushes to main so merged work is reviewed too; the App's own PRs wait until they leave draft.
