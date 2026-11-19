@@ -58,6 +58,8 @@ function useMounted() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     ensureImportMap();
+    // Mounting after hydration has to be a post-render fact; there is no render-time equivalent.
+    // oxlint-disable-next-line react/set-state-in-effect
     setMounted(true);
   }, []);
   return mounted;

@@ -47,6 +47,9 @@ export function CanvasBrowser({ useTabInfo, sessionId, cwdOf, t }: CanvasBrowser
   useEffect(() => {
     if (cwd === undefined) return;
     let live = true;
+    // Clearing synchronously is deliberate: a new workspace must not keep rendering the previous
+    // listing while its own read is in flight.
+    // oxlint-disable-next-line react/set-state-in-effect
     setIds(null);
     setError(null);
     void listCanvasIds(cwd)

@@ -51,6 +51,9 @@ export function CanvasBody({ useTabInfo, cwdOf, onCardError, onCardRendered, t }
   useEffect(() => {
     if (cwd === undefined || id === null) return;
     let live = true;
+    // Same reason as the browser: drop the old body before the new read lands, so a stale canvas
+    // is never shown against a new id.
+    // oxlint-disable-next-line react/set-state-in-effect
     setError(null);
     setLoading(true);
     // Every re-read drops the body it is replacing, including the automatic one an edit triggers.
