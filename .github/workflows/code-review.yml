@@ -32,4 +32,4 @@ jobs:
     with:
       model-catalog: ${{ vars.CODEX_MODEL_CATALOG }}
     secrets:
-      codex-config: ${{ vars.CODEX_CONFIG }}
+      codex-config: ${{ secrets.CODEX_CONFIG }}
