@@ -88,7 +88,8 @@ export const SETTINGS_NAMESPACE = name;
  * card, `git log`, and the twenty-`readdir` walks a single `ls -R` replaces. Off, a model reasoning
  * from a five-capability set writes those as file-by-file loops or does not write the card at all.
  */
-export const Config = z.object({
+type ConfigShape = { allowExec: boolean };
+export const Config: ReturnType<typeof z.object<ConfigShape>> = z.object({
   allowExec: z
     .boolean()
     .default(true)
