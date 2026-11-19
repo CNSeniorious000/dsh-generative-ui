@@ -58,9 +58,17 @@ const { id, factory } = registered as NonNullable<typeof registered>;
 if (id !== "dsh-generative-ui") throw new Error(`registered under the wrong id: ${id}`);
 
 const asked: string[] = [];
+// React 19's inlined `react-dom/server` reads `react-dom`'s shared internals at module scope and
+// copies every dispatcher method off the previous one. Requiring the real package here would boot
+// a DOM renderer inside a DOM-less process (it hangs), so answer with just the internals shape the
+// server bundle walks.
+const reactDomInternals = new Proxy({}, { get: () => () => {} });
+const reactDomShim = { __DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE: { d: reactDomInternals } };
+
 const exports = factory((specifier) => {
   asked.push(specifier);
   if (!PLATFORM.has(specifier)) throw new Error(`require(${JSON.stringify(specifier)}) is not in the shell's module table`);
+  if (specifier === "react-dom") return reactDomShim;
   return specifier === "react" || specifier === "react/jsx-runtime" ? require(specifier) : {};
 });
 
