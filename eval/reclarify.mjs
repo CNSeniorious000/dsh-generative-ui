@@ -89,5 +89,5 @@ for (const root of process.argv.slice(2)) {
     }
   }
   const name = root.split("/").pop();
-  console.log(`${name}: 出过卡的 run ${runs}；第 3 轮后出过卡 ${late} (${((100 * late) / runs).toFixed(0)}%)；` + `其中带选择的 ${lateChoice} (${((100 * lateChoice) / Math.max(late, 1)).toFixed(0)}% of late, ${((100 * lateChoice) / runs).toFixed(0)}% of runs)`);
+  console.log(`${name}: 出过卡的 run ${runs}；第 3 轮后出过卡 ${late} (${((100 * late) / runs).toFixed(0)}%)；其中带选择的 ${lateChoice} (${((100 * lateChoice) / Math.max(late, 1)).toFixed(0)}% of late, ${((100 * lateChoice) / runs).toFixed(0)}% of runs)`);
 }

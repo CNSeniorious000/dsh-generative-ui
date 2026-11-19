@@ -179,7 +179,7 @@ if (process.argv.includes("--paired")) {
   const [pa, sa] = keys.reduce(([p, s], k) => [p + A.get(k).pinned, s + A.get(k).shaped], [0, 0]);
   const [pb, sb] = keys.reduce(([p, s], k) => [p + B.get(k).pinned, s + B.get(k).shaped], [0, 0]);
   console.log(`配对 ${keys.length} 组（两侧都产出了这个形状的格子）`);
-  console.log(`  钉住率  ${mean >= 0 ? "+" : ""}${mean.toFixed(3)} ± ${se.toFixed(3)}` + `  ${se > 0 && Math.abs(mean) >= 2 * se ? "← 过 2SE" : "(未过 2SE)"}`);
+  console.log(`  钉住率  ${mean >= 0 ? "+" : ""}${mean.toFixed(3)} ± ${se.toFixed(3)}  ${se > 0 && Math.abs(mean) >= 2 * se ? "← 过 2SE" : "(未过 2SE)"}`);
   console.log(`  同一批格子: 前 ${pa}/${sa} = ${((100 * pa) / sa).toFixed(1)}%   后 ${pb}/${sb} = ${((100 * pb) / sb).toFixed(1)}%`);
   process.exit(0);
 }
@@ -216,5 +216,5 @@ for (const a of readdirSync(root)) {
     }
   }
 }
-console.log(`${root.split("/").pop()}: ${total} 张卡片；有"列表之上有标题/控件"这个形状的 ${shaped} 张` + `；其中钉住的 ${pinned} 张 = ${shaped ? ((100 * pinned) / shaped).toFixed(1) : 0}%` + (failed ? `；解析失败 ${failed} 张` : ""));
+console.log(`${root.split("/").pop()}: ${total} 张卡片；有"列表之上有标题/控件"这个形状的 ${shaped} 张；其中钉住的 ${pinned} 张 = ${shaped ? ((100 * pinned) / shaped).toFixed(1) : 0}%` + (failed ? `；解析失败 ${failed} 张` : ""));
 if (process.argv.includes("--show")) pins.forEach((p) => console.log("  钉住: " + p));
