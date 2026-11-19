@@ -1,10 +1,10 @@
-import katex from "katex";
+import { renderToString } from "katex";
 import NumberFlow from "@number-flow/react";
 import { Label, Slider, SliderThumb, SliderTrack } from "react-aria-components";
 import { usePersistedState } from "$dsh/state";
 import { sendMessage } from "$dsh/chat";
 
-const FORMULA = katex.renderToString("A = P\\left(1 + \\frac{r}{n}\\right)^{nt}", { throwOnError: false });
+const FORMULA = renderToString("A = P\\left(1 + \\frac{r}{n}\\right)^{nt}", { throwOnError: false });
 
 export default function CompoundInterest() {
   // Persisted: scroll back to this card next week and it still shows the plan you settled on.
