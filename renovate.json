@@ -6,6 +6,14 @@
     {
       "groupName": "dsh packages",
       "matchPackageNames": ["/^@deepseek-ai//"]
+    },
+    {
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "allowedVersions": "<19"
+    },
+    {
+      "matchPackageNames": ["js-yaml"],
+      "allowedVersions": "<5"
     }
   ]
 }
