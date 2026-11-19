@@ -60,6 +60,7 @@ export function CanvasBrowser({ useTabInfo, sessionId, cwdOf, t }: CanvasBrowser
     };
     // Keyed on the workspace, not on the tab's revision: browsing is a listing, and re-listing on
     // every navigation would refetch what has not changed.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `retry` is a re-run trigger, not a read
   }, [cwd, retry]);
 
   if (cwd === undefined) return null;

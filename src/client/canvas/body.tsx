@@ -76,6 +76,7 @@ export function CanvasBody({ useTabInfo, cwdOf, onCardError, onCardRendered, t }
     // `edit` marks the canvas stale — so a patch is re-read here without the transcript having
     // to carry the new body. `visible` deliberately does not appear: with `keepMounted` the body
     // survives a hide, and re-reading on every return would drop state for nothing.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `retry` is a re-run trigger, not a read
   }, [cwd, id, tab.navigation.revision, retry]);
 
   // Disk is the source, so a body read here is always settled. Under the default PTC mode the
