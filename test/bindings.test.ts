@@ -152,7 +152,11 @@ test("replacing Map.prototype cannot mint a capability for another session", asy
   const capability = bindingImports("victim")["$dsh/fs"];
   const realHas = Map.prototype.has;
   const realGet = Map.prototype.get;
+  // Forging the prototype is the point of this test: `bindOwner` must not resolve capabilities
+  // through anything a card can replace.
+  // oxlint-disable-next-line no-extend-native
   Map.prototype.has = () => true;
+  // oxlint-disable-next-line no-extend-native
   Map.prototype.get = () => "victim";
   try {
     // The lookup is a null-prototype table, so neither `in` nor `[]` dispatches what a card can
@@ -160,7 +164,9 @@ test("replacing Map.prototype cannot mint a capability for another session", asy
     expect(() => bindOwner("forged-token")).toThrow("no such capability");
     expect(() => bindOwner(capability)).not.toThrow();
   } finally {
+    // oxlint-disable-next-line no-extend-native
     Map.prototype.has = realHas;
+    // oxlint-disable-next-line no-extend-native
     Map.prototype.get = realGet;
   }
 });
