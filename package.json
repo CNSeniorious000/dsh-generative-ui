@@ -166,7 +166,7 @@
     "micromark-util-sanitize-uri": "^2.0.1",
     "micromark-util-symbol": "^2.0.1",
     "micromatch": "^4.0.8",
-    "minimatch": "^10.2.6",
+    "minimatch": "^11.0.0",
     "motion": "^14.0.0",
     "oxfmt": "^0.75.0",
     "oxlint": "^1.80.0",
