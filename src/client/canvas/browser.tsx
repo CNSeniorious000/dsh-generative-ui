@@ -37,6 +37,7 @@ const ROW: CSSProperties = {
 const HOVER = "var(--dsw-alias-interactive-bg-hover)";
 
 export function CanvasBrowser({ useTabInfo, sessionId, cwdOf, t }: CanvasBrowserProps) {
+  // oxlint-disable-next-line react/hooks -- `useTabInfo` is the slot runtime's injected hook, not a selection
   const { tab } = useTabInfo();
   const cwd = cwdOf(String(sessionId));
   const [ids, setIds] = useState<readonly string[] | null>(null);

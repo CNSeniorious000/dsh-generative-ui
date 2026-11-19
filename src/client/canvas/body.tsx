@@ -34,6 +34,7 @@ export type CanvasInjected = {
 export type CanvasBodyProps = PropsRuntime<"sidebar.right.pane.tab"> & CanvasInjected & { t: TranslateNS<"ui4aCanvas"> };
 
 export function CanvasBody({ useTabInfo, cwdOf, onCardError, onCardRendered, t }: CanvasBodyProps) {
+  // oxlint-disable-next-line react/hooks -- `useTabInfo` is the slot runtime's injected hook, not a selection
   const { tab } = useTabInfo();
   const address = tab.contentId;
   const id = canvasIdOfAddress(address);
